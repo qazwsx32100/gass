@@ -1,0 +1,955 @@
+// Financial and Equity Math Engine for BusinessPilot ERP v1.0
+
+import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getFixedAssets } from '../db/storage';
+
+const isBankTransfer = (item) => !!item.bankId;
+
+// Helper: Check if date falls within a period
+// periodType: 'month' (e.g. '2026-06'), 'quarter' (e.g. '2026-Q2'), 'year' (e.g. '2026'), 'all'
+export const isDateInPeriod = (dateStr, periodType, periodVal) => {
+  if (!dateStr || typeof dateStr !== 'string') return false;
+  if (periodType === 'all') return true;
+  if (periodType === 'date') return dateStr === periodVal;
+  if (periodType === 'range') {
+    const { startDate, endDate } = periodVal || {};
+    return (!startDate || dateStr >= startDate) && (!endDate || dateStr <= endDate);
+  }
+
+  const parts = dateStr.split('-');
+  if (parts.length < 2) return false;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+
+  if (periodType === 'month') {
+    if (!periodVal || typeof periodVal !== 'string') return false;
+    const pParts = periodVal.split('-');
+    if (pParts.length < 2) return false;
+    const [targetYear, targetMonth] = pParts.map(Number);
+    return year === targetYear && month === targetMonth;
+  }
+
+  if (periodType === 'quarter') {
+    if (!periodVal || typeof periodVal !== 'string') return false;
+    const pParts = periodVal.split('-');
+    if (pParts.length < 2) return false;
+    const [targetYear, qStr] = pParts;
+    const q = parseInt(qStr.replace('Q', ''), 10);
+    const targetYearNum = parseInt(targetYear, 10);
+    if (year !== targetYearNum) return false;
+    const quarter = Math.ceil(month / 3);
+    return quarter === q;
+  }
+
+  if (periodType === 'year') {
+    const targetYearNum = parseInt(periodVal, 10);
+    return year === targetYearNum;
+  }
+
+  return false;
+};
+
+const daysBetween = (fromDate, toDate) => {
+  if (!fromDate || !toDate) return 0;
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  return Math.max(0, Math.floor((to - from) / 86400000));
+};
+
+const getAgingBucket = (days) => {
+  if (days <= 30) return '0-30';
+  if (days <= 60) return '31-60';
+  if (days <= 90) return '61-90';
+  return '90+';
+};
+
+export const getAgingReport = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+  const makeRow = (item, type) => {
+    const dueDate = item.dueDate || item.checkDueDate || item.date;
+    const daysOverdue = daysBetween(dueDate, asOfDate);
+    return {
+      ...item,
+      type,
+      dueDate,
+      daysOverdue,
+      bucket: getAgingBucket(daysOverdue)
+    };
+  };
+
+  const receivables = getIncomes()
+    .filter(item => item.companyId === companyId && item.status === 'approved' && item.paymentStatus === 'unpaid')
+    .map(item => makeRow(item, 'receivable'));
+
+  const payables = getExpenses()
+    .filter(item => item.companyId === companyId && item.status === 'approved' && item.paymentStatus === 'unpaid')
+    .map(item => makeRow(item, 'payable'));
+
+  const summarize = (rows) => {
+    const summary = { '0-30': 0, '31-60': 0, '61-90': 0, '90+': 0, total: 0 };
+    rows.forEach(row => {
+      summary[row.bucket] += Number(row.amount || 0);
+      summary.total += Number(row.amount || 0);
+    });
+    return summary;
+  };
+
+  return {
+    asOfDate,
+    receivables,
+    payables,
+    receivableSummary: summarize(receivables),
+    payableSummary: summarize(payables),
+    receivables: {
+      rows: receivables,
+      total: summarize(receivables).total,
+      buckets: {
+        current: { total: summarize(receivables)['0-30'] },
+        days31to60: { total: summarize(receivables)['31-60'] },
+        days61to90: { total: summarize(receivables)['61-90'] },
+        over90: { total: summarize(receivables)['90+'] }
+      }
+    },
+    payables: {
+      rows: payables,
+      total: summarize(payables).total,
+      buckets: {
+        current: { total: summarize(payables)['0-30'] },
+        days31to60: { total: summarize(payables)['31-60'] },
+        days61to90: { total: summarize(payables)['61-90'] },
+        over90: { total: summarize(payables)['90+'] }
+      }
+    },
+  };
+};
+
+const normalizeImportAmount = (value) => {
+  const cleaned = String(value || '').replace(/,/g, '').trim();
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+export const parseBankStatementText = (text) => {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const parts = line.split(/,|\t/).map(part => part.trim());
+      const [date, description, withdrawal, deposit, balance] = parts;
+      const withdrawalAmount = normalizeImportAmount(withdrawal);
+      const depositAmount = normalizeImportAmount(deposit);
+      const signedAmount = depositAmount > 0 ? depositAmount : -Math.abs(withdrawalAmount);
+      return {
+        id: `stmt-${index + 1}`,
+        date,
+        description: description || '',
+        withdrawal: withdrawalAmount,
+        deposit: depositAmount,
+        amount: signedAmount,
+        balance: normalizeImportAmount(balance),
+        raw: line
+      };
+    })
+    .filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.date) && row.amount !== 0);
+};
+
+export const buildBankReconciliation = ({ companyId, bankId, statementDate, statementRows }) => {
+  const rows = Array.isArray(statementRows) ? statementRows : [];
+  const systemRows = [
+    ...getIncomes()
+      .filter(item => item.companyId === companyId && item.bankId === bankId && item.status === 'approved')
+      .map(item => ({ ...item, type: 'income', signedAmount: Number(item.amount || 0) })),
+    ...getExpenses()
+      .filter(item => item.companyId === companyId && item.bankId === bankId && item.status === 'approved')
+      .map(item => ({ ...item, type: 'expense', signedAmount: -Number(item.amount || 0) }))
+  ].filter(item => !statementDate || item.date <= statementDate);
+
+  const usedSystemIds = new Set();
+  const matchedRows = [];
+  const unmatchedStatementRows = [];
+
+  rows.forEach(row => {
+    const match = systemRows.find(item => (
+      !usedSystemIds.has(item.id) &&
+      item.date === row.date &&
+      Number(item.signedAmount || 0) === Number(row.amount || 0)
+    ));
+    if (match) {
+      usedSystemIds.add(match.id);
+      matchedRows.push({ statementRow: row, systemRow: match });
+    } else {
+      unmatchedStatementRows.push(row);
+    }
+  });
+
+  const unmatchedSystemRows = systemRows.filter(item => !usedSystemIds.has(item.id));
+  const statementBalance = rows.length ? Number(rows[rows.length - 1].balance || 0) : 0;
+  const systemBalance = getBankBalancesAtDate(companyId, statementDate)
+    .find(bank => bank.id === bankId)?.currentBalance || 0;
+
+  return {
+    statementBalance,
+    systemBalance,
+    difference: statementBalance - systemBalance,
+    matchedRows,
+    unmatchedStatementRows,
+    unmatchedSystemRows
+  };
+};
+
+export const calculateAssetDepreciation = (asset, asOfDate = new Date().toISOString().split('T')[0]) => {
+  const cost = Number(asset.acquisitionCost || 0);
+  const residual = Number(asset.residualValue || 0);
+  const usefulLifeMonths = Number(asset.usefulLifeMonths || 0);
+  const depreciable = Math.max(0, cost - residual);
+  const monthlyDepreciation = usefulLifeMonths > 0 ? depreciable / usefulLifeMonths : 0;
+  const start = new Date(`${asset.acquisitionDate}T00:00:00`);
+  const end = new Date(`${asOfDate}T00:00:00`);
+  const elapsedMonths = Math.max(0, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1);
+  const monthsUsed = Math.min(usefulLifeMonths || 0, elapsedMonths);
+  const accumulatedDepreciation = Math.round(monthlyDepreciation * monthsUsed);
+  const bookValue = Math.max(residual, cost - accumulatedDepreciation);
+
+  return {
+    monthlyDepreciation: Math.round(monthlyDepreciation),
+    monthsUsed,
+    accumulatedDepreciation,
+    bookValue
+  };
+};
+
+export const getFixedAssetSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+  const assets = getFixedAssets()
+    .filter(asset => asset.companyId === companyId)
+    .map(asset => ({ ...asset, depreciation: calculateAssetDepreciation(asset, asOfDate) }));
+
+  return {
+    assets,
+    totalCost: assets.reduce((sum, asset) => sum + Number(asset.acquisitionCost || 0), 0),
+    totalAccumulatedDepreciation: assets.reduce((sum, asset) => sum + asset.depreciation.accumulatedDepreciation, 0),
+    totalBookValue: assets.reduce((sum, asset) => sum + asset.depreciation.bookValue, 0)
+  };
+};
+
+const accountName = (code, fallback = '') => {
+  const account = getChartOfAccounts().find(item => item.code === code);
+  return account?.name || fallback || code;
+};
+
+const cashAccountName = (item) => {
+  if (item.paymentMethod === 'cash') return '現金';
+  if (item.paymentMethod === 'receivable') return '應收帳款';
+  if (item.paymentMethod === 'payable') return '應付帳款';
+  if (item.paymentMethod === 'check') return item.amount >= 0 ? '應收票據' : '應付票據';
+  const bank = getBanks().find(bankItem => bankItem.id === item.bankId);
+  return bank?.name || '銀行存款';
+};
+
+const pushEntry = (entries, header) => {
+  const debit = header.lines.filter(line => line.side === 'debit').reduce((sum, line) => sum + Number(line.amount || 0), 0);
+  const credit = header.lines.filter(line => line.side === 'credit').reduce((sum, line) => sum + Number(line.amount || 0), 0);
+  entries.push({
+    ...header,
+    debit,
+    credit,
+    balanced: Math.round(debit) === Math.round(credit)
+  });
+};
+
+export const getJournalEntries = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const entries = [];
+
+  getIncomes()
+    .filter(item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal))
+    .forEach(item => {
+      pushEntry(entries, {
+        id: `J-${item.id}`,
+        sourceId: item.id,
+        sourceType: 'income',
+        date: item.date,
+        description: item.remarks || '收入傳票',
+        lines: [
+          { side: 'debit', accountCode: item.paymentMethod === 'receivable' ? '1102' : '1101', accountName: cashAccountName(item), amount: Number(item.amount || 0) },
+          { side: 'credit', accountCode: item.accountCode, accountName: accountName(item.accountCode, '營業收入'), amount: Number(item.amount || 0) }
+        ]
+      });
+    });
+
+  getExpenses()
+    .filter(item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal))
+    .forEach(item => {
+      pushEntry(entries, {
+        id: `J-${item.id}`,
+        sourceId: item.id,
+        sourceType: 'expense',
+        date: item.date,
+        description: item.remarks || '支出傳票',
+        lines: [
+          { side: 'debit', accountCode: item.accountCode, accountName: accountName(item.accountCode, '營業費用'), amount: Number(item.amount || 0) },
+          { side: 'credit', accountCode: item.paymentMethod === 'payable' ? '2102' : '1101', accountName: cashAccountName({ ...item, amount: -Number(item.amount || 0) }), amount: Number(item.amount || 0) }
+        ]
+      });
+    });
+
+  getShareholderLedger()
+    .filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal))
+    .forEach(item => {
+      const isCapitalIn = item.type === 'join' || item.type === 'increase';
+      pushEntry(entries, {
+        id: `J-${item.id}`,
+        sourceId: item.id,
+        sourceType: 'equity',
+        date: item.date,
+        description: item.remarks || '股東權益傳票',
+        lines: isCapitalIn
+          ? [
+              { side: 'debit', accountCode: '1101', accountName: '銀行存款/現金', amount: Number(item.amount || 0) },
+              { side: 'credit', accountCode: '3101', accountName: '股本', amount: Number(item.amount || 0) }
+            ]
+          : [
+              { side: 'debit', accountCode: '3101', accountName: '股本', amount: Number(item.amount || 0) },
+              { side: 'credit', accountCode: '1101', accountName: '銀行存款/現金', amount: Number(item.amount || 0) }
+            ]
+      });
+    });
+
+  getFixedAssets()
+    .filter(asset => asset.companyId === companyId && isDateInPeriod(asset.acquisitionDate, periodType, periodVal))
+    .forEach(asset => {
+      pushEntry(entries, {
+        id: `J-AST-${asset.id}`,
+        sourceId: asset.id,
+        sourceType: 'fixed_asset',
+        date: asset.acquisitionDate,
+        description: `${asset.assetName} 固定資產購入`,
+        lines: [
+          { side: 'debit', accountCode: '1501', accountName: '固定資產', amount: Number(asset.acquisitionCost || 0) },
+          { side: 'credit', accountCode: '1101', accountName: '銀行存款/現金', amount: Number(asset.acquisitionCost || 0) }
+        ]
+      });
+    });
+
+  const asOfDate = getPeriodEndDate(periodType, periodVal);
+  getFixedAssets()
+    .filter(asset => asset.companyId === companyId && asset.status === 'active' && isDateInPeriod(asOfDate, periodType, periodVal))
+    .forEach(asset => {
+      const dep = calculateAssetDepreciation(asset, asOfDate);
+      if (dep.monthlyDepreciation <= 0) return;
+      pushEntry(entries, {
+        id: `J-DEP-${asset.id}-${String(asOfDate).slice(0, 7)}`,
+        sourceId: asset.id,
+        sourceType: 'depreciation',
+        date: asOfDate,
+        description: `${asset.assetName} 每月折舊`,
+        lines: [
+          { side: 'debit', accountCode: '6201', accountName: '折舊費用', amount: dep.monthlyDepreciation },
+          { side: 'credit', accountCode: '1599', accountName: '累計折舊', amount: dep.monthlyDepreciation }
+        ]
+      });
+    });
+
+  return entries.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+const VAT_RATE = 0.05;
+const isVatTaxable = (item) => (item.taxType || 'taxable') === 'taxable';
+const taxFromAmount = (item) => {
+  if (!isVatTaxable(item)) return 0;
+  if (item.vatAmount !== null && item.vatAmount !== undefined && item.vatAmount !== '') return Number(item.vatAmount) || 0;
+  const amount = Number(item.amount || 0);
+  return item.taxIncluded === false ? Math.round(amount * VAT_RATE) : Math.round(amount * VAT_RATE / (1 + VAT_RATE));
+};
+const netSalesAmount = (item) => {
+  const amount = Number(item.amount || 0);
+  if (!isVatTaxable(item)) return amount;
+  return item.taxIncluded === false ? amount : amount - taxFromAmount(item);
+};
+
+export const getVatReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const taxableIncomes = getIncomes().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+  const taxableExpenses = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.accountCode !== '6101' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const incomeRows = taxableIncomes.map(item => ({
+    ...item,
+    taxableAmount: netSalesAmount(item),
+    vatAmountCalculated: taxFromAmount(item)
+  }));
+  const expenseRows = taxableExpenses.map(item => ({
+    ...item,
+    taxableAmount: netSalesAmount(item),
+    vatAmountCalculated: taxFromAmount(item)
+  }));
+  const outputTax = incomeRows.reduce((sum, item) => sum + item.vatAmountCalculated, 0);
+  const inputTax = expenseRows.reduce((sum, item) => sum + item.vatAmountCalculated, 0);
+  const salesNet = incomeRows.reduce((sum, item) => sum + item.taxableAmount, 0);
+  const purchaseNet = expenseRows.reduce((sum, item) => sum + item.taxableAmount, 0);
+
+  return {
+    rate: VAT_RATE,
+    outputTax,
+    inputTax,
+    netTaxPayable: outputTax - inputTax,
+    salesGross: taxableIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    salesNet,
+    purchaseGross: taxableExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    purchaseNet,
+    incomeRows,
+    expenseRows
+  };
+};
+
+export const getPayrollReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const salaryRows = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.accountCode === '6101' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+  const grossSalary = salaryRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const manualLaborInsurance = salaryRows.reduce((sum, item) => sum + Number(item.laborInsurance || 0), 0);
+  const manualHealthInsurance = salaryRows.reduce((sum, item) => sum + Number(item.healthInsurance || 0), 0);
+  const manualPension = salaryRows.reduce((sum, item) => sum + Number(item.pension || 0), 0);
+  const estimatedLaborInsurance = manualLaborInsurance || Math.round(grossSalary * 0.08);
+  const estimatedHealthInsurance = manualHealthInsurance || Math.round(grossSalary * 0.05);
+  const estimatedPension = manualPension || Math.round(grossSalary * 0.06);
+  const withholdingTax = salaryRows.reduce((sum, item) => sum + Number(item.withholdingTax || 0), 0);
+  const totalEmployerCost = grossSalary + estimatedLaborInsurance + estimatedHealthInsurance + estimatedPension;
+
+  return {
+    salaryRows,
+    grossSalary,
+    estimatedLaborInsurance,
+    estimatedHealthInsurance,
+    estimatedPension,
+    withholdingTax,
+    totalEmployerCost
+  };
+};
+
+export const getAuditReadinessReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const entries = getJournalEntries(companyId, periodType, periodVal);
+  const incomes = getIncomes().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
+  const expenses = getExpenses().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
+  const approvedWithoutAttachment = [...incomes, ...expenses].filter(item => item.status === 'approved' && !item.receiptAttachment);
+  const taxableWithoutInvoice = [...incomes, ...expenses].filter(item => item.status === 'approved' && isVatTaxable(item) && !item.invoiceNo);
+  const pendingRows = [...incomes, ...expenses].filter(item => String(item.status || '').startsWith('pending'));
+  const unbalancedEntries = entries.filter(entry => !entry.balanced);
+
+  return {
+    entries,
+    approvedWithoutAttachment,
+    taxableWithoutInvoice,
+    pendingRows,
+    unbalancedEntries,
+    score: Math.max(0, 100 - approvedWithoutAttachment.length * 5 - taxableWithoutInvoice.length * 5 - pendingRows.length * 8 - unbalancedEntries.length * 20)
+  };
+};
+
+// Helper: Get end date of a month as a comparison string
+export const getPeriodEndDate = (periodType, periodVal) => {
+  if (periodType === 'date') return periodVal || '';
+  if (periodType === 'range') return periodVal?.endDate || '2099-12-31';
+  if (periodType === 'month') {
+    if (!periodVal || typeof periodVal !== 'string') return '2099-12-31';
+    const parts = periodVal.split('-');
+    if (parts.length < 2) return '2099-12-31';
+    const [year, month] = parts.map(Number);
+    // Last day of month
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  }
+  if (periodType === 'quarter') {
+    if (!periodVal || typeof periodVal !== 'string') return '2099-12-31';
+    const parts = periodVal.split('-');
+    if (parts.length < 2) return '2099-12-31';
+    const [year, qStr] = parts;
+    const q = parseInt(qStr.replace('Q', ''), 10);
+    const months = { 1: '03-31', 2: '06-30', 3: '09-30', 4: '12-31' };
+    return `${year}-${months[q] || '12-31'}`;
+  }
+  if (periodType === 'year') {
+    return periodVal ? `${periodVal}-12-31` : '2099-12-31';
+  }
+  return '2099-12-31';
+};
+
+export const getPeriodLabel = (periodType, periodVal) => {
+  if (periodType === 'date') return `${periodVal || ''} 單日`;
+  if (periodType === 'range') return `${periodVal?.startDate || '最早'} 至 ${periodVal?.endDate || '今日'}`;
+  if (periodType === 'month') {
+    if (!periodVal || typeof periodVal !== 'string') return '全部期間';
+    const parts = periodVal.split('-');
+    if (parts.length < 2) return '全部期間';
+    const [year, month] = parts;
+    return `${year} 年 ${parseInt(month, 10)} 月`;
+  }
+  if (periodType === 'quarter') return periodVal || '';
+  if (periodType === 'year') return periodVal ? `${periodVal} 年` : '';
+  return '全部期間';
+};
+
+const toYearMonth = (dateStr) => String(dateStr || '').slice(0, 7);
+
+const getApprovedGasSales = (companyId, periodType = 'all', periodVal = null) => (
+  getIncomes().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    Number(item.gasKg || 0) > 0 &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  )
+);
+
+export const getGasInventoryForMonth = (companyId, yearMonth) => {
+  const config = getGasInventoryPeriods().find(item => item.companyId === companyId && item.yearMonth === yearMonth);
+  const openingKg = Number(config?.openingKg || 0);
+  const openingCost = Number(config?.openingCost || 0);
+  const purchaseKg = Number(config?.purchaseKg || 0);
+  const purchaseAmount = Number(config?.purchaseAmount || 0);
+  const shrinkageKg = Number(config?.shrinkageKg || 0);
+  const availableKg = openingKg + purchaseKg;
+  const availableCost = openingCost + purchaseAmount;
+  const averageCostPerKg = availableKg > 0 ? availableCost / availableKg : 0;
+  const monthSales = getApprovedGasSales(companyId, 'month', yearMonth);
+  const soldKg = monthSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
+  const gasRevenue = monthSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const gasCogs = Math.round(soldKg * averageCostPerKg);
+  const bookEndingKg = Math.max(0, availableKg - soldKg - shrinkageKg);
+  const endingKg = config?.physicalEndingKg === null || config?.physicalEndingKg === undefined ? bookEndingKg : Number(config.physicalEndingKg || 0);
+  const endingCost = Math.round(endingKg * averageCostPerKg);
+  const grossProfit = gasRevenue - gasCogs;
+
+  return {
+    config,
+    yearMonth,
+    openingKg,
+    openingCost,
+    purchaseKg,
+    purchaseAmount,
+    shrinkageKg,
+    availableKg,
+    availableCost,
+    averageCostPerKg,
+    soldKg,
+    gasRevenue,
+    gasCogs,
+    grossProfit,
+    grossMargin: gasRevenue > 0 ? (grossProfit / gasRevenue) * 100 : 0,
+    bookEndingKg,
+    endingKg,
+    endingCost
+  };
+};
+
+export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
+  const periods = getGasInventoryPeriods()
+    .filter(item => item.companyId === companyId && item.yearMonth <= toYearMonth(dateStr))
+    .map(item => getGasInventoryForMonth(companyId, item.yearMonth))
+    .sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+  return periods[0] || getGasInventoryForMonth(companyId, toYearMonth(dateStr));
+};
+
+export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
+  const sales = getApprovedGasSales(companyId, periodType, periodVal);
+  const dailyMap = {};
+  let totalKg = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+
+  sales.forEach(item => {
+    const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
+    const kg = Number(item.gasKg || 0);
+    const revenue = Number(item.amount || 0);
+    const cogs = Math.round(kg * monthCost.averageCostPerKg);
+    if (!dailyMap[item.date]) {
+      dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
+    }
+    dailyMap[item.date].gasKg += kg;
+    dailyMap[item.date].revenue += revenue;
+    dailyMap[item.date].cogs += cogs;
+    totalKg += kg;
+    totalRevenue += revenue;
+    totalCogs += cogs;
+  });
+
+  const dailyRows = Object.values(dailyMap)
+    .map(row => ({
+      ...row,
+      grossProfit: row.revenue - row.cogs,
+      grossMargin: row.revenue > 0 ? ((row.revenue - row.cogs) / row.revenue) * 100 : 0
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    dailyRows,
+    totalKg,
+    totalRevenue,
+    totalCogs,
+    grossProfit: totalRevenue - totalCogs,
+    grossMargin: totalRevenue > 0 ? ((totalRevenue - totalCogs) / totalRevenue) * 100 : 0
+  };
+};
+
+/**
+ * 1. Dynamic Shareholder Equity Timeline
+ * Calculates the active capital and ratio of all shareholders for a company up to a specific date.
+ */
+export const getShareholderSharesAtDate = (companyId, endDateStr) => {
+  const ledger = getShareholderLedger().filter(
+    item => item.companyId === companyId && item.date <= endDateStr
+  );
+  const shareholders = getShareholders();
+  
+  // Group capital by shareholder
+  const capitalMap = {};
+  shareholders.forEach(sh => {
+    capitalMap[sh.id] = 0;
+  });
+
+  ledger.forEach(tx => {
+    if (tx.type === 'join' || tx.type === 'increase') {
+      capitalMap[tx.shareholderId] = (capitalMap[tx.shareholderId] || 0) + tx.amount;
+    } else if (tx.type === 'decrease') {
+      capitalMap[tx.shareholderId] = (capitalMap[tx.shareholderId] || 0) - tx.amount;
+      if (capitalMap[tx.shareholderId] < 0) capitalMap[tx.shareholderId] = 0; // Avoid negative capital
+    }
+  });
+
+  // Calculate totals and percentages
+  const totalCapital = Object.values(capitalMap).reduce((sum, cap) => sum + cap, 0);
+
+  const results = shareholders
+    .map(sh => {
+      const activeCapital = capitalMap[sh.id] || 0;
+      const ratio = totalCapital > 0 ? (activeCapital / totalCapital) * 100 : 0;
+      return {
+        shareholderId: sh.id,
+        name: sh.name,
+        activeCapital,
+        ratio: Math.round(ratio * 100) / 100 // 2 decimal places
+      };
+    })
+    .filter(item => item.activeCapital > 0); // Only return active shareholders
+
+  return {
+    shareholders: results,
+    totalCapital
+  };
+};
+
+/**
+ * 2. Income Statement (P&L) Engine
+ */
+export const getIncomeStatement = (companyId, periodType, periodVal) => {
+  const incomes = getIncomes().filter(
+    item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal)
+  );
+  
+  const expenses = getExpenses().filter(
+    item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const accounts = getChartOfAccounts();
+
+  // Create lookup dictionary for accounts
+  const accountMap = {};
+  accounts.forEach(acc => {
+    accountMap[acc.code] = acc;
+  });
+
+  // Aggregate Revenues
+  const revenueItems = {};
+  incomes.forEach(inc => {
+    const acc = accountMap[inc.accountCode] || { name: '其他收入', type: 'revenue' };
+    if (!revenueItems[inc.accountCode]) {
+      revenueItems[inc.accountCode] = { code: inc.accountCode, name: acc.name, amount: 0 };
+    }
+    revenueItems[inc.accountCode].amount += inc.amount;
+  });
+
+  // Aggregate Expenses and COGS
+  const cogsItems = {};
+  const expenseItems = {};
+  expenses.forEach(exp => {
+    const acc = accountMap[exp.accountCode] || { name: '其他支出', type: 'expense' };
+    const isGasPurchaseInventory = exp.accountCode === '5101';
+    if (isGasPurchaseInventory) return;
+    const targetMap = acc.type === 'cogs' && !isGasPurchaseInventory ? cogsItems : expenseItems;
+    if (!targetMap[exp.accountCode]) {
+      targetMap[exp.accountCode] = { code: exp.accountCode, name: isGasPurchaseInventory ? `${acc.name}（進貨付款/存貨，不列銷貨成本）` : acc.name, amount: 0 };
+    }
+    if (isGasPurchaseInventory) return;
+    targetMap[exp.accountCode].amount += exp.amount;
+  });
+
+  const totalRevenue = Object.values(revenueItems).reduce((sum, i) => sum + i.amount, 0);
+  const gasProfit = getGasGrossProfitForPeriod(companyId, periodType, periodVal);
+  if (gasProfit.totalCogs > 0) {
+    cogsItems.AUTO_GAS_COGS = {
+      code: 'AUTO',
+      name: '瓦斯銷貨成本（月加權平均）',
+      amount: gasProfit.totalCogs
+    };
+  }
+  const totalCogs = Object.values(cogsItems).reduce((sum, i) => sum + i.amount, 0);
+  const grossProfit = totalRevenue - totalCogs;
+  const totalExpenses = Object.values(expenseItems).reduce((sum, i) => sum + i.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+
+  return {
+    revenueItems: Object.values(revenueItems),
+    cogsItems: Object.values(cogsItems),
+    expenseItems: Object.values(expenseItems),
+    totalRevenue,
+    totalCogs,
+    grossProfit,
+    grossMargin: totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0,
+    gasProfit,
+    totalExpenses,
+    netProfit
+  };
+};
+
+/**
+ * 3. Bank Account Balances Engine
+ * Calculates current cash and bank balances dynamically up to a date.
+ */
+export const getBankBalancesAtDate = (companyId, dateStr) => {
+  const banks = getBanks().filter(b => b.companyId === companyId);
+  const incomes = getIncomes().filter(i => i.companyId === companyId && i.date <= dateStr && i.status === 'approved' && isBankTransfer(i));
+  const expenses = getExpenses().filter(e => e.companyId === companyId && e.date <= dateStr && e.status === 'approved' && isBankTransfer(e));
+  const shLedger = getShareholderLedger().filter(s => s.companyId === companyId && s.date <= dateStr);
+  // Note: For simplicity, assume all shareholder investments/reductions went through BANK001/002/003 based on first bank found
+  
+  const balanceMap = {};
+  banks.forEach(b => {
+    balanceMap[b.id] = b.initialBalance;
+  });
+
+  // Add Approved Incomes
+  incomes.forEach(i => {
+    if (balanceMap[i.bankId] !== undefined) {
+      balanceMap[i.bankId] += i.amount;
+    }
+  });
+
+  // Subtract Approved Expenses
+  expenses.forEach(e => {
+    if (balanceMap[e.bankId] !== undefined) {
+      balanceMap[e.bankId] -= e.amount;
+    }
+  });
+
+  // Add/Subtract Shareholder investments
+  // Default to the first bank of the company if not specified
+  const primaryBankId = banks[0]?.id;
+  shLedger.forEach(tx => {
+    const bankId = tx.bankId || primaryBankId;
+    if (balanceMap[bankId] !== undefined) {
+      if (tx.type === 'join' || tx.type === 'increase') {
+        balanceMap[bankId] += tx.amount;
+      } else if (tx.type === 'decrease') {
+        balanceMap[bankId] -= tx.amount;
+      }
+    }
+  });
+
+  return banks.map(b => ({
+    ...b,
+    currentBalance: balanceMap[b.id] || 0
+  }));
+};
+
+/**
+ * 4. Balance Sheet Engine
+ */
+export const getBalanceSheet = (companyId, dateStr) => {
+  const bankBalances = getBankBalancesAtDate(companyId, dateStr);
+  const totalCash = bankBalances.reduce((sum, b) => sum + b.currentBalance, 0);
+  const gasInventory = getGasInventoryValuationAtDate(companyId, dateStr);
+  const inventoryAsset = gasInventory.endingCost;
+
+  // Fixed Assets (Non-current assets)
+  const fixedAssetSummary = getFixedAssetSummary(companyId, dateStr);
+  const fixedAssetsBookValue = fixedAssetSummary.totalBookValue;
+
+  // Accounts Receivable (AR)
+  const agingReport = getAgingReport(companyId, dateStr);
+  const totalAR = agingReport.receivables.total;
+
+  // Liabilities (Loans outstanding)
+  const loans = getLoans().filter(l => l.companyId === companyId && l.startDate <= dateStr);
+  // For simplicity, calculate loan remaining principal: 
+  // Initial Principal - monthly repayments * months elapsed since start
+  let loanLiabilities = 0;
+  const loanDetails = loans.map(loan => {
+    const start = new Date(loan.startDate);
+    const end = new Date(dateStr);
+    const monthsElapsed = Math.max(0, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
+    
+    // Total payments made
+    const paidAmount = Math.min(loan.principal, monthsElapsed * (loan.monthlyPayment || 10000)); 
+    const remainingPrincipal = loan.principal - paidAmount;
+    loanLiabilities += remainingPrincipal;
+
+    return {
+      ...loan,
+      remainingPrincipal
+    };
+  });
+
+  // Accounts Payable (AP)
+  const totalAP = agingReport.payables.total;
+
+  const totalLiabilities = loanLiabilities + totalAP;
+
+  // Equity
+  // Paid-in Capital
+  const equityCalc = getShareholderSharesAtDate(companyId, dateStr);
+  const paidInCapital = equityCalc.totalCapital;
+
+  const totalAssets = totalCash + inventoryAsset + fixedAssetsBookValue + totalAR;
+
+  // Retained Earnings (Cumulative Net Profit up to this date)
+  // Calculated as Assets - Liabilities - Paid-in Capital to ensure perfect balance
+  const retainedEarnings = totalAssets - totalLiabilities - paidInCapital;
+  const totalEquity = paidInCapital + retainedEarnings;
+
+  // Balance Check (Accounting identity: Assets = Liabilities + Equity)
+  const balancingAdjustment = 0;
+
+  return {
+    date: dateStr,
+    assets: {
+      banks: bankBalances,
+      totalCash,
+      inventoryAsset,
+      gasInventory,
+      fixedAssetsCost: fixedAssetSummary.totalCost,
+      fixedAssetsAccumulatedDepreciation: fixedAssetSummary.totalAccumulatedDepreciation,
+      fixedAssetsBookValue,
+      totalAR,
+      totalAssets
+    },
+    liabilities: {
+      loans: loanDetails,
+      loanLiabilities,
+      totalAP,
+      totalLiabilities
+    },
+    equity: {
+      paidInCapital,
+      retainedEarnings,
+      balancingAdjustment,
+      totalEquity
+    }
+  };
+};
+
+/**
+ * 5. Dividend Distribution Generator
+ */
+export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1) => {
+  // 1. Calculate P&L for this month
+  const pnl = getIncomeStatement(companyId, 'month', yearMonthStr);
+  const netProfit = pnl.netProfit;
+
+  // 2. Get Shareholder percentages at the end of this month
+  const lastDayOfMonth = getPeriodEndDate('month', yearMonthStr);
+  const equity = getShareholderSharesAtDate(companyId, lastDayOfMonth);
+  
+  // 3. Calculate Dividends
+  let totalDividends = 0;
+  let reserveAmount = 0;
+  let isLoss = netProfit <= 0;
+
+  if (!isLoss) {
+    reserveAmount = Math.round(netProfit * reserveRatio);
+    totalDividends = netProfit - reserveAmount;
+  }
+
+  const shareholderDividends = equity.shareholders.map(sh => {
+    const dividend = isLoss ? 0 : Math.round(totalDividends * (sh.ratio / 100));
+    return {
+      ...sh,
+      dividend
+    };
+  });
+
+  return {
+    yearMonth: yearMonthStr,
+    netProfit,
+    isLoss,
+    reserveRatio,
+    reserveAmount,
+    totalDividends,
+    shareholderDividends
+  };
+};
+
+export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveRatio = 0.1) => {
+  const pnl = getIncomeStatement(companyId, periodType, periodVal);
+  const netProfit = pnl.netProfit;
+  const endDate = getPeriodEndDate(periodType, periodVal);
+  const equity = getShareholderSharesAtDate(companyId, endDate);
+
+  let totalDividends = 0;
+  let reserveAmount = 0;
+  const isLoss = netProfit <= 0;
+
+  if (!isLoss) {
+    reserveAmount = Math.round(netProfit * reserveRatio);
+    totalDividends = netProfit - reserveAmount;
+  }
+
+  const shareholderDividends = equity.shareholders.map(sh => ({
+    ...sh,
+    dividend: isLoss ? 0 : Math.round(totalDividends * (sh.ratio / 100))
+  }));
+
+  return {
+    yearMonth: getPeriodLabel(periodType, periodVal),
+    netProfit,
+    isLoss,
+    reserveRatio,
+    reserveAmount,
+    totalDividends,
+    shareholderDividends
+  };
+};
+
+/**
+ * 6. Generate LINE Sharing Text
+ */
+export const generateLineShareText = (companyName, divData) => {
+  const label = divData.yearMonth?.includes('-') && divData.yearMonth.length === 7
+    ? `${divData.yearMonth.split('-')[0]}年${parseInt(divData.yearMonth.split('-')[1], 10)}月份`
+    : divData.yearMonth;
+  let text = `📢 【${companyName}】${label} 股東分紅明細\n`;
+  text += `=========================\n`;
+  text += `📊 本月營運成果：\n`;
+  text += `  - 淨利潤：$${divData.netProfit.toLocaleString()}\n`;
+  
+  if (divData.isLoss) {
+    text += `  - 說明：因本月無盈餘/虧損，故不執行分紅分配。\n`;
+  } else {
+    text += `  - 提撥公積金 (${divData.reserveRatio * 100}%)：$${divData.reserveAmount.toLocaleString()}\n`;
+    text += `  - 可分配紅利：$${divData.totalDividends.toLocaleString()}\n`;
+    text += `=========================\n`;
+    text += `💰 股東分紅明細：\n`;
+    divData.shareholderDividends.forEach(sh => {
+      text += `  👤 ${sh.name} (${sh.ratio}%)：$${sh.dividend.toLocaleString()}\n`;
+    });
+  }
+  
+  text += `=========================\n`;
+  text += `💡 本報表由 BusinessPilot ERP 自動生成。`;
+  return text;
+};

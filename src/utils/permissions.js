@@ -1,0 +1,79 @@
+import { USER_ROLES } from '../db/storage';
+
+const ALL_TABS = ['dashboard', 'reports', 'inputs', 'settings', 'firebase'];
+
+export const SENSITIVE_BOOKKEEPER_TABS = ['dashboard', 'reports'];
+
+export const getAllowedTabsForUser = (userRole, user) => {
+  if (userRole === USER_ROLES.ADMIN) return ALL_TABS;
+
+  const configuredTabs = user?.allowedTabs || [];
+
+  if (userRole === USER_ROLES.BOOKKEEPER) {
+    return configuredTabs.filter(tab => ['dashboard', 'reports', 'inputs'].includes(tab));
+  }
+
+  if (userRole === USER_ROLES.READONLY_SHAREHOLDER) {
+    const tabs = configuredTabs.filter(tab => ['dashboard', 'reports', 'settings'].includes(tab));
+    return tabs.includes('settings') ? tabs : [...tabs, 'settings'];
+  }
+
+  if (userRole === USER_ROLES.BUSINESS_REVIEWER) {
+    const tabs = configuredTabs.filter(tab => ['dashboard', 'reports', 'inputs', 'settings'].includes(tab));
+    return tabs.includes('settings') ? tabs : [...tabs, 'settings'];
+  }
+
+  return ['dashboard'];
+};
+
+export const canViewShareholderInfo = (userRole) => (
+  userRole === USER_ROLES.ADMIN ||
+  userRole === USER_ROLES.BUSINESS_REVIEWER ||
+  userRole === USER_ROLES.READONLY_SHAREHOLDER
+);
+
+export const canEditShareholderSettings = (userRole) => userRole === USER_ROLES.ADMIN;
+
+export const canViewAuditLogs = (userRole) => (
+  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
+);
+
+export const canViewShareholderLedger = (userRole) => (
+  userRole === USER_ROLES.ADMIN ||
+  userRole === USER_ROLES.BUSINESS_REVIEWER ||
+  userRole === USER_ROLES.READONLY_SHAREHOLDER
+);
+
+export const canManageShareholderLedger = (userRole) => (
+  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
+);
+
+export const canViewLoans = (userRole) => (
+  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
+);
+
+export const canViewShareholderReports = (userRole) => (
+  userRole !== USER_ROLES.BOOKKEEPER
+);
+
+export const canExportReports = (userRole) => (
+  userRole === USER_ROLES.ADMIN ||
+  userRole === USER_ROLES.BUSINESS_REVIEWER ||
+  userRole === USER_ROLES.READONLY_SHAREHOLDER
+);
+
+export const canInputBasicLedger = (userRole) => (
+  userRole === USER_ROLES.ADMIN ||
+  userRole === USER_ROLES.BUSINESS_REVIEWER ||
+  userRole === USER_ROLES.BOOKKEEPER
+);
+
+export const canReviewLedger = (userRole) => (
+  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
+);
+
+export const canVoidLedger = (userRole) => userRole === USER_ROLES.ADMIN;
+
+export const canViewCreatorAudit = (userRole) => (
+  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
+);

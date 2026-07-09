@@ -1,0 +1,194 @@
+{
+  "exportedAt": "2026-07-07T07:31:07.253Z",
+  "source": "supabase.app_state.main",
+  "projectRef": "buacrgrprrpbgtekqdfi",
+  "data": {
+    "id": "main",
+    "state": {
+      "logs": [],
+      "banks": [],
+      "loans": [],
+      "incomes": [],
+      "expenses": [],
+      "companies": [
+        {
+          "id": "COMP001",
+          "desc": "瓦斯行營運主體",
+          "name": "盛隆瓦斯行"
+        }
+      ],
+      "auditArchive": [],
+      "dailyBackups": [
+        {
+          "id": "BAK20260707071713782BY2NMC",
+          "actor": "系統每日備份",
+          "snapshot": {
+            "logs": [],
+            "banks": [],
+            "loans": [],
+            "incomes": [],
+            "expenses": [],
+            "companies": [
+              {
+                "id": "COMP001",
+                "desc": "瓦斯行營運主體",
+                "name": "盛隆瓦斯行"
+              }
+            ],
+            "auditArchive": [],
+            "dailyBackups": [],
+            "shareholders": [],
+            "resetSnapshots": [],
+            "chartOfAccounts": [
+              {
+                "code": "4101",
+                "desc": "主要商品營業收入",
+                "name": "銷貨收入",
+                "type": "revenue"
+              },
+              {
+                "code": "4102",
+                "desc": "安裝及爐具檢修收入",
+                "name": "維修服務收入",
+                "type": "revenue"
+              },
+              {
+                "code": "4103",
+                "desc": "非主營業務之金流",
+                "name": "其他營業收入",
+                "type": "revenue"
+              },
+              {
+                "code": "5101",
+                "desc": "瓦斯分裝廠進氣成本",
+                "name": "進氣成本",
+                "type": "cogs"
+              },
+              {
+                "code": "5102",
+                "desc": "爐具、管線與安全閥進貨",
+                "name": "材料零件成本",
+                "type": "cogs"
+              },
+              {
+                "code": "6101",
+                "desc": "正職員工及配送司機薪資",
+                "name": "員工薪資",
+                "type": "expense"
+              },
+              {
+                "code": "6102",
+                "desc": "店面與鋼瓶放置場租金",
+                "name": "店租費用",
+                "type": "expense"
+              },
+              {
+                "code": "6103",
+                "desc": "送貨小貨車之加油費用",
+                "name": "車輛油資",
+                "type": "expense"
+              },
+              {
+                "code": "6104",
+                "desc": "貨車牌照、檢驗、損耗修繕",
+                "name": "車輛折舊與維修",
+                "type": "expense"
+              },
+              {
+                "code": "6105",
+                "desc": "水費、電費、店內瓦斯、電話費",
+                "name": "水電瓦斯與電信",
+                "type": "expense"
+              },
+              {
+                "code": "6106",
+                "desc": "文具、交際費、清潔用品等",
+                "name": "雜項支出",
+                "type": "expense"
+              }
+            ],
+            "bankTransactions": [],
+            "shareholderLedger": []
+          },
+          "archivedAt": "2026-07-07T07:17:13.782Z",
+          "backupDate": "2026-07-07",
+          "purgeAfter": "2027-07-07T07:17:13.782Z"
+        }
+      ],
+      "shareholders": [],
+      "resetSnapshots": [],
+      "chartOfAccounts": [
+        {
+          "code": "4101",
+          "desc": "主要商品營業收入",
+          "name": "銷貨收入",
+          "type": "revenue"
+        },
+        {
+          "code": "4102",
+          "desc": "安裝及爐具檢修收入",
+          "name": "維修服務收入",
+          "type": "revenue"
+        },
+        {
+          "code": "4103",
+          "desc": "非主營業務之金流",
+          "name": "其他營業收入",
+          "type": "revenue"
+        },
+        {
+          "code": "5101",
+          "desc": "瓦斯分裝廠進氣成本",
+          "name": "進氣成本",
+          "type": "cogs"
+        },
+        {
+          "code": "5102",
+          "desc": "爐具、管線與安全閥進貨",
+          "name": "材料零件成本",
+          "type": "cogs"
+        },
+        {
+          "code": "6101",
+          "desc": "正職員工及配送司機薪資",
+          "name": "員工薪資",
+          "type": "expense"
+        },
+        {
+          "code": "6102",
+          "desc": "店面與鋼瓶放置場租金",
+          "name": "店租費用",
+          "type": "expense"
+        },
+        {
+          "code": "6103",
+          "desc": "送貨小貨車之加油費用",
+          "name": "車輛油資",
+          "type": "expense"
+        },
+        {
+          "code": "6104",
+          "desc": "貨車牌照、檢驗、損耗修繕",
+          "name": "車輛折舊與維修",
+          "type": "expense"
+        },
+        {
+          "code": "6105",
+          "desc": "水費、電費、店內瓦斯、電話費",
+          "name": "水電瓦斯與電信",
+          "type": "expense"
+        },
+        {
+          "code": "6106",
+          "desc": "文具、交際費、清潔用品等",
+          "name": "雜項支出",
+          "type": "expense"
+        }
+      ],
+      "bankTransactions": [],
+      "shareholderLedger": []
+    },
+    "updated_at": "2026-07-07T07:17:13.783+00:00",
+    "updated_by": "系統每日備份"
+  }
+}
