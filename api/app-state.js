@@ -70,6 +70,73 @@ const validateStateWriteScope = (previousState, nextState, sessionUser) => {
     };
   }
 
+  // --- Enforce Backend Period Locks for Non-Admins ---
+  const locks = Array.isArray(nextState.periodLocks) ? nextState.periodLocks : [];
+  const lockedPeriods = new Set(locks.filter(l => l.locked).map(l => l.yearMonth));
+
+  if (lockedPeriods.size > 0) {
+    const getPeriod = (dateStr) => String(dateStr || '').slice(0, 7);
+    const isPeriodLocked = (dateStr) => lockedPeriods.has(getPeriod(dateStr));
+
+    // Compare incomes
+    const prevIncomes = Array.isArray(previousState.incomes) ? previousState.incomes : [];
+    const nextIncomes = Array.isArray(nextState.incomes) ? nextState.incomes : [];
+    const prevIncomesMap = new Map(prevIncomes.map(i => [i.id, i]));
+    const nextIncomesMap = new Map(nextIncomes.map(i => [i.id, i]));
+
+    for (const item of nextIncomes) {
+      const prev = prevIncomesMap.get(item.id);
+      if (!prev) {
+        if (isPeriodLocked(item.date)) {
+          return { ok: false, error: `Cannot add transactions to a locked period (${getPeriod(item.date)}).` };
+        }
+      } else {
+        if (JSON.stringify(prev) !== JSON.stringify(item)) {
+          if (isPeriodLocked(prev.date) || isPeriodLocked(item.date)) {
+            return { ok: false, error: `Cannot modify transactions in a locked period (${getPeriod(prev.date)}).` };
+          }
+        }
+      }
+    }
+
+    for (const item of prevIncomes) {
+      if (!nextIncomesMap.has(item.id)) {
+        if (isPeriodLocked(item.date)) {
+          return { ok: false, error: `Cannot delete transactions in a locked period (${getPeriod(item.date)}).` };
+        }
+      }
+    }
+
+    // Compare expenses
+    const prevExpenses = Array.isArray(previousState.expenses) ? previousState.expenses : [];
+    const nextExpenses = Array.isArray(nextState.expenses) ? nextState.expenses : [];
+    const prevExpensesMap = new Map(prevExpenses.map(e => [e.id, e]));
+    const nextExpensesMap = new Map(nextExpenses.map(e => [e.id, e]));
+
+    for (const item of nextExpenses) {
+      const prev = prevExpensesMap.get(item.id);
+      if (!prev) {
+        if (isPeriodLocked(item.date)) {
+          return { ok: false, error: `Cannot add transactions to a locked period (${getPeriod(item.date)}).` };
+        }
+      } else {
+        if (JSON.stringify(prev) !== JSON.stringify(item)) {
+          if (isPeriodLocked(prev.date) || isPeriodLocked(item.date)) {
+            return { ok: false, error: `Cannot modify transactions in a locked period (${getPeriod(prev.date)}).` };
+          }
+        }
+      }
+    }
+
+    for (const item of prevExpenses) {
+      if (!nextExpensesMap.has(item.id)) {
+        if (isPeriodLocked(item.date)) {
+          return { ok: false, error: `Cannot delete transactions in a locked period (${getPeriod(item.date)}).` };
+        }
+      }
+    }
+  }
+
   return { ok: true };
 };
 
