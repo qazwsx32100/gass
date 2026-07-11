@@ -43,15 +43,20 @@ export const signToken = (payload) => {
 };
 
 export const verifyToken = (token) => {
-  if (!token || !token.includes('.')) return null;
-  const [encoded, signature] = token.split('.');
-  const expected = crypto.createHmac('sha256', getSyncSecret()).update(encoded).digest('base64url');
-  if (Buffer.byteLength(signature) !== Buffer.byteLength(expected)) return null;
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  try {
+    if (!token || !token.includes('.')) return null;
+    const [encoded, signature] = token.split('.');
+    if (!encoded || !signature) return null;
+    const expected = crypto.createHmac('sha256', getSyncSecret()).update(encoded).digest('base64url');
+    if (Buffer.byteLength(signature) !== Buffer.byteLength(expected)) return null;
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
 
-  const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
-  if (!payload.exp || payload.exp < Date.now()) return null;
-  return payload;
+    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    if (!payload.exp || payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 };
 
 export const hashPassword = (password, salt = crypto.randomBytes(16).toString('hex')) => {
@@ -89,6 +94,34 @@ const stripCredentialFields = (record = {}) => {
   return cleaned;
 };
 
+const stripClientSensitiveFields = (record = {}, { includeDeviceManagement = false } = {}) => {
+  const cleaned = stripCredentialFields(record);
+  delete cleaned.emailVerificationToken;
+  delete cleaned.emailVerificationExpiresAt;
+
+  if (!includeDeviceManagement) {
+    delete cleaned.approvedDevices;
+    delete cleaned.pendingDevices;
+  }
+
+  return cleaned;
+};
+
+const preserveHiddenSecurityFields = (incoming = {}, previous = {}) => {
+  const merged = { ...incoming };
+  [
+    'approvedDevices',
+    'pendingDevices',
+    'emailVerificationToken',
+    'emailVerificationExpiresAt'
+  ].forEach((field) => {
+    if (merged[field] === undefined && previous[field] !== undefined) {
+      merged[field] = previous[field];
+    }
+  });
+  return merged;
+};
+
 const getCredentialFields = (record = {}, fallbackPassword = '') => {
   if (record.passwordHash && record.passwordSalt) {
     return {
@@ -102,11 +135,16 @@ const getCredentialFields = (record = {}, fallbackPassword = '') => {
   return legacyPassword ? hashPassword(legacyPassword) : {};
 };
 
-export const sanitizeStateForClient = (state = {}) => {
+export const sanitizeStateForClient = (state = {}, session = null) => {
   const sanitized = cloneJson(state);
-  sanitized.adminSecurity = stripCredentialFields(sanitized.adminSecurity || {});
+  const isAdmin = session?.id === 'ADMIN' || session?.role === 'admin';
+  sanitized.adminSecurity = stripClientSensitiveFields(sanitized.adminSecurity || {}, {
+    includeDeviceManagement: isAdmin
+  });
   sanitized.shareholders = Array.isArray(sanitized.shareholders)
-    ? sanitized.shareholders.map(stripCredentialFields)
+    ? sanitized.shareholders.map(item => stripClientSensitiveFields(item, {
+        includeDeviceManagement: isAdmin
+      }))
     : [];
   return sanitized;
 };
@@ -121,7 +159,7 @@ export const secureStateForSave = (incomingState = {}, previousState = {}) => {
     if (item?.email) previousByKey.set(`email:${String(item.email).trim().toLowerCase()}`, item);
   });
 
-  const adminInput = state.adminSecurity || {};
+  const adminInput = preserveHiddenSecurityFields(state.adminSecurity || {}, previousState.adminSecurity || {});
   const adminPrevious = previousState.adminSecurity || {};
   const adminCredential = normalizePassword(adminInput.password)
     ? hashPassword(adminInput.password)
@@ -136,11 +174,12 @@ export const secureStateForSave = (incomingState = {}, previousState = {}) => {
         const previous = previousByKey.get(`id:${item.id}`) ||
           previousByKey.get(`email:${String(item.email || '').trim().toLowerCase()}`) ||
           {};
-        const credential = normalizePassword(item.password)
-          ? hashPassword(item.password)
+        const mergedItem = preserveHiddenSecurityFields(item, previous);
+        const credential = normalizePassword(mergedItem.password)
+          ? hashPassword(mergedItem.password)
           : getCredentialFields(previous);
         return {
-          ...stripCredentialFields(item),
+          ...stripCredentialFields(mergedItem),
           ...credential
         };
       })

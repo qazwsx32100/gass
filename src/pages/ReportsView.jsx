@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getGasInventoryValuationAtDate, getJournalEntries, getVatReport, getPayrollReport, getAuditReadinessReport } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses } from '../db/storage';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getGasInventoryValuationAtDate, getJournalEntries, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary } from '../utils/financials';
+import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 
@@ -178,6 +178,13 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getAuditReadinessReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
+  const arapAsOfDate = useMemo(() => getPeriodEndDate(activePeriodType, activePeriodVal), [activePeriodType, activePeriodVal]);
+  const agingReport = useMemo(() => getAgingReport(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
+  const customerReceivables = useMemo(() => getCustomerReceivableSummary(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
+  const supplierPayables = useMemo(() => getSupplierPayableSummary(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
+  const customers = useMemo(() => getCustomers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const suppliers = useMemo(() => getSuppliers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+
   const revenuePieItems = useMemo(() => (
     pnl.revenueItems.map(item => ({ label: `${item.code} ${item.name}`, amount: item.amount }))
   ), [pnl]);
@@ -245,6 +252,21 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['資產總計 (Total Assets)', balanceSheet.assets.totalAssets, '權益總計 (Total Equity)', balanceSheet.equity.totalEquity],
         [],
         ['', '', '負債與權益總計 (Total L&E)', balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity]
+      ];
+    } else if (reportType === 'arap') {
+      csvRows = [
+        [`${companyName} - 應收應付帳齡表`],
+        [`基準日: ${arapAsOfDate}`],
+        [],
+        ['項目', '0-30', '31-60', '61-90', '90+', '合計'],
+        ['應收帳款', agingReport.receivables.buckets.current.total, agingReport.receivables.buckets.days31to60.total, agingReport.receivables.buckets.days61to90.total, agingReport.receivables.buckets.over90.total, agingReport.receivables.total],
+        ['應付帳款', agingReport.payables.buckets.current.total, agingReport.payables.buckets.days31to60.total, agingReport.payables.buckets.days61to90.total, agingReport.payables.buckets.over90.total, agingReport.payables.total],
+        [],
+        ['客戶', '統編', '未收款', '未收筆數', '最長帳齡'],
+        ...customerReceivables.map(row => [row.name, row.taxId || '', row.receivableTotal, row.unpaidCount, row.oldestDays]),
+        [],
+        ['供應商', '統編', '未付款', '未付筆數', '最長帳齡'],
+        ...supplierPayables.map(row => [row.name, row.taxId || '', row.payableTotal, row.unpaidCount, row.oldestDays])
       ];
     } else if (reportType === 'gas') {
       csvRows = [
@@ -358,6 +380,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
             </button>
             <button className={`tab-btn ${reportType === 'gas' ? 'active' : ''}`} onClick={() => setReportType('gas')}>
               🛢️ 瓦斯毛利表
+            </button>
+            <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
+              應收/應付
             </button>
             <button className={`tab-btn ${reportType === 'investor' ? 'active' : ''}`} onClick={() => setReportType('investor')}>
               🧾 投資人摘要
@@ -691,6 +716,90 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   差額：${balanceSheet.equity.balancingAdjustment.toLocaleString()}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {reportType === 'arap' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">應收 / 應付帳齡表</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>基準日：{arapAsOfDate}</span>
+            </div>
+            <div className="card-body">
+              <div className="summary-grid" style={{ marginBottom: '16px' }}>
+                <div className="summary-card">
+                  <div className="summary-label">應收帳款</div>
+                  <div className="summary-value income">${agingReport.receivables.total.toLocaleString()}</div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-label">應付帳款</div>
+                  <div className="summary-value expense">${agingReport.payables.total.toLocaleString()}</div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-label">逾期 90 天以上應收</div>
+                  <div className="summary-value expense">${agingReport.receivables.buckets.over90.total.toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="grid-2col" style={{ marginBottom: '20px' }}>
+                <div>
+                  <div className="financial-row header-row"><span>應收帳齡</span><span>金額</span></div>
+                  <div className="financial-row"><span>0-30 天</span><span>${agingReport.receivables.buckets.current.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>31-60 天</span><span>${agingReport.receivables.buckets.days31to60.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>61-90 天</span><span>${agingReport.receivables.buckets.days61to90.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>90 天以上</span><span>${agingReport.receivables.buckets.over90.total.toLocaleString()}</span></div>
+                </div>
+                <div>
+                  <div className="financial-row header-row"><span>應付帳齡</span><span>金額</span></div>
+                  <div className="financial-row"><span>0-30 天</span><span>${agingReport.payables.buckets.current.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>31-60 天</span><span>${agingReport.payables.buckets.days31to60.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>61-90 天</span><span>${agingReport.payables.buckets.days61to90.total.toLocaleString()}</span></div>
+                  <div className="financial-row"><span>90 天以上</span><span>${agingReport.payables.buckets.over90.total.toLocaleString()}</span></div>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '1rem', margin: '16px 0 8px' }}>客戶未收款</h3>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>客戶</th><th>統編</th><th style={{ textAlign: 'right' }}>未收款</th><th>未收筆數</th><th>最長帳齡</th></tr></thead>
+                  <tbody>
+                    {customerReceivables.map(row => (
+                      <tr key={row.id}>
+                        <td>{row.name}</td>
+                        <td>{row.taxId || '-'}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${Number(row.receivableTotal || 0).toLocaleString()}</td>
+                        <td>{row.unpaidCount}</td>
+                        <td>{row.unpaidCount ? `${row.oldestDays} 天` : '-'}</td>
+                      </tr>
+                    ))}
+                    {customers.length === 0 && (
+                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>尚未建立客戶主檔</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 style={{ fontSize: '1rem', margin: '20px 0 8px' }}>供應商未付款</h3>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>供應商</th><th>統編</th><th style={{ textAlign: 'right' }}>未付款</th><th>未付筆數</th><th>最長帳齡</th></tr></thead>
+                  <tbody>
+                    {supplierPayables.map(row => (
+                      <tr key={row.id}>
+                        <td>{row.name}</td>
+                        <td>{row.taxId || '-'}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${Number(row.payableTotal || 0).toLocaleString()}</td>
+                        <td>{row.unpaidCount}</td>
+                        <td>{row.unpaidCount ? `${row.oldestDays} 天` : '-'}</td>
+                      </tr>
+                    ))}
+                    {suppliers.length === 0 && (
+                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>尚未建立供應商主檔</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

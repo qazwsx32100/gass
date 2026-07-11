@@ -20,6 +20,12 @@ const DATA_KEYS = {
   dailyBackups: 'bp_daily_backups',
   outboundEmails: 'bp_outbound_emails',
   periodLocks: 'bp_period_locks',
+  customers: 'bp_customers',
+  suppliers: 'bp_suppliers',
+  goLiveChecks: 'bp_go_live_checks',
+  backupRestoreDrills: 'bp_backup_restore_drills',
+  productionInitialization: 'bp_production_initialization',
+  gasInventoryModulePlan: 'bp_gas_inventory_module_plan',
   adminSecurity: 'bp_admin_security'
 };
 

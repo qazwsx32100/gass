@@ -1,4 +1,4 @@
-import {
+﻿import {
   fetchAppState,
   getClientIp,
   sanitizeStateForClient,
@@ -10,8 +10,30 @@ import {
 
 const ADMIN_EMAIL = 'qazwsx32100@gmail.com';
 const ADMIN_DEFAULT_PASSWORD = 'windsboy123';
+const LOGIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const LOGIN_RATE_LIMIT_MAX = 12;
+const loginAttempts = new Map();
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
+const rateLimitKey = (req, email) => `${getClientIp(req)}:${email || 'unknown'}`;
+
+const isLoginRateLimited = (req, email) => {
+  const key = rateLimitKey(req, email);
+  const now = Date.now();
+  const current = loginAttempts.get(key) || { count: 0, resetAt: now + LOGIN_RATE_LIMIT_WINDOW_MS };
+  if (current.resetAt <= now) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  current.count += 1;
+  loginAttempts.set(key, current);
+  return current.count > LOGIN_RATE_LIMIT_MAX;
+};
+
+const clearLoginRateLimit = (req, email) => {
+  loginAttempts.delete(rateLimitKey(req, email));
+};
 
 const upsertDevice = (devices = [], device = {}, status = 'pending') => {
   const now = new Date().toISOString();
@@ -66,7 +88,7 @@ const appendLog = (state, operator, action, details) => ({
 const getAdminDisplayName = (state) => {
   const shareholders = state.shareholders || [];
   const owner = shareholders.find(s => s.id === 'SH001' || normalizeEmail(s.email) === ADMIN_EMAIL);
-  return owner?.name || '主管理員';
+  return owner?.name || '銝餌恣?';
 };
 
 const publicUserFromState = (state, id, fallback) => (
@@ -87,6 +109,10 @@ export default async function handler(req, res) {
     const password = String(body.password || '').trim();
     const device = body.device || {};
 
+    if (isLoginRateLimited(req, email)) {
+      return sendJson(res, 429, { success: false, error: '登入嘗試過多，請稍後再試。' });
+    }
+
     const row = await fetchAppState();
     const previousState = row.state || {};
     let state = { ...previousState };
@@ -104,9 +130,8 @@ export default async function handler(req, res) {
       const hasStoredAdminPassword = Boolean(security.password || (security.passwordHash && security.passwordSalt));
 
       if (!verifyPassword(password, security, ADMIN_DEFAULT_PASSWORD)) {
-        state = appendLog(state, email, 'LOGIN_FAILED', '主管理員密碼錯誤');
-        await saveAppState({ state, updatedBy: '登入失敗', requestIp: getClientIp(req), previousState });
-        return sendJson(res, 401, { success: false, error: '帳號或密碼不正確。' });
+        console.warn('admin login failed', { email, ip: getClientIp(req) });
+        return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
       }
 
       if (!hasStoredAdminPassword) {
@@ -125,15 +150,15 @@ export default async function handler(req, res) {
 
       if (!isDeviceApproved(security, device)) {
         security.pendingDevices = upsertDevice(security.pendingDevices, device, 'pending');
-        state = appendLog({ ...state, adminSecurity: security }, displayName, 'DEVICE_PENDING', '主管理員使用新裝置登入，等待核准');
+        state = appendLog({ ...state, adminSecurity: security }, displayName, 'DEVICE_PENDING', '主管理員裝置等待核准');
         await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
-        return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請先由主管理員核准裝置。' });
+        return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請由主管理員核准後再登入。' });
       }
 
-      state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '主管理員登入成功');
+      state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '銝餌恣??餃??');
       await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
+      clearLoginRateLimit(req, email);
 
-      const publicState = sanitizeStateForClient(state);
       const user = {
         id: 'ADMIN',
         name: displayName,
@@ -142,6 +167,7 @@ export default async function handler(req, res) {
         shareholderId: 'SH001',
         requiresPasswordChange: security.requiresPasswordChange
       };
+      const publicState = sanitizeStateForClient(state, user);
 
       return sendJson(res, 200, {
         success: true,
@@ -158,9 +184,8 @@ export default async function handler(req, res) {
     const idx = shareholders.findIndex(s => normalizeEmail(s.email) === email && verifyPassword(password, s));
 
     if (idx === -1) {
-      state = appendLog(state, email || '未知帳號', 'LOGIN_FAILED', '帳號或密碼錯誤');
-      await saveAppState({ state, updatedBy: '登入失敗', requestIp: getClientIp(req), previousState });
-      return sendJson(res, 401, { success: false, error: '帳號或密碼不正確。' });
+      console.warn('user login failed', { email: email || 'unknown', ip: getClientIp(req) });
+      return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
     }
 
     const user = {
@@ -179,15 +204,16 @@ export default async function handler(req, res) {
         ...shareholders[idx],
         pendingDevices: upsertDevice(shareholders[idx].pendingDevices, device, 'pending')
       };
-      state = appendLog({ ...state, shareholders }, user.name || email, 'DEVICE_PENDING', '新裝置登入，等待核准');
+      state = appendLog({ ...state, shareholders }, user.name || email, 'DEVICE_PENDING', '裝置等待核准');
       await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
-      return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請先由主管理員核准裝置。' });
+      return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請由主管理員核准後再登入。' });
     }
 
     state = appendLog(state, user.name || email, 'LOGIN_SUCCESS', '登入成功');
     await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
+    clearLoginRateLimit(req, email);
 
-    const publicState = sanitizeStateForClient(state);
+    const publicState = sanitizeStateForClient(state, user);
     const publicUser = publicUserFromState(publicState, user.id, {
       id: user.id,
       name: user.name,

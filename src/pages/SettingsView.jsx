@@ -18,6 +18,7 @@ import {
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
 import { createManualCloudBackup, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
+import GoLiveView from './GoLiveView';
 
 export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole }) {
   const [innerTab, setInnerTab] = useState('shareholder');
@@ -665,12 +666,15 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'budgets' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('budgets')}>
             ?? ???頂蝯梯身摰?          </button>
+          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
+            上線檢查
+          </button>
         </div>
       )}
 
       {/* 2. Main content container */}
       <div style={{ width: '100%' }}>
-        {activeSettingsTab !== 'backup' && activeSettingsTab !== 'security' && activeSettingsTab !== 'periodLocks' && activeSettingsTab !== 'budgets' && (
+        {activeSettingsTab !== 'backup' && activeSettingsTab !== 'security' && activeSettingsTab !== 'periodLocks' && activeSettingsTab !== 'budgets' && activeSettingsTab !== 'goLive' && (
           <div className="card">
             <div className="card-header">
               <span className="card-title">
@@ -949,6 +953,14 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               </div>
             </div>
           </div>
+        )}
+
+        {activeSettingsTab === 'goLive' && (
+          <GoLiveView
+            companies={companies}
+            onDataChange={onDataChange}
+            showToast={showToast}
+          />
         )}
 
         {activeSettingsTab === 'security' && (

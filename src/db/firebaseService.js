@@ -93,6 +93,8 @@ export const initFirebase = (onSync) => {
           if (cloudData.bankReconciliations) localStorage.setItem('bp_bank_reconciliations', JSON.stringify(cloudData.bankReconciliations));
           if (cloudData.fixedAssets) localStorage.setItem('bp_fixed_assets', JSON.stringify(cloudData.fixedAssets));
           if (cloudData.gasInventoryPeriods) localStorage.setItem('bp_gas_inventory_periods', JSON.stringify(cloudData.gasInventoryPeriods));
+          if (cloudData.customers) localStorage.setItem('bp_customers', JSON.stringify(cloudData.customers));
+          if (cloudData.suppliers) localStorage.setItem('bp_suppliers', JSON.stringify(cloudData.suppliers));
           if (cloudData.logs) localStorage.setItem('bp_logs', JSON.stringify(cloudData.logs));
           
           localStorage.setItem('bp_cloud_updated_at', String(cloudUpdatedAt));
@@ -151,6 +153,8 @@ export const syncLocalToCloud = async (operatorName = '系統') => {
       bankReconciliations: readLocal('bp_bank_reconciliations'),
       fixedAssets: readLocal('bp_fixed_assets'),
       gasInventoryPeriods: readLocal('bp_gas_inventory_periods'),
+      customers: readLocal('bp_customers'),
+      suppliers: readLocal('bp_suppliers'),
       logs: readLocal('bp_logs'),
       updatedAt,
       updatedBy: operatorName

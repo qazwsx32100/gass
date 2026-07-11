@@ -1,6 +1,6 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
-import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getFixedAssets } from '../db/storage';
+import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getFixedAssets, getCustomers, getSuppliers } from '../db/storage';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -118,6 +118,106 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
         over90: { total: summarize(payables)['90+'] }
       }
     },
+  };
+};
+
+const matchCustomerIncome = (income, customer) => {
+  if (!income || !customer) return false;
+  if (income.customerId && income.customerId === customer.id) return true;
+  const target = String(customer.name || '').trim();
+  if (!target) return false;
+  return [income.counterpartyName, income.customerName, income.clientName, income.remarks]
+    .some(value => String(value || '').includes(target));
+};
+
+const matchSupplierExpense = (expense, supplier) => {
+  if (!expense || !supplier) return false;
+  if (expense.supplierId && expense.supplierId === supplier.id) return true;
+  const target = String(supplier.name || '').trim();
+  if (!target) return false;
+  return [expense.counterpartyName, expense.supplierName, expense.vendorName, expense.remarks]
+    .some(value => String(value || '').includes(target));
+};
+
+export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+  const customers = getCustomers().filter(item => item.companyId === companyId && item.status !== 'inactive');
+  const unpaidIncomes = getIncomes().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.paymentStatus === 'unpaid'
+  );
+
+  return customers.map(customer => {
+    const rows = unpaidIncomes.filter(income => matchCustomerIncome(income, customer));
+    const total = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const oldestDays = rows.reduce((max, item) => {
+      const dueDate = item.dueDate || item.checkDueDate || item.date;
+      return Math.max(max, daysBetween(dueDate, asOfDate));
+    }, 0);
+    return {
+      ...customer,
+      receivableTotal: total,
+      unpaidCount: rows.length,
+      oldestDays,
+      agingBucket: getAgingBucket(oldestDays)
+    };
+  }).sort((a, b) => b.receivableTotal - a.receivableTotal);
+};
+
+export const getSupplierPayableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+  const suppliers = getSuppliers().filter(item => item.companyId === companyId && item.status !== 'inactive');
+  const unpaidExpenses = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.paymentStatus === 'unpaid'
+  );
+
+  return suppliers.map(supplier => {
+    const rows = unpaidExpenses.filter(expense => matchSupplierExpense(expense, supplier));
+    const total = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const oldestDays = rows.reduce((max, item) => {
+      const dueDate = item.dueDate || item.checkDueDate || item.date;
+      return Math.max(max, daysBetween(dueDate, asOfDate));
+    }, 0);
+    return {
+      ...supplier,
+      payableTotal: total,
+      unpaidCount: rows.length,
+      oldestDays,
+      agingBucket: getAgingBucket(oldestDays)
+    };
+  }).sort((a, b) => b.payableTotal - a.payableTotal);
+};
+
+export const getCustomerStatement = (companyId, customerId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const customer = getCustomers().find(item => item.companyId === companyId && item.id === customerId);
+  if (!customer) return { customer: null, rows: [], total: 0, unpaidTotal: 0 };
+  const rows = getIncomes()
+    .filter(item => item.companyId === companyId && matchCustomerIncome(item, customer) && isDateInPeriod(item.date, periodType, periodVal))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  return {
+    customer,
+    rows,
+    total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    unpaidTotal: rows
+      .filter(item => item.paymentStatus === 'unpaid')
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+  };
+};
+
+export const getSupplierStatement = (companyId, supplierId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const supplier = getSuppliers().find(item => item.companyId === companyId && item.id === supplierId);
+  if (!supplier) return { supplier: null, rows: [], total: 0, unpaidTotal: 0 };
+  const rows = getExpenses()
+    .filter(item => item.companyId === companyId && matchSupplierExpense(item, supplier) && isDateInPeriod(item.date, periodType, periodVal))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  return {
+    supplier,
+    rows,
+    total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    unpaidTotal: rows
+      .filter(item => item.paymentStatus === 'unpaid')
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0)
   };
 };
 

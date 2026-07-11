@@ -8,7 +8,7 @@ import {
   getBankReconciliations, saveBankReconciliations,
   getFixedAssets, saveFixedAssets,
   getLogs, addLog,
-  getShareholders, getBanks, getChartOfAccounts,
+  getShareholders, getBanks, getChartOfAccounts, getCustomers, getSuppliers,
   USER_ROLES,
   archiveChange, archiveDeletion,
   isPeriodLocked
@@ -34,7 +34,7 @@ import {
 const STATUS_LABELS = {
   draft: '草稿',
   pending_admin_review: '待管理員審核',
-  pending_business_review: '待經營股東審核',
+  pending_business_review: '待審核管理者審核',
   pending_second_admin_review: '待第二管理員覆核',
   approved: '已核准',
   returned: '已退回',
@@ -45,8 +45,8 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: 'cash', label: '現金' },
   { value: 'bank_transfer', label: '銀行轉帳' },
   { value: 'check', label: '支票' },
-  { value: 'receivable', label: '月結應收' },
-  { value: 'payable', label: '月結應付' },
+  { value: 'receivable', label: '應收款' },
+  { value: 'payable', label: '應付款' },
   { value: 'other', label: '其他' }
 ];
 
@@ -101,9 +101,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (tab === 'assets') return item.acquisitionDate;
     return item.date;
   };
-  const blockIfPeriodLocked = (dateOrYearMonth, actionLabel = '異動') => {
+  const blockIfPeriodLocked = (dateOrYearMonth, actionLabel = '新增') => {
     if (!isPeriodLocked(companyId, dateOrYearMonth)) return false;
-    window.alert(`此月份已月結鎖帳，不能${actionLabel}。請先由主管理員到設定解除鎖帳。`);
+    window.alert(`此月份已鎖帳，不能${actionLabel}。請改用更正沖銷或請系統管理員重新開放月份。`);
     return true;
   };
 
@@ -139,8 +139,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const exps = getExpenses().filter(e => e.companyId === companyId && e.paymentMethod === 'check' && e.status === 'approved');
 
     const all = [
-      ...incs.map(i => ({ ...i, type: 'income', label: '應收票據' })),
-      ...exps.map(e => ({ ...e, type: 'expense', label: '應付票據' }))
+      ...incs.map(i => ({ ...i, type: 'income', label: '?蟡冽?' })),
+      ...exps.map(e => ({ ...e, type: 'expense', label: '??蟡冽?' }))
     ];
 
     return all.filter(item => {
@@ -168,8 +168,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const handleClearSubmit = (e) => {
     e.preventDefault();
     if (!clearingItem) return;
-    if (blockIfPeriodLocked(clearingItem.date, '沖銷這筆應收應付')) return;
-    if (blockIfPeriodLocked(clearData.date, '在鎖帳月份入帳')) return;
+    if (blockIfPeriodLocked(clearingItem.date, '結清原應收應付')) return;
+    if (blockIfPeriodLocked(clearData.date, '結清入帳')) return;
 
     const isIncome = clearingItem.type === 'income';
     const db = isIncome ? getIncomes() : getExpenses();
@@ -182,22 +182,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     let methodLabel = '';
 
     if (isClearingCheck) {
-      targetBankName = getBankName(clearData.bankId) || '店內零用金/現金';
+      targetBankName = getBankName(clearData.bankId) || '未指定銀行';
       db[index] = {
         ...db[index],
         bankId: clearData.bankId,
         paymentStatus: 'paid',
-        remarks: `${db[index].remarks || ''} (於 ${clearData.date} 票據兌現存入/扣款自 ${targetBankName})`.trim()
+        remarks: `${db[index].remarks || ''} (${clearData.date} 支票兌現入帳：${targetBankName})`.trim()
       };
     } else {
       methodLabel = PAYMENT_METHOD_OPTIONS.find(o => o.value === clearData.method)?.label || clearData.method;
-      targetBankName = clearData.method === 'bank_transfer' ? getBankName(clearData.bankId) : '店內零用金/現金';
+      targetBankName = clearData.method === 'bank_transfer' ? getBankName(clearData.bankId) : '現金';
       db[index] = {
         ...db[index],
         paymentMethod: clearData.method,
         bankId: clearData.method === 'bank_transfer' ? clearData.bankId : (clearData.method === 'cash' ? 'BANK_PETTY' : ''),
         paymentStatus: 'paid',
-        remarks: `${db[index].remarks || ''} (於 ${clearData.date} 經 ${methodLabel} 結清入 ${targetBankName})`.trim()
+        remarks: `${db[index].remarks || ''} (${clearData.date} 以 ${methodLabel} 結清：${targetBankName})`.trim()
       };
     }
 
@@ -211,25 +211,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       before,
       after: db[index],
       actor: operatorName,
-      reason: isClearingCheck ? `兌現${isIncome ? '應收' : '應付'}票據` : `結清${isIncome ? '應收' : '應付'}帳款`
+      reason: isClearingCheck ? '支票兌現' : '結清應收應付'
     });
 
-    addLog(
-      operatorName, 
-      isClearingCheck ? `兌現票據` : `結清${isIncome ? '應收' : '應付'}`, 
-      isClearingCheck 
-        ? `已兌現票據 ${clearingItem.id}，票號：${clearingItem.checkNo || '無'}，金額 $${clearingItem.amount.toLocaleString()} 元。兌現帳戶：${targetBankName}。`
-        : `已結清帳單 ${clearingItem.id}，金額 $${clearingItem.amount.toLocaleString()} 元。支付方式：${methodLabel} (${targetBankName})。`
-    );
-
+    addLog(operatorName, isClearingCheck ? '支票兌現' : '結清應收應付', `資料 ${clearingItem.id} 已結清，金額 $${clearingItem.amount.toLocaleString()}。`);
     setClearingItem(null);
     onDataChange();
   };
-
   // Common lookups
   const shareholders = useMemo(() => getShareholders(), [triggerRefresh]);
   const banks = useMemo(() => getBanks().filter(b => b.companyId === companyId), [companyId, triggerRefresh]);
   const accounts = useMemo(() => getChartOfAccounts(), [triggerRefresh]);
+  const customers = useMemo(() => getCustomers().filter(c => c.companyId === companyId && c.status !== 'inactive'), [companyId, triggerRefresh]);
+  const suppliers = useMemo(() => getSuppliers().filter(s => s.companyId === companyId && s.status !== 'inactive'), [companyId, triggerRefresh]);
   const auditLogs = useMemo(() => getLogs(), [triggerRefresh]);
   const bankReconciliations = useMemo(() => getBankReconciliations().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
   const agingReport = useMemo(() => getAgingReport(companyId, agingAsOfDate), [companyId, agingAsOfDate, triggerRefresh]);
@@ -261,6 +255,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     paymentMethod: 'cash',
     checkNo: '',
     checkDueDate: '',
+    customerId: '',
+    supplierId: '',
     counterpartyName: '',
     remarks: '',
     status: 'pending_admin_review',
@@ -379,6 +375,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       paymentMethod: 'cash',
       checkNo: '',
       checkDueDate: '',
+      customerId: '',
+      supplierId: '',
       counterpartyName: '',
       invoiceNo: '',
       invoiceDate: new Date().toISOString().split('T')[0],
@@ -451,6 +449,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       paymentMethod: getStoredPaymentMethod(item),
       checkNo: item.checkNo || '',
       checkDueDate: item.checkDueDate || '',
+      customerId: item.customerId || '',
+      supplierId: item.supplierId || '',
       counterpartyName: item.counterpartyName || '',
       invoiceNo: item.invoiceNo || '',
       invoiceDate: item.invoiceDate || item.date || '',
@@ -498,7 +498,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const handleSave = (e) => {
     e.preventDefault();
     if (blockIfPeriodLocked(getRecordPeriod(formData, activeSubTab), editingItem ? '修改資料' : '新增資料')) return;
-    if (editingItem && blockIfPeriodLocked(getRecordPeriod(editingItem, activeSubTab), '修改原鎖帳月份資料')) return;
+    if (editingItem && blockIfPeriodLocked(getRecordPeriod(editingItem, activeSubTab), '修改原資料')) return;
     const unitPriceVal = parseFloat(formData.unitPrice) || 0;
     const quantityVal = parseFloat(formData.quantity) || 0;
     const calculatedAmountVal = unitPriceVal > 0 && quantityVal > 0 ? unitPriceVal * quantityVal : 0;
@@ -523,6 +523,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       bankId: normalizedBankId,
       checkNo: paymentMethod === 'check' ? formData.checkNo : '',
       checkDueDate: paymentMethod === 'check' ? formData.checkDueDate : '',
+      customerId: activeSubTab === 'income' ? formData.customerId || '' : '',
+      supplierId: activeSubTab === 'expense' ? formData.supplierId || '' : '',
       counterpartyName: formData.counterpartyName || '',
       paymentStatus,
       dueDate: ['receivable', 'payable'].includes(paymentMethod) ? formData.dueDate || '' : '',
@@ -584,7 +586,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const db = getIncomes();
       if (editingItem) {
         if (editingItem.status === 'approved' || editingItem.status === 'void') {
-          window.alert('已核准或已作廢的收入不可直接修改，請改用作廢或調整分錄。');
+          window.alert('已核准或已作廢的收入不能直接修改，請使用更正沖銷流程。');
           return;
         }
         const index = db.findIndex(i => i.id === editingItem.id);
@@ -592,21 +594,21 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: formData.status };
           archiveChange({ collection: 'incomes', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '收入資料修改' });
           saveIncomes(db);
-          addLog(operatorName, '修改收入', `修改了收入記錄 ${editingItem.id}。舊金額: $${editingItem.amount.toLocaleString()} -> 新金額: $${amountVal.toLocaleString()} 元，備註: "${formData.remarks}"`);
+          addLog(operatorName, 'UPDATE_INCOME', `Update income ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
           success = true;
         }
       } else {
         const newId = generateId('income', formData.date);
         db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
         saveIncomes(db);
-        addLog(operatorName, '新增收入', `新增了單筆收入 ${newId}，金額 $${amountVal.toLocaleString()} 元，科目代碼 ${formData.accountCode}，備註: "${formData.remarks}"`);
+        addLog(operatorName, 'CREATE_INCOME', `Create income ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
       }
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
       if (editingItem) {
         if (editingItem.status === 'approved' || editingItem.status === 'void') {
-          window.alert('已核准或已作廢的支出不可直接修改，請改用作廢或調整分錄。');
+          window.alert('已核准或已作廢的支出不能直接修改，請使用更正沖銷流程。');
           return;
         }
         const index = db.findIndex(e => e.id === editingItem.id);
@@ -614,19 +616,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: formData.status };
           archiveChange({ collection: 'expenses', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '支出資料修改' });
           saveExpenses(db);
-          addLog(operatorName, '修改支出', `修改了支出記錄 ${editingItem.id}。舊金額: $${editingItem.amount.toLocaleString()} -> 新金額: $${amountVal.toLocaleString()} 元，備註: "${formData.remarks}"`);
+          addLog(operatorName, 'UPDATE_EXPENSE', `Update expense ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
           success = true;
         }
       } else {
         const newId = generateId('expense', formData.date);
         db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
         saveExpenses(db);
-        addLog(operatorName, '新增支出', `新增了單筆支出 ${newId}，金額 $${amountVal.toLocaleString()} 元，科目代碼 ${formData.accountCode}，備註: "${formData.remarks}"`);
+        addLog(operatorName, 'CREATE_EXPENSE', `Create expense ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
       }
     } else if (activeSubTab === 'shareholder') {
       const db = getShareholderLedger();
-      const typeLabel = formData.type === 'join' ? '入股' : formData.type === 'increase' ? '增資' : '減資/退股';
+      const typeLabel = formData.type === 'join' ? '入股' : formData.type === 'increase' ? '增資' : '減資/提領';
       const shName = shareholders.find(s => s.id === formData.shareholderId)?.name || '未知股東';
       
       if (editingItem) {
@@ -635,14 +637,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           db[index] = { ...db[index], date: formData.date, shareholderId: formData.shareholderId, type: formData.type, amount: amountVal, remarks: formData.remarks };
           archiveChange({ collection: 'shareholderLedger', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '股東往來修改' });
           saveShareholderLedger(db);
-          addLog(operatorName, '修改股東往來', `修改了股東 ${shName} 的往來記錄 ${editingItem.id}。金額變更為 $${amountVal.toLocaleString()} 元，類型: ${typeLabel}，備註: "${formData.remarks}"`);
+          addLog(operatorName, 'UPDATE_SHAREHOLDER_LEDGER', `Update shareholder ledger ${editingItem.id}: $${amountVal.toLocaleString()}.`);
           success = true;
         }
       } else {
         const newId = generateId('shareholder', formData.date);
         db.push({ id: newId, companyId, date: formData.date, shareholderId: formData.shareholderId, type: formData.type, amount: amountVal, remarks: formData.remarks });
         saveShareholderLedger(db);
-        addLog(operatorName, '新增股東往來', `登記了股東 ${shName} 的往來帳目 ${newId}，金額 $${amountVal.toLocaleString()} 元，類型: ${typeLabel}，備註: "${formData.remarks}"`);
+        addLog(operatorName, 'CREATE_SHAREHOLDER_LEDGER', `Create shareholder ledger ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
       }
     } else if (activeSubTab === 'gas') {
@@ -665,25 +667,25 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         if (index !== -1) {
           const duplicated = db.some(item => item.id !== editingItem.id && item.companyId === companyId && item.yearMonth === payload.yearMonth);
           if (duplicated) {
-            window.alert('此月份已經有瓦斯庫存成本設定，請改用原月份或編輯既有資料。');
+            window.alert('此月份已存在瓦斯進貨設定，請改用原資料修改。');
             return;
           }
           db[index] = { ...db[index], ...payload };
-          archiveChange({ collection: 'gasInventoryPeriods', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '瓦斯月成本與庫存設定修改' });
+          archiveChange({ collection: 'gasInventoryPeriods', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '瓦斯進貨設定修改' });
           saveGasInventoryPeriods(db);
-          addLog(operatorName, '修改瓦斯月成本', `修改 ${payload.yearMonth} 瓦斯庫存設定：進貨 ${payload.purchaseKg.toLocaleString()} 公斤，進貨金額 $${payload.purchaseAmount.toLocaleString()}。`);
+          addLog(operatorName, 'UPDATE_GAS_INVENTORY', `Update gas inventory ${payload.yearMonth}: ${payload.purchaseKg.toLocaleString()} kg, $${payload.purchaseAmount.toLocaleString()}.`);
           success = true;
         }
       } else {
         if (db.some(item => item.companyId === companyId && item.yearMonth === payload.yearMonth)) {
-          window.alert('此月份已經有瓦斯庫存成本設定，請直接編輯原資料。');
+          window.alert('此月份已存在瓦斯進貨設定，請改用修改。');
           return;
         }
         const newId = generateId('gas', `${payload.yearMonth}-01`);
         const newRecord = { id: newId, ...payload, createdAt: now };
         db.push(newRecord);
         saveGasInventoryPeriods(db);
-        addLog(operatorName, '新增瓦斯月成本', `新增 ${payload.yearMonth} 瓦斯庫存設定：期初 ${payload.openingKg.toLocaleString()} 公斤，本月進貨 ${payload.purchaseKg.toLocaleString()} 公斤，進貨金額 $${payload.purchaseAmount.toLocaleString()}。`);
+        addLog(operatorName, 'CREATE_GAS_INVENTORY', `Create gas inventory ${payload.yearMonth}: ${payload.purchaseKg.toLocaleString()} kg, $${payload.purchaseAmount.toLocaleString()}.`);
         success = true;
       }
     } else if (activeSubTab === 'loan') {
@@ -694,14 +696,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           db[index] = { ...db[index], name: formData.name, bankId: formData.bankId, principal: principalVal, interestRate: interestVal, months: monthsVal, startDate: formData.startDate, monthlyPayment: paymentVal, remarks: formData.remarks, status: formData.status };
           archiveChange({ collection: 'loans', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '貸款資料修改' });
           saveLoans(db);
-          addLog(operatorName, '修改貸款', `修改了貸款專案 ${editingItem.id} (${formData.name})。本金為 $${principalVal.toLocaleString()} 元`);
+          addLog(operatorName, 'UPDATE_LOAN', `Update loan ${editingItem.id} (${formData.name}): $${principalVal.toLocaleString()}.`);
           success = true;
         }
       } else {
         const newId = generateId('loan');
         db.push({ id: newId, companyId, name: formData.name, bankId: formData.bankId, principal: principalVal, interestRate: interestVal, months: monthsVal, startDate: formData.startDate, monthlyPayment: paymentVal, remarks: formData.remarks, status: formData.status });
         saveLoans(db);
-        addLog(operatorName, '新增貸款', `登記了新的銀行貸款專案 ${newId} (${formData.name})，本金 $${principalVal.toLocaleString()} 元，期數 ${monthsVal} 個月`);
+        addLog(operatorName, 'CREATE_LOAN', `Create loan ${newId} (${formData.name}): $${principalVal.toLocaleString()}.`);
         success = true;
       }
     }
@@ -730,7 +732,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           db[index] = { ...db[index], ...payload };
           archiveChange({ collection: 'fixedAssets', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '固定資產修改' });
           saveFixedAssets(db);
-          addLog(operatorName, '修改固定資產', `修改固定資產 ${editingItem.id} (${formData.assetName})，取得成本 $${acquisitionCostVal.toLocaleString()}。`);
+          addLog(operatorName, 'UPDATE_FIXED_ASSET', `Update fixed asset ${editingItem.id} (${formData.assetName}): $${acquisitionCostVal.toLocaleString()}.`);
           success = true;
         }
       } else {
@@ -738,7 +740,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         const newRecord = { id: newId, ...payload, createdAt: now };
         db.push(newRecord);
         saveFixedAssets(db);
-        addLog(operatorName, '新增固定資產', `新增固定資產 ${newId} (${formData.assetName})，取得成本 $${acquisitionCostVal.toLocaleString()}。`);
+        addLog(operatorName, 'CREATE_FIXED_ASSET', `Create fixed asset ${newId} (${formData.assetName}): $${acquisitionCostVal.toLocaleString()}.`);
         success = true;
       }
     }
@@ -756,7 +758,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (index === -1) return;
 
     const item = db[index];
-    if (blockIfPeriodLocked(item.date, '審核或作廢資料')) return;
+    if (blockIfPeriodLocked(item.date, '審核資料')) return;
     const beforeItem = { ...item };
     const now = new Date().toISOString();
     const actor = currentUser?.name || operatorName;
@@ -774,23 +776,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         firstReviewedByRole: !isAdmin ? userRole : item.firstReviewedByRole,
         firstReviewedAt: !isAdmin ? now : item.firstReviewedAt
       };
-      addLog(actor, '核准帳務', `核准${isIncome ? '收入' : '支出'} ${id}，金額 $${item.amount.toLocaleString()} 元。`);
+      addLog(actor, '核准資料', `已核准${isIncome ? '收入' : '支出'} ${id}，金額 $${item.amount.toLocaleString()}。`);
     } else if (nextStatus === 'returned') {
-      const reason = window.prompt('請輸入退回原因：') || '未填寫原因';
+      const reason = window.prompt('請輸入退回原因。') || '管理員退回';
       db[index] = { ...item, status: 'returned', returnedBy: actorId, returnedByName: actor, returnedAt: now, returnReason: reason };
-      addLog(actor, '退回帳務', `退回${isIncome ? '收入' : '支出'} ${id}，原因：${reason}`);
+      addLog(actor, '退回資料', `已退回${isIncome ? '收入' : '支出'} ${id}，原因：${reason}`);
     } else if (nextStatus === 'void') {
-      if (!isAdmin) {
-        window.alert('只有系統管理員可以作廢已核准帳務。');
-        return;
-      }
-      const reason = window.prompt('請輸入作廢原因 (必填)：');
-      if (!reason || !reason.trim()) {
-        window.alert('作廢已取消：必須輸入作廢原因！');
-        return;
-      }
-      db[index] = { ...item, status: 'void', voidedBy: actorId, voidedByName: actor, voidedAt: now, voidReason: reason };
-      addLog(actor, '作廢帳務', `作廢${isIncome ? '收入' : '支出'} ${id}，原金額 $${item.amount.toLocaleString()} 元，原因：${reason}`);
+      window.alert('已核准資料請使用更正沖銷流程，不直接作廢。');
+      return;
     }
 
     if (isIncome) saveIncomes(db);
@@ -802,17 +795,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       before: beforeItem,
       after: db[index],
       actor,
-      reason: nextStatus === 'returned' ? db[index].returnReason : nextStatus === 'void' ? db[index].voidReason : '審核狀態變更'
+      reason: nextStatus === 'returned' ? db[index].returnReason : '審核狀態變更'
     });
     onDataChange();
   };
-
   // Delete transaction and log it
   const handleDelete = (id) => {
-    if (!window.confirm('確定要刪除此筆記錄嗎？此刪除動作會被記錄在操作日誌中。')) return;
-    const reason = window.prompt('請輸入刪除原因，此資料會保留一年：');
+    if (!window.confirm('確定要刪除這筆資料？刪除資料會保留一年稽核紀錄。')) return;
+    const reason = window.prompt('請輸入刪除原因，系統會保留一年稽核紀錄。');
     if (!reason) {
-      window.alert('刪除已取消：刪除原因為必填。');
+      window.alert('未輸入原因，刪除已取消。');
       return;
     }
 
@@ -822,12 +814,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
         if (item.status === 'approved') {
-          window.alert('已核准的收入不可直接刪除，請先執行作廢流程。');
+          window.alert('已核准收入不能刪除，請使用更正沖銷。');
           return;
         }
         archiveDeletion({ collection: 'incomes', record: item, actor: operatorName, reason });
         saveIncomes(db.filter(i => i.id !== id));
-        addLog(operatorName, '刪除收入', `刪除了單筆收入 ${id}，原金額 $${item.amount.toLocaleString()} 元，備註: "${item.remarks}"`);
+        addLog(operatorName, '刪除收入', `刪除收入 ${id}，金額 $${item.amount.toLocaleString()}。`);
       }
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
@@ -835,22 +827,21 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
         if (item.status === 'approved') {
-          window.alert('已核准的支出不可直接刪除，請先執行作廢流程。');
+          window.alert('已核准支出不能刪除，請使用更正沖銷。');
           return;
         }
         archiveDeletion({ collection: 'expenses', record: item, actor: operatorName, reason });
         saveExpenses(db.filter(e => e.id !== id));
-        addLog(operatorName, '刪除支出', `刪除了單筆支出 ${id}，原金額 $${item.amount.toLocaleString()} 元，備註: "${item.remarks}"`);
+        addLog(operatorName, '刪除支出', `刪除支出 ${id}，金額 $${item.amount.toLocaleString()}。`);
       }
     } else if (activeSubTab === 'shareholder') {
       const db = getShareholderLedger();
       const item = db.find(s => s.id === id);
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
-        const shName = shareholders.find(s => s.id === item.shareholderId)?.name || '未知股東';
         archiveDeletion({ collection: 'shareholderLedger', record: item, actor: operatorName, reason });
         saveShareholderLedger(db.filter(s => s.id !== id));
-        addLog(operatorName, '刪除股東往來', `刪除了股東 ${shName} 的往來記錄 ${id}，原金額 $${item.amount.toLocaleString()} 元`);
+        addLog(operatorName, '刪除股東往來', `刪除股東往來 ${id}。`);
       }
     } else if (activeSubTab === 'gas') {
       const db = getGasInventoryPeriods();
@@ -859,7 +850,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         if (blockIfPeriodLocked(item.yearMonth, '刪除資料')) return;
         archiveDeletion({ collection: 'gasInventoryPeriods', record: item, actor: operatorName, reason });
         saveGasInventoryPeriods(db.filter(g => g.id !== id));
-        addLog(operatorName, '刪除瓦斯月成本', `刪除了 ${item.yearMonth} 瓦斯庫存成本設定。`);
+        addLog(operatorName, '刪除瓦斯進貨設定', `刪除 ${item.yearMonth} 瓦斯進貨設定。`);
       }
     } else if (activeSubTab === 'loan') {
       const db = getLoans();
@@ -868,7 +859,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         if (blockIfPeriodLocked(item.startDate, '刪除資料')) return;
         archiveDeletion({ collection: 'loans', record: item, actor: operatorName, reason });
         saveLoans(db.filter(l => l.id !== id));
-        addLog(operatorName, '刪除貸款', `刪除了貸款項目 ${id} (${item.name})，原金額 $${item.principal.toLocaleString()} 元`);
+        addLog(operatorName, '刪除貸款', `刪除貸款 ${id}。`);
       }
     } else if (activeSubTab === 'assets') {
       const db = getFixedAssets();
@@ -877,50 +868,43 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         if (blockIfPeriodLocked(item.acquisitionDate, '刪除資料')) return;
         archiveDeletion({ collection: 'fixedAssets', record: item, actor: operatorName, reason });
         saveFixedAssets(db.filter(asset => asset.id !== id));
-        addLog(operatorName, '刪除固定資產', `刪除固定資產 ${id} (${item.assetName})，原始成本 $${Number(item.acquisitionCost || 0).toLocaleString()}。`);
+        addLog(operatorName, '刪除固定資產', `刪除固定資產 ${id}。`);
       }
     }
     onDataChange();
   };
-
   // Lookups helper
   const getAccountName = (code) => {
-    return accounts.find(a => a.code === code)?.name || code || '未知科目';
+    return accounts.find(a => a.code === code)?.name || code || '?芰蝘';
   };
 
   const getBankName = (id) => {
-    return banks.find(b => b.id === id)?.name || id || '未知帳戶';
+    return banks.find(b => b.id === id)?.name || id || '?芰撣單';
   };
 
   const getPaymentDisplay = (item) => {
     const method = getStoredPaymentMethod(item);
     const label = getPaymentMethodLabel(method);
-    
-    if (item.paymentStatus === 'unpaid') {
-      return `${label} / 🔴 未結清`;
-    }
-    
-    if (method === 'bank_transfer') {
-      return item.bankId ? `${label} / ${getBankName(item.bankId)}` : label;
-    }
-    if (method === 'check') {
-      return item.checkNo ? `${label} / ${item.checkNo}` : label;
-    }
+    if (item.paymentStatus === 'unpaid') return `${label} / 未結清`;
+    if (method === 'bank_transfer') return item.bankId ? `${label} / ${getBankName(item.bankId)}` : label;
+    if (method === 'check') return item.checkNo ? `${label} / ${item.checkNo}` : label;
     return label;
   };
-
   const getShareholderName = (id) => {
-    return shareholders.find(s => s.id === id)?.name || id || '未知股東';
+    return shareholders.find(s => s.id === id)?.name || id || '?芰?⊥';
   };
 
   const handleCreateCorrection = (item) => {
     if (!isAdmin || !['income', 'expense'].includes(activeSubTab)) return;
     if (item.status !== 'approved') {
-      window.alert('只有已核准資料需要走更正分錄。');
+      window.alert('只有已核准的收入或支出可以建立更正沖銷。');
       return;
     }
-    if (blockIfPeriodLocked(item.date, '建立更正分錄')) return;
-    const reason = window.prompt('請輸入更正原因：');
+
+    const today = new Date().toISOString().split('T')[0];
+    if (blockIfPeriodLocked(today, '建立更正沖銷')) return;
+
+    const reason = window.prompt('請輸入更正原因。');
     if (!reason || !reason.trim()) return;
 
     const isIncome = activeSubTab === 'income';
@@ -929,25 +913,29 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (index === -1) return;
 
     const now = new Date().toISOString();
-    const reversalId = generateId(activeSubTab, item.date);
-    const correctedId = `${generateId(activeSubTab, new Date().toISOString().split('T')[0])}C`;
+    const originalPeriodLocked = isPeriodLocked(companyId, item.date);
+    const correctionDate = originalPeriodLocked ? today : item.date;
+    const reversalId = generateId(activeSubTab, correctionDate);
+    const correctedId = `${generateId(activeSubTab, correctionDate)}C`;
     const actor = currentUser?.name || operatorName;
     const actorId = currentUser?.id || 'ADMIN';
     const before = { ...db[index] };
 
     db[index] = {
       ...db[index],
-      status: 'void',
-      voidedBy: actorId,
-      voidedByName: actor,
-      voidedAt: now,
-      voidReason: `更正沖銷：${reason}`
+      correctionStatus: 'corrected',
+      correctedBy: actorId,
+      correctedByName: actor,
+      correctedAt: now,
+      correctionReason: reason
     };
 
     const reversal = {
       ...item,
       id: reversalId,
+      date: correctionDate,
       amount: -Math.abs(Number(item.amount || 0)),
+      calculatedAmount: -Math.abs(Number(item.calculatedAmount || item.amount || 0)),
       status: 'approved',
       remarks: `沖銷 ${item.id}：${reason}`,
       createdBy: actorId,
@@ -964,12 +952,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const corrected = {
       ...item,
       id: correctedId,
+      date: correctionDate,
       status: 'pending_admin_review',
-      remarks: `更正 ${item.id}：請修改後送審。原因：${reason}`,
+      remarks: `更正 ${item.id}：請編輯此筆後送審。原因：${reason}`,
       createdBy: actorId,
       createdByName: actor,
       createdByRole: userRole,
       createdAt: now,
+      firstReviewedBy: null,
+      firstReviewedByName: null,
+      firstReviewedByRole: null,
+      firstReviewedAt: null,
       adminReviewedBy: null,
       adminReviewedByName: null,
       adminReviewedAt: null,
@@ -986,14 +979,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       recordId: item.id,
       action: 'correction',
       before,
-      after: { voided: db[index], reversal, corrected },
+      after: { original: db[index], reversal, corrected },
       actor,
       reason
     });
-    addLog(actor, '建立更正分錄', `原資料 ${item.id} 已作廢，建立沖銷 ${reversalId} 與待審更正 ${correctedId}。原因：${reason}`);
+    addLog(actor, '建立更正沖銷', `原資料 ${item.id} 保留不動，建立沖銷 ${reversalId} 與待審更正 ${correctedId}。原因：${reason}`);
     onDataChange();
   };
-
   const handleSaveReconciliation = () => {
     if (!isAdmin) return;
     if (!reconciliationBankId) {
@@ -1001,7 +993,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       return;
     }
     if (parsedStatementRows.length === 0) {
-      window.alert('請貼上銀行對帳單資料。格式：日期,摘要,支出,收入,餘額');
+      window.alert('請貼上銀行對帳資料，格式需包含日期、摘要、支出、收入、餘額。');
       return;
     }
     const records = getBankReconciliations();
@@ -1025,26 +1017,25 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     records.unshift(newRecord);
     saveBankReconciliations(records);
     archiveChange({ collection: 'bankReconciliations', recordId: newRecord.id, action: 'create', after: newRecord, actor: operatorName, reason: '銀行對帳' });
-    addLog(operatorName, '新增銀行對帳', `新增銀行對帳 ${newRecord.id}，差異 $${Number(newRecord.difference || 0).toLocaleString()}。`);
+    addLog(operatorName, '新增銀行對帳', `新增銀行對帳 ${newRecord.id}，差額 $${Number(newRecord.difference || 0).toLocaleString()}。`);
     setStatementText('');
     onDataChange();
   };
-
   return (
     <div className="card">
       <div className="card-header" style={{ borderBottom: 'none' }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className={`tab-btn ${activeSubTab === 'income' ? 'active' : ''}`} onClick={() => setActiveSubTab('income')}>
-            📥 收入 (Income)
+            收入 (Income)
           </button>
           <button className={`tab-btn ${activeSubTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveSubTab('expense')}>
-            📤 支出 (Expense)
+            支出 (Expense)
           </button>
           <button className={`tab-btn ${activeSubTab === 'arap' ? 'active' : ''}`} onClick={() => setActiveSubTab('arap')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
-            📅 待收付管理 (AR/AP)
+            應收應付 (AR/AP)
           </button>
           <button className={`tab-btn ${activeSubTab === 'checks' ? 'active' : ''}`} onClick={() => setActiveSubTab('checks')} style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>
-            🎟️ 支票收付管理 (Check Ledger)
+            支票管理 (Check Ledger)
           </button>
           {isAdmin && (
             <button className={`tab-btn ${activeSubTab === 'bankRecon' ? 'active' : ''}`} onClick={() => setActiveSubTab('bankRecon')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
@@ -1063,29 +1054,28 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           )}
           {canWriteBasicLedger && (
             <button className={`tab-btn ${activeSubTab === 'gas' ? 'active' : ''}`} onClick={() => setActiveSubTab('gas')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
-              🛢️ 瓦斯庫存 / 毛利
+              瓦斯進貨 / 毛利
             </button>
           )}
           {showShareholderLedger && (
             <button className={`tab-btn ${activeSubTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSubTab('shareholder')}>
-              👑 股東往來 (Shareholder Ledger)
+              股東往來 (Shareholder Ledger)
             </button>
           )}
           {showLoans && (
             <button className={`tab-btn ${activeSubTab === 'loan' ? 'active' : ''}`} onClick={() => setActiveSubTab('loan')}>
-              🏦 貸款 (Loans)
+              貸款 (Loans)
             </button>
           )}
           {showAuditLogs && (
             <button className={`tab-btn ${activeSubTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSubTab('log')} style={{ color: 'var(--accent-gold)' }}>
-              📜 操作稽核日誌 (Audit Logs)
+              操作稽核日誌 (Audit Logs)
             </button>
           )}
         </div>
-
         {activeSubTab !== 'log' && activeSubTab !== 'arap' && activeSubTab !== 'checks' && activeSubTab !== 'bankRecon' && activeSubTab !== 'aging' && canWriteBasicLedger && (isAdmin || activeSubTab === 'gas' || manageShareholderLedger || (activeSubTab !== 'shareholder' && activeSubTab !== 'loan')) && (
           <button className="btn btn-primary" onClick={handleOpenAdd}>
-            ➕ 新增記錄
+            ???啣?閮?
           </button>
         )}
       </div>
@@ -1095,16 +1085,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         {activeSubTab === 'log' ? (
           <div className="table-responsive">
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              🔒 這是系統操作記錄（唯讀），系統會自動記錄所有人對記帳資料進行的任何「新增、編輯、刪除、審核」動作。
-            </div>
+              ?? ?蝟餌絞??閮?嚗霈嚗?蝟餌絞??????犖撠?撣唾??脰??遙雿憓楊頛胯?扎祟?詻?雿?            </div>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>日誌編號</th>
-                  <th>紀錄時間</th>
-                  <th>操作人員</th>
-                  <th>事件動作</th>
-                  <th>日誌詳細內容</th>
+                  <th>?亥?蝺刻?</th>
+                  <th>蝝????</th>
+                  <th>??鈭箏</th>
+                  <th>鈭辣??</th>
+                  <th>?亥?閰喟敦?批捆</th>
                 </tr>
               </thead>
               <tbody>
@@ -1112,13 +1101,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <tr key={idx}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.id}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.timestamp}</td>
-                    <td style={{ fontWeight: '600', color: log.operator === '主管理員' ? 'var(--accent-blue)' : 'var(--accent-gold)' }}>
-                      👤 {log.operator}
+                    <td style={{ fontWeight: '600', color: log.operator === '銝餌恣?' ? 'var(--accent-blue)' : 'var(--accent-gold)' }}>
+                      ? {log.operator}
                     </td>
                     <td>
                       <span className={`badge ${
-                        log.action.includes('新增') ? 'approved' : 
-                        log.action.includes('修改') ? 'pending' : 'void'
+                        log.action.includes('?啣?') ? 'approved' : 
+                        log.action.includes('靽格') ? 'pending' : 'void'
                       }`}>
                         {log.action}
                       </span>
@@ -1128,7 +1117,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 ))}
                 {auditLogs.length === 0 && (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>暫無操作日誌紀錄</td>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>?怎???亥?蝝??</td>
                   </tr>
                 )}
               </tbody>
@@ -1137,21 +1126,20 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         ) : activeSubTab === 'arap' ? (
           <div className="table-responsive">
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              📅 這是待結清的月結應收 (顧客欠款) 與月結應付 (廠商帳款) 總帳。確認款項收到或付出後，點擊「結清款項」登記進銀行帳戶或零用金。
-            </div>
+              ?? ?敺?皜???? (憿批恥甈狡) ??蝯?隞?(撱?撣單狡) 蝮賢董?Ⅱ隤狡??唳?隞敺?暺???皜狡?閮脤?銵董?嗆??嗥??            </div>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>單號 ID</th>
-                  <th>記帳日期</th>
-                  <th>收支類型</th>
-                  <th>會計科目</th>
-                  <th>金額 (TWD)</th>
-                  <th>客戶/對象</th>
-                  <th>付款期限</th>
-                  <th>憑證照片</th>
-                  <th>備註</th>
-                  <th style={{ textAlign: 'right' }}>操作</th>
+                  <th>?株? ID</th>
+                  <th>閮董?交?</th>
+                  <th>?嗆憿?</th>
+                  <th>??蝘</th>
+                  <th>?? (TWD)</th>
+                  <th>摰Ｘ/撠情</th>
+                  <th>隞狡??</th>
+                  <th>???抒?</th>
+                  <th>?酉</th>
+                  <th style={{ textAlign: 'right' }}>??</th>
                 </tr>
               </thead>
               <tbody>
@@ -1161,7 +1149,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
                     <td>
                       <span className={`badge ${item.type === 'income' ? 'approved' : 'void'}`}>
-                        {item.type === 'income' ? '📥 應收款' : '📤 應付款'}
+                        {item.type === 'income' ? '應收' : '應付'}
                       </span>
                     </td>
                     <td>{getAccountName(item.accountCode)}</td>
@@ -1170,7 +1158,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </td>
                     <td>{item.counterpartyName || '-'}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: '600' }}>
-                      {item.dueDate ? `📅 ${item.dueDate}` : '未指定'}
+                      {item.dueDate ? `?? ${item.dueDate}` : '???'}
                     </td>
                     <td>
                       {item.receiptAttachment ? (
@@ -1180,10 +1168,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           style={{ padding: '2px 6px', fontSize: '0.7rem' }}
                           onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
                         >
-                          📷 檢視
+                          ? 瑼Ｚ?
                         </button>
                       ) : (
-                        <span style={{ color: 'var(--text-tertiary)' }}>無</span>
+                        <span style={{ color: 'var(--text-tertiary)' }}>??</span>
                       )}
                     </td>
                     <td style={{ fontSize: '0.85rem' }}>{item.remarks}</td>
@@ -1193,7 +1181,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         className="btn btn-primary btn-sm"
                         onClick={() => handleOpenClearModal(item)}
                       >
-                        💰 結清款項
+                        ? 蝯?甈暸?
                       </button>
                     </td>
                   </tr>
@@ -1201,7 +1189,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {unpaidArapItems.length === 0 && (
                   <tr>
                     <td colSpan="10" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
-                      暫無待結清的應收/應付款項 🎉
+                      ?怎敺?皜??/??甈暸? ??
                     </td>
                   </tr>
                 )}
@@ -1211,25 +1199,24 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         ) : activeSubTab === 'aging' ? (
           <div>
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              帳齡分析會把尚未收款、尚未付款的資料依逾期天數分類，方便追蹤應收、應付與催收風險。
-            </div>
+              撣喲翩????撠?嗆狡???芯?甈曄?鞈?靘暹?憭拇??嚗靘輯蕭頩斗??嗚?隞??祆憸券??            </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '16px' }}>
               <div className="form-group" style={{ marginBottom: 0, minWidth: '180px' }}>
-                <label className="form-label">基準日</label>
+                <label className="form-label">?箸???</label>
                 <input type="date" className="form-control" value={agingAsOfDate} onChange={e => setAgingAsOfDate(e.target.value)} />
               </div>
             </div>
             <div className="summary-grid" style={{ marginBottom: '16px' }}>
               <div className="summary-card">
-                <div className="summary-label">應收未收</div>
+                <div className="summary-label">??芣</div>
                 <div className="summary-value income">{formatCurrency(agingReport.receivables.total)}</div>
               </div>
               <div className="summary-card">
-                <div className="summary-label">應付未付</div>
+                <div className="summary-label">???芯?</div>
                 <div className="summary-value expense">{formatCurrency(agingReport.payables.total)}</div>
               </div>
               <div className="summary-card">
-                <div className="summary-label">逾期 90 天以上應收</div>
+                <div className="summary-label">?暹? 90 憭拐誑銝???</div>
                 <div className="summary-value">{formatCurrency(agingReport.receivables.buckets.over90.total)}</div>
               </div>
             </div>
@@ -1237,17 +1224,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>類別</th>
-                    <th>0-30 天</th>
-                    <th>31-60 天</th>
-                    <th>61-90 天</th>
-                    <th>90 天以上</th>
-                    <th>合計</th>
+                    <th>憿</th>
+                    <th>0-30 憭?</th>
+                    <th>31-60 憭?</th>
+                    <th>61-90 憭?</th>
+                    <th>90 憭拐誑銝?</th>
+                    <th>??</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style={{ fontWeight: 700 }}>應收帳款</td>
+                    <td style={{ fontWeight: 700 }}>?撣單狡</td>
                     <td>{formatCurrency(agingReport.receivables.buckets.current.total)}</td>
                     <td>{formatCurrency(agingReport.receivables.buckets.days31to60.total)}</td>
                     <td>{formatCurrency(agingReport.receivables.buckets.days61to90.total)}</td>
@@ -1255,7 +1242,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <td style={{ fontWeight: 700 }}>{formatCurrency(agingReport.receivables.total)}</td>
                   </tr>
                   <tr>
-                    <td style={{ fontWeight: 700 }}>應付帳款</td>
+                    <td style={{ fontWeight: 700 }}>??撣單狡</td>
                     <td>{formatCurrency(agingReport.payables.buckets.current.total)}</td>
                     <td>{formatCurrency(agingReport.payables.buckets.days31to60.total)}</td>
                     <td>{formatCurrency(agingReport.payables.buckets.days61to90.total)}</td>
@@ -1269,11 +1256,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         ) : activeSubTab === 'bankRecon' ? (
           <div>
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              銀行對帳可貼上銀行匯出的 CSV 內容，比對系統帳與銀行帳是否一致。格式建議：日期,摘要,出帳,入帳,餘額。
-            </div>
+              ?銵?撣喳鞎潔??銵?箇? CSV ?批捆嚗?撠頂蝯勗董??銵董?臬銝?氬撘遣霅堆??交?,??,?箏董,?亙董,擗???            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1fr)', gap: '12px', marginBottom: '12px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">銀行帳戶</label>
+                <label className="form-label">?銵董??</label>
                 <select className="select-dropdown" style={{ width: '100%' }} value={reconciliationBankId} onChange={e => setReconciliationBankId(e.target.value)}>
                   {banks.map(bank => (
                     <option key={bank.id} value={bank.id}>{bank.name} ({bank.accountNo})</option>
@@ -1281,50 +1267,50 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">對帳日期</label>
+                <label className="form-label">撠董?交?</label>
                 <input type="date" className="form-control" value={reconciliationDate} onChange={e => setReconciliationDate(e.target.value)} />
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">貼上銀行對帳資料</label>
+              <label className="form-label">鞎潔??銵?撣唾???</label>
               <textarea
                 className="form-control"
                 style={{ minHeight: '130px' }}
-                placeholder={'2026-07-01,現金存入,0,50000,150000\n2026-07-02,轉帳付款,12000,0,138000'}
+                placeholder={'2026-07-01,?暸?摮,0,50000,150000\n2026-07-02,頧董隞狡,12000,0,138000'}
                 value={statementText}
                 onChange={e => setStatementText(e.target.value)}
               />
             </div>
             <div className="summary-grid" style={{ marginBottom: '16px' }}>
               <div className="summary-card">
-                <div className="summary-label">銀行帳餘額</div>
+                <div className="summary-label">?銵董擗?</div>
                 <div className="summary-value">{formatCurrency(reconciliationPreview.statementBalance)}</div>
               </div>
               <div className="summary-card">
-                <div className="summary-label">系統帳餘額</div>
+                <div className="summary-label">蝟餌絞撣喲?憿?</div>
                 <div className="summary-value">{formatCurrency(reconciliationPreview.systemBalance)}</div>
               </div>
               <div className="summary-card">
-                <div className="summary-label">差額</div>
+                <div className="summary-label">撌桅?</div>
                 <div className={`summary-value ${Math.abs(reconciliationPreview.difference) < 1 ? 'income' : 'expense'}`}>
                   {formatCurrency(reconciliationPreview.difference)}
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-              <button type="button" className="btn btn-primary" onClick={handleSaveReconciliation}>儲存對帳結果</button>
+              <button type="button" className="btn btn-primary" onClick={handleSaveReconciliation}>?脣?撠董蝯?</button>
             </div>
             <div className="table-responsive">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>對帳單號</th>
-                    <th>日期</th>
-                    <th>銀行</th>
-                    <th>銀行帳</th>
-                    <th>系統帳</th>
-                    <th>差額</th>
-                    <th>狀態</th>
+                    <th>撠董?株?</th>
+                    <th>?交?</th>
+                    <th>?銵?</th>
+                    <th>?銵董</th>
+                    <th>蝟餌絞撣?</th>
+                    <th>撌桅?</th>
+                    <th>???</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1340,7 +1326,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </tr>
                   ))}
                   {bankReconciliations.length === 0 && (
-                    <tr><td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>尚無銀行對帳紀錄</td></tr>
+                    <tr><td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>撠?銵?撣喟???</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1349,25 +1335,24 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         ) : activeSubTab === 'checks' ? (
           <div>
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              🎟️ 這是公司所有的應收票據（收到支票）與應付票據（開出支票）總帳。您可以在此追蹤票期，並在到期時點擊「兌現」入帳或扣款。
-            </div>
+              ??儭???砍????蟡冽?嚗?唳蟡剁???隞巨????舐巨嚗蜇撣喋?臭誑?冽迨餈質馱蟡冽?嚗蒂?典??暺????整撣單???狡??            </div>
             
             {/* Filter controls */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }} className="no-print">
               <div className="form-group" style={{ marginBottom: 0, minWidth: '150px' }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>票據類型</label>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>蟡冽?憿?</label>
                 <select className="select-dropdown" style={{ width: '100%' }} value={checkTypeFilter} onChange={e => setCheckTypeFilter(e.target.value)}>
-                  <option value="all">全部票據</option>
-                  <option value="receivable">應收票據 (收到支票)</option>
-                  <option value="payable">應付票據 (開出支票)</option>
+                  <option value="all">?券蟡冽?</option>
+                  <option value="receivable">?蟡冽? (?嗅?舐巨)</option>
+                  <option value="payable">??蟡冽? (??舐巨)</option>
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0, minWidth: '150px' }}>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>兌現狀態</label>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>????</label>
                 <select className="select-dropdown" style={{ width: '100%' }} value={checkStatusFilter} onChange={e => setCheckStatusFilter(e.target.value)}>
-                  <option value="all">全部狀態</option>
-                  <option value="unpaid">未兌現 (待處理)</option>
-                  <option value="paid">已兌現 (已結清)</option>
+                  <option value="all">?券???</option>
+                  <option value="unpaid">?芸???(敺???</option>
+                  <option value="paid">撌脣???(撌脩?皜?</option>
                 </select>
               </div>
             </div>
@@ -1376,16 +1361,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>票據種類</th>
-                    <th>支票號碼</th>
-                    <th>到期日</th>
-                    <th>收付款對象</th>
-                    <th style={{ textAlign: 'right' }}>金額 (TWD)</th>
-                    <th>關聯會計科目</th>
-                    <th>兌現狀態</th>
-                    <th>憑證照片</th>
-                    <th>備註</th>
-                    <th style={{ textAlign: 'right', width: '120px' }}>操作</th>
+                    <th>蟡冽?蝔桅?</th>
+                    <th>?舐巨?Ⅳ</th>
+                    <th>?唳???</th>
+                    <th>?嗡?甈曉?鞊?</th>
+                    <th style={{ textAlign: 'right' }}>?? (TWD)</th>
+                    <th>???蝘</th>
+                    <th>????</th>
+                    <th>???抒?</th>
+                    <th>?酉</th>
+                    <th style={{ textAlign: 'right', width: '120px' }}>??</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1397,12 +1382,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       <tr key={item.id}>
                         <td>
                           <span className={`badge ${isIncome ? 'success' : 'danger'}`}>
-                            {isIncome ? '📥 應收票據' : '📤 應付票據'}
+                            {isIncome ? '? ?蟡冽?' : '? ??蟡冽?'}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{item.checkNo || '未填票號'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{item.checkNo || '?芸‵蟡刻?'}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: '600' }}>
-                          {item.checkDueDate ? `📅 ${item.checkDueDate}` : '未設定期限'}
+                          {item.checkDueDate ? `?? ${item.checkDueDate}` : '???'}
                         </td>
                         <td>{item.counterpartyName || '-'}</td>
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 'bold', color: isIncome ? 'var(--accent-green)' : 'var(--accent-red)' }}>
@@ -1411,7 +1396,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td>{item.accountCode} {getAccountName(item.accountCode)}</td>
                         <td>
                           <span className={`badge ${isPaid ? 'approved' : 'draft'}`}>
-                            {isPaid ? '✓ 已兌現' : '🔴 未兌現'}
+                            {isPaid ? '已結清' : '未結清'}
                           </span>
                         </td>
                         <td>
@@ -1422,10 +1407,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               style={{ padding: '2px 6px', fontSize: '0.75rem' }}
                               onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
                             >
-                              📷 憑證
+                              ? ??
                             </button>
                           ) : (
-                            <span style={{ color: 'var(--text-tertiary)' }}>無</span>
+                            <span style={{ color: 'var(--text-tertiary)' }}>??</span>
                           )}
                         </td>
                         <td style={{ fontSize: '0.85rem' }}>{item.remarks}</td>
@@ -1436,10 +1421,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               className="btn btn-primary btn-sm"
                               onClick={() => handleOpenClearModal(item)}
                             >
-                              💰 兌現結清
+                              ? ?蝯?
                             </button>
                           ) : (
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>已完成</span>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>撌脣???</span>
                           )}
                         </td>
                       </tr>
@@ -1448,7 +1433,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   {checkItems.length === 0 && (
                     <tr>
                       <td colSpan="10" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
-                        沒有符合篩選條件的票據資料 📂
+                        瘝?蝚血?蝭拚璇辣?巨??????
                       </td>
                     </tr>
                   )}
@@ -1463,84 +1448,84 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <thead>
                 {activeSubTab === 'income' && (
                   <tr>
-                    <th>流水號 ID</th>
-                    <th>記帳日期</th>
-                    <th>科目</th>
-                    <th>收款方式</th>
-                    <th>單價</th>
-                    <th>數量</th>
-                    <th>瓦斯公斤</th>
-                    <th>金額</th>
-                    <th>狀態</th>
-                    {showCreatorAudit && <th>建立資訊</th>}
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>瘚偌??ID</th>
+                    <th>閮董?交?</th>
+                    <th>蝘</th>
+                    <th>?嗆狡?孵?</th>
+                    <th>?桀</th>
+                    <th>?賊?</th>
+                    <th>?行?祆</th>
+                    <th>??</th>
+                    <th>???</th>
+                    {showCreatorAudit && <th>撱箇?鞈?</th>}
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
                 {activeSubTab === 'expense' && (
                   <tr>
-                    <th>流水號 ID</th>
-                    <th>記帳日期</th>
-                    <th>科目</th>
-                    <th>付款方式</th>
-                    <th>單價</th>
-                    <th>數量</th>
-                    <th>金額</th>
-                    <th>狀態</th>
-                    {showCreatorAudit && <th>建立資訊</th>}
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>瘚偌??ID</th>
+                    <th>閮董?交?</th>
+                    <th>蝘</th>
+                    <th>隞狡?孵?</th>
+                    <th>?桀</th>
+                    <th>?賊?</th>
+                    <th>??</th>
+                    <th>???</th>
+                    {showCreatorAudit && <th>撱箇?鞈?</th>}
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gas' && (
                   <tr>
-                    <th>月份</th>
-                    <th>期初公斤 / 成本</th>
-                    <th>本月進貨公斤 / 金額</th>
-                    <th>平均成本</th>
-                    <th>銷售公斤</th>
-                    <th>自動銷貨成本</th>
-                    <th>期末庫存</th>
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>?遢</th>
+                    <th>???祆 / ?</th>
+                    <th>?祆??脰疏?祆 / ??</th>
+                    <th>撟喳??</th>
+                    <th>?瑕?祆</th>
+                    <th>?芸??瑁疏?</th>
+                    <th>?摨怠?</th>
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
                 {activeSubTab === 'shareholder' && (
                   <tr>
-                    <th>流水號 ID</th>
-                    <th>記帳日期</th>
-                    <th>股東姓名</th>
-                    <th>往來類型</th>
-                    <th>異動金額</th>
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>瘚偌??ID</th>
+                    <th>閮董?交?</th>
+                    <th>?⊥憪?</th>
+                    <th>敺靘???</th>
+                    <th>?啣???</th>
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
                 {activeSubTab === 'loan' && (
                   <tr>
-                    <th>貸款編號 ID</th>
-                    <th>貸款名稱</th>
-                    <th>撥款銀行</th>
-                    <th>貸款本金</th>
-                    <th>年利率</th>
-                    <th>期限</th>
-                    <th>月付金額</th>
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>鞎豢狡蝺刻? ID</th>
+                    <th>鞎豢狡?迂</th>
+                    <th>?交狡?銵?</th>
+                    <th>鞎豢狡?祇?</th>
+                    <th>撟游??</th>
+                    <th>??</th>
+                    <th>????</th>
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
                 {activeSubTab === 'assets' && (
                   <tr>
-                    <th>資產編號</th>
-                    <th>資產名稱</th>
-                    <th>類別</th>
-                    <th>取得日期</th>
-                    <th>取得成本</th>
-                    <th>累計折舊</th>
-                    <th>帳面價值</th>
-                    <th>狀態</th>
-                    <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    <th>鞈蝺刻?</th>
+                    <th>鞈?迂</th>
+                    <th>憿</th>
+                    <th>???交?</th>
+                    <th>???</th>
+                    <th>蝝航???</th>
+                    <th>撣喲?孵?</th>
+                    <th>???</th>
+                    <th>?酉</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>??</th>}
                   </tr>
                 )}
               </thead>
@@ -1562,7 +1547,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: Number(item.gasKg || 0) > 0 ? 700 : 400 }}>
                           {item.gasKg ? `${Number(item.gasKg).toLocaleString()} kg` : '-'}
-                          {item.cylinderQty ? <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.cylinderQty} 桶</div> : null}
+                          {item.cylinderQty ? <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{item.cylinderQty} 獢?</div> : null}
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)', fontWeight: 'bold' }}>
                           {formatCurrency(item.amount)}
@@ -1574,7 +1559,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         </td>
                         {showCreatorAudit && (
                           <td style={{ minWidth: '110px' }}>
-                            <div style={{ fontWeight: 600 }}>{item.createdByName || '系統'}</div>
+                            <div style={{ fontWeight: 600 }}>{item.createdByName || '蝟餌絞'}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{formatDateTime(item.createdAt)}</div>
                           </td>
                         )}
@@ -1588,7 +1573,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                 style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
                               >
-                                📷 檢視憑證
+                                ? 瑼Ｚ???
                               </button>
                             </div>
                           )}
@@ -1644,7 +1629,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         </td>
                         {showCreatorAudit && (
                           <td style={{ minWidth: '110px' }}>
-                            <div style={{ fontWeight: 600 }}>{item.createdByName || '系統'}</div>
+                            <div style={{ fontWeight: 600 }}>{item.createdByName || '蝟餌絞'}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{formatDateTime(item.createdAt)}</div>
                           </td>
                         )}
@@ -1658,7 +1643,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                 style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
                               >
-                                📷 檢視憑證
+                                ? 瑼Ｚ???
                               </button>
                             </div>
                           )}
@@ -1672,7 +1657,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontWeight: '600' }}>{getShareholderName(item.shareholderId)}</td>
                         <td>
                           <span className={`badge ${item.type === 'join' ? 'approved' : item.type === 'increase' ? 'paid' : 'void'}`}>
-                            {item.type === 'join' ? '入股' : item.type === 'increase' ? '增資' : '減資/退股'}
+                            {item.type === 'join' ? '入股' : item.type === 'increase' ? '增資' : '減資/提領'}
                           </span>
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: item.type === 'decrease' ? 'var(--accent-red)' : 'var(--accent-gold)', fontWeight: 'bold' }}>
@@ -1688,7 +1673,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td>{getBankName(item.bankId)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>${item.principal.toLocaleString()}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{item.interestRate}%</td>
-                        <td>{item.months} 個月</td>
+                        <td>{item.months} ??</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: 'bold' }}>
                           ${item.monthlyPayment.toLocaleString()}
                         </td>
@@ -1719,31 +1704,25 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           {(activeSubTab === 'income' || activeSubTab === 'expense') && canReview && item.status.startsWith('pending') && (
                             <>
                               <button className="btn btn-primary btn-sm" onClick={() => updateReviewStatus(item.id, 'approved')}>
-                                ✅ 核准
+                                ???詨?
                               </button>
                               <button className="btn btn-secondary btn-sm" onClick={() => updateReviewStatus(item.id, 'returned')}>
-                                ↩️ 退回
-                              </button>
+                                ?抬? ???                              </button>
                             </>
                           )}
                           {(activeSubTab === 'income' || activeSubTab === 'expense') && allowVoid && item.status === 'approved' && (
                             <button className="btn btn-secondary btn-sm" onClick={() => handleCreateCorrection(item)}>
-                              更正
-                            </button>
-                          )}
-                          {(activeSubTab === 'income' || activeSubTab === 'expense') && allowVoid && item.status === 'approved' && (
-                            <button className="btn btn-danger btn-sm" onClick={() => updateReviewStatus(item.id, 'void')}>
-                              🚫 作廢
+                              ?湔迤
                             </button>
                           )}
                           {item.status !== 'approved' && item.status !== 'void' && (
                             <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
-                              ✏️ 編輯
+                              ?? 蝺刻摩
                             </button>
                           )}
                           {item.status !== 'approved' && (
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.id)}>
-                              🗑️ 徹底刪除
+                              ??儭?敺孵??芷
                             </button>
                           )}
                         </div>
@@ -1754,7 +1733,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {items.length === 0 && (
                   <tr>
                     <td colSpan="12" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
-                      📪 目前無記錄。點擊右上角「新增記錄」開始建檔！
+                      ? ?桀??∟????銝??憓???憪遣瑼?
                     </td>
                   </tr>
                 )}
@@ -1770,27 +1749,27 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           <div className="modal-content">
             <div className="modal-header">
               <span className="modal-title">
-                {editingItem ? '✏️ 編輯記錄' : '➕ 新增項目'} - {
-                  activeSubTab === 'income' ? '收入' :
-                  activeSubTab === 'expense' ? '支出' :
-                  activeSubTab === 'shareholder' ? '股東往來' :
-                  activeSubTab === 'gas' ? '瓦斯庫存 / 毛利' : '貸款'
+                {editingItem ? '????' : '????'} - {
+                  activeSubTab === 'income' ? '??' :
+                  activeSubTab === 'expense' ? '??' :
+                  activeSubTab === 'shareholder' ? '????' :
+                  activeSubTab === 'gas' ? '???? / ??' : '??'
                 }
               </span>
-              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)}>×</button>
+              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)}>?</button>
             </div>
 
             <form onSubmit={handleSave}>
               <div className="modal-body">
                 {/* Operator tag for visual reference in modal */}
                 <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '8px 12px', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-blue)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  👤 目前操作人員：<strong>{operatorName}</strong> (此項異動將會記錄日誌)
+                  建立人：<strong>{operatorName}</strong>
                 </div>
 
                 {/* 1. Date Field */}
                 {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && (
                   <div className="form-group">
-                    <label className="form-label">交易日期</label>
+                    <label className="form-label">鈭斗??交?</label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                   </div>
                 )}
@@ -1798,42 +1777,41 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'gas' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">成本月份</label>
+                      <label className="form-label">??遢</label>
                       <input type="month" required className="form-control" value={formData.yearMonth} onChange={e => setFormData({ ...formData, yearMonth: e.target.value })} />
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">期初瓦斯公斤數</label>
+                        <label className="form-label">???行?祆??</label>
                         <input type="number" min="0" step="0.01" className="form-control" value={formData.openingKg} onChange={e => setFormData({ ...formData, openingKg: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">期初瓦斯成本</label>
+                        <label className="form-label">???行?</label>
                         <input type="number" min="0" step="1" className="form-control" value={formData.openingCost} onChange={e => setFormData({ ...formData, openingCost: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">本月進貨公斤數</label>
+                        <label className="form-label">?祆??脰疏?祆??</label>
                         <input type="number" min="0" step="0.01" required className="form-control" value={formData.purchaseKg} onChange={e => setFormData({ ...formData, purchaseKg: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">本月進貨金額</label>
+                        <label className="form-label">?祆??脰疏??</label>
                         <input type="number" min="0" step="1" required className="form-control" value={formData.purchaseAmount} onChange={e => setFormData({ ...formData, purchaseAmount: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">本月損耗 / 盤差公斤數</label>
+                        <label className="form-label">?祆???/ ?文榆?祆??</label>
                         <input type="number" min="0" step="0.01" className="form-control" value={formData.shrinkageKg} onChange={e => setFormData({ ...formData, shrinkageKg: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">實際盤點期末公斤數</label>
-                        <input type="number" min="0" step="0.01" placeholder="留空則由系統試算" className="form-control" value={formData.physicalEndingKg} onChange={e => setFormData({ ...formData, physicalEndingKg: e.target.value })} />
+                        <label className="form-label">撖阡??日???祆??</label>
+                        <input type="number" min="0" step="0.01" placeholder="?征?蝟餌絞閰衣?" className="form-control" value={formData.physicalEndingKg} onChange={e => setFormData({ ...formData, physicalEndingKg: e.target.value })} />
                       </div>
                     </div>
                     <div className="alert-box info" style={{ marginTop: 0 }}>
-                      系統會用「期初成本 + 本月進貨金額」除以「期初公斤 + 本月進貨公斤」算出平均成本，再用收入記錄的瓦斯公斤數自動換算銷貨成本與毛利。
-                    </div>
+                      蝟餌絞???????+ ?祆??脰疏???隞乓????+ ?祆??脰疏?祆???箏像???穿???嗅閮???臬?斗?芸????瑁疏????押?                    </div>
                   </>
                 )}
 
@@ -1842,24 +1820,24 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">單價 (TWD)</label>
+                        <label className="form-label">?桀 (TWD)</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          placeholder="例：850"
+                          placeholder="靘?850"
                           className="form-control"
                           value={formData.unitPrice}
                           onChange={e => updateAmountCalculation({ unitPrice: e.target.value })}
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">數量</label>
+                        <label className="form-label">?賊?</label>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          placeholder="例：12"
+                          placeholder="靘?12"
                           className="form-control"
                           value={formData.quantity}
                           onChange={e => updateAmountCalculation({ quantity: e.target.value })}
@@ -1867,33 +1845,33 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       </div>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '-8px', marginBottom: '12px' }}>
-                      系統試算金額：${Number(formData.calculatedAmount || 0).toLocaleString()}
+                      蝟餌絞閰衣???嚗?{Number(formData.calculatedAmount || 0).toLocaleString()}
                     </div>
                     {activeSubTab === 'income' && (
                       <>
                         <div className="form-row">
                           <div className="form-group">
-                            <label className="form-label">瓦斯銷售公斤數</label>
-                            <input type="number" min="0" step="0.01" placeholder="例：240" className="form-control" value={formData.gasKg} onChange={e => setFormData({ ...formData, gasKg: e.target.value })} />
+                            <label className="form-label">?行?瑕?祆??</label>
+                            <input type="number" min="0" step="0.01" placeholder="靘?240" className="form-control" value={formData.gasKg} onChange={e => setFormData({ ...formData, gasKg: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">鋼瓶 / 桶數</label>
-                            <input type="number" min="0" step="1" placeholder="例：20" className="form-control" value={formData.cylinderQty} onChange={e => setFormData({ ...formData, cylinderQty: e.target.value })} />
+                            <label className="form-label">?潛 / 獢嗆</label>
+                            <input type="number" min="0" step="1" placeholder="靘?20" className="form-control" value={formData.cylinderQty} onChange={e => setFormData({ ...formData, cylinderQty: e.target.value })} />
                           </div>
                         </div>
                         <div className="form-row">
                           <div className="form-group">
-                            <label className="form-label">配送趟次</label>
-                            <input type="number" min="0" step="1" placeholder="例：8" className="form-control" value={formData.deliveryTrips} onChange={e => setFormData({ ...formData, deliveryTrips: e.target.value })} />
+                            <label className="form-label">??甈?</label>
+                            <input type="number" min="0" step="1" placeholder="靘?8" className="form-control" value={formData.deliveryTrips} onChange={e => setFormData({ ...formData, deliveryTrips: e.target.value })} />
                           </div>
                           <div className="form-group">
-                            <label className="form-label">客戶類型</label>
+                            <label className="form-label">摰Ｘ憿?</label>
                             <select className="select-dropdown" style={{ width: '100%' }} value={formData.customerType} onChange={e => setFormData({ ...formData, customerType: e.target.value })}>
-                              <option value="">未分類</option>
-                              <option value="home">家庭戶</option>
-                              <option value="restaurant">餐飲店</option>
-                              <option value="business">營業用戶</option>
-                              <option value="dealer">同業 / 批發</option>
+                              <option value="">?芸?憿?</option>
+                              <option value="home">摰嗅滬??</option>
+                              <option value="restaurant">擗ㄡ摨?</option>
+                              <option value="business">?平?冽</option>
+                              <option value="dealer">?平 / ?寧</option>
                             </select>
                           </div>
                         </div>
@@ -1904,15 +1882,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
                 {activeSubTab !== 'loan' && activeSubTab !== 'gas' && (
                   <div className="form-group">
-                    <label className="form-label">{activeSubTab === 'income' ? '實收/總金額 (TWD)' : '實付/總金額 (TWD)'}</label>
-                    <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                  activeSubTab === 'income' ? '??' :
+                    <input type="number" required placeholder="???" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
                   </div>
                 )}
 
                 {/* 3. Account Category */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">會計科目</label>
+                    <label className="form-label">??蝘</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.accountCode} onChange={e => setFormData({ ...formData, accountCode: e.target.value })}>
                       {activeSubTab === 'income' 
                         ? revenueAccounts.map(a => <option key={a.code} value={a.code}>{a.code} - {a.name} ({a.desc})</option>)
@@ -1924,7 +1902,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">{activeSubTab === 'income' ? '收款方式' : '付款方式'}</label>
+                  activeSubTab === 'income' ? '??' :
                     <select
                       required
                       className="select-dropdown"
@@ -1946,11 +1924,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {formData.paymentMethod === 'check' && (activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">支票號碼</label>
+                      <label className="form-label">?舐巨?Ⅳ</label>
                       <input type="text" className="form-control" value={formData.checkNo} onChange={e => setFormData({ ...formData, checkNo: e.target.value })} />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">支票到期日</label>
+                      <label className="form-label">?舐巨?唳???</label>
                       <input type="date" className="form-control" value={formData.checkDueDate} onChange={e => setFormData({ ...formData, checkDueDate: e.target.value })} />
                     </div>
                   </div>
@@ -1958,8 +1936,43 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">{activeSubTab === 'income' ? '客戶/來源名稱' : '廠商/付款對象'}</label>
-                    <input type="text" placeholder="可留空" className="form-control" value={formData.counterpartyName} onChange={e => setFormData({ ...formData, counterpartyName: e.target.value })} />
+                    <label className="form-label">{activeSubTab === 'income' ? '客戶主檔' : '供應商主檔'}</label>
+                    <select
+                      className="select-dropdown"
+                      style={{ width: '100%' }}
+                      value={activeSubTab === 'income' ? formData.customerId || '' : formData.supplierId || ''}
+                      onChange={e => {
+                        if (activeSubTab === 'income') {
+                          const selected = customers.find(item => item.id === e.target.value);
+                          setFormData({
+                            ...formData,
+                            customerId: e.target.value,
+                            counterpartyName: selected?.name || formData.counterpartyName,
+                            counterpartyTaxId: selected?.taxId || formData.counterpartyTaxId
+                          });
+                        } else {
+                          const selected = suppliers.find(item => item.id === e.target.value);
+                          setFormData({
+                            ...formData,
+                            supplierId: e.target.value,
+                            counterpartyName: selected?.name || formData.counterpartyName,
+                            counterpartyTaxId: selected?.taxId || formData.counterpartyTaxId
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">不綁定主檔</option>
+                      {(activeSubTab === 'income' ? customers : suppliers).map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {(activeSubTab === 'income' || activeSubTab === 'expense') && (
+                  <div className="form-group">
+                  activeSubTab === 'income' ? '??' :
+                    <input type="text" placeholder="???" className="form-control" value={formData.counterpartyName} onChange={e => setFormData({ ...formData, counterpartyName: e.target.value })} />
                   </div>
                 )}
 
@@ -1967,39 +1980,39 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">發票號碼</label>
-                        <input type="text" placeholder="例：AB12345678" className="form-control" value={formData.invoiceNo} onChange={e => setFormData({ ...formData, invoiceNo: e.target.value })} />
+                        <label className="form-label">?潛巨?Ⅳ</label>
+                        <input type="text" placeholder="靘?AB12345678" className="form-control" value={formData.invoiceNo} onChange={e => setFormData({ ...formData, invoiceNo: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">發票日期</label>
+                        <label className="form-label">?潛巨?交?</label>
                         <input type="date" className="form-control" value={formData.invoiceDate || formData.date} onChange={e => setFormData({ ...formData, invoiceDate: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">{activeSubTab === 'income' ? '買受人統編' : '廠商統編'}</label>
-                        <input type="text" maxLength="8" placeholder="可留空" className="form-control" value={formData.counterpartyTaxId} onChange={e => setFormData({ ...formData, counterpartyTaxId: e.target.value })} />
+                  activeSubTab === 'income' ? '??' :
+                        <input type="text" maxLength="8" placeholder="????" className="form-control" value={formData.counterpartyTaxId} onChange={e => setFormData({ ...formData, counterpartyTaxId: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">稅別</label>
+                        <label className="form-label">蝔</label>
                         <select className="select-dropdown" style={{ width: '100%' }} value={formData.taxType} onChange={e => setFormData({ ...formData, taxType: e.target.value })}>
-                          <option value="taxable">應稅 5%</option>
-                          <option value="zero">零稅率</option>
-                          <option value="exempt">免稅</option>
-                          <option value="non_vat">非營業稅項目</option>
+                          <option value="taxable">?? 5%</option>
+                          <option value="zero">?嗥???</option>
+                          <option value="exempt">??</option>
+                          <option value="non_vat">??璆剔??</option>
                         </select>
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">稅額</label>
-                        <input type="number" min="0" placeholder="留空由系統估算" className="form-control" value={formData.vatAmount} onChange={e => setFormData({ ...formData, vatAmount: e.target.value })} />
+                        <label className="form-label">蝔?</label>
+                        <input type="number" min="0" placeholder="???" className="form-control" value={formData.vatAmount} onChange={e => setFormData({ ...formData, vatAmount: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">金額型態</label>
+                        <label className="form-label">????</label>
                         <select className="select-dropdown" style={{ width: '100%' }} value={formData.taxIncluded ? 'included' : 'excluded'} onChange={e => setFormData({ ...formData, taxIncluded: e.target.value === 'included' })}>
-                          <option value="included">含稅</option>
-                          <option value="excluded">未稅</option>
+                          <option value="included">?怎?</option>
+                          <option value="excluded">?芰?</option>
                         </select>
                       </div>
                     </div>
@@ -2010,31 +2023,31 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">員工姓名</label>
+                        <label className="form-label">?∪極憪?</label>
                         <input type="text" className="form-control" value={formData.employeeName} onChange={e => setFormData({ ...formData, employeeName: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">薪資月份</label>
+                        <label className="form-label">?芾??遢</label>
                         <input type="month" className="form-control" value={formData.payrollMonth} onChange={e => setFormData({ ...formData, payrollMonth: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">勞保雇主負擔</label>
+                        <label className="form-label">???蜓鞎?</label>
                         <input type="number" min="0" className="form-control" value={formData.laborInsurance} onChange={e => setFormData({ ...formData, laborInsurance: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">健保雇主負擔</label>
+                        <label className="form-label">?乩??蜓鞎?</label>
                         <input type="number" min="0" className="form-control" value={formData.healthInsurance} onChange={e => setFormData({ ...formData, healthInsurance: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">勞退提撥</label>
+                        <label className="form-label">??</label>
                         <input type="number" min="0" className="form-control" value={formData.pension} onChange={e => setFormData({ ...formData, pension: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">代扣所得稅</label>
+                        <label className="form-label">隞??敺?</label>
                         <input type="number" min="0" className="form-control" value={formData.withholdingTax} onChange={e => setFormData({ ...formData, withholdingTax: e.target.value })} />
                       </div>
                     </div>
@@ -2043,14 +2056,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
                 {['receivable', 'payable'].includes(formData.paymentMethod) && (activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">預計結清期限 (選填)</label>
+                    <label className="form-label">??蝯??? (?詨‵)</label>
                     <input type="date" className="form-control" value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} />
                   </div>
                 )}
 
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">🧾 上傳憑證/發票照片 (選填，限 5MB)</label>
+                    <label className="form-label">?屁 銝??/?潛巨?抒? (?詨‵嚗? 5MB)</label>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -2102,7 +2115,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           onClick={() => setFormData({ ...formData, receiptAttachment: '' })} 
                           style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: 'var(--accent-red)', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
                         >
-                          ×
+                          ?
                         </button>
                       </div>
                     )}
@@ -2112,7 +2125,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 4. Bank ID */}
                 {(activeSubTab === 'loan' || ((activeSubTab === 'income' || activeSubTab === 'expense') && formData.paymentMethod === 'bank_transfer')) && (
                   <div className="form-group">
-                    <label className="form-label">{activeSubTab === 'loan' ? '撥款解付銀行' : '往來銀行帳戶'}</label>
+                        <label className="form-label">{activeSubTab === 'loan' ? '貸款銀行' : '股東往來銀行'}</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.bankId} onChange={e => setFormData({ ...formData, bankId: e.target.value })}>
                       {banks.map(b => (
                         <option key={b.id} value={b.id}>{b.name} ({b.accountNo})</option>
@@ -2125,7 +2138,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'shareholder' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">交易股東</label>
+                      <label className="form-label">鈭斗??⊥</label>
                       <select required className="select-dropdown" style={{ width: '100%' }} value={formData.shareholderId} onChange={e => setFormData({ ...formData, shareholderId: e.target.value })}>
                         {shareholders.map(s => (
                           <option key={s.id} value={s.id}>{s.name} ({s.phone})</option>
@@ -2134,11 +2147,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">往來類型</label>
+                      <label className="form-label">敺靘???</label>
                       <select required className="select-dropdown" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                        <option value="join">創始入股 (Join)</option>
-                        <option value="increase">增資 (Capital Increase)</option>
-                        <option value="decrease">減資/退股 (Capital Reduction)</option>
+                        <option value="join">?萄??亥 (Join)</option>
+                        <option value="increase">憓? (Capital Increase)</option>
+                        <option value="decrease">皜?/???(Capital Reduction)</option>
                       </select>
                     </div>
                   </>
@@ -2148,35 +2161,35 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'loan' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">貸款名稱</label>
-                      <input type="text" required placeholder="如：第一銀行青年創業貸款" className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                      <label className="form-label">鞎豢狡?迂</label>
+                      <input type="text" required placeholder="???" className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     </div>
 
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">貸款本金</label>
-                        <input type="number" required placeholder="本金金額" className="form-control" value={formData.principal} onChange={e => setFormData({ ...formData, principal: e.target.value })} />
+                        <label className="form-label">鞎豢狡?祇?</label>
+                        <input type="number" required placeholder="?祇???" className="form-control" value={formData.principal} onChange={e => setFormData({ ...formData, principal: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">年利率 (%)</label>
-                        <input type="number" step="0.01" required placeholder="如 2.1" className="form-control" value={formData.interestRate} onChange={e => setFormData({ ...formData, interestRate: e.target.value })} />
+                        <label className="form-label">撟游??(%)</label>
+                        <input type="number" step="0.01" required placeholder="憒?2.1" className="form-control" value={formData.interestRate} onChange={e => setFormData({ ...formData, interestRate: e.target.value })} />
                       </div>
                     </div>
 
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">貸款期限 (月)</label>
-                        <input type="number" required placeholder="期數" className="form-control" value={formData.months} onChange={e => setFormData({ ...formData, months: e.target.value })} />
+                        <label className="form-label">鞎豢狡?? (??</label>
+                        <input type="number" required placeholder="?" className="form-control" value={formData.months} onChange={e => setFormData({ ...formData, months: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">撥款日期</label>
+                        <label className="form-label">?交狡?交?</label>
                         <input type="date" required className="form-control" value={formData.startDate} onChange={e => setFormData({ ...formData, startDate: e.target.value })} />
                       </div>
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">每月固定償還本息 (TWD)</label>
-                      <input type="number" required placeholder="月還款金額" className="form-control" value={formData.monthlyPayment} onChange={e => setFormData({ ...formData, monthlyPayment: e.target.value })} />
+                      <label className="form-label">瘥??箏????祆 (TWD)</label>
+                      <input type="number" required placeholder="???" className="form-control" value={formData.monthlyPayment} onChange={e => setFormData({ ...formData, monthlyPayment: e.target.value })} />
                     </div>
                   </>
                 )}
@@ -2184,56 +2197,56 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'assets' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">資產名稱</label>
+                      <label className="form-label">鞈?迂</label>
                       <input type="text" required className="form-control" value={formData.assetName} onChange={e => setFormData({ ...formData, assetName: e.target.value })} />
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">資產類別</label>
+                        <label className="form-label">鞈憿</label>
                         <select className="select-dropdown" style={{ width: '100%' }} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                          <option value="truck">貨車</option>
-                          <option value="cylinder">鋼瓶</option>
-                          <option value="equipment">設備</option>
-                          <option value="office">辦公設備</option>
-                          <option value="other">其他</option>
+                          <option value="truck">鞎刻?</option>
+                          <option value="cylinder">?潛</option>
+                          <option value="equipment">閮剖?</option>
+                          <option value="office">颲血閮剖?</option>
+                          <option value="other">?嗡?</option>
                         </select>
                       </div>
                       <div className="form-group">
-                        <label className="form-label">取得日期</label>
+                        <label className="form-label">???交?</label>
                         <input type="date" required className="form-control" value={formData.acquisitionDate} onChange={e => setFormData({ ...formData, acquisitionDate: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">取得成本</label>
+                        <label className="form-label">???</label>
                         <input type="number" min="0" required className="form-control" value={formData.acquisitionCost} onChange={e => setFormData({ ...formData, acquisitionCost: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">耐用月數</label>
+                        <label className="form-label">??</label>
                         <input type="number" min="1" required className="form-control" value={formData.usefulLifeMonths} onChange={e => setFormData({ ...formData, usefulLifeMonths: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">殘值</label>
+                        <label className="form-label">畾?</label>
                         <input type="number" min="0" className="form-control" value={formData.residualValue} onChange={e => setFormData({ ...formData, residualValue: e.target.value })} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">資產狀態</label>
+                        <label className="form-label">鞈???</label>
                         <select className="select-dropdown" style={{ width: '100%' }} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                          <option value="active">使用中</option>
-                          <option value="disposed">已處分</option>
+                          <option value="active">雿輻銝?</option>
+                          <option value="disposed">撌脰???</option>
                         </select>
                       </div>
                     </div>
                     {formData.status === 'disposed' && (
                       <div className="form-row">
                         <div className="form-group">
-                          <label className="form-label">處分日期</label>
+                          <label className="form-label">???交?</label>
                           <input type="date" className="form-control" value={formData.disposalDate} onChange={e => setFormData({ ...formData, disposalDate: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">處分金額</label>
+                          <label className="form-label">????</label>
                           <input type="number" min="0" className="form-control" value={formData.disposalAmount} onChange={e => setFormData({ ...formData, disposalAmount: e.target.value })} />
                         </div>
                       </div>
@@ -2244,28 +2257,27 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 7. Status field */}
                 {activeSubTab !== 'shareholder' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && (
                   <div className="form-group">
-                    <label className="form-label">核准狀態</label>
+                    <label className="form-label">?詨????</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                      <option value="pending_admin_review">待審核</option>
-                      <option value="draft">草稿</option>
+                      <option value="pending_admin_review">敺祟??</option>
+                      <option value="draft">?阮</option>
                     </select>
                   </div>
                 )}
 
                 {/* 8. Remarks */}
                 <div className="form-group">
-                  <label className="form-label">項目備註/摘要說明</label>
-                  <input type="text" placeholder="請輸入說明" className="form-control" value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} />
+                  <label className="form-label">??酉/??隤芣?</label>
+                  <input type="text" placeholder="???" className="form-control" value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} />
                 </div>
               </div>
 
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
-                  取消
+                  ??
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  💾 儲存並寫入日誌
-                </button>
+                  ? ?脣?銝血神?交隤?                </button>
               </div>
             </form>
           </div>
@@ -2278,16 +2290,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           <div className="modal-content" style={{ maxWidth: '420px' }}>
             <div className="modal-header">
               <span className="modal-title">
-                {clearingItem.paymentMethod === 'check' ? '🎟️ 票據兌現確認' : '💰 結清款項確認'}
+                {clearingItem.paymentMethod === 'check' ? '??儭?蟡冽??蝣箄?' : '? 蝯?甈暸?蝣箄?'}
               </span>
-              <button type="button" className="modal-close" onClick={() => setClearingItem(null)}>×</button>
+              <button type="button" className="modal-close" onClick={() => setClearingItem(null)}>?</button>
             </div>
             <form onSubmit={handleClearSubmit}>
               <div className="modal-body">
                 <div style={{ backgroundColor: 'var(--card-bg-hover)', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>待結帳單：{clearingItem.id} ({getAccountName(clearingItem.accountCode)})</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>結清資料：{clearingItem.id} ({getAccountName(clearingItem.accountCode)})</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: clearingItem.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)', marginTop: '4px' }}>
-                    待結金額：${Number(clearingItem.amount).toLocaleString()} TWD
+                    待結清金額：{Number(clearingItem.amount).toLocaleString()} TWD
                   </div>
                   {clearingItem.checkNo && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: '600' }}>支票號碼：{clearingItem.checkNo}</div>}
                   {clearingItem.counterpartyName && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>對象：{clearingItem.counterpartyName}</div>}
@@ -2295,7 +2307,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
                 {clearingItem.paymentMethod === 'check' ? (
                   <div className="form-group">
-                    <label className="form-label">兌現存入/扣款帳戶</label>
+                    <label className="form-label">?摮/??狡撣單</label>
                     <select 
                       required 
                       className="select-dropdown" 
@@ -2311,7 +2323,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 ) : (
                   <>
                     <div className="form-group">
-                      <label className="form-label">實際支付/結清方式</label>
+                      <label className="form-label">撖阡??臭?/蝯??孵?</label>
                       <select 
                         required 
                         className="select-dropdown" 
@@ -2323,16 +2335,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           bankId: e.target.value === 'bank_transfer' ? (clearData.bankId || banks[0]?.id || '') : ''
                         })}
                       >
-                        <option value="bank_transfer">銀行轉帳</option>
-                        <option value="cash">現金 (自店面零用金)</option>
-                        <option value="check">支票</option>
-                        <option value="other">其他</option>
+                        <option value="bank_transfer">?銵?撣?</option>
+                        <option value="cash">?暸? (?芸??ａ?券?)</option>
+                        <option value="check">?舐巨</option>
+                        <option value="other">?嗡?</option>
                       </select>
                     </div>
 
                     {clearData.method === 'bank_transfer' && (
                       <div className="form-group">
-                        <label className="form-label">往來銀行帳戶</label>
+                        <label className="form-label">敺靘?銵董??</label>
                         <select 
                           required 
                           className="select-dropdown" 
@@ -2350,7 +2362,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">收付款/結清日期</label>
+                  <label className="form-label">?嗡?甈?蝯??交?</label>
                   <input 
                     type="date" 
                     required 
@@ -2362,8 +2374,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setClearingItem(null)}>取消</button>
-                <button type="submit" className="btn btn-primary">✅ 確認結清並入帳</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setClearingItem(null)}>??</button>
+                <button type="submit" className="btn btn-primary">??蝣箄?蝯?銝血撣?</button>
               </div>
             </form>
           </div>
@@ -2375,8 +2387,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setViewingReceiptUrl(null)}>
           <div className="modal-content" style={{ maxWidth: '800px', width: '90%', textAlign: 'center', padding: '16px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">📷 原始發票憑證影像</span>
-              <button type="button" className="modal-close" onClick={() => setViewingReceiptUrl(null)}>×</button>
+              <span className="modal-title">? ???潛巨??敶勗?</span>
+              <button type="button" className="modal-close" onClick={() => setViewingReceiptUrl(null)}>?</button>
             </div>
             <div className="modal-body" style={{ padding: '16px 0', overflowY: 'auto' }}>
               <img 
@@ -2384,19 +2396,24 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 alt="Receipt Attachment" 
                 style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: '6px', border: '1px solid var(--border-color)', objectFit: 'contain', cursor: 'zoom-in' }} 
                 onClick={() => {
-                  const newWindow = window.open();
+                  const newWindow = window.open('', '_blank', 'noopener,noreferrer');
                   if (newWindow) {
-                    newWindow.document.write(`<img src="${viewingReceiptUrl}" style="max-width: 100%; height: auto;" />`);
+                    const img = newWindow.document.createElement('img');
+                    img.src = viewingReceiptUrl;
+                    img.alt = 'Receipt Attachment';
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    newWindow.document.body.style.margin = '0';
+                    newWindow.document.body.appendChild(img);
                   }
                 }}
-                title="點擊圖片可另開新視窗放大檢視"
+                title="暺????臬?閬??曉之瑼Ｚ?"
               />
               <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                💡 提示：點擊圖片可另開新視窗放大檢視原始尺寸。
-              </div>
+                ? ?內嚗?????阡??啗?蝒憭扳炎閬?憪偕撖詻?              </div>
             </div>
             <div className="modal-footer" style={{ paddingBottom: 0 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceiptUrl(null)}>關閉視窗</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceiptUrl(null)}>??閬?</button>
             </div>
           </div>
         </div>
@@ -2404,3 +2421,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     </div>
   );
 }
+
+
+
+

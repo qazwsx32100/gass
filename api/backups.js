@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       return sendJson(res, 200, {
         ok: true,
         restored,
-        state: sanitizeStateForClient(row.state || {}),
+        state: sanitizeStateForClient(row.state || {}, session),
         updated_at: row.updated_at,
         updated_by: row.updated_by
       });

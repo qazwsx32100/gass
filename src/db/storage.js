@@ -32,6 +32,12 @@ const KEYS = {
   DAILY_BACKUPS: 'bp_daily_backups',
   OUTBOUND_EMAILS: 'bp_outbound_emails',
   PERIOD_LOCKS: 'bp_period_locks',
+  CUSTOMERS: 'bp_customers',
+  SUPPLIERS: 'bp_suppliers',
+  GO_LIVE_CHECKS: 'bp_go_live_checks',
+  BACKUP_RESTORE_DRILLS: 'bp_backup_restore_drills',
+  PRODUCTION_INITIALIZATION: 'bp_production_initialization',
+  GAS_INVENTORY_MODULE_PLAN: 'bp_gas_inventory_module_plan',
   FIREBASE_CONFIG: 'bp_firebase_config',
   ADMIN_PASSWORD: 'bp_admin_password',
   ADMIN_SECURITY: 'bp_admin_security',
@@ -88,6 +94,8 @@ export const normalizeTransaction = (item) => {
     gasKg,
     cylinderQty,
     deliveryTrips,
+    customerId: item.customerId || '',
+    supplierId: item.supplierId || '',
     customerType: item.customerType || '',
     checkNo: item.checkNo || '',
     checkDueDate: item.checkDueDate || '',
@@ -126,7 +134,14 @@ export const normalizeTransaction = (item) => {
     voidedBy: item.voidedBy || null,
     voidedByName: item.voidedByName || null,
     voidedAt: item.voidedAt || null,
-    voidReason: item.voidReason || null
+    voidReason: item.voidReason || null,
+    correctionStatus: item.correctionStatus || null,
+    correctedBy: item.correctedBy || null,
+    correctedByName: item.correctedByName || null,
+    correctedAt: item.correctedAt || null,
+    correctionReason: item.correctionReason || null,
+    correctionOf: item.correctionOf || null,
+    correctionType: item.correctionType || null
   };
 };
 
@@ -224,6 +239,103 @@ export const normalizePeriodLock = (item) => ({
   remarks: item.remarks || ''
 });
 
+export const normalizeCustomer = (item = {}) => ({
+  id: item.id || createArchiveId('CUS'),
+  companyId: item.companyId || 'COMP001',
+  name: item.name || '',
+  taxId: item.taxId || '',
+  contactPerson: item.contactPerson || '',
+  phone: item.phone || '',
+  email: item.email || '',
+  address: item.address || '',
+  creditLimit: Number(item.creditLimit) || 0,
+  paymentTermsDays: Number(item.paymentTermsDays) || 30,
+  status: item.status || 'active',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeSupplier = (item = {}) => ({
+  id: item.id || createArchiveId('SUP'),
+  companyId: item.companyId || 'COMP001',
+  name: item.name || '',
+  taxId: item.taxId || '',
+  contactPerson: item.contactPerson || '',
+  phone: item.phone || '',
+  email: item.email || '',
+  address: item.address || '',
+  paymentTermsDays: Number(item.paymentTermsDays) || 30,
+  status: item.status || 'active',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeGoLiveCheck = (item = {}) => ({
+  id: item.id || createArchiveId('GLC'),
+  title: item.title || '',
+  category: item.category || 'operations',
+  status: item.status || 'pending',
+  notes: item.notes || '',
+  checkedAt: item.checkedAt || null,
+  checkedBy: item.checkedBy || ''
+});
+
+export const normalizeBackupRestoreDrill = (item = {}) => ({
+  id: item.id || createArchiveId('DRL'),
+  drillDate: item.drillDate || new Date().toISOString().split('T')[0],
+  backupSource: item.backupSource || 'manual_backup',
+  restoredTo: item.restoredTo || 'test_environment',
+  result: item.result || 'pending',
+  operator: item.operator || '',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString()
+});
+
+const DEFAULT_GO_LIVE_CHECKS = [
+  { id: 'GLC_PERMISSIONS', category: 'security', title: '權限角色與裝置白名單已測試' },
+  { id: 'GLC_SUPABASE', category: 'security', title: 'Supabase 舊表格已清理或關閉權限' },
+  { id: 'GLC_BACKUP', category: 'backup', title: '雲端備份與地端備份已建立' },
+  { id: 'GLC_RESTORE', category: 'backup', title: '備份還原演練已完成' },
+  { id: 'GLC_INITIAL_DATA', category: 'launch', title: '正式資料已初始化，測試資料已清空' },
+  { id: 'GLC_REPORTS', category: 'reports', title: '營運報表、圓餅圖、日期範圍報表已確認' },
+  { id: 'GLC_CUSTOMERS_AR', category: 'accounting', title: '客戶資料與應收帳款流程已確認' },
+  { id: 'GLC_SUPPLIERS_AP', category: 'accounting', title: '供應商資料與應付帳款流程已確認' },
+  { id: 'GLC_IMMUTABLE_LEDGER', category: 'accounting', title: '已核准資料改用作廢或更正流程' },
+  { id: 'GLC_GAS_INVENTORY_RESERVED', category: 'gas_inventory', title: '完整瓦斯庫存模組已預留欄位與頁面空間' }
+].map(normalizeGoLiveCheck);
+
+const DEFAULT_PRODUCTION_INITIALIZATION = {
+  testDataCleared: false,
+  companyProfileReady: false,
+  chartOfAccountsReady: false,
+  shareholdersReady: false,
+  bankOpeningBalancesReady: false,
+  customersReady: false,
+  suppliersReady: false,
+  openingInventoryReserved: false,
+  lastInitializedAt: null,
+  initializedBy: '',
+  notes: ''
+};
+
+const DEFAULT_GAS_INVENTORY_MODULE_PLAN = {
+  enabled: false,
+  reserved: true,
+  plannedFields: [
+    '鋼瓶編號',
+    '瓦斯規格與公斤數',
+    '空瓶/實瓶狀態',
+    '客戶寄存瓶',
+    '配送車庫存',
+    '盤點差異',
+    '異動紀錄',
+    '月結庫存成本'
+  ],
+  notes: '目前先保留完整庫存模組空間；現階段仍以當月進貨公斤數與銷售公斤數計算毛利。'
+};
+
 const toYearMonth = (value) => String(value || '').slice(0, 7);
 
 const getDefaultAdminSecurity = () => ({
@@ -305,6 +417,18 @@ export const initializeDB = (forceReset = false) => {
     localStorage.setItem(KEYS.DAILY_BACKUPS, JSON.stringify(keepOrSeed(KEYS.DAILY_BACKUPS, [])));
     localStorage.setItem(KEYS.OUTBOUND_EMAILS, JSON.stringify(keepOrSeed(KEYS.OUTBOUND_EMAILS, [])));
     localStorage.setItem(KEYS.PERIOD_LOCKS, JSON.stringify(keepOrSeed(KEYS.PERIOD_LOCKS, []).map(normalizePeriodLock)));
+    localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify(keepOrSeed(KEYS.CUSTOMERS, []).map(normalizeCustomer)));
+    localStorage.setItem(KEYS.SUPPLIERS, JSON.stringify(keepOrSeed(KEYS.SUPPLIERS, []).map(normalizeSupplier)));
+    localStorage.setItem(KEYS.GO_LIVE_CHECKS, JSON.stringify(keepOrSeed(KEYS.GO_LIVE_CHECKS, DEFAULT_GO_LIVE_CHECKS).map(normalizeGoLiveCheck)));
+    localStorage.setItem(KEYS.BACKUP_RESTORE_DRILLS, JSON.stringify(keepOrSeed(KEYS.BACKUP_RESTORE_DRILLS, []).map(normalizeBackupRestoreDrill)));
+    localStorage.setItem(KEYS.PRODUCTION_INITIALIZATION, JSON.stringify({
+      ...DEFAULT_PRODUCTION_INITIALIZATION,
+      ...keepOrSeed(KEYS.PRODUCTION_INITIALIZATION, {})
+    }));
+    localStorage.setItem(KEYS.GAS_INVENTORY_MODULE_PLAN, JSON.stringify({
+      ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
+      ...keepOrSeed(KEYS.GAS_INVENTORY_MODULE_PLAN, {})
+    }));
     localStorage.setItem(KEYS.ADMIN_SECURITY, JSON.stringify({
       ...getDefaultAdminSecurity(),
       ...read(KEYS.ADMIN_SECURITY, {})
@@ -350,6 +474,30 @@ export const initializeDB = (forceReset = false) => {
 
   if (!localStorage.getItem(KEYS.FIXED_ASSETS)) {
     localStorage.setItem(KEYS.FIXED_ASSETS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.CUSTOMERS)) {
+    localStorage.setItem(KEYS.CUSTOMERS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.SUPPLIERS)) {
+    localStorage.setItem(KEYS.SUPPLIERS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.GO_LIVE_CHECKS)) {
+    localStorage.setItem(KEYS.GO_LIVE_CHECKS, JSON.stringify(DEFAULT_GO_LIVE_CHECKS));
+  }
+
+  if (!localStorage.getItem(KEYS.BACKUP_RESTORE_DRILLS)) {
+    localStorage.setItem(KEYS.BACKUP_RESTORE_DRILLS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.PRODUCTION_INITIALIZATION)) {
+    localStorage.setItem(KEYS.PRODUCTION_INITIALIZATION, JSON.stringify(DEFAULT_PRODUCTION_INITIALIZATION));
+  }
+
+  if (!localStorage.getItem(KEYS.GAS_INVENTORY_MODULE_PLAN)) {
+    localStorage.setItem(KEYS.GAS_INVENTORY_MODULE_PLAN, JSON.stringify(DEFAULT_GAS_INVENTORY_MODULE_PLAN));
   }
   
   // Force migration for SYSTEM_CONFIG to enable check alerts
@@ -594,6 +742,38 @@ export const savePeriodLocks = (data) => write(KEYS.PERIOD_LOCKS, data.map(norma
 export const getBudgets = () => read(KEYS.BUDGETS, []);
 export const saveBudgets = (data) => write(KEYS.BUDGETS, data);
 
+export const getCustomers = () => read(KEYS.CUSTOMERS, []).map(normalizeCustomer);
+export const saveCustomers = (data) => write(KEYS.CUSTOMERS, data.map(normalizeCustomer));
+export const getSuppliers = () => read(KEYS.SUPPLIERS, []).map(normalizeSupplier);
+export const saveSuppliers = (data) => write(KEYS.SUPPLIERS, data.map(normalizeSupplier));
+export const getGoLiveChecks = () => {
+  const saved = read(KEYS.GO_LIVE_CHECKS, []);
+  const savedMap = new Map(saved.map(item => [item.id, item]));
+  return DEFAULT_GO_LIVE_CHECKS.map(defaultItem => normalizeGoLiveCheck({
+    ...defaultItem,
+    ...(savedMap.get(defaultItem.id) || {})
+  }));
+};
+export const saveGoLiveChecks = (data) => write(KEYS.GO_LIVE_CHECKS, data.map(normalizeGoLiveCheck));
+export const getBackupRestoreDrills = () => read(KEYS.BACKUP_RESTORE_DRILLS, []).map(normalizeBackupRestoreDrill);
+export const saveBackupRestoreDrills = (data) => write(KEYS.BACKUP_RESTORE_DRILLS, data.map(normalizeBackupRestoreDrill));
+export const getProductionInitialization = () => ({
+  ...DEFAULT_PRODUCTION_INITIALIZATION,
+  ...read(KEYS.PRODUCTION_INITIALIZATION, {})
+});
+export const saveProductionInitialization = (data) => write(KEYS.PRODUCTION_INITIALIZATION, {
+  ...DEFAULT_PRODUCTION_INITIALIZATION,
+  ...data
+});
+export const getGasInventoryModulePlan = () => ({
+  ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
+  ...read(KEYS.GAS_INVENTORY_MODULE_PLAN, {})
+});
+export const saveGasInventoryModulePlan = (data) => write(KEYS.GAS_INVENTORY_MODULE_PLAN, {
+  ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
+  ...data
+});
+
 export const getSystemConfig = () => read(KEYS.SYSTEM_CONFIG, { enableCheckMaturityAlert: false });
 export const saveSystemConfig = (data) => write(KEYS.SYSTEM_CONFIG, data);
 
@@ -652,6 +832,12 @@ export const getDatabaseState = () => ({
   dailyBackups: getDailyBackups(),
   outboundEmails: getOutboundEmails(),
   periodLocks: getPeriodLocks(),
+  customers: getCustomers(),
+  suppliers: getSuppliers(),
+  goLiveChecks: getGoLiveChecks(),
+  backupRestoreDrills: getBackupRestoreDrills(),
+  productionInitialization: getProductionInitialization(),
+  gasInventoryModulePlan: getGasInventoryModulePlan(),
   adminSecurity: getAdminSecurity()
 });
 
@@ -1125,11 +1311,23 @@ export const saveFirebaseConfig = (data) => write(KEYS.FIREBASE_CONFIG, data);
 
 // Export whole database as a backup JSON object
 export const exportBackup = () => {
+  const cleanShareholders = getShareholders().map(s => {
+    const cleaned = { ...s };
+    delete cleaned.password;
+    return cleaned;
+  });
+
+  const adminSec = getAdminSecurity();
+  const cleanAdminSecurity = adminSec ? { ...adminSec } : null;
+  if (cleanAdminSecurity) {
+    delete cleanAdminSecurity.password;
+  }
+
   const backup = {
     version: '1.0',
     timestamp: new Date().toISOString(),
     companies: getCompanies(),
-    shareholders: getShareholders(),
+    shareholders: cleanShareholders,
     banks: getBanks(),
     chartOfAccounts: getChartOfAccounts(),
     shareholderLedger: getShareholderLedger(),
@@ -1146,7 +1344,13 @@ export const exportBackup = () => {
     dailyBackups: getDailyBackups(),
     outboundEmails: getOutboundEmails(),
     periodLocks: getPeriodLocks(),
-    adminSecurity: getAdminSecurity()
+    customers: getCustomers(),
+    suppliers: getSuppliers(),
+    goLiveChecks: getGoLiveChecks(),
+    backupRestoreDrills: getBackupRestoreDrills(),
+    productionInitialization: getProductionInitialization(),
+    gasInventoryModulePlan: getGasInventoryModulePlan(),
+    adminSecurity: cleanAdminSecurity
   };
   return JSON.stringify(backup, null, 2);
 };
@@ -1182,6 +1386,18 @@ export const importBackup = (jsonString) => {
     write(KEYS.DAILY_BACKUPS, backup.dailyBackups || []);
     write(KEYS.OUTBOUND_EMAILS, backup.outboundEmails || []);
     write(KEYS.PERIOD_LOCKS, (backup.periodLocks || []).map(normalizePeriodLock));
+    write(KEYS.CUSTOMERS, (backup.customers || []).map(normalizeCustomer));
+    write(KEYS.SUPPLIERS, (backup.suppliers || []).map(normalizeSupplier));
+    write(KEYS.GO_LIVE_CHECKS, (backup.goLiveChecks || DEFAULT_GO_LIVE_CHECKS).map(normalizeGoLiveCheck));
+    write(KEYS.BACKUP_RESTORE_DRILLS, (backup.backupRestoreDrills || []).map(normalizeBackupRestoreDrill));
+    write(KEYS.PRODUCTION_INITIALIZATION, {
+      ...DEFAULT_PRODUCTION_INITIALIZATION,
+      ...(backup.productionInitialization || {})
+    });
+    write(KEYS.GAS_INVENTORY_MODULE_PLAN, {
+      ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
+      ...(backup.gasInventoryModulePlan || {})
+    });
     write(KEYS.ADMIN_SECURITY, backup.adminSecurity || getDefaultAdminSecurity());
     return { success: true };
   } catch (e) {

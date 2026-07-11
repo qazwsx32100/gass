@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeDB, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
-import { initFirebase, syncLocalToCloud, saveFirebaseConfig } from './db/firebaseService';
+import { initFirebase } from './db/firebaseService';
 import { clearCloudSessionToken, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
 import DashboardView from './pages/DashboardView';
 import InputsView from './pages/InputsView';
@@ -90,31 +90,21 @@ function App() {
         } catch {}
       }
 
-      // Parse URL query parameters to auto-configure Firebase for shared users
+      // Clear one-time verification tokens from the address bar.
       const params = new URLSearchParams(window.location.search);
       const verifyEmailToken = params.get('verifyEmailToken');
       if (verifyEmailToken) {
         window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
       }
-      const queryProject = params.get('project');
-      const queryApiKey = params.get('apiKey');
-      if (queryProject && queryApiKey) {
-        saveFirebaseConfig({
-          projectId: queryProject,
-          apiKey: queryApiKey,
-          viewerPin: '888888'
-        });
-        // Clear URL query parameters for security and clean address bar
-        window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
-      }
 
       setDbVersion(prev => prev + 1);
 
-      // Setup Firestore listener if credentials exist
-      initFirebase((updatedBy) => {
-        showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已即時同步畫面。`, 'info');
-        setDbVersion(prev => prev + 1);
-      });
+      if (!isSupabaseConnected()) {
+        initFirebase((updatedBy) => {
+          showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已即時同步畫面。`, 'info');
+          setDbVersion(prev => prev + 1);
+        });
+      }
 
       setIsDataReady(true);
     };
@@ -137,8 +127,6 @@ function App() {
     const supabaseSynced = isSupabaseConnected()
       ? await syncLocalToSupabase(currentUser?.name || '系統')
       : true;
-    // Sync to Firestore in background
-    syncLocalToCloud(currentUser?.name || '系統');
     return supabaseSynced;
   };
 
