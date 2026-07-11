@@ -349,7 +349,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
     const csvString = '\ufeff' + csvRows.map(row => 
       row.map(cell => {
-        const valStr = cell === null || cell === undefined ? '' : String(cell);
+        let valStr = cell === null || cell === undefined ? '' : String(cell);
+        if (/^[=\+\-\@\t\r]/.test(valStr)) {
+          valStr = "'" + valStr;
+        }
         return `"${valStr.replace(/"/g, '""')}"`;
       }).join(',')
     ).join('\r\n');
