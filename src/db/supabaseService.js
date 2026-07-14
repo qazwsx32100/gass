@@ -29,6 +29,7 @@ const DATA_KEYS = {
   productionInitialization: 'bp_production_initialization',
   gasInventoryModulePlan: 'bp_gas_inventory_module_plan',
   databaseTablePlan: 'bp_database_table_plan',
+  domainReadiness: 'bp_domain_readiness',
   adminSecurity: 'bp_admin_security'
 };
 

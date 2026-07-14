@@ -13,6 +13,8 @@ import {
   getGasInventoryModulePlan,
   getDatabaseTablePlan,
   saveDatabaseTablePlan,
+  getDomainReadiness,
+  saveDomainReadiness,
   getShareholders,
   getBanks,
   getChartOfAccounts,
@@ -69,6 +71,15 @@ const restoredToLabel = {
   production_verified_only: '正式站僅驗證備份可讀'
 };
 
+const domainReadinessLabels = {
+  domainPurchased: '正式網域已購買',
+  dnsConfigured: 'DNS 已設定',
+  vercelDomainConnected: 'Vercel 已連接正式網域',
+  httpsVerified: 'HTTPS 憑證正常',
+  resendDomainVerified: 'Resend 寄信網域已驗證',
+  emailNotificationsEnabled: 'Email 通知正式啟用'
+};
+
 export default function GoLiveView({ companies, onDataChange, showToast }) {
   const [, setRefresh] = useState(0);
   const [companyId, setCompanyId] = useState(companies[0]?.id || 'COMP001');
@@ -114,6 +125,10 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
   const initialization = getProductionInitialization();
   const gasPlan = getGasInventoryModulePlan();
   const tablePlan = getDatabaseTablePlan();
+  const domainReadiness = getDomainReadiness();
+  const currentBrowserUrl = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : domainReadiness.currentUrl;
   const productionSummary = (() => {
     const shareholders = getShareholders();
     const banks = getBanks().filter(item => item.companyId === companyId);
@@ -146,6 +161,7 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
   const doneCount = checks.filter(item => item.status === 'passed').length;
   const initDoneCount = Object.keys(initLabels).filter(key => Boolean(initialization[key])).length;
   const tablePlanDoneCount = tablePlan.filter(item => ['active', 'done'].includes(item.status)).length;
+  const domainReadyCount = Object.keys(domainReadinessLabels).filter(key => Boolean(domainReadiness[key])).length;
 
   const saveAndRefresh = async (message) => {
     setRefresh(v => v + 1);
@@ -300,6 +316,16 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
     await saveAndRefresh('資料庫表格化計畫已更新');
   };
 
+  const handleDomainReadinessChange = async (patch) => {
+    saveDomainReadiness({
+      ...getDomainReadiness(),
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      updatedBy: '系統管理員'
+    });
+    await saveAndRefresh('正式網域與 Email 準備狀態已更新');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div className="card">
@@ -327,6 +353,10 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
             <div className="summary-card">
               <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>資料庫升級項目</div>
               <div style={{ fontSize: '28px', fontWeight: 800 }}>{tablePlanDoneCount}/{tablePlan.length}</div>
+            </div>
+            <div className="summary-card">
+              <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>網域與通知</div>
+              <div style={{ fontSize: '28px', fontWeight: 800 }}>{domainReadyCount}/{Object.keys(domainReadinessLabels).length}</div>
             </div>
           </div>
 
@@ -411,6 +441,63 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
               defaultValue={initialization.notes}
               onBlur={e => handleInitializationNotes(e.target.value)}
               placeholder="初始化備註，例如：保留哪些正式科目、股東、銀行帳戶"
+              rows={3}
+              style={{ marginTop: '12px' }}
+            />
+          </section>
+
+          <section>
+            <h3 style={{ margin: '0 0 12px', fontSize: '18px' }}>正式網域與 Email 通知準備</h3>
+            <div className={`alert-box ${domainReadiness.plannedDomain ? 'info' : 'warning'}`} style={{ marginBottom: '12px' }}>
+              {domainReadiness.plannedDomain
+                ? `預計正式網址：${domainReadiness.plannedDomain}`
+                : '目前先使用 Vercel 網址；未設定正式網域前，Email 通知維持保留或測試狀態。'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>目前正式網址</label>
+                <input
+                  className="form-control"
+                  defaultValue={domainReadiness.currentUrl || currentBrowserUrl}
+                  onBlur={e => handleDomainReadinessChange({ currentUrl: e.target.value })}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>預計正式網域</label>
+                <input
+                  className="form-control"
+                  defaultValue={domainReadiness.plannedDomain}
+                  onBlur={e => handleDomainReadinessChange({ plannedDomain: e.target.value })}
+                  placeholder="例如：erp.shenglong.com.tw"
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>寄件信箱</label>
+                <input
+                  className="form-control"
+                  defaultValue={domainReadiness.senderEmail}
+                  onBlur={e => handleDomainReadinessChange({ senderEmail: e.target.value })}
+                  placeholder="例如：noreply@shenglong.com.tw"
+                />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+              {Object.entries(domainReadinessLabels).map(([key, label]) => (
+                <label key={key} style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(domainReadiness[key])}
+                    onChange={e => handleDomainReadinessChange({ [key]: e.target.checked })}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            <textarea
+              className="form-control"
+              defaultValue={domainReadiness.notes}
+              onBlur={e => handleDomainReadinessChange({ notes: e.target.value })}
+              placeholder="網域、DNS、Email 寄信或通知規劃備註"
               rows={3}
               style={{ marginTop: '12px' }}
             />

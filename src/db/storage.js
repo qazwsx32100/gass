@@ -39,6 +39,7 @@ const KEYS = {
   PRODUCTION_INITIALIZATION: 'bp_production_initialization',
   GAS_INVENTORY_MODULE_PLAN: 'bp_gas_inventory_module_plan',
   DATABASE_TABLE_PLAN: 'bp_database_table_plan',
+  DOMAIN_READINESS: 'bp_domain_readiness',
   FIREBASE_CONFIG: 'bp_firebase_config',
   ADMIN_PASSWORD: 'bp_admin_password',
   ADMIN_SECURITY: 'bp_admin_security',
@@ -313,6 +314,21 @@ export const normalizeDatabaseTablePlanItem = (item = {}) => ({
   updatedAt: item.updatedAt || null
 });
 
+export const normalizeDomainReadiness = (item = {}) => ({
+  currentUrl: item.currentUrl || 'https://erp-weld-three-96.vercel.app',
+  plannedDomain: item.plannedDomain || '',
+  domainPurchased: Boolean(item.domainPurchased),
+  dnsConfigured: Boolean(item.dnsConfigured),
+  vercelDomainConnected: Boolean(item.vercelDomainConnected),
+  httpsVerified: item.httpsVerified ?? true,
+  resendDomainVerified: Boolean(item.resendDomainVerified),
+  emailNotificationsEnabled: Boolean(item.emailNotificationsEnabled),
+  senderEmail: item.senderEmail || '',
+  notes: item.notes || '',
+  updatedAt: item.updatedAt || null,
+  updatedBy: item.updatedBy || ''
+});
+
 const DEFAULT_GO_LIVE_CHECKS = [
   { id: 'GLC_PERMISSIONS', category: 'security', title: '權限角色與裝置白名單已測試' },
   { id: 'GLC_SUPABASE', category: 'security', title: 'Supabase 舊表格已清理或關閉權限' },
@@ -419,6 +435,11 @@ const DEFAULT_DATABASE_TABLE_PLAN = [
   }
 ].map(normalizeDatabaseTablePlanItem);
 
+const DEFAULT_DOMAIN_READINESS = normalizeDomainReadiness({
+  currentUrl: 'https://erp-weld-three-96.vercel.app',
+  notes: '正式網域尚未啟用前，可先使用 Vercel 網址；Email 通知功能先保留，等寄信網域驗證後再正式啟用。'
+});
+
 const toYearMonth = (value) => String(value || '').slice(0, 7);
 
 const getDefaultAdminSecurity = () => ({
@@ -515,6 +536,10 @@ export const initializeDB = (forceReset = false) => {
     localStorage.setItem(KEYS.DATABASE_TABLE_PLAN, JSON.stringify(
       keepOrSeed(KEYS.DATABASE_TABLE_PLAN, DEFAULT_DATABASE_TABLE_PLAN).map(normalizeDatabaseTablePlanItem)
     ));
+    localStorage.setItem(KEYS.DOMAIN_READINESS, JSON.stringify(normalizeDomainReadiness({
+      ...DEFAULT_DOMAIN_READINESS,
+      ...keepOrSeed(KEYS.DOMAIN_READINESS, {})
+    })));
     localStorage.setItem(KEYS.ADMIN_SECURITY, JSON.stringify({
       ...getDefaultAdminSecurity(),
       ...read(KEYS.ADMIN_SECURITY, {})
@@ -584,6 +609,10 @@ export const initializeDB = (forceReset = false) => {
 
   if (!localStorage.getItem(KEYS.GAS_INVENTORY_MODULE_PLAN)) {
     localStorage.setItem(KEYS.GAS_INVENTORY_MODULE_PLAN, JSON.stringify(DEFAULT_GAS_INVENTORY_MODULE_PLAN));
+  }
+
+  if (!localStorage.getItem(KEYS.DOMAIN_READINESS)) {
+    localStorage.setItem(KEYS.DOMAIN_READINESS, JSON.stringify(DEFAULT_DOMAIN_READINESS));
   }
   
   // Force migration for SYSTEM_CONFIG to enable check alerts
@@ -870,6 +899,15 @@ export const getDatabaseTablePlan = () => {
 };
 export const saveDatabaseTablePlan = (data) => write(KEYS.DATABASE_TABLE_PLAN, data.map(normalizeDatabaseTablePlanItem));
 
+export const getDomainReadiness = () => normalizeDomainReadiness({
+  ...DEFAULT_DOMAIN_READINESS,
+  ...read(KEYS.DOMAIN_READINESS, {})
+});
+export const saveDomainReadiness = (data) => write(KEYS.DOMAIN_READINESS, normalizeDomainReadiness({
+  ...DEFAULT_DOMAIN_READINESS,
+  ...data
+}));
+
 export const getSystemConfig = () => read(KEYS.SYSTEM_CONFIG, { enableCheckMaturityAlert: false });
 export const saveSystemConfig = (data) => write(KEYS.SYSTEM_CONFIG, data);
 
@@ -935,6 +973,7 @@ export const getDatabaseState = () => ({
   productionInitialization: getProductionInitialization(),
   gasInventoryModulePlan: getGasInventoryModulePlan(),
   databaseTablePlan: getDatabaseTablePlan(),
+  domainReadiness: getDomainReadiness(),
   adminSecurity: getAdminSecurity()
 });
 
@@ -1448,6 +1487,7 @@ export const exportBackup = () => {
     productionInitialization: getProductionInitialization(),
     gasInventoryModulePlan: getGasInventoryModulePlan(),
     databaseTablePlan: getDatabaseTablePlan(),
+    domainReadiness: getDomainReadiness(),
     adminSecurity: cleanAdminSecurity
   };
   return JSON.stringify(backup, null, 2);
@@ -1497,6 +1537,10 @@ export const importBackup = (jsonString) => {
       ...(backup.gasInventoryModulePlan || {})
     });
     write(KEYS.DATABASE_TABLE_PLAN, (backup.databaseTablePlan || DEFAULT_DATABASE_TABLE_PLAN).map(normalizeDatabaseTablePlanItem));
+    write(KEYS.DOMAIN_READINESS, normalizeDomainReadiness({
+      ...DEFAULT_DOMAIN_READINESS,
+      ...(backup.domainReadiness || {})
+    }));
     write(KEYS.ADMIN_SECURITY, backup.adminSecurity || getDefaultAdminSecurity());
     return { success: true };
   } catch (e) {

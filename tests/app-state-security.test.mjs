@@ -89,3 +89,19 @@ test('prevents bookkeeper from changing database table migration plan', () => {
   assert.equal(result.ok, false);
   assert.match(result.error, /protected data/i);
 });
+
+test('prevents bookkeeper from changing domain and email readiness settings', () => {
+  const previousState = {
+    ...baseState,
+    domainReadiness: { currentUrl: 'https://erp-weld-three-96.vercel.app', emailNotificationsEnabled: false }
+  };
+  const nextState = {
+    ...previousState,
+    domainReadiness: { currentUrl: 'https://example.com', emailNotificationsEnabled: true }
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /protected data/i);
+});
