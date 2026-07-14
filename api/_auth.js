@@ -194,7 +194,12 @@ export const getBearerToken = (req) => {
 };
 
 export const sendJson = (res, status, body) => {
-  res.status(status).setHeader('Content-Type', 'application/json; charset=utf-8');
+  res
+    .status(status)
+    .setHeader('Content-Type', 'application/json; charset=utf-8')
+    .setHeader('Cache-Control', 'no-store, max-age=0')
+    .setHeader('Pragma', 'no-cache')
+    .setHeader('X-Content-Type-Options', 'nosniff');
   res.end(JSON.stringify(body));
 };
 
@@ -274,6 +279,8 @@ export const restoreCloudBackup = async ({ backupId, actor = 'system', requestIp
 };
 
 export const getClientIp = (req) => {
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) return String(realIp).trim();
   const forwarded = req.headers['x-forwarded-for'];
-  return Array.isArray(forwarded) ? forwarded[0] : String(forwarded || req.socket?.remoteAddress || '').split(',')[0].trim();
+  return Array.isArray(forwarded) ? forwarded[0].trim() : String(forwarded || req.socket?.remoteAddress || '').split(',')[0].trim();
 };

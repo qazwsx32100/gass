@@ -32,6 +32,80 @@ const changedTopLevelKeys = (before = {}, after = {}) => {
   return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
 };
 
+const changedRecordKeys = (before = {}, after = {}) => {
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
+};
+
+const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
+  'paymentMethod',
+  'bankId',
+  'paymentStatus',
+  'remarks',
+  'receiptAttachment',
+  'correctionStatus',
+  'correctedBy',
+  'correctedByName',
+  'correctedAt',
+  'correctionReason'
+]);
+
+const APPROVED_TRANSACTION_VOID_KEYS = new Set([
+  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
+  'status',
+  'voidedBy',
+  'voidedByName',
+  'voidedAt',
+  'voidReason'
+]);
+
+const isApprovedTransactionChangeAllowed = (before, after) => {
+  if (before?.status !== 'approved') return true;
+  if (!after) return false;
+
+  const changedKeys = changedRecordKeys(before, after);
+  if (changedKeys.length === 0) return true;
+
+  if (after.status === 'void') {
+    return changedKeys.every(key => APPROVED_TRANSACTION_VOID_KEYS.has(key));
+  }
+
+  if (after.status !== 'approved') return false;
+  return changedKeys.every(key => APPROVED_TRANSACTION_MUTABLE_KEYS.has(key));
+};
+
+const validateApprovedTransactionIntegrity = (previousState = {}, nextState = {}) => {
+  const collections = [
+    { key: 'incomes', label: 'income' },
+    { key: 'expenses', label: 'expense' }
+  ];
+
+  for (const collection of collections) {
+    const previousRows = Array.isArray(previousState[collection.key]) ? previousState[collection.key] : [];
+    const nextRows = Array.isArray(nextState[collection.key]) ? nextState[collection.key] : [];
+    const nextMap = new Map(nextRows.map(item => [item.id, item]));
+
+    for (const previousRow of previousRows) {
+      if (previousRow?.status !== 'approved') continue;
+      const nextRow = nextMap.get(previousRow.id);
+      if (!nextRow) {
+        return {
+          ok: false,
+          error: `Approved ${collection.label} ${previousRow.id} cannot be deleted. Use correction or void workflow.`
+        };
+      }
+      if (!isApprovedTransactionChangeAllowed(previousRow, nextRow)) {
+        return {
+          ok: false,
+          error: `Approved ${collection.label} ${previousRow.id} cannot be materially changed. Use correction workflow.`
+        };
+      }
+    }
+  }
+
+  return { ok: true };
+};
+
 const allowedWriteKeysByRole = {
   bookkeeper: new Set([
     'incomes',
@@ -55,7 +129,29 @@ const allowedWriteKeysByRole = {
   ])
 };
 
-const validateStateWriteScope = (previousState, nextState, sessionUser) => {
+const WRITE_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const WRITE_RATE_LIMIT_MAX = 30;
+const writeAttempts = new Map();
+
+const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientIp(req) || 'unknown'}`;
+
+const isWriteRateLimited = (req, session) => {
+  const key = rateLimitKey(req, session);
+  const now = Date.now();
+  const current = writeAttempts.get(key) || { count: 0, resetAt: now + WRITE_RATE_LIMIT_WINDOW_MS };
+  if (current.resetAt <= now) {
+    writeAttempts.set(key, { count: 1, resetAt: now + WRITE_RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  current.count += 1;
+  writeAttempts.set(key, current);
+  return current.count > WRITE_RATE_LIMIT_MAX;
+};
+
+export const validateStateWriteScope = (previousState, nextState, sessionUser) => {
+  const approvedIntegrity = validateApprovedTransactionIntegrity(previousState, nextState);
+  if (!approvedIntegrity.ok) return approvedIntegrity;
+
   if (sessionUser?.role === 'admin') return { ok: true };
   const allowedKeys = allowedWriteKeysByRole[sessionUser?.role];
   if (!allowedKeys) {
@@ -155,6 +251,9 @@ export default async function handler(req, res) {
     const writeAllowedRoles = ['admin', 'business_reviewer', 'bookkeeper'];
     if (!writeAllowedRoles.includes(session.role)) {
       return sendJson(res, 403, { error: 'Forbidden: Insufficient role permissions to modify database.' });
+    }
+    if (isWriteRateLimited(req, session)) {
+      return sendJson(res, 429, { error: 'Too many write requests. Please try again later.' });
     }
   }
 

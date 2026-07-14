@@ -1,4 +1,4 @@
-﻿import {
+import {
   fetchAppState,
   getClientIp,
   sanitizeStateForClient,
@@ -9,7 +9,7 @@
 } from './_auth.js';
 
 const ADMIN_EMAIL = 'qazwsx32100@gmail.com';
-const ADMIN_DEFAULT_PASSWORD = 'windsboy123';
+const getAdminDefaultPassword = () => process.env.ADMIN_DEFAULT_PASSWORD || '';
 const LOGIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const LOGIN_RATE_LIMIT_MAX = 12;
 const loginAttempts = new Map();
@@ -127,15 +127,21 @@ export default async function handler(req, res) {
         ...(state.adminSecurity || {})
       };
       const displayName = getAdminDisplayName(state);
+      const defaultPassword = getAdminDefaultPassword();
       const hasStoredAdminPassword = Boolean(security.password || (security.passwordHash && security.passwordSalt));
 
-      if (!verifyPassword(password, security, ADMIN_DEFAULT_PASSWORD)) {
+      if (!hasStoredAdminPassword && !defaultPassword) {
+        console.warn('Admin password not initialized in database and no environment variable set.');
+        return sendJson(res, 500, { success: false, error: '系統管理員密碼尚未初始化，請聯絡系統管理員設定環境變數。' });
+      }
+
+      if (!verifyPassword(password, security, defaultPassword)) {
         console.warn('admin login failed', { email, ip: getClientIp(req) });
         return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
       }
 
       if (!hasStoredAdminPassword) {
-        security.password = ADMIN_DEFAULT_PASSWORD;
+        security.password = defaultPassword;
       }
 
       if (security.disabled) {

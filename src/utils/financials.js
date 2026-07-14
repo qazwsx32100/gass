@@ -92,30 +92,33 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
     return summary;
   };
 
+  const receivableSummary = summarize(receivables);
+  const payableSummary = summarize(payables);
+
   return {
     asOfDate,
-    receivables,
-    payables,
-    receivableSummary: summarize(receivables),
-    payableSummary: summarize(payables),
+    receivableRows: receivables,
+    payableRows: payables,
+    receivableSummary,
+    payableSummary,
     receivables: {
       rows: receivables,
-      total: summarize(receivables).total,
+      total: receivableSummary.total,
       buckets: {
-        current: { total: summarize(receivables)['0-30'] },
-        days31to60: { total: summarize(receivables)['31-60'] },
-        days61to90: { total: summarize(receivables)['61-90'] },
-        over90: { total: summarize(receivables)['90+'] }
+        current: { total: receivableSummary['0-30'] },
+        days31to60: { total: receivableSummary['31-60'] },
+        days61to90: { total: receivableSummary['61-90'] },
+        over90: { total: receivableSummary['90+'] }
       }
     },
     payables: {
       rows: payables,
-      total: summarize(payables).total,
+      total: payableSummary.total,
       buckets: {
-        current: { total: summarize(payables)['0-30'] },
-        days31to60: { total: summarize(payables)['31-60'] },
-        days61to90: { total: summarize(payables)['61-90'] },
-        over90: { total: summarize(payables)['90+'] }
+        current: { total: payableSummary['0-30'] },
+        days31to60: { total: payableSummary['31-60'] },
+        days61to90: { total: payableSummary['61-90'] },
+        over90: { total: payableSummary['90+'] }
       }
     },
   };

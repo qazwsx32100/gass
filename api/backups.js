@@ -28,6 +28,25 @@ const parseBody = (req) => (
     : JSON.parse(req.body || '{}')
 );
 
+const BACKUP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const BACKUP_RATE_LIMIT_MAX = 8;
+const backupAttempts = new Map();
+
+const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientIp(req) || 'unknown'}`;
+
+const isBackupRateLimited = (req, session) => {
+  const key = rateLimitKey(req, session);
+  const now = Date.now();
+  const current = backupAttempts.get(key) || { count: 0, resetAt: now + BACKUP_RATE_LIMIT_WINDOW_MS };
+  if (current.resetAt <= now) {
+    backupAttempts.set(key, { count: 1, resetAt: now + BACKUP_RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  current.count += 1;
+  backupAttempts.set(key, current);
+  return current.count > BACKUP_RATE_LIMIT_MAX;
+};
+
 export default async function handler(req, res) {
   if (!['GET', 'POST'].includes(req.method)) {
     res.setHeader('Allow', 'GET, POST');
@@ -48,6 +67,10 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const backups = await listCloudBackups(50);
       return sendJson(res, 200, { ok: true, backups });
+    }
+
+    if (isBackupRateLimited(req, session)) {
+      return sendJson(res, 429, { ok: false, error: 'Too many backup requests. Please try again later.' });
     }
 
     const body = parseBody(req);

@@ -76,13 +76,22 @@ export default async function handler(req, res) {
     }
 
     const to = String(payload?.to || '').trim();
-    const subject = String(payload?.subject || '').trim();
-    const text = String(payload?.text || '').trim();
-    const html = String(payload?.html || text).trim();
-
-    if (!to || !subject || !text) {
-      return sendJson(res, 400, { success: false, error: 'Missing recipient, subject, or content.' });
+    if (!to) {
+      return sendJson(res, 400, { success: false, error: 'Missing recipient email.' });
     }
+
+    // Hardcode subject and content on the server to prevent email relay abuse
+    const subject = 'Gass ERP 系統電子信箱驗證信';
+    const text = '您好，這是 Gass ERP 系統的驗證信件。請回到系統完成驗證。';
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; max-width: 500px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px;">
+        <h2 style="color: #007bff; margin-top: 0;">Gass ERP 電子信箱驗證</h2>
+        <p>您好，系統管理員已為您申請或重送驗證郵件。</p>
+        <p>請回到系統繼續完成您的操作。</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #888; font-size: 12px; margin-bottom: 0;">此郵件為系統自動發送，請勿直接回覆。</p>
+      </div>
+    `;
 
     const from = process.env.RESEND_FROM_EMAIL || 'BusinessPilot ERP <onboarding@resend.dev>';
     const response = await fetch('https://api.resend.com/emails', {
