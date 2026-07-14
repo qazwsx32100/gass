@@ -2,6 +2,7 @@ const baseUrl = (process.argv[2] || process.env.ERP_BASE_URL || 'https://erp-wel
 
 const checks = [
   { name: 'home', method: 'GET', path: '/', expectedStatus: 200 },
+  { name: 'api-health', method: 'GET', path: '/api/health', expectedStatus: 200 },
   { name: 'app-state-get-unauth', method: 'GET', path: '/api/app-state', expectedStatus: 401 },
   {
     name: 'app-state-post-unauth',

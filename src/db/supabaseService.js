@@ -1,3 +1,5 @@
+import { apiFetch } from './apiClient';
+
 const LOCAL_UPDATED_AT_KEY = 'bp_supabase_updated_at';
 const CLOUD_SESSION_TOKEN_KEY = 'bp_cloud_session_token';
 
@@ -76,7 +78,7 @@ const writeLocalState = (state) => {
 
 export const pullSupabaseToLocal = async () => {
   if (!getCloudSessionToken()) return false;
-  const response = await fetch('/api/app-state', {
+  const response = await apiFetch('/api/app-state', {
     method: 'GET',
     headers: { Accept: 'application/json', ...authHeaders() }
   });
@@ -100,11 +102,11 @@ export const syncLocalToSupabase = async (operatorName = '系統') => {
   isSyncing = true;
   try {
     const now = new Date().toISOString();
-    const response = await fetch('/api/app-state', {
+    const response = await apiFetch('/api/app-state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...authHeaders() },
       body: JSON.stringify({
-      state: readLocalState(),
+        state: readLocalState(),
         updatedBy: operatorName
       })
     });
@@ -127,7 +129,7 @@ export const syncLocalToSupabase = async (operatorName = '系統') => {
 
 export const seedSupabaseIfEmpty = async (operatorName = '系統') => {
   if (!getCloudSessionToken()) return false;
-  const response = await fetch('/api/app-state', {
+  const response = await apiFetch('/api/app-state', {
     method: 'GET',
     headers: { Accept: 'application/json', ...authHeaders() }
   });
@@ -151,7 +153,7 @@ export const initSupabaseSync = async (onSync) => {
   pollTimer = window.setInterval(async () => {
     if (isSyncing) return;
     try {
-      const response = await fetch('/api/app-state', {
+      const response = await apiFetch('/api/app-state', {
         method: 'GET',
         headers: { Accept: 'application/json', ...authHeaders() }
       });
@@ -159,11 +161,11 @@ export const initSupabaseSync = async (onSync) => {
       const data = await response.json();
       if (!data?.state) return;
       const remoteUpdatedAt = new Date(data.updated_at).getTime();
-        const localUpdatedAt = Number(localStorage.getItem(LOCAL_UPDATED_AT_KEY) || 0);
-        if (remoteUpdatedAt <= localUpdatedAt) return;
+      const localUpdatedAt = Number(localStorage.getItem(LOCAL_UPDATED_AT_KEY) || 0);
+      if (remoteUpdatedAt <= localUpdatedAt) return;
 
       writeLocalState(data.state);
-        localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(remoteUpdatedAt));
+      localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(remoteUpdatedAt));
       if (onSync) onSync(data.updated_by || '其他使用者');
     } catch (error) {
       console.error('Supabase polling failed', error);
@@ -174,7 +176,7 @@ export const initSupabaseSync = async (onSync) => {
 };
 
 export const loginViaCloud = async ({ email, password, device }) => {
-  const response = await fetch('/api/auth-login', {
+  const response = await apiFetch('/api/auth-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ email, password, device })
@@ -193,7 +195,7 @@ export const loginViaCloud = async ({ email, password, device }) => {
 };
 
 export const listCloudBackups = async () => {
-  const response = await fetch('/api/backups', {
+  const response = await apiFetch('/api/backups', {
     method: 'GET',
     headers: { Accept: 'application/json', ...authHeaders() }
   });
@@ -205,7 +207,7 @@ export const listCloudBackups = async () => {
 };
 
 export const createManualCloudBackup = async (reason = 'manual') => {
-  const response = await fetch('/api/backups', {
+  const response = await apiFetch('/api/backups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...authHeaders() },
     body: JSON.stringify({ action: 'create', reason })
@@ -218,7 +220,7 @@ export const createManualCloudBackup = async (reason = 'manual') => {
 };
 
 export const restoreCloudBackup = async (backupId) => {
-  const response = await fetch('/api/backups', {
+  const response = await apiFetch('/api/backups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...authHeaders() },
     body: JSON.stringify({ action: 'restore', backupId, confirm: 'RESTORE' })
