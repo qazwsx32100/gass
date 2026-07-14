@@ -73,3 +73,19 @@ test('prevents bookkeeper from changing protected shareholder data', () => {
   assert.equal(result.ok, false);
   assert.match(result.error, /protected data/i);
 });
+
+test('prevents bookkeeper from changing database table migration plan', () => {
+  const previousState = {
+    ...baseState,
+    databaseTablePlan: [{ id: 'DBT_LEDGER', status: 'planned' }]
+  };
+  const nextState = {
+    ...previousState,
+    databaseTablePlan: [{ id: 'DBT_LEDGER', status: 'done' }]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /protected data/i);
+});

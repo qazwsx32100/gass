@@ -28,6 +28,7 @@ const DATA_KEYS = {
   backupRestoreDrills: 'bp_backup_restore_drills',
   productionInitialization: 'bp_production_initialization',
   gasInventoryModulePlan: 'bp_gas_inventory_module_plan',
+  databaseTablePlan: 'bp_database_table_plan',
   adminSecurity: 'bp_admin_security'
 };
 

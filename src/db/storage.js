@@ -38,6 +38,7 @@ const KEYS = {
   BACKUP_RESTORE_DRILLS: 'bp_backup_restore_drills',
   PRODUCTION_INITIALIZATION: 'bp_production_initialization',
   GAS_INVENTORY_MODULE_PLAN: 'bp_gas_inventory_module_plan',
+  DATABASE_TABLE_PLAN: 'bp_database_table_plan',
   FIREBASE_CONFIG: 'bp_firebase_config',
   ADMIN_PASSWORD: 'bp_admin_password',
   ADMIN_SECURITY: 'bp_admin_security',
@@ -286,11 +287,30 @@ export const normalizeBackupRestoreDrill = (item = {}) => ({
   id: item.id || createArchiveId('DRL'),
   drillDate: item.drillDate || new Date().toISOString().split('T')[0],
   backupSource: item.backupSource || 'manual_backup',
+  backupId: item.backupId || '',
   restoredTo: item.restoredTo || 'test_environment',
   result: item.result || 'pending',
   operator: item.operator || '',
+  recordCountsVerified: Boolean(item.recordCountsVerified),
+  loginVerified: Boolean(item.loginVerified),
+  reportsVerified: Boolean(item.reportsVerified),
+  rollbackVerified: Boolean(item.rollbackVerified),
+  verifiedAt: item.verifiedAt || null,
   remarks: item.remarks || '',
   createdAt: item.createdAt || new Date().toISOString()
+});
+
+export const normalizeDatabaseTablePlanItem = (item = {}) => ({
+  id: item.id || createArchiveId('DBT'),
+  phase: item.phase || 'phase1',
+  title: item.title || '',
+  targetTables: Array.isArray(item.targetTables) ? item.targetTables : [],
+  status: item.status || 'planned',
+  risk: item.risk || 'medium',
+  owner: item.owner || '主管理員',
+  targetDate: item.targetDate || '',
+  notes: item.notes || '',
+  updatedAt: item.updatedAt || null
 });
 
 const DEFAULT_GO_LIVE_CHECKS = [
@@ -335,6 +355,69 @@ const DEFAULT_GAS_INVENTORY_MODULE_PLAN = {
   ],
   notes: '目前先保留完整庫存模組空間；現階段仍以當月進貨公斤數與銷售公斤數計算毛利。'
 };
+
+const DEFAULT_DATABASE_TABLE_PLAN = [
+  {
+    id: 'DBT_APP_STATE',
+    phase: 'phase1',
+    title: '保留 app_state 作為正式回滾主資料',
+    targetTables: ['app_state', 'app_state_backups'],
+    status: 'active',
+    risk: 'low',
+    owner: '主管理員',
+    notes: '目前正式系統仍以整包狀態同步；表格化前保留此表作為回滾點。'
+  },
+  {
+    id: 'DBT_MASTER_DATA',
+    phase: 'phase2',
+    title: '拆分公司、股東、銀行、科目主檔',
+    targetTables: ['companies', 'shareholders', 'banks', 'chart_of_accounts'],
+    status: 'planned',
+    risk: 'medium',
+    owner: '主管理員',
+    notes: '先建立平行表與匯入檢核，不直接取代現有正式資料。'
+  },
+  {
+    id: 'DBT_LEDGER',
+    phase: 'phase2',
+    title: '拆分收入、支出、傳票與股東往來',
+    targetTables: ['incomes', 'expenses', 'journal_entries', 'journal_lines', 'shareholder_ledger'],
+    status: 'planned',
+    risk: 'high',
+    owner: '主管理員',
+    notes: '需要保留不可竄改稽核軌跡；已核准資料只能作廢或沖銷。'
+  },
+  {
+    id: 'DBT_AR_AP',
+    phase: 'phase3',
+    title: '拆分客戶、供應商、應收應付與支票',
+    targetTables: ['customers', 'suppliers', 'receivables', 'payables', 'checks'],
+    status: 'planned',
+    risk: 'medium',
+    owner: '主管理員',
+    notes: '先以現有日常金流資料反推應收、應付與支票狀態。'
+  },
+  {
+    id: 'DBT_GAS_INVENTORY',
+    phase: 'reserved',
+    title: '瓦斯完整庫存資料表預留',
+    targetTables: ['gas_inventory_periods', 'gas_cylinders', 'gas_stock_movements'],
+    status: 'reserved',
+    risk: 'medium',
+    owner: '主管理員',
+    notes: '目前先預留，不在本階段啟用逐瓶庫存。'
+  },
+  {
+    id: 'DBT_AUDIT_BACKUP',
+    phase: 'phase2',
+    title: '拆分操作日誌、備份、還原演練',
+    targetTables: ['audit_logs', 'audit_archive', 'backups', 'backup_restore_drills'],
+    status: 'planned',
+    risk: 'medium',
+    owner: '主管理員',
+    notes: '操作紀錄與刪修紀錄需保留一年，未來應改成只能追加不可覆蓋。'
+  }
+].map(normalizeDatabaseTablePlanItem);
 
 const toYearMonth = (value) => String(value || '').slice(0, 7);
 
@@ -429,6 +512,9 @@ export const initializeDB = (forceReset = false) => {
       ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
       ...keepOrSeed(KEYS.GAS_INVENTORY_MODULE_PLAN, {})
     }));
+    localStorage.setItem(KEYS.DATABASE_TABLE_PLAN, JSON.stringify(
+      keepOrSeed(KEYS.DATABASE_TABLE_PLAN, DEFAULT_DATABASE_TABLE_PLAN).map(normalizeDatabaseTablePlanItem)
+    ));
     localStorage.setItem(KEYS.ADMIN_SECURITY, JSON.stringify({
       ...getDefaultAdminSecurity(),
       ...read(KEYS.ADMIN_SECURITY, {})
@@ -774,6 +860,16 @@ export const saveGasInventoryModulePlan = (data) => write(KEYS.GAS_INVENTORY_MOD
   ...data
 });
 
+export const getDatabaseTablePlan = () => {
+  const saved = read(KEYS.DATABASE_TABLE_PLAN, []);
+  const savedMap = new Map(saved.map(item => [item.id, item]));
+  return DEFAULT_DATABASE_TABLE_PLAN.map(defaultItem => normalizeDatabaseTablePlanItem({
+    ...defaultItem,
+    ...(savedMap.get(defaultItem.id) || {})
+  }));
+};
+export const saveDatabaseTablePlan = (data) => write(KEYS.DATABASE_TABLE_PLAN, data.map(normalizeDatabaseTablePlanItem));
+
 export const getSystemConfig = () => read(KEYS.SYSTEM_CONFIG, { enableCheckMaturityAlert: false });
 export const saveSystemConfig = (data) => write(KEYS.SYSTEM_CONFIG, data);
 
@@ -838,6 +934,7 @@ export const getDatabaseState = () => ({
   backupRestoreDrills: getBackupRestoreDrills(),
   productionInitialization: getProductionInitialization(),
   gasInventoryModulePlan: getGasInventoryModulePlan(),
+  databaseTablePlan: getDatabaseTablePlan(),
   adminSecurity: getAdminSecurity()
 });
 
@@ -1350,6 +1447,7 @@ export const exportBackup = () => {
     backupRestoreDrills: getBackupRestoreDrills(),
     productionInitialization: getProductionInitialization(),
     gasInventoryModulePlan: getGasInventoryModulePlan(),
+    databaseTablePlan: getDatabaseTablePlan(),
     adminSecurity: cleanAdminSecurity
   };
   return JSON.stringify(backup, null, 2);
@@ -1398,6 +1496,7 @@ export const importBackup = (jsonString) => {
       ...DEFAULT_GAS_INVENTORY_MODULE_PLAN,
       ...(backup.gasInventoryModulePlan || {})
     });
+    write(KEYS.DATABASE_TABLE_PLAN, (backup.databaseTablePlan || DEFAULT_DATABASE_TABLE_PLAN).map(normalizeDatabaseTablePlanItem));
     write(KEYS.ADMIN_SECURITY, backup.adminSecurity || getDefaultAdminSecurity());
     return { success: true };
   } catch (e) {
