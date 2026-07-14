@@ -113,7 +113,7 @@ export const normalizeTransaction = (item) => {
     pension: Number(item.pension) || 0,
     withholdingTax: Number(item.withholdingTax) || 0,
     createdBy: item.createdBy || 'SYSTEM',
-    createdByName: item.createdByName || '蝟餌絞',
+    createdByName: item.createdByName || '系統管理員',
     createdByRole: item.createdByRole || USER_ROLES.ADMIN,
     createdAt: item.createdAt || `${item.date || new Date().toISOString().split('T')[0]}T00:00:00+08:00`,
     firstReviewedBy: item.firstReviewedBy || null,
@@ -121,7 +121,7 @@ export const normalizeTransaction = (item) => {
     firstReviewedByRole: item.firstReviewedByRole || null,
     firstReviewedAt: item.firstReviewedAt || null,
     adminReviewedBy: item.adminReviewedBy || (status === 'approved' ? 'SYSTEM' : null),
-    adminReviewedByName: item.adminReviewedByName || (status === 'approved' ? '蝟餌絞' : null),
+    adminReviewedByName: item.adminReviewedByName || (status === 'approved' ? '系統管理員' : null),
     adminReviewedAt: item.adminReviewedAt || null,
     requiresDualApproval: Boolean(item.requiresDualApproval),
     secondAdminReviewedBy: item.secondAdminReviewedBy || null,
@@ -675,7 +675,7 @@ export const saveShareholders = (data) => write(KEYS.SHAREHOLDERS, data);
 
 export const getAdminDisplayName = () => {
   const shareholder = getShareholders().find(s => s.id === 'SH001' || String(s.email || '').trim().toLowerCase() === 'qazwsx32100@gmail.com');
-  return shareholder?.name || '銝餌恣?';
+  return shareholder?.name || '主管理員';
 };
 
 // Banks API
@@ -685,7 +685,7 @@ export const getBanks = () => {
     list.push({
       id: 'BANK_PETTY',
       companyId: 'COMP001',
-      name: '摨?嗥??(?暸?)',
+      name: '零用金 / 現金',
       accountNo: 'CASH-BOX-01',
       initialBalance: 10000
     });
@@ -841,7 +841,7 @@ export const getDatabaseState = () => ({
   adminSecurity: getAdminSecurity()
 });
 
-export const archiveChange = ({ collection, recordId, action, before = null, after = null, actor = '蝟餌絞', reason = '' }) => {
+export const archiveChange = ({ collection, recordId, action, before = null, after = null, actor = '系統管理員', reason = '' }) => {
   const now = new Date();
   const archive = getAuditArchive();
   archive.unshift({
@@ -859,7 +859,7 @@ export const archiveChange = ({ collection, recordId, action, before = null, aft
   saveAuditArchive(archive);
 };
 
-export const archiveDeletion = ({ collection, record, actor = '蝟餌絞', reason = '' }) => {
+export const archiveDeletion = ({ collection, record, actor = '系統管理員', reason = '' }) => {
   archiveChange({
     collection,
     recordId: record?.id || record?.code || '',
@@ -871,7 +871,7 @@ export const archiveDeletion = ({ collection, record, actor = '蝟餌絞', reaso
   });
 };
 
-export const archiveResetSnapshot = (actor = '蝟餌絞', reason = '蝟餌絞?蔭') => {
+export const archiveResetSnapshot = (actor = '系統管理員', reason = '系統資料重置') => {
   const now = new Date();
   const snapshots = getResetSnapshots();
   snapshots.unshift({
@@ -885,7 +885,7 @@ export const archiveResetSnapshot = (actor = '蝟餌絞', reason = '蝟餌絞?�
   saveResetSnapshots(snapshots);
 };
 
-export const createDailyBackupIfNeeded = (actor = '蝟餌絞') => {
+export const createDailyBackupIfNeeded = (actor = '系統管理員') => {
   const today = new Date().toISOString().split('T')[0];
   const backups = getDailyBackups();
   if (backups.some(item => item.backupDate === today)) return false;
@@ -1061,7 +1061,7 @@ export const sendVerificationEmail = (userId, operator = '系統管理員') => {
     userId,
     token
   });
-  addLog(operator, 'EMAIL_VERIFICATION_SENT', `撖?Email 撽?靽∴?${shareholders[idx].name}`);
+  addLog(operator, 'EMAIL_VERIFICATION_SENT', `已建立 Email 驗證信：${shareholders[idx].name}`);
   return { success: true, email };
 };
 
@@ -1077,7 +1077,7 @@ export const markEmailVerified = (userId, operator = '系統管理員') => {
   if (idx === -1) return false;
   shareholders[idx] = { ...shareholders[idx], emailVerified: true, emailVerificationToken: null, emailVerificationExpiresAt: null };
   saveShareholders(shareholders);
-  addLog(operator, 'EMAIL_VERIFIED', `Email 撌脫?閮?霅?${shareholders[idx].name}`);
+  addLog(operator, 'EMAIL_VERIFIED', `Email 已驗證：${shareholders[idx].name}`);
   return true;
 };
 
@@ -1282,7 +1282,7 @@ export const verifyLogin = (email, password) => {
   }
 
   addLog(normalizedEmail || '未知帳號', 'LOGIN_FAILED', '帳號或密碼錯誤。');
-  return { success: false, error: '撣唾???蝣潸撓?仿隤歹?隢?閰佗?' };
+  return { success: false, error: '帳號或密碼錯誤，請重新輸入。' };
 };
 
 // Update Password Helper

@@ -88,7 +88,7 @@ const appendLog = (state, operator, action, details) => ({
 const getAdminDisplayName = (state) => {
   const shareholders = state.shareholders || [];
   const owner = shareholders.find(s => s.id === 'SH001' || normalizeEmail(s.email) === ADMIN_EMAIL);
-  return owner?.name || '銝餌恣?';
+  return owner?.name || '主管理員';
 };
 
 const publicUserFromState = (state, id, fallback) => (
@@ -161,7 +161,7 @@ export default async function handler(req, res) {
         return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請由主管理員核准後再登入。' });
       }
 
-      state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '銝餌恣??餃??');
+      state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '主管理員登入成功');
       await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
       clearLoginRateLimit(req, email);
 

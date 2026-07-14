@@ -86,7 +86,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
 
     saveBudgets(newBudgets);
     setBudgets(newBudgets);
-    showToast('? ?臬蝘???蔭撌脫??摮?', 'success');
+    showToast('預算設定已儲存。', 'success');
     onDataChange();
   };
 
@@ -287,7 +287,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         !prev.allowedTabs.includes(tId) &&
         SENSITIVE_BOOKKEEPER_TABS.includes(tId)
       ) {
-        const confirmed = window.confirm('瘜冽?嚗甇???撣喃犖?⊥???摮?鞎∪??梯”???迨雿輻???臭誑??嗅??箝?抵??梯”鞈?嚗?銝?憿舐內?⊥鞈???衣Ⅱ隤???');
+        const confirmed = window.confirm('記帳人員通常不開放營運總覽或報表中心。若開通，仍會隱藏股東個資與股東往來資料。確定要開通此功能嗎？');
         if (!confirmed) return prev;
       }
       const allowed = prev.allowedTabs.includes(tId)
@@ -325,7 +325,8 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       <div className="card">
         <div className="card-body">
           <div className="alert-box warning" style={{ margin: 0 }}>
-            甇文董?????梯???甈???          </div>
+            目前帳號沒有權限查看股東資料。
+          </div>
         </div>
       </div>
     );
@@ -649,23 +650,26 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       {isAdmin && (
         <div className="horizontal-settings-tabs">
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('shareholder')}>
-            ? ?⊥?箸鞈?
+            股東資料
           </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'bank' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('bank')}>
-            ? ?銵董?嗥恣??          </button>
+            銀行帳戶
+          </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('accounts')}>
-            ?屁 ??蝘蝮質”
+            會計科目
           </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'company' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('company')}>
-            ? ?砍撖阡?閮剖?
+            公司設定
           </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('backup')}>
-            ?儭?鞈??遢??閮?          </button>
+            備份與還原
+          </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'periodLocks' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('periodLocks')}>
-            ???董
+            關帳管理
           </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'budgets' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('budgets')}>
-            ?? ???頂蝯梯身摰?          </button>
+            預算與提醒
+          </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
             上線檢查
           </button>
@@ -685,7 +689,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               </span>
               {canEditShareholders && (
                 <button className="btn btn-primary btn-sm" onClick={handleOpenAdd}>
-                  {activeSettingsTab === 'shareholder' ? '???啣?甈?' : '???啣??'}
+                  {activeSettingsTab === 'shareholder' ? '新增股東' : '新增設定'}
                 </button>
               )}
             </div>
@@ -772,9 +776,9 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                         {canEditShareholders && (
                           <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                             {(sh.allowedTabs || []).map(t => {
-                              if (t === 'dashboard') return '??蝮質汗';
-                              if (t === 'reports') return '鞎∪??梯”';
-                              if (t === 'inputs') return '?亙虜??';
+                              if (t === 'dashboard') return '營運總覽';
+                              if (t === 'reports') return '報表中心';
+                              if (t === 'inputs') return '日常金流';
                               return t;
                             }).join(', ')}
                           </td>
@@ -853,7 +857,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             <div className="card-body">
               {/* Part A: System Config */}
               <h3 style={{ fontSize: '1.15rem', borderBottom: '2px solid rgba(5, 178, 165, 0.15)', paddingBottom: '8px', marginBottom: '16px', color: 'var(--accent-blue)' }}>
-                ?? 蟡冽????脤?閮剖?
+                支票到期提醒設定
               </h3>
               <div className="form-group" style={{ backgroundColor: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -868,15 +872,17 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       onDataChange();
                     }}
                   />
-                  ?蟡冽??唳???? (撠??舐巨蝞∠????)
+                  啟用支票到期提醒（營運總覽顯示近期到期支票）
                 </label>
                 <p style={{ margin: '8px 0 0 26px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  * ??敺?擐???蝮質汗撠?憿舐內?唳??亙 3 憭拙?歇?暹?銝蝯??蟡具漱????                </p>
+                  開啟後，系統會在營運總覽提醒 3 天內到期且尚未兌現的支票。
+                </p>
               </div>
 
               {/* Part B: Budgets */}
               <h3 style={{ fontSize: '1.15rem', borderBottom: '2px solid rgba(5, 178, 165, 0.15)', paddingBottom: '8px', marginBottom: '16px', color: 'var(--accent-green)' }}>
-                ? ??閮??格???粹?蝞?蝵?              </h3>
+                月度預算與費用控管
+              </h3>
               
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <div className="form-group" style={{ minWidth: '180px', marginBottom: 0 }}>
@@ -907,10 +913,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>蝘隞?Ⅳ</th>
-                      <th>??蝘?</th>
-                      <th>蝘憿</th>
-                      <th style={{ width: '220px' }}>瘥????? (TWD)</th>
+                      <th>科目代碼</th>
+                      <th>會計科目名稱</th>
+                      <th>科目類型</th>
+                      <th style={{ width: '220px' }}>月度預算金額 (TWD)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -923,7 +929,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                           <td style={{ fontWeight: '600' }}>{acc.name}</td>
                           <td>
                             <span className={`badge ${acc.type === 'cogs' ? 'danger' : 'warning'}`}>
-                              {acc.type === 'cogs' ? '?平?' : '?平鞎餌'}
+                              {acc.type === 'cogs' ? '銷貨成本' : '營業費用'}
                             </span>
                           </td>
                           <td>
@@ -948,7 +954,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
 
               <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button className="btn btn-primary" onClick={handleSaveBudgets}>
-                  ? ?脣???閮剖?
+                  儲存預算設定
                 </button>
               </div>
             </div>
@@ -966,7 +972,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         {activeSettingsTab === 'security' && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">?? 撣唾?摰蝞∠?</span>
+              <span className="card-title">帳號安全管理</span>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {securityUsers.map(user => (
@@ -984,7 +990,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
 
                   <div className="security-actions">
                     {user.disabled ? (
-                      <button className="btn btn-primary btn-sm" onClick={() => handleSecurityAction('enable', user.id)}>?撣唾?</button>
+                      <button className="btn btn-primary btn-sm" onClick={() => handleSecurityAction('enable', user.id)}>啟用帳號</button>
                     ) : (
                       <button className="btn btn-danger btn-sm" onClick={() => handleSecurityAction('disable', user.id)}>停用帳號</button>
                     )}
@@ -1037,12 +1043,12 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         {activeSettingsTab === 'periodLocks' && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">???董</span>
+              <span className="card-title">關帳管理</span>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">?砍</label>
+                  <label className="form-label">公司</label>
                   <select
                     className="select-dropdown"
                     style={{ width: '100%' }}
@@ -1055,7 +1061,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">?遢</label>
+                  <label className="form-label">月份</label>
                   <input
                     type="month"
                     className="form-control"
@@ -1066,13 +1072,13 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               </div>
 
               <div className="form-group">
-                <label className="form-label">?酉</label>
+                <label className="form-label">備註</label>
                 <input
                   type="text"
                   className="form-control"
                   value={periodLockForm.remarks}
                   onChange={e => setPeriodLockForm({ ...periodLockForm, remarks: e.target.value })}
-                  placeholder="靘?嚗?董?歇蝯?"
+                  placeholder="例如：完成本月結帳檢查"
                 />
               </div>
 
@@ -1105,29 +1111,30 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               </div>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button type="button" className="btn btn-danger" onClick={() => handlePeriodLockToggle(true)}>???遢</button>
-                <button type="button" className="btn btn-secondary" onClick={() => handlePeriodLockToggle(false)}>??</button>
+                <button type="button" className="btn btn-danger" onClick={() => handlePeriodLockToggle(true)}>鎖定月份</button>
+                <button type="button" className="btn btn-secondary" onClick={() => handlePeriodLockToggle(false)}>解除鎖定</button>
               </div>
 
               <div className="table-responsive">
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>?砍</th>
-                      <th>?遢</th>
+                      <th>公司</th>
+                      <th>年月</th>
                       <th>月份</th>
                       <th>檢核分數</th>
                       <th>關帳檢核</th>
-                      <th>??鈭?/ ??</th>
-                      <th>?鈭?/ ??</th>
-                      <th>?酉</th>
+                      <th>鎖定人 / 時間</th>
+                      <th>解除人 / 時間</th>
+                      <th>備註</th>
                     </tr>
                   </thead>
                   <tbody>
                     {periodLocks.length === 0 && (
                       <tr>
                         <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
-                          撠?董蝝??                        </td>
+                          目前沒有關帳紀錄
+                        </td>
                       </tr>
                     )}
                     {periodLocks.map((lock, idx) => (
@@ -1176,16 +1183,17 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
                   <div>
-                    <h4 style={{ marginBottom: '4px' }}>?脩垢?芸??遢</h4>
+                    <h4 style={{ marginBottom: '4px' }}>雲端備份</h4>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0 }}>
-                      瘥予? 3 暺?遣蝡?隞賜???隞踝?Google Drive ?芾身摰???靽???Supabase 蝘??遢銵具?                    </p>
+                      系統會保留最近的雲端備份紀錄，並在設定完成後同步到 Google Drive；還原前請先確認備份內容正確。
+                    </p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button className="btn btn-secondary btn-sm" onClick={refreshCloudBackups} disabled={backupBusy}>
-                      ??渡?
+                      重新整理
                     </button>
                     <button className="btn btn-primary btn-sm" onClick={handleManualCloudBackup} disabled={backupBusy}>
-                      蝡撱箇??遢
+                      建立手動備份
                     </button>
                   </div>
                 </div>
@@ -1194,19 +1202,20 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>撱箇???</th>
-                        <th>??</th>
-                        <th>憭批?</th>
+                        <th>建立時間</th>
+                        <th>原因</th>
+                        <th>資料大小</th>
                         <th>Drive 檔案</th>
-                        <th>靽??唳?</th>
-                        <th style={{ textAlign: 'right' }}>??</th>
+                        <th>保留期限</th>
+                        <th style={{ textAlign: 'right' }}>操作</th>
                       </tr>
                     </thead>
                     <tbody>
                       {cloudBackups.length === 0 && (
                         <tr>
                           <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
-                            撠?脩垢?遢蝝??                          </td>
+                            目前沒有雲端備份紀錄
+                          </td>
                         </tr>
                       )}
                       {cloudBackups.map(backup => (
@@ -1216,7 +1225,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(backup.state_bytes || 0).toLocaleString()} bytes</td>
                           <td>
                             <span className={`badge ${backup.drive_status === 'uploaded' ? 'approved' : backup.drive_status === 'failed' ? 'void' : 'draft'}`}>
-                              {backup.drive_status === 'uploaded' ? '撌脣?甇?Drive' : backup.drive_status === 'failed' ? 'Drive 憭望?' : '?芾身摰?Drive'}
+                              {backup.drive_status === 'uploaded' ? '已上傳至 Drive' : backup.drive_status === 'failed' ? 'Drive 失敗' : '等待同步 Drive'}
                             </span>
                             {backup.drive_error && (
                               <div style={{ fontSize: '0.75rem', color: 'var(--accent-red)', marginTop: '4px' }}>{backup.drive_error}</div>
@@ -1225,7 +1234,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{backup.purge_after ? new Date(backup.purge_after).toLocaleDateString() : '-'}</td>
                           <td style={{ textAlign: 'right' }}>
                             <button className="btn btn-danger btn-sm" onClick={() => handleRestoreCloudBackup(backup.id)} disabled={backupBusy}>
-                              ??
+                              還原
                             </button>
                           </td>
                         </tr>
@@ -1238,20 +1247,21 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               <hr style={{ border: 'none', borderTop: '2px solid var(--border-color)' }} />
 
               <div>
-                <h4 style={{ marginBottom: '8px' }}>銝??箸璈???隞?(Export JSON)</h4>
+                <h4 style={{ marginBottom: '8px' }}>一次性完整資料匯出 (Export JSON)</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '12px' }}>
-                  撠蝟餌絞?桀?????舀?瘞游董??勗???銵董?嗅?閮剖?嚗???頛銝??隞賣?摮?餉??                </p>
+                  匯出目前系統資料成 JSON 備份檔，適合在大量調整資料前先留一份本機備份。
+                </p>
                 <button className="btn btn-primary" onClick={handleBackupExport}>
-                  ? ?臬蝟餌絞?遢瑼?
+                  匯出系統備份檔
                 </button>
               </div>
 
               <hr style={{ border: 'none', borderTop: '2px solid var(--border-color)' }} />
 
               <div>
-                <h4 style={{ marginBottom: '8px' }}>鈭??頂蝯梯???(Import JSON)</h4>
+                <h4 style={{ marginBottom: '8px' }}>從本機備份還原 (Import JSON)</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '12px' }}>
-                  ?豢????臬??JSON ?遢瑼?隞仿????董?風?脰???瘜冽?嚗???*閬?**?冽璈??鞈?摨怠摰對?
+                  匯入 JSON 備份會覆蓋目前本機資料。請確認已先建立備份，並只匯入可信任的備份檔。
                 </p>
                 <input type="file" accept=".json" className="form-control" style={{ maxWidth: '300px', cursor: 'pointer' }} onChange={handleBackupImport} />
               </div>
@@ -1259,11 +1269,13 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               <hr style={{ border: 'none', borderTop: '2px solid var(--border-color)' }} />
 
               <div>
-                <h4 style={{ marginBottom: '8px', color: 'var(--accent-red)' }}>銝??斗??????身??(Factory Reset)</h4>
+                <h4 style={{ marginBottom: '8px', color: 'var(--accent-red)' }}>重置系統資料 (Factory Reset)</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '12px' }}>
-                  甇文?雿?皜?冽憓????瘞游董???啗??亙??怎???航?????蝝?砍?葫閰西???                </p>
+                  會先保存一份重置前快照，再把資料恢復成系統初始狀態。正式上線後請謹慎使用。
+                </p>
                 <button className="btn btn-danger" onClick={handleResetDB}>
-                  ? ?蔭蝟餌絞??????                </button>
+                  重置系統資料
+                </button>
               </div>
             </div>
           </div>
@@ -1285,7 +1297,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   }`
                 )}
               </span>
-              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)}>?</button>
+              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)}>x</button>
             </div>
 
             <form onSubmit={handleSave}>
@@ -1323,7 +1335,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                         <input 
                           type="text" 
                           required 
-                          placeholder="憒?A123456789" 
+                          placeholder="例如：A123456789"
                           className="form-control" 
                           value={formData.idCard} 
                           onChange={e => setFormData({ ...formData, idCard: e.target.value.toUpperCase() })} 
@@ -1331,7 +1343,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       </div>
                       <div className="form-group">
                         <label className="form-label">聯絡手機</label>
-                        <input type="text" placeholder="憒?0912-345678" className="form-control" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                        <input type="text" placeholder="例如：0912-345678" className="form-control" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                       </div>
                     </div>
 
@@ -1352,7 +1364,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       </div>
                     </div>
 
-                    {/* Tab authorization checks (??蝞∠?) */}
+                    {/* Tab authorization checks */}
                     <div className="form-group">
                       <label className="form-label">可使用功能</label>
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', padding: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
