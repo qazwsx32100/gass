@@ -407,6 +407,21 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       empty16kg: item.empty16kg?.toString() || '',
       empty10kg: item.empty10kg?.toString() || '',
       empty4kg: item.empty4kg?.toString() || '',
+      test50kg: item.test50kg?.toString() || '',
+      test20kg: item.test20kg?.toString() || '',
+      test16kg: item.test16kg?.toString() || '',
+      test10kg: item.test10kg?.toString() || '',
+      test4kg: item.test4kg?.toString() || '',
+      scrap50kg: item.scrap50kg?.toString() || '',
+      scrap20kg: item.scrap20kg?.toString() || '',
+      scrap16kg: item.scrap16kg?.toString() || '',
+      scrap10kg: item.scrap10kg?.toString() || '',
+      scrap4kg: item.scrap4kg?.toString() || '',
+      gas50kg: item.gas50kg?.toString() || '',
+      gas20kg: item.gas20kg?.toString() || '',
+      gas16kg: item.gas16kg?.toString() || '',
+      gas10kg: item.gas10kg?.toString() || '',
+      gas4kg: item.gas4kg?.toString() || '',
       openingKg: item.openingKg?.toString() || '',
       openingCost: item.openingCost?.toString() || '',
       purchaseKg: item.purchaseKg?.toString() || '',
@@ -453,7 +468,28 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         empty16kg: parseInt(formData.empty16kg, 10) || 0,
         empty10kg: parseInt(formData.empty10kg, 10) || 0,
         empty4kg: parseInt(formData.empty4kg, 10) || 0,
+        test50kg: parseInt(formData.test50kg, 10) || 0,
+        test20kg: parseInt(formData.test20kg, 10) || 0,
+        test16kg: parseInt(formData.test16kg, 10) || 0,
+        test10kg: parseInt(formData.test10kg, 10) || 0,
+        test4kg: parseInt(formData.test4kg, 10) || 0,
+        scrap50kg: parseInt(formData.scrap50kg, 10) || 0,
+        scrap20kg: parseInt(formData.scrap20kg, 10) || 0,
+        scrap16kg: parseInt(formData.scrap16kg, 10) || 0,
+        scrap10kg: parseInt(formData.scrap10kg, 10) || 0,
+        scrap4kg: parseInt(formData.scrap4kg, 10) || 0,
+        gas50kg: parseFloat(formData.gas50kg) || 0,
+        gas20kg: parseFloat(formData.gas20kg) || 0,
+        gas16kg: parseFloat(formData.gas16kg) || 0,
+        gas10kg: parseFloat(formData.gas10kg) || 0,
+        gas4kg: parseFloat(formData.gas4kg) || 0,
+        grossKg: purchaseGrossKg,
+        totalGasKg: purchaseResidualGasKg,
         totalKg: purchaseTotalKg,
+        totalCollected: purchaseTotalCollected,
+        totalReceived: purchaseTotalReceived,
+        cylinderBalance: purchaseTotalCollected - purchaseTotalReceived,
+        totalScrapped: purchaseTotalScrapped,
         monthlyGasPrice: purchasePrice,
         amount: purchaseTotalAmount,
         remarks: formData.remarks || '',
@@ -820,7 +856,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       {/* Tabs */}
       <div className="tab-container" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '1px', marginBottom: '20px', overflowX: 'auto' }}>
         <button className={`tab-btn ${activeSubTab === 'gasPurchases' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gasPurchases'); setSearchText(''); }} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
-          📦 瓦斯進貨流水帳
+          📦 瓦斯進貨
         </button>
         <button className={`tab-btn ${activeSubTab === 'gas' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gas'); setSearchText(''); }} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
           📅 瓦斯月度庫存價格
@@ -884,17 +920,14 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
               <tr>
                 <th>交易 ID</th>
                 <th>日期</th>
-                <th>50kg (進)</th>
-                <th>20kg (進)</th>
-                <th>16kg (進)</th>
-                <th>10kg (進)</th>
-                <th>4kg (進)</th>
-                <th>50kg (收空)</th>
-                <th>20kg (收空)</th>
-                <th>16kg (收空)</th>
-                <th>10kg (收空)</th>
-                <th>4kg (收空)</th>
-                <th>總進貨 (kg)</th>
+                <th style={{ background: 'rgba(5,178,165,0.08)' }}>進桶 (回來)</th>
+                <th style={{ background: 'rgba(5,178,165,0.08)' }}>收空桶</th>
+                <th style={{ background: 'rgba(5,178,165,0.08)' }}>檢驗桶</th>
+                <th style={{ background: 'rgba(248,113,113,0.1)' }}>報廢桶</th>
+                <th style={{ background: 'rgba(251,191,36,0.1)' }}>收桶合計</th>
+                <th style={{ background: 'rgba(251,191,36,0.1)' }}>尚未回來</th>
+                <th>淨進貨 (kg)</th>
+                <th>存氣扣抵 (kg)</th>
                 <th>當月單價</th>
                 <th>進氣金額</th>
                 <th>備註</th>
@@ -978,25 +1011,54 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                 <tr key={idx}>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
 
-                  {activeSubTab === 'gasPurchases' && (
-                    <>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty50kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty20kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty16kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty10kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty4kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty50kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty20kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty16kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty10kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty4kg || '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{item.totalKg.toLocaleString()} kg</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{item.monthlyGasPrice ? `$${item.monthlyGasPrice}` : '-'}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: 'bold' }}>{formatCurrency(item.amount)}</td>
-                      <td style={{ whiteSpace: 'normal', maxWidth: '200px' }}>{item.remarks}</td>
-                    </>
-                  )}
+                  {activeSubTab === 'gasPurchases' && (() => {
+                    const totalIn     = (item.qty50kg||0)+(item.qty20kg||0)+(item.qty16kg||0)+(item.qty10kg||0)+(item.qty4kg||0);
+                    const totalEmpty  = (item.empty50kg||0)+(item.empty20kg||0)+(item.empty16kg||0)+(item.empty10kg||0)+(item.empty4kg||0);
+                    const totalTest   = (item.test50kg||0)+(item.test20kg||0)+(item.test16kg||0)+(item.test10kg||0)+(item.test4kg||0);
+                    const totalScrap  = (item.scrap50kg||0)+(item.scrap20kg||0)+(item.scrap16kg||0)+(item.scrap10kg||0)+(item.scrap4kg||0);
+                    const collected   = totalEmpty + totalTest;
+                    const balance     = collected - totalIn;
+                    const gasDeduct   = (item.gas50kg||0)+(item.gas20kg||0)+(item.gas16kg||0)+(item.gas10kg||0)+(item.gas4kg||0);
+                    return (
+                      <>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(5,178,165,0.05)', textAlign: 'center' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{totalIn}</span>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            {[item.qty50kg,item.qty20kg,item.qty16kg,item.qty10kg,item.qty4kg].map((v,i)=>v>0?`${[50,20,16,10,4][i]}kg×${v}`:null).filter(Boolean).join(' ')||'-'}
+                          </div>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(5,178,165,0.05)', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          <span>{totalEmpty||'-'}</span>
+                          <div style={{ fontSize: '0.72rem' }}>
+                            {[item.empty50kg,item.empty20kg,item.empty16kg,item.empty10kg,item.empty4kg].map((v,i)=>v>0?`${[50,20,16,10,4][i]}×${v}`:null).filter(Boolean).join(' ')||''}
+                          </div>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(5,178,165,0.05)', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          <span>{totalTest||'-'}</span>
+                          <div style={{ fontSize: '0.72rem' }}>
+                            {[item.test50kg,item.test20kg,item.test16kg,item.test10kg,item.test4kg].map((v,i)=>v>0?`${[50,20,16,10,4][i]}×${v}`:null).filter(Boolean).join(' ')||''}
+                          </div>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(248,113,113,0.07)', textAlign: 'center', color: totalScrap>0?'var(--accent-red)':'var(--text-secondary)' }}>
+                          {totalScrap||'-'}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(251,191,36,0.07)', fontWeight: 700, textAlign: 'center' }}>
+                          {collected||'-'}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(251,191,36,0.07)', textAlign: 'center', color: balance>0?'var(--accent-gold)':balance<0?'var(--accent-red)':'var(--text-secondary)' }}>
+                          {balance !== 0 ? balance : '-'}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{(item.totalKg||0).toLocaleString()} kg</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          {gasDeduct > 0 ? `${gasDeduct} kg` : '-'}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.monthlyGasPrice ? `$${item.monthlyGasPrice}` : '-'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: 'bold' }}>{formatCurrency(item.amount)}</td>
+                        <td style={{ whiteSpace: 'normal', maxWidth: '200px' }}>{item.remarks}</td>
+                      </>
+                    );
+                  })()}
 
                   {activeSubTab === 'gas' && (() => {
                     const calc = getGasInventoryForMonth(companyId, item.yearMonth);
@@ -1141,7 +1203,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
                 {editingItem ? '✏️ 修改' : '➕ 建立'}{
-                  activeSubTab === 'gasPurchases' ? '瓦斯進貨流水帳' :
+                  activeSubTab === 'gasPurchases' ? '瓦斯進貨' :
                   activeSubTab === 'gas' ? '瓦斯月度設定' :
                   activeSubTab === 'gasCylinders' ? '鋼瓶資料' :
                   activeSubTab === 'gasVehicles' ? '配送車輛' :
@@ -1219,14 +1281,81 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                         </div>
                       </div>
                     </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">總公斤數 (kg)</label>
-                        <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold' }} value={`${purchaseTotalKg.toLocaleString()} kg`} />
+                    {/* 檢驗桶 */}
+                    <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-blue)', borderLeftWidth: '4px' }}>
+                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-blue)' }}>🔬 各規格送檢桶數量（送去工廠檢驗，尚未回來）</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                        {[['50kg', 'test50kg'], ['20kg', 'test20kg'], ['16kg', 'test16kg'], ['10kg', 'test10kg'], ['4kg', 'test4kg']].map(([label, key]) => (
+                          <div className="form-group" style={{ margin: 0 }} key={key}>
+                            <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
+                            <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+                          </div>
+                        ))}
                       </div>
-                      <div className="form-group">
-                        <label className="form-label">總進貨金額</label>
-                        <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', color: 'var(--accent-blue)' }} value={formatCurrency(purchaseTotalAmount)} />
+                    </div>
+                    {/* 報廢桶 */}
+                    <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-red)', borderLeftWidth: '4px' }}>
+                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-red)' }}>🗑️ 各規格報廢桶數量（永久報廢，不會回來）</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                        {[['50kg', 'scrap50kg'], ['20kg', 'scrap20kg'], ['16kg', 'scrap16kg'], ['10kg', 'scrap10kg'], ['4kg', 'scrap4kg']].map(([label, key]) => (
+                          <div className="form-group" style={{ margin: 0 }} key={key}>
+                            <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
+                            <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* 存氣 */}
+                    <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-gold)', borderLeftWidth: '4px' }}>
+                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-gold)' }}>💡 各規格空桶存氣量 (kg)（回收空桶內尚有殘氣，需從進氣費用中扣除）</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                        {[['50kg', 'gas50kg'], ['20kg', 'gas20kg'], ['16kg', 'gas16kg'], ['10kg', 'gas10kg'], ['4kg', 'gas4kg']].map(([label, key]) => (
+                          <div className="form-group" style={{ margin: 0 }} key={key}>
+                            <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
+                            <input type="number" min="0" step="0.1" className="form-control" style={{ textAlign: 'center' }} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
+                          </div>
+                        ))}
+                      </div>
+                      {purchaseResidualGasKg > 0 && (
+                        <div style={{ marginTop: '8px', fontSize: '0.82rem', color: 'var(--accent-gold)' }}>
+                          ⚡ 存氣合計：{purchaseResidualGasKg} kg，進氣費用自動扣除此部分
+                        </div>
+                      )}
+                    </div>
+                    {/* Summary */}
+                    <div style={{ background: 'var(--bg-secondary)', padding: '14px 16px', borderRadius: '10px', marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>收桶合計（送出桶）</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{purchaseTotalCollected} 桶</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>= 空桶 + 檢驗桶</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>進桶（回來桶）</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-green)' }}>{purchaseTotalReceived} 桶</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>尚未回來</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: purchaseTotalCollected - purchaseTotalReceived > 0 ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>
+                          {purchaseTotalCollected - purchaseTotalReceived} 桶
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>報廢桶合計</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: purchaseTotalScrapped > 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
+                          {purchaseTotalScrapped} 桶
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>毛進氣 (kg)</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{purchaseGrossKg.toLocaleString()} kg</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>扣除存氣後淨量</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-blue)' }}>{purchaseTotalKg.toLocaleString()} kg</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>進氣金額</div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-blue)' }}>{formatCurrency(purchaseTotalAmount)}</div>
                       </div>
                     </div>
                     <div className="form-group">
