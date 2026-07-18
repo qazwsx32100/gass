@@ -855,6 +855,7 @@ export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
   const sales = getApprovedGasSales(companyId, periodType, periodVal);
+  const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
   const dailyMap = {};
   let totalKg = 0;
   let totalRevenue = 0;
@@ -863,7 +864,17 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
   sales.forEach(item => {
     const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
     const kg = Number(item.gasKg || 0);
-    const revenue = Number(item.amount || 0);
+    
+    let revenue = Number(item.amount || 0);
+    if (item.remarks === '當日營業彙總 - 現收') {
+      const sameDayIncomes = allIncomes.filter(inc => 
+        inc.date === item.date && 
+        inc.remarks && 
+        (inc.remarks === '當日營業彙總 - 月結' || inc.remarks === '當日營業彙總 - 賒欠')
+      );
+      revenue += sameDayIncomes.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+    }
+
     const cogs = Math.round(kg * monthCost.averageCostPerKg);
     if (!dailyMap[item.date]) {
       dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
