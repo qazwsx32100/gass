@@ -2326,7 +2326,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>{formatCurrency(item.repaymentAmount)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.totalWeight).toLocaleString()} kg</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.totalCylinders).toLocaleString()} 桶</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>${Number(item.avgPrice).toFixed(1)} / kg</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>${Number(item.avgPrice).toFixed(2)} / kg</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.stoveIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.repairIncome)}</td>
                       </>
