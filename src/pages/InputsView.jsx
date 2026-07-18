@@ -3027,7 +3027,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   </>
                 )}
 
-                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
+                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'dailySummary' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">{activeSubTab === 'income' ? '收入金額' : '支出金額'}</label>
                     <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
