@@ -1,11 +1,29 @@
--- Add empty cylinder columns to erp_gas_purchases
+-- Add empty, test, scrap, and residual gas columns to erp_gas_purchases
 alter table public.erp_gas_purchases add column if not exists empty_50kg integer not null default 0;
 alter table public.erp_gas_purchases add column if not exists empty_20kg integer not null default 0;
 alter table public.erp_gas_purchases add column if not exists empty_16kg integer not null default 0;
 alter table public.erp_gas_purchases add column if not exists empty_10kg integer not null default 0;
 alter table public.erp_gas_purchases add column if not exists empty_4kg integer not null default 0;
 
--- Re-define erp_refresh_relational_mirror to support empty_50kg, empty_20kg, empty_16kg, empty_10kg, empty_4kg columns
+alter table public.erp_gas_purchases add column if not exists test_50kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists test_20kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists test_16kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists test_10kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists test_4kg integer not null default 0;
+
+alter table public.erp_gas_purchases add column if not exists scrap_50kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists scrap_20kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists scrap_16kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists scrap_10kg integer not null default 0;
+alter table public.erp_gas_purchases add column if not exists scrap_4kg integer not null default 0;
+
+alter table public.erp_gas_purchases add column if not exists gas_50kg numeric not null default 0;
+alter table public.erp_gas_purchases add column if not exists gas_20kg numeric not null default 0;
+alter table public.erp_gas_purchases add column if not exists gas_16kg numeric not null default 0;
+alter table public.erp_gas_purchases add column if not exists gas_10kg numeric not null default 0;
+alter table public.erp_gas_purchases add column if not exists gas_4kg numeric not null default 0;
+
+-- Re-define erp_refresh_relational_mirror to support the full set of columns
 create or replace function public.erp_refresh_relational_mirror(p_state jsonb, p_synced_at timestamptz default now())
 returns void
 language plpgsql
@@ -197,7 +215,15 @@ begin
   end loop;
 
   for item in select value from jsonb_array_elements(coalesce(p_state->'gasPurchases', '[]'::jsonb)) loop
-    insert into public.erp_gas_purchases (id, company_id, purchase_date, qty_50kg, qty_20kg, qty_16kg, qty_10kg, qty_4kg, empty_50kg, empty_20kg, empty_16kg, empty_10kg, empty_4kg, total_kg, monthly_gas_price, amount, raw, synced_at)
+    insert into public.erp_gas_purchases (
+      id, company_id, purchase_date,
+      qty_50kg, qty_20kg, qty_16kg, qty_10kg, qty_4kg,
+      empty_50kg, empty_20kg, empty_16kg, empty_10kg, empty_4kg,
+      test_50kg, test_20kg, test_16kg, test_10kg, test_4kg,
+      scrap_50kg, scrap_20kg, scrap_16kg, scrap_10kg, scrap_4kg,
+      gas_50kg, gas_20kg, gas_16kg, gas_10kg, gas_4kg,
+      total_kg, monthly_gas_price, amount, raw, synced_at
+    )
     values (
       item->>'id',
       item->>'companyId',
@@ -212,6 +238,21 @@ begin
       coalesce(public.erp_to_numeric(item->>'empty16kg')::integer, 0),
       coalesce(public.erp_to_numeric(item->>'empty10kg')::integer, 0),
       coalesce(public.erp_to_numeric(item->>'empty4kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'test50kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'test20kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'test16kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'test10kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'test4kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'scrap50kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'scrap20kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'scrap16kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'scrap10kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'scrap4kg')::integer, 0),
+      coalesce(public.erp_to_numeric(item->>'gas50kg'), 0),
+      coalesce(public.erp_to_numeric(item->>'gas20kg'), 0),
+      coalesce(public.erp_to_numeric(item->>'gas16kg'), 0),
+      coalesce(public.erp_to_numeric(item->>'gas10kg'), 0),
+      coalesce(public.erp_to_numeric(item->>'gas4kg'), 0),
       coalesce(public.erp_to_numeric(item->>'totalKg'), 0),
       coalesce(public.erp_to_numeric(item->>'monthlyGasPrice'), 0),
       coalesce(public.erp_to_numeric(item->>'amount'), 0),
@@ -231,6 +272,21 @@ begin
       empty_16kg = excluded.empty_16kg,
       empty_10kg = excluded.empty_10kg,
       empty_4kg = excluded.empty_4kg,
+      test_50kg = excluded.test_50kg,
+      test_20kg = excluded.test_20kg,
+      test_16kg = excluded.test_16kg,
+      test_10kg = excluded.test_10kg,
+      test_4kg = excluded.test_4kg,
+      scrap_50kg = excluded.scrap_50kg,
+      scrap_20kg = excluded.scrap_20kg,
+      scrap_16kg = excluded.scrap_16kg,
+      scrap_10kg = excluded.scrap_10kg,
+      scrap_4kg = excluded.scrap_4kg,
+      gas_50kg = excluded.gas_50kg,
+      gas_20kg = excluded.gas_20kg,
+      gas_16kg = excluded.gas_16kg,
+      gas_10kg = excluded.gas_10kg,
+      gas_4kg = excluded.gas_4kg,
       total_kg = excluded.total_kg,
       monthly_gas_price = excluded.monthly_gas_price,
       amount = excluded.amount,

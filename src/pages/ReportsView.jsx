@@ -309,20 +309,20 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     });
 
     return {
-      gasSalesAmount,
-      gasSalesPaidAmount,
-      repaymentAmount,
-      monthlyArAmount,
-      unpaidArAmount,
-      cylinderQty,
-      gasKg,
-      avgPricePerCylinder,
-      avgPricePerKg,
-      grossProfit: totalGrossProfit,
-      buyCylinderAmount,
-      repairAmount,
-      stoveAmount,
-      otherExpenseAmount
+      gasSalesAmount: gasSalesAmount || 0,
+      gasSalesPaidAmount: gasSalesPaidAmount || 0,
+      repaymentAmount: repaymentAmount || 0,
+      monthlyArAmount: monthlyArAmount || 0,
+      unpaidArAmount: unpaidArAmount || 0,
+      cylinderQty: cylinderQty || 0,
+      gasKg: gasKg || 0,
+      avgPricePerCylinder: avgPricePerCylinder || 0,
+      avgPricePerKg: avgPricePerKg || 0,
+      grossProfit: totalGrossProfit || 0,
+      buyCylinderAmount: buyCylinderAmount || 0,
+      repairAmount: repairAmount || 0,
+      stoveAmount: stoveAmount || 0,
+      otherExpenseAmount: otherExpenseAmount || 0
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -1040,6 +1040,19 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
             </div>
             <div className="card-body">
+
+              {dailySales.gasSalesAmount === 0 && dailySales.cylinderQty === 0 && (
+                <div style={{
+                  textAlign: 'center', padding: '32px 16px',
+                  color: 'var(--text-secondary)', background: 'var(--bg-secondary)',
+                  borderRadius: '12px', marginBottom: '24px'
+                }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📭</div>
+                  <div style={{ fontWeight: 600 }}>此期間無瓦斯銷售紀錄</div>
+                  <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>請確認已選取正確日期，且銷售單據狀態為「已審核」</div>
+                </div>
+              )}
+
               {/* Financial Metrics */}
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💰 銷貨金流指標</h3>
               <div className="metrics-grid" style={{ marginBottom: '24px' }}>
@@ -1070,23 +1083,23 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               <div className="metrics-grid" style={{ marginBottom: '24px' }}>
                 <div className="metric-card">
                   <span className="metric-label">當日銷售數量</span>
-                  <span className="metric-value">{dailySales.cylinderQty.toLocaleString()} 桶</span>
+                  <span className="metric-value">{(dailySales.cylinderQty || 0).toLocaleString()} 桶</span>
                 </div>
                 <div className="metric-card">
                   <span className="metric-label">當日銷售重量</span>
-                  <span className="metric-value">{dailySales.gasKg.toLocaleString()} kg</span>
+                  <span className="metric-value">{(dailySales.gasKg || 0).toLocaleString()} kg</span>
                 </div>
                 <div className="metric-card">
                   <span className="metric-label">平均單價 (元/桶)</span>
-                  <span className="metric-value">{formatCurrency(dailySales.avgPricePerCylinder)}</span>
+                  <span className="metric-value">{formatCurrency(dailySales.avgPricePerCylinder || 0)}</span>
                 </div>
                 <div className="metric-card">
                   <span className="metric-label">平均單價 (元/kg)</span>
-                  <span className="metric-value">${dailySales.avgPricePerKg.toFixed(2)}</span>
+                  <span className="metric-value">${(dailySales.avgPricePerKg || 0).toFixed(2)}</span>
                 </div>
                 <div className="metric-card accent-green">
                   <span className="metric-label">當日估算毛利</span>
-                  <span className="metric-value">{formatCurrency(dailySales.grossProfit)}</span>
+                  <span className="metric-value">{formatCurrency(dailySales.grossProfit || 0)}</span>
                 </div>
               </div>
 
@@ -1109,6 +1122,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-label">其他營業費用</span>
                   <span className="metric-value">{formatCurrency(dailySales.otherExpenseAmount)}</span>
                 </div>
+              </div>
+
+              {/* Detail: Sales breakdown by account code */}
+              <h3 style={{ fontSize: '1.1rem', margin: '16px 0 16px 0', borderBottom: '2px solid var(--border-color)', paddingBottom: '6px', color: 'var(--text-primary)' }}>📋 說明</h3>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.7' }}>
+                <p>• <strong>瓦斯銷售總金額</strong>：期間內所有科目代碼 4101 且狀態為「已審核」的收入合計。</p>
+                <p>• <strong>已收款</strong>：付款狀態為「已付清」且付款方式非月結應收的項目。</p>
+                <p>• <strong>月結應收帳款</strong>：付款方式設定為「月結應收」的項目。</p>
+                <p>• <strong>欠款金額</strong>：現結但尚未付款（未結清）的項目。</p>
+                <p>• <strong>還款金額</strong>：期間內來自「收款結算」的入帳銀行交易。</p>
+                <p>• <strong>當日估算毛利</strong>：瓦斯銷售收入扣除以日為單位估算的當日進貨成本。</p>
               </div>
             </div>
           </div>

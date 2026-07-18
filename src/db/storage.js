@@ -208,31 +208,70 @@ export const normalizeGasPurchase = (item = {}) => {
   const qty10kg = Number(item.qty10kg) || 0;
   const qty4kg = Number(item.qty4kg) || 0;
 
+  // 回收空瓶 (送去灌裝廠的空桶)
   const empty50kg = Number(item.empty50kg) || 0;
   const empty20kg = Number(item.empty20kg) || 0;
   const empty16kg = Number(item.empty16kg) || 0;
   const empty10kg = Number(item.empty10kg) || 0;
   const empty4kg = Number(item.empty4kg) || 0;
 
-  const totalKg = qty50kg * 50 + qty20kg * 20 + qty16kg * 16 + qty10kg * 10 + qty4kg * 4;
+  // 檢驗桶 (送去工廠檢驗)
+  const test50kg = Number(item.test50kg) || 0;
+  const test20kg = Number(item.test20kg) || 0;
+  const test16kg = Number(item.test16kg) || 0;
+  const test10kg = Number(item.test10kg) || 0;
+  const test4kg = Number(item.test4kg) || 0;
+
+  // 報廢桶 (報廢不再回來)
+  const scrap50kg = Number(item.scrap50kg) || 0;
+  const scrap20kg = Number(item.scrap20kg) || 0;
+  const scrap16kg = Number(item.scrap16kg) || 0;
+  const scrap10kg = Number(item.scrap10kg) || 0;
+  const scrap4kg = Number(item.scrap4kg) || 0;
+
+  // 存氣 (回收空桶中殘留的瓦斯公斤數)
+  const gas50kg = Number(item.gas50kg) || 0;
+  const gas20kg = Number(item.gas20kg) || 0;
+  const gas16kg = Number(item.gas16kg) || 0;
+  const gas10kg = Number(item.gas10kg) || 0;
+  const gas4kg = Number(item.gas4kg) || 0;
+
+  // 總進氣重量 (進實瓶的公斤數)
+  const grossKg = qty50kg * 50 + qty20kg * 20 + qty16kg * 16 + qty10kg * 10 + qty4kg * 4;
+  // 存氣總公斤數 (要扣掉，不計費)
+  const totalGasKg = gas50kg + gas20kg + gas16kg + gas10kg + gas4kg;
+  // 淨進貨重量 (計費基礎)
+  const totalKg = Math.max(0, grossKg - totalGasKg);
+
   const monthlyGasPrice = Number(item.monthlyGasPrice) || 0;
   const amount = Math.round(totalKg * monthlyGasPrice);
+
+  // 收桶 = 空桶 + 檢驗桶 (今日送去工廠的桶數)
+  const totalCollected = (empty50kg + empty20kg + empty16kg + empty10kg + empty4kg)
+                       + (test50kg + test20kg + test16kg + test10kg + test4kg);
+  // 進桶 = 回來的實瓶數
+  const totalReceived = qty50kg + qty20kg + qty16kg + qty10kg + qty4kg;
+  // 差額 = 收桶 - 進桶 (尚未回來)
+  const cylinderBalance = totalCollected - totalReceived;
+  // 報廢桶合計
+  const totalScrapped = scrap50kg + scrap20kg + scrap16kg + scrap10kg + scrap4kg;
 
   return {
     id: item.id || createArchiveId('GP'),
     companyId: item.companyId || 'COMP001',
     date: item.date || new Date().toISOString().split('T')[0],
-    qty50kg,
-    qty20kg,
-    qty16kg,
-    qty10kg,
-    qty4kg,
-    empty50kg,
-    empty20kg,
-    empty16kg,
-    empty10kg,
-    empty4kg,
+    qty50kg, qty20kg, qty16kg, qty10kg, qty4kg,
+    empty50kg, empty20kg, empty16kg, empty10kg, empty4kg,
+    test50kg, test20kg, test16kg, test10kg, test4kg,
+    scrap50kg, scrap20kg, scrap16kg, scrap10kg, scrap4kg,
+    gas50kg, gas20kg, gas16kg, gas10kg, gas4kg,
+    grossKg,
+    totalGasKg,
     totalKg,
+    totalCollected,
+    totalReceived,
+    cylinderBalance,
+    totalScrapped,
     monthlyGasPrice,
     amount,
     remarks: item.remarks || '',

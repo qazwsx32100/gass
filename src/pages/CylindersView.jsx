@@ -82,16 +82,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   // Form State
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    qty50kg: '',
-    qty20kg: '',
-    qty16kg: '',
-    qty10kg: '',
-    qty4kg: '',
-    empty50kg: '',
-    empty20kg: '',
-    empty16kg: '',
-    empty10kg: '',
-    empty4kg: '',
+    qty50kg: '', qty20kg: '', qty16kg: '', qty10kg: '', qty4kg: '',
+    empty50kg: '', empty20kg: '', empty16kg: '', empty10kg: '', empty4kg: '',
+    test50kg: '', test20kg: '', test16kg: '', test10kg: '', test4kg: '',
+    scrap50kg: '', scrap20kg: '', scrap16kg: '', scrap10kg: '', scrap4kg: '',
+    gas50kg: '', gas20kg: '', gas16kg: '', gas10kg: '', gas4kg: '',
     remarks: '',
     yearMonth: new Date().toISOString().substring(0, 7),
     openingKg: '',
@@ -237,14 +232,26 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   };
 
   // Computed fields during Daily Purchase entry
-  const purchaseTotalKg = useMemo(() => {
+  const purchaseGrossKg = useMemo(() => {
     const q50 = Number(formData.qty50kg) || 0;
     const q20 = Number(formData.qty20kg) || 0;
     const q16 = Number(formData.qty16kg) || 0;
     const q10 = Number(formData.qty10kg) || 0;
-    const q4 = Number(formData.qty4kg) || 0;
+    const q4  = Number(formData.qty4kg)  || 0;
     return q50 * 50 + q20 * 20 + q16 * 16 + q10 * 10 + q4 * 4;
   }, [formData.qty50kg, formData.qty20kg, formData.qty16kg, formData.qty10kg, formData.qty4kg]);
+
+  const purchaseResidualGasKg = useMemo(() => {
+    return (Number(formData.gas50kg) || 0)
+         + (Number(formData.gas20kg) || 0)
+         + (Number(formData.gas16kg) || 0)
+         + (Number(formData.gas10kg) || 0)
+         + (Number(formData.gas4kg)  || 0);
+  }, [formData.gas50kg, formData.gas20kg, formData.gas16kg, formData.gas10kg, formData.gas4kg]);
+
+  // Net kg billed = gross - residual gas (存氣)
+  const purchaseTotalKg = useMemo(() => Math.max(0, purchaseGrossKg - purchaseResidualGasKg),
+    [purchaseGrossKg, purchaseResidualGasKg]);
 
   const purchasePrice = useMemo(() => {
     return getMonthlyGasPriceForDate(formData.date);
@@ -253,6 +260,22 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const purchaseTotalAmount = useMemo(() => {
     return Math.round(purchaseTotalKg * purchasePrice);
   }, [purchaseTotalKg, purchasePrice]);
+
+  // Cylinder reconciliation counters
+  const purchaseTotalCollected = useMemo(() => {
+    const empties = (Number(formData.empty50kg)||0)+(Number(formData.empty20kg)||0)+(Number(formData.empty16kg)||0)+(Number(formData.empty10kg)||0)+(Number(formData.empty4kg)||0);
+    const tests   = (Number(formData.test50kg) ||0)+(Number(formData.test20kg) ||0)+(Number(formData.test16kg) ||0)+(Number(formData.test10kg) ||0)+(Number(formData.test4kg)  ||0);
+    return empties + tests;
+  }, [formData.empty50kg, formData.empty20kg, formData.empty16kg, formData.empty10kg, formData.empty4kg,
+      formData.test50kg,  formData.test20kg,  formData.test16kg,  formData.test10kg,  formData.test4kg]);
+
+  const purchaseTotalReceived = useMemo(() => {
+    return (Number(formData.qty50kg)||0)+(Number(formData.qty20kg)||0)+(Number(formData.qty16kg)||0)+(Number(formData.qty10kg)||0)+(Number(formData.qty4kg)||0);
+  }, [formData.qty50kg, formData.qty20kg, formData.qty16kg, formData.qty10kg, formData.qty4kg]);
+
+  const purchaseTotalScrapped = useMemo(() => {
+    return (Number(formData.scrap50kg)||0)+(Number(formData.scrap20kg)||0)+(Number(formData.scrap16kg)||0)+(Number(formData.scrap10kg)||0)+(Number(formData.scrap4kg)||0);
+  }, [formData.scrap50kg, formData.scrap20kg, formData.scrap16kg, formData.scrap10kg, formData.scrap4kg]);
 
   // Computed fields during Monthly Period Config entry
   const monthlySumPurchaseKg = useMemo(() => {
@@ -331,16 +354,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     setEditingItem(null);
     setFormData({
       date: new Date().toISOString().split('T')[0],
-      qty50kg: '',
-      qty20kg: '',
-      qty16kg: '',
-      qty10kg: '',
-      qty4kg: '',
-      empty50kg: '',
-      empty20kg: '',
-      empty16kg: '',
-      empty10kg: '',
-      empty4kg: '',
+      qty50kg: '', qty20kg: '', qty16kg: '', qty10kg: '', qty4kg: '',
+      empty50kg: '', empty20kg: '', empty16kg: '', empty10kg: '', empty4kg: '',
+      test50kg: '', test20kg: '', test16kg: '', test10kg: '', test4kg: '',
+      scrap50kg: '', scrap20kg: '', scrap16kg: '', scrap10kg: '', scrap4kg: '',
+      gas50kg: '', gas20kg: '', gas16kg: '', gas10kg: '', gas4kg: '',
       remarks: '',
       yearMonth: new Date().toISOString().substring(0, 7),
       openingKg: '',
