@@ -2171,7 +2171,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>合計桶數</th>
                     <th>平均單價</th>
                     <th>爐具收入</th>
-                    <th>維修收入</th>
+                    <th>維修/安裝 收入</th>
                     <th>買桶收入</th>
                     <th>檢驗費收入</th>
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
@@ -2700,8 +2700,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>維修收入</label>
-                          <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>維修/安裝 收入</label>
+                          <input type="number" min="0" placeholder="請輸入檢修/安裝收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
                         </div>
                         <div className="form-group" style={{ marginTop: '12px' }}>
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>買桶收入</label>
