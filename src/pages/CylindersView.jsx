@@ -1401,7 +1401,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     </div>
                     <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--border-color)' }}>
                       <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>各規格進貨數量 (桶)</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px' }}>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>50 kg</label>
                           <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.qty50kg} onChange={e => setFormData({ ...formData, qty50kg: e.target.value })} />
@@ -1426,7 +1426,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     </div>
                     <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--border-color)' }}>
                       <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>各規格回收空瓶數量 (桶)</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px' }}>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>50 kg</label>
                           <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty50kg} onChange={e => setFormData({ ...formData, empty50kg: e.target.value })} />
@@ -1452,7 +1452,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     {/* 檢驗桶 */}
                     <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-blue)', borderLeftWidth: '4px' }}>
                       <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-blue)' }}>🔬 各規格送檢桶數量（送去工廠檢驗，尚未回來）</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px' }}>
                         {[['50kg', 'test50kg'], ['20kg', 'test20kg'], ['16kg', 'test16kg'], ['10kg', 'test10kg'], ['4kg', 'test4kg']].map(([label, key]) => (
                           <div className="form-group" style={{ margin: 0 }} key={key}>
                             <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
@@ -1464,7 +1464,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     {/* 報廢桶 */}
                     <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-red)', borderLeftWidth: '4px' }}>
                       <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-red)' }}>🗑️ 各規格報廢桶數量（永久報廢，不會回來）</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px' }}>
                         {[['50kg', 'scrap50kg'], ['20kg', 'scrap20kg'], ['16kg', 'scrap16kg'], ['10kg', 'scrap10kg'], ['4kg', 'scrap4kg']].map(([label, key]) => (
                           <div className="form-group" style={{ margin: 0 }} key={key}>
                             <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
