@@ -280,13 +280,13 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   // Computed fields during Monthly Period Config entry
   const monthlySumPurchaseKg = useMemo(() => {
     return gasPurchases
-      .filter(p => p.date.startsWith(formData.yearMonth))
+      .filter(p => p.date && typeof p.date === 'string' && p.date.startsWith(formData.yearMonth))
       .reduce((sum, p) => sum + (p.totalKg || 0), 0);
   }, [gasPurchases, formData.yearMonth]);
 
   const monthlySumPurchaseAmount = useMemo(() => {
     return gasPurchases
-      .filter(p => p.date.startsWith(formData.yearMonth))
+      .filter(p => p.date && typeof p.date === 'string' && p.date.startsWith(formData.yearMonth))
       .reduce((sum, p) => sum + (p.amount || 0), 0);
   }, [gasPurchases, formData.yearMonth]);
 

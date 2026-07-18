@@ -66,7 +66,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const budgetProgressItems = useMemo(() => {
     const allBudgets = getBudgets().filter(b => b.companyId === companyId && b.year === year && b.month === month);
     const accounts = getChartOfAccounts();
-    const expensesList = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date.startsWith(periodVal));
+    const expensesList = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date && typeof e.date === 'string' && e.date.startsWith(periodVal));
     
     return allBudgets.map(b => {
       const account = accounts.find(a => a.code === b.accountCode);

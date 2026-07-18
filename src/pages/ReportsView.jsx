@@ -76,7 +76,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     
     const filtered = all.filter(item => {
       if (activePeriodType === 'month') {
-        return item.date.startsWith(activePeriodVal);
+        return item.date && typeof item.date === 'string' && item.date.startsWith(activePeriodVal);
       }
       if (activePeriodType === 'date') {
         return item.date === activePeriodVal;

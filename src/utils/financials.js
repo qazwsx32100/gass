@@ -799,7 +799,7 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const openingCost = Number(config?.openingCost || 0);
 
   // Aggregate from daily purchases
-  const monthDailyPurchases = getGasPurchases().filter(p => p.companyId === companyId && p.date.startsWith(yearMonth));
+  const monthDailyPurchases = getGasPurchases().filter(p => p.companyId === companyId && p.date && typeof p.date === 'string' && p.date.startsWith(yearMonth));
 
   const purchaseKg = monthDailyPurchases.length > 0
     ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.totalKg || 0), 0)
