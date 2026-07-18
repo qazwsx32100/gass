@@ -1,7 +1,9 @@
 import { apiFetch } from './apiClient';
 
 const LOCAL_UPDATED_AT_KEY = 'bp_supabase_updated_at';
+const CLOUD_UPDATED_AT_KEY = 'bp_cloud_updated_at';
 const CLOUD_SESSION_TOKEN_KEY = 'bp_cloud_session_token';
+const CLOUD_SYNC_LAST_ERROR_KEY = 'bp_cloud_sync_last_error';
 
 const DATA_KEYS = {
   companies: 'bp_companies',
@@ -16,6 +18,14 @@ const DATA_KEYS = {
   bankReconciliations: 'bp_bank_reconciliations',
   fixedAssets: 'bp_fixed_assets',
   gasInventoryPeriods: 'bp_gas_inventory_periods',
+  gasPurchases: 'bp_gas_purchases',
+  gasCylinders: 'bp_gas_cylinders',
+  gasCylinderMovements: 'bp_gas_cylinder_movements',
+  gasDeliveryVehicles: 'bp_gas_delivery_vehicles',
+  gasVehicleInventory: 'bp_gas_vehicle_inventory',
+  customerCylinderDeposits: 'bp_customer_cylinder_deposits',
+  journalEntries: 'bp_journal_entries',
+  journalLines: 'bp_journal_lines',
   logs: 'bp_logs',
   auditArchive: 'bp_audit_archive',
   resetSnapshots: 'bp_reset_snapshots',
@@ -45,6 +55,63 @@ export const setCloudSessionToken = (token) => {
 };
 export const clearCloudSessionToken = () => {
   localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
+};
+
+const setLastCloudSyncError = ({ status = 0, error = '雲端同步失敗。' } = {}) => {
+  localStorage.setItem(CLOUD_SYNC_LAST_ERROR_KEY, JSON.stringify({ status, error, at: new Date().toISOString() }));
+};
+
+export const clearLastCloudSyncError = () => {
+  localStorage.removeItem(CLOUD_SYNC_LAST_ERROR_KEY);
+};
+
+export const getLastCloudSyncError = () => {
+  try {
+    const value = localStorage.getItem(CLOUD_SYNC_LAST_ERROR_KEY);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getResponseError = async (response, fallback = '雲端同步失敗。') => {
+  const text = await response.text().catch(() => '');
+  if (!text) return fallback;
+  try {
+    const data = JSON.parse(text);
+    return data.error || data.message || fallback;
+  } catch {
+    return text.slice(0, 240) || fallback;
+  }
+};
+
+const normalizeCloudError = (status, error = '', fallback = '雲端同步失敗。') => {
+  const message = String(error || '');
+  if (status === 401 || /Unauthorized/i.test(message)) {
+    return '雲端登入已失效，請登出後重新登入再儲存。';
+  }
+  if (/Session is no longer allowed/i.test(message)) {
+    return '這個帳號或裝置已不在允許清單內，請重新登入或請管理員核准裝置。';
+  }
+  if (/Insufficient role permissions/i.test(message) || /read-only/i.test(message)) {
+    return '目前雲端登入帳號沒有修改資料權限，請登出後用系統管理員重新登入。';
+  }
+  if (/protected data/i.test(message)) {
+    return '目前雲端登入帳號不能修改這類資料，請改用系統管理員帳號。';
+  }
+  if (/locked period/i.test(message)) {
+    return '這筆資料屬於已鎖定月份，不能直接新增、修改或刪除。';
+  }
+  if (status === 409 || /Cloud data changed before this save/i.test(message)) {
+    return '其他使用者已先更新雲端資料，系統已停止覆蓋。請重新整理頁面後再輸入這筆資料。';
+  }
+  if (status === 413 || /Cloud state is too large/i.test(message)) {
+    return '雲端資料量過大，憑證附件必須改存私密檔案空間。';
+  }
+  if (/Cloud sync failed/i.test(message)) {
+    return '雲端資料庫寫入失敗，請稍後再試或檢查雲端設定。';
+  }
+  return message || fallback;
 };
 
 const authHeaders = () => {
@@ -78,15 +145,25 @@ const writeLocalState = (state) => {
   });
 };
 
+const rememberCloudUpdatedAt = (updatedAt) => {
+  const value = String(updatedAt || '');
+  if (value) localStorage.setItem(CLOUD_UPDATED_AT_KEY, value);
+  localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(new Date(value || Date.now()).getTime() || Date.now()));
+};
+
 export const pullSupabaseToLocal = async () => {
   if (!getCloudSessionToken()) return false;
+  clearLastCloudSyncError();
   const response = await apiFetch('/api/app-state', {
     method: 'GET',
     headers: { Accept: 'application/json', ...authHeaders() }
   });
 
   if (!response.ok) {
-    console.error('Supabase pull failed', await response.text());
+    const error = normalizeCloudError(response.status, await getResponseError(response, '雲端資料讀取失敗。'));
+    setLastCloudSyncError({ status: response.status, error });
+    if (response.status === 401) clearCloudSessionToken();
+    console.error('Supabase pull failed', error);
     return false;
   }
 
@@ -94,27 +171,36 @@ export const pullSupabaseToLocal = async () => {
   if (!data?.state) return false;
 
   writeLocalState(data.state);
-  localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(new Date(data.updated_at).getTime() || Date.now()));
+  rememberCloudUpdatedAt(data.updated_at);
   return true;
 };
 
 export const syncLocalToSupabase = async (operatorName = '系統') => {
-  if (isSyncing || !getCloudSessionToken()) return false;
+  if (isSyncing) return false;
+  if (!getCloudSessionToken()) {
+    setLastCloudSyncError({ status: 401, error: '雲端登入已失效，請重新登入後再儲存。' });
+    return false;
+  }
 
   isSyncing = true;
   try {
+    clearLastCloudSyncError();
     const now = new Date().toISOString();
     const response = await apiFetch('/api/app-state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...authHeaders() },
       body: JSON.stringify({
         state: readLocalState(),
-        updatedBy: operatorName
+        updatedBy: operatorName,
+        expectedUpdatedAt: localStorage.getItem(CLOUD_UPDATED_AT_KEY) || null
       })
     });
 
     if (!response.ok) {
-      console.error('Supabase sync failed', await response.text());
+      const error = normalizeCloudError(response.status, await getResponseError(response, '雲端同步失敗。'));
+      setLastCloudSyncError({ status: response.status, error });
+      if (response.status === 401) clearCloudSessionToken();
+      console.error('Supabase sync failed', error);
       return false;
     }
 
@@ -122,7 +208,7 @@ export const syncLocalToSupabase = async (operatorName = '系統') => {
     if (data?.state) {
       writeLocalState(data.state);
     }
-    localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(new Date(data.updated_at || now).getTime()));
+    rememberCloudUpdatedAt(data.updated_at || now);
     return true;
   } finally {
     isSyncing = false;
@@ -135,7 +221,12 @@ export const seedSupabaseIfEmpty = async (operatorName = '系統') => {
     method: 'GET',
     headers: { Accept: 'application/json', ...authHeaders() }
   });
-  if (!response.ok) return false;
+  if (!response.ok) {
+    const error = normalizeCloudError(response.status, await getResponseError(response, '雲端資料讀取失敗。'));
+    setLastCloudSyncError({ status: response.status, error });
+    if (response.status === 401) clearCloudSessionToken();
+    return false;
+  }
 
   const data = await response.json();
   if (data?.state) return true;
@@ -144,8 +235,11 @@ export const seedSupabaseIfEmpty = async (operatorName = '系統') => {
 
 export const initSupabaseSync = async (onSync) => {
   if (!getCloudSessionToken()) return false;
-  await seedSupabaseIfEmpty('系統初始化');
-  await pullSupabaseToLocal();
+  clearLastCloudSyncError();
+  const seeded = await seedSupabaseIfEmpty('系統初始化');
+  if (!seeded) return false;
+  const pulled = await pullSupabaseToLocal();
+  if (!pulled) return false;
 
   if (pollTimer) {
     clearInterval(pollTimer);
@@ -162,12 +256,14 @@ export const initSupabaseSync = async (onSync) => {
       if (!response.ok) return;
       const data = await response.json();
       if (!data?.state) return;
+      const syncError = getLastCloudSyncError();
+      if (syncError?.status === 409) return;
       const remoteUpdatedAt = new Date(data.updated_at).getTime();
       const localUpdatedAt = Number(localStorage.getItem(LOCAL_UPDATED_AT_KEY) || 0);
       if (remoteUpdatedAt <= localUpdatedAt) return;
 
       writeLocalState(data.state);
-      localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(remoteUpdatedAt));
+      rememberCloudUpdatedAt(data.updated_at);
       if (onSync) onSync(data.updated_by || '其他使用者');
     } catch (error) {
       console.error('Supabase polling failed', error);
@@ -178,6 +274,7 @@ export const initSupabaseSync = async (onSync) => {
 };
 
 export const loginViaCloud = async ({ email, password, device }) => {
+  clearLastCloudSyncError();
   const response = await apiFetch('/api/auth-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -191,7 +288,7 @@ export const loginViaCloud = async ({ email, password, device }) => {
   setCloudSessionToken(data.token);
   if (data.state) {
     writeLocalState(data.state);
-    localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(new Date(data.updated_at || Date.now()).getTime() || Date.now()));
+    rememberCloudUpdatedAt(data.updated_at || new Date().toISOString());
   }
   return data;
 };
@@ -233,7 +330,7 @@ export const restoreCloudBackup = async (backupId) => {
   }
   if (data.state) {
     writeLocalState(data.state);
-    localStorage.setItem(LOCAL_UPDATED_AT_KEY, String(new Date(data.updated_at || Date.now()).getTime() || Date.now()));
+    rememberCloudUpdatedAt(data.updated_at || new Date().toISOString());
   }
   return data;
 };

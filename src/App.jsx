@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { initializeDB, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
 import { initFirebase } from './db/firebaseService';
-import { clearCloudSessionToken, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
+import { clearCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
 import DashboardView from './pages/DashboardView';
 import InputsView from './pages/InputsView';
 import ReportsView from './pages/ReportsView';
 import SettingsView from './pages/SettingsView';
 import FirebaseView from './pages/FirebaseView';
+import CylindersView from './pages/CylindersView';
 import { getAllowedTabsForUser } from './utils/permissions';
 
 function App() {
@@ -31,8 +32,16 @@ function App() {
 
   // Period / Company Selector States
   const [currentCompanyId, setCurrentCompanyId] = useState('COMP001');
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState('06'); // June has rich default data
+  // Get current Taiwan timezone year/month
+  const twDateStr = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit'
+  }).format(new Date()); // e.g. "2026/07"
+  const [twYear, twMonth] = twDateStr.split('/');
+  
+  const [currentYear, setCurrentYear] = useState(parseInt(twYear, 10) || 2026);
+  const [currentMonth, setCurrentMonth] = useState(twMonth || '07');
   const [toasts, setToasts] = useState([]);
   const [isDataReady, setIsDataReady] = useState(false);
 
@@ -83,9 +92,24 @@ function App() {
         try {
           const session = JSON.parse(savedSession);
           if (session?.user?.id && session?.role) {
-            setIsLoggedIn(true);
-            setUserRole(session.role);
-            setCurrentUser(session.user);
+            let sessionValid = true;
+            if (isSupabaseConnected()) {
+              sessionValid = await initSupabaseSync((updatedBy) => {
+                showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
+                setDbVersion(prev => prev + 1);
+              });
+            }
+
+            if (sessionValid) {
+              setIsLoggedIn(true);
+              setUserRole(session.role);
+              setCurrentUser(session.user);
+            } else {
+              localStorage.removeItem('bp_login_session');
+              clearCloudSessionToken();
+              const error = getLastCloudSyncError();
+              showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
+            }
           }
         } catch {}
       }
@@ -127,6 +151,10 @@ function App() {
     const supabaseSynced = isSupabaseConnected()
       ? await syncLocalToSupabase(currentUser?.name || '系統')
       : true;
+    if (!supabaseSynced) {
+      const error = getLastCloudSyncError();
+      showToast(error?.error || '資料尚未同步到雲端，請稍後再試。', 'error');
+    }
     return supabaseSynced;
   };
 
@@ -214,9 +242,6 @@ function App() {
       showToast(`👋 歡迎回來，${result.user.name}！系統已成功載入您的權限。`, 'success');
     } else {
       setLoginError(result.error);
-      if (isSupabaseConnected()) {
-        await syncLocalToSupabase('登入流程');
-      }
       showToast('❌ 登入失敗！請確認帳號密碼。', 'error');
     }
   };
@@ -399,6 +424,10 @@ function App() {
                 <span className="sidebar-link-icon">📝</span>
                 日常金流
               </button>
+              <button className={`sidebar-link ${activeTab === 'cylinders' ? 'active' : ''}`} onClick={() => setActiveTab('cylinders')}>
+                <span className="sidebar-link-icon">🍼</span>
+                鋼瓶狀態
+              </button>
             </>
           )}
           
@@ -546,6 +575,17 @@ function App() {
               triggerRefresh={dbVersion}
               onDataChange={handleDataChange}
               operatorName={currentUser.name}
+              currentUser={currentUser}
+              userRole={userRole}
+            />
+          )}
+
+          {activeTab === 'cylinders' && (
+            <CylindersView
+              companyId={currentCompanyId}
+              triggerRefresh={dbVersion}
+              onDataChange={handleDataChange}
+              operatorName={currentUser?.name}
               currentUser={currentUser}
               userRole={userRole}
             />

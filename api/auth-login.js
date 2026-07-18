@@ -95,6 +95,29 @@ const publicUserFromState = (state, id, fallback) => (
   (state.shareholders || []).find(item => item.id === id) || fallback
 );
 
+const hasCredential = (record = {}) => Boolean(
+  record.password || (record.passwordHash && record.passwordSalt)
+);
+
+export const resolveAdminCredential = (state = {}, security = {}, defaultPassword = '') => {
+  if (hasCredential(security)) {
+    return { record: security, fallbackPassword: '', source: 'adminSecurity' };
+  }
+
+  const owner = (state.shareholders || []).find(
+    item => item.id === 'SH001' || normalizeEmail(item.email) === ADMIN_EMAIL
+  );
+  if (hasCredential(owner)) {
+    return { record: owner, fallbackPassword: '', source: 'ownerAccount' };
+  }
+
+  if (defaultPassword) {
+    return { record: security, fallbackPassword: defaultPassword, source: 'environment' };
+  }
+
+  return { record: security, fallbackPassword: '', source: 'missing' };
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -129,19 +152,26 @@ export default async function handler(req, res) {
       const displayName = getAdminDisplayName(state);
       const defaultPassword = getAdminDefaultPassword();
       const hasStoredAdminPassword = Boolean(security.password || (security.passwordHash && security.passwordSalt));
+      const adminCredential = resolveAdminCredential(state, security, defaultPassword);
 
-      if (!hasStoredAdminPassword && !defaultPassword) {
-        console.warn('Admin password not initialized in database and no environment variable set.');
+      if (adminCredential.source === 'missing') {
+        console.warn('Admin password not initialized in admin security, owner account, or environment.');
         return sendJson(res, 500, { success: false, error: '系統管理員密碼尚未初始化，請聯絡系統管理員設定環境變數。' });
       }
 
-      if (!verifyPassword(password, security, defaultPassword)) {
+      if (!verifyPassword(password, adminCredential.record, adminCredential.fallbackPassword)) {
         console.warn('admin login failed', { email, ip: getClientIp(req) });
         return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
       }
 
       if (!hasStoredAdminPassword) {
-        security.password = defaultPassword;
+        if (adminCredential.record.passwordHash && adminCredential.record.passwordSalt) {
+          security.passwordHash = adminCredential.record.passwordHash;
+          security.passwordSalt = adminCredential.record.passwordSalt;
+          security.passwordAlgo = adminCredential.record.passwordAlgo;
+        } else {
+          security.password = adminCredential.record.password || adminCredential.fallbackPassword;
+        }
       }
 
       if (security.disabled) {

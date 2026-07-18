@@ -39,7 +39,7 @@ const initLabels = {
   bankOpeningBalancesReady: '銀行與期初餘額已確認',
   customersReady: '客戶與應收流程已確認',
   suppliersReady: '供應商與應付流程已確認',
-  openingInventoryReserved: '瓦斯完整庫存模組已預留'
+  openingInventoryReserved: '瓦斯完整庫存模組已啟用'
 };
 
 const tablePlanStatusLabel = {
@@ -786,7 +786,7 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">瓦斯完整庫存模組預留</span>
+          <span className="card-title">瓦斯完整庫存模組</span>
         </div>
         <div className="card-body">
           <div style={{ marginBottom: '12px', color: 'var(--text-secondary)' }}>

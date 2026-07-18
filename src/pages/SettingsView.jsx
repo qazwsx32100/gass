@@ -17,7 +17,7 @@ import {
 } from '../db/storage';
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
-import { createManualCloudBackup, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
+import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
 export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole }) {
@@ -110,6 +110,11 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     }, {});
   }, [companies, triggerRefresh]);
 
+  const getCloudSyncFailureMessage = (prefix) => {
+    const cloudError = getLastCloudSyncError();
+    return `${prefix}：${cloudError?.error || '請稍後再試。'}`;
+  };
+
   // Modal forms
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -194,7 +199,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     }
 
     const cloudSaved = await onDataChange();
-    showToast(cloudSaved === false ? '本機已更新，但雲端同步失敗。' : locked ? '月份已鎖定。' : '月份已重新開放。', cloudSaved === false ? 'error' : 'success');
+    showToast(
+      cloudSaved === false ? getCloudSyncFailureMessage('本機已更新，但雲端同步失敗') : locked ? '月份已鎖定。' : '月份已重新開放。',
+      cloudSaved === false ? 'error' : 'success'
+    );
   };
 
   // Open modal to add
@@ -417,7 +425,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             setIsModalOpen(false);
             const cloudSaved = await onDataChange();
             if (cloudSaved === false) {
-              showToast('帳號已復原，但雲端同步失敗，請稍後重新整理確認。', 'error');
+              showToast(getCloudSyncFailureMessage('帳號已復原，但雲端同步失敗'), 'error');
             } else {
               showToast('帳號已復原，雲端同步完成。', 'success');
             }
@@ -507,7 +515,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       setIsModalOpen(false);
       const cloudSaved = await onDataChange();
       if (cloudSaved === false) {
-        showToast('資料已儲存在本機，但同步到雲端失敗，請稍後再試。', 'error');
+        showToast(getCloudSyncFailureMessage('資料已儲存在本機，但同步到雲端失敗'), 'error');
       } else {
         showToast('設定已儲存。', 'success');
       }
@@ -530,7 +538,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       return;
     }
     const cloudSaved = await onDataChange();
-    showToast(cloudSaved === false ? '安全設定已更新，但雲端同步失敗。' : '安全設定已更新。', cloudSaved === false ? 'error' : 'success');
+    showToast(
+      cloudSaved === false ? getCloudSyncFailureMessage('安全設定已更新，但雲端同步失敗') : '安全設定已更新。',
+      cloudSaved === false ? 'error' : 'success'
+    );
   };
 
   // Delete Item
@@ -560,7 +571,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       saveCompanies(getCompanies().filter(c => c.id !== id));
     }
     const cloudSaved = await onDataChange();
-    showToast(cloudSaved === false ? '資料已刪除並保留稽核紀錄，但雲端同步失敗。' : '資料已刪除，稽核紀錄會保留一年。', cloudSaved === false ? 'error' : 'info');
+    showToast(
+      cloudSaved === false ? getCloudSyncFailureMessage('資料已刪除並保留稽核紀錄，但雲端同步失敗') : '資料已刪除，稽核紀錄會保留一年。',
+      cloudSaved === false ? 'error' : 'info'
+    );
   };
 
   // Database resets/backups
@@ -574,7 +588,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     archiveResetSnapshot('系統管理員', reason);
     initializeDB(true);
     const cloudSaved = await onDataChange();
-    showToast(cloudSaved === false ? '資料已重置，但雲端同步失敗。' : '資料已重置，重置前資料已保留一年。', cloudSaved === false ? 'error' : 'warning');
+    showToast(
+      cloudSaved === false ? getCloudSyncFailureMessage('資料已重置，但雲端同步失敗') : '資料已重置，重置前資料已保留一年。',
+      cloudSaved === false ? 'error' : 'warning'
+    );
   };
 
   const handleBackupExport = () => {

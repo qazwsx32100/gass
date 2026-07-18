@@ -21,6 +21,20 @@ const checks = [
     headers: { 'content-type': 'application/json' }
   },
   {
+    name: 'attachment-get-unauth',
+    method: 'GET',
+    path: '/api/attachments?id=unauthorized-check',
+    expectedStatus: 401
+  },
+  {
+    name: 'attachment-post-unauth',
+    method: 'POST',
+    path: '/api/attachments',
+    expectedStatus: 401,
+    body: JSON.stringify({ fileName: 'test.pdf', dataUrl: 'data:application/pdf;base64,AA==' }),
+    headers: { 'content-type': 'application/json' }
+  },
+  {
     name: 'backup-file-public',
     method: 'GET',
     path: '/backups/BusinessPilot_Backup_2026-07-07.json',

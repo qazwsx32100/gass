@@ -1,6 +1,6 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
-import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getFixedAssets, getCustomers, getSuppliers } from '../db/storage';
+import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines } from '../db/storage';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -359,6 +359,25 @@ const pushEntry = (entries, header) => {
 };
 
 export const getJournalEntries = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const storedEntries = getStoredJournalEntries()
+    .filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
+  if (storedEntries.length > 0) {
+    const storedLines = getStoredJournalLines();
+    return storedEntries.map((entry) => {
+      const lines = storedLines.filter(line => line.entryId === entry.id);
+      const debit = lines.filter(line => line.side === 'debit').reduce((sum, line) => sum + Number(line.amount || 0), 0);
+      const credit = lines.filter(line => line.side === 'credit').reduce((sum, line) => sum + Number(line.amount || 0), 0);
+      return {
+        ...entry,
+        description: entry.memo,
+        lines,
+        debit,
+        credit,
+        balanced: Math.abs(debit - credit) < 0.01
+      };
+    }).sort((a, b) => `${a.date}:${a.id}`.localeCompare(`${b.date}:${b.id}`));
+  }
+
   const entries = [];
 
   getIncomes()
@@ -451,6 +470,170 @@ export const getJournalEntries = (companyId, periodType = 'month', periodVal = n
     });
 
   return entries.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+const getPeriodBounds = (periodType, periodVal) => {
+  if (periodType === 'date') return { startDate: periodVal || '', endDate: periodVal || '' };
+  if (periodType === 'range') {
+    return {
+      startDate: periodVal?.startDate || '',
+      endDate: periodVal?.endDate || '2099-12-31'
+    };
+  }
+  if (periodType === 'month') {
+    return {
+      startDate: `${periodVal}-01`,
+      endDate: getPeriodEndDate(periodType, periodVal)
+    };
+  }
+  if (periodType === 'quarter') {
+    const [year, quarterText] = String(periodVal || '').split('-');
+    const quarter = Number(String(quarterText || '').replace('Q', '')) || 1;
+    const startMonth = String((quarter - 1) * 3 + 1).padStart(2, '0');
+    return { startDate: `${year}-${startMonth}-01`, endDate: getPeriodEndDate(periodType, periodVal) };
+  }
+  if (periodType === 'year') return { startDate: `${periodVal}-01-01`, endDate: `${periodVal}-12-31` };
+  return { startDate: '', endDate: '2099-12-31' };
+};
+
+export const getTrialBalance = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const accounts = new Map();
+  getJournalEntries(companyId, periodType, periodVal).forEach((entry) => {
+    entry.lines.forEach((line) => {
+      const key = `${line.accountCode}:${line.accountName}`;
+      const current = accounts.get(key) || {
+        accountCode: line.accountCode,
+        accountName: line.accountName,
+        debit: 0,
+        credit: 0
+      };
+      current[line.side] += Number(line.amount || 0);
+      accounts.set(key, current);
+    });
+  });
+
+  const rows = [...accounts.values()]
+    .map((row) => {
+      const balance = row.debit - row.credit;
+      return {
+        ...row,
+        debitBalance: Math.max(0, balance),
+        creditBalance: Math.max(0, -balance)
+      };
+    })
+    .sort((a, b) => String(a.accountCode).localeCompare(String(b.accountCode)));
+
+  return {
+    rows,
+    totalDebit: rows.reduce((sum, row) => sum + row.debit, 0),
+    totalCredit: rows.reduce((sum, row) => sum + row.credit, 0),
+    totalDebitBalance: rows.reduce((sum, row) => sum + row.debitBalance, 0),
+    totalCreditBalance: rows.reduce((sum, row) => sum + row.creditBalance, 0)
+  };
+};
+
+export const getGeneralLedger = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const selectedEntries = getJournalEntries(companyId, periodType, periodVal);
+  const storedHeaders = getStoredJournalEntries().filter(item => item.companyId === companyId);
+  const storedLines = getStoredJournalLines();
+  const { startDate } = getPeriodBounds(periodType, periodVal);
+  const openingByAccount = new Map();
+
+  storedHeaders
+    .filter(entry => !startDate || entry.date < startDate)
+    .forEach((entry) => {
+      storedLines.filter(line => line.entryId === entry.id).forEach((line) => {
+        const key = `${line.accountCode}:${line.accountName}`;
+        const delta = line.side === 'debit' ? Number(line.amount || 0) : -Number(line.amount || 0);
+        openingByAccount.set(key, (openingByAccount.get(key) || 0) + delta);
+      });
+    });
+
+  const accounts = new Map();
+  selectedEntries.forEach((entry) => {
+    entry.lines.forEach((line) => {
+      const key = `${line.accountCode}:${line.accountName}`;
+      if (!accounts.has(key)) {
+        accounts.set(key, {
+          accountCode: line.accountCode,
+          accountName: line.accountName,
+          openingBalance: openingByAccount.get(key) || 0,
+          rows: []
+        });
+      }
+      accounts.get(key).rows.push({
+        date: entry.date,
+        entryId: entry.id,
+        description: entry.description,
+        debit: line.side === 'debit' ? Number(line.amount || 0) : 0,
+        credit: line.side === 'credit' ? Number(line.amount || 0) : 0
+      });
+    });
+  });
+
+  return [...accounts.values()]
+    .map((account) => {
+      let runningBalance = account.openingBalance;
+      const rows = account.rows
+        .sort((a, b) => `${a.date}:${a.entryId}`.localeCompare(`${b.date}:${b.entryId}`))
+        .map((row) => {
+          runningBalance += row.debit - row.credit;
+          return { ...row, runningBalance };
+        });
+      return { ...account, rows, closingBalance: runningBalance };
+    })
+    .sort((a, b) => String(a.accountCode).localeCompare(String(b.accountCode)));
+};
+
+const CASH_ACCOUNT_CODES = new Set(['1100', '1101']);
+
+const cashDeltaForEntry = (entry) => entry.lines.reduce((sum, line) => {
+  if (!CASH_ACCOUNT_CODES.has(String(line.accountCode))) return sum;
+  return sum + (line.side === 'debit' ? Number(line.amount || 0) : -Number(line.amount || 0));
+}, 0);
+
+const cashFlowSectionForEntry = (entry) => {
+  if (entry.sourceType === 'fixed_asset' || entry.lines.some(line => String(line.accountCode).startsWith('15'))) return 'investing';
+  if (entry.sourceType === 'equity' || entry.sourceType === 'loan' || entry.lines.some(line => /^(21|31)/.test(String(line.accountCode)))) return 'financing';
+  return 'operating';
+};
+
+export const getCashFlowStatement = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const sections = {
+    operating: { label: '營業活動', rows: [], total: 0 },
+    investing: { label: '投資活動', rows: [], total: 0 },
+    financing: { label: '籌資活動', rows: [], total: 0 }
+  };
+  const entries = getJournalEntries(companyId, periodType, periodVal);
+
+  entries.forEach((entry) => {
+    const amount = cashDeltaForEntry(entry);
+    if (Math.abs(amount) < 0.01) return;
+    const section = sections[cashFlowSectionForEntry(entry)];
+    section.rows.push({
+      date: entry.date,
+      entryId: entry.id,
+      description: entry.description,
+      amount
+    });
+    section.total += amount;
+  });
+
+  const { startDate } = getPeriodBounds(periodType, periodVal);
+  const storedLines = getStoredJournalLines();
+  const openingCash = getStoredJournalEntries()
+    .filter(entry => entry.companyId === companyId && (!startDate || entry.date < startDate))
+    .reduce((sum, entry) => sum + storedLines
+      .filter(line => line.entryId === entry.id && CASH_ACCOUNT_CODES.has(String(line.accountCode)))
+      .reduce((lineSum, line) => lineSum + (line.side === 'debit' ? Number(line.amount || 0) : -Number(line.amount || 0)), 0), 0);
+  const netChange = Object.values(sections).reduce((sum, section) => sum + section.total, 0);
+
+  return {
+    sections,
+    openingCash,
+    netChange,
+    closingCash: openingCash + netChange
+  };
 };
 
 const VAT_RATE = 0.05;
@@ -614,8 +797,18 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const config = getGasInventoryPeriods().find(item => item.companyId === companyId && item.yearMonth === yearMonth);
   const openingKg = Number(config?.openingKg || 0);
   const openingCost = Number(config?.openingCost || 0);
-  const purchaseKg = Number(config?.purchaseKg || 0);
-  const purchaseAmount = Number(config?.purchaseAmount || 0);
+
+  // Aggregate from daily purchases
+  const monthDailyPurchases = getGasPurchases().filter(p => p.companyId === companyId && p.date.startsWith(yearMonth));
+
+  const purchaseKg = monthDailyPurchases.length > 0
+    ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.totalKg || 0), 0)
+    : Number(config?.purchaseKg || 0);
+
+  const purchaseAmount = monthDailyPurchases.length > 0
+    ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+    : Number(config?.purchaseAmount || 0);
+
   const shrinkageKg = Number(config?.shrinkageKg || 0);
   const availableKg = openingKg + purchaseKg;
   const availableCost = openingCost + purchaseAmount;

@@ -5,6 +5,11 @@ import {
   getShareholderLedger, saveShareholderLedger,
   getLoans, saveLoans,
   getGasInventoryPeriods, saveGasInventoryPeriods,
+  getGasCylinders, saveGasCylinders,
+  getGasCylinderMovements, saveGasCylinderMovements,
+  getGasDeliveryVehicles, saveGasDeliveryVehicles,
+  getCustomerCylinderDeposits, saveCustomerCylinderDeposits,
+  getBankTransactions, saveBankTransactions,
   getBankReconciliations, saveBankReconciliations,
   getFixedAssets, saveFixedAssets,
   getLogs, addLog,
@@ -30,6 +35,11 @@ import {
   getGasInventoryForMonth,
   parseBankStatementText
 } from '../utils/financials';
+import {
+  getCloudAttachmentUrl,
+  revokeCloudAttachmentUrl,
+  uploadCloudAttachment
+} from '../db/attachmentService';
 
 const STATUS_LABELS = {
   draft: '草稿',
@@ -54,6 +64,50 @@ const getPaymentMethodLabel = (method) => {
   const value = method || 'cash';
   return PAYMENT_METHOD_OPTIONS.find(option => option.value === value)?.label || value;
 };
+
+const GAS_CYLINDER_STATUS_OPTIONS = [
+  { value: 'empty', label: '空瓶' },
+  { value: 'full', label: '實瓶' },
+  { value: 'residual', label: '殘氣' },
+  { value: 'maintenance', label: '維修中' },
+  { value: 'scrapped', label: '報廢' }
+];
+
+const GAS_LOCATION_OPTIONS = [
+  { value: 'warehouse', label: '倉庫' },
+  { value: 'vehicle', label: '配送車' },
+  { value: 'customer', label: '客戶' },
+  { value: 'filling_station', label: '分裝廠' },
+  { value: 'maintenance_vendor', label: '維修廠' }
+];
+
+const GAS_OWNERSHIP_OPTIONS = [
+  { value: 'owned', label: '自有瓶' },
+  { value: 'leased', label: '租賃瓶' },
+  { value: 'customer_owned', label: '客戶瓶' },
+  { value: 'supplier_owned', label: '供應商瓶' }
+];
+
+const GAS_DEPOSIT_STATUS_OPTIONS = [
+  { value: 'active', label: '押瓶中' },
+  { value: 'returned', label: '已退瓶' },
+  { value: 'disputed', label: '爭議' },
+  { value: 'lost', label: '遺失' }
+];
+
+const GAS_MOVEMENT_TYPE_OPTIONS = [
+  { value: 'inbound', label: '入庫' },
+  { value: 'load_vehicle', label: '裝車' },
+  { value: 'deliver_customer', label: '配送給客戶' },
+  { value: 'return_from_customer', label: '客戶退瓶' },
+  { value: 'return_to_warehouse', label: '車輛回庫' },
+  { value: 'send_maintenance', label: '送檢 / 維修' },
+  { value: 'scrap', label: '報廢' },
+  { value: 'manual_adjustment', label: '人工調整' }
+];
+
+const optionLabel = (options, value) => options.find(option => option.value === value)?.label || value || '-';
+const GAS_OPERATION_TABS = ['gasCylinders', 'gasVehicles', 'gasDeposits', 'gasMovements'];
 
 const getStoredPaymentMethod = (item) => item.paymentMethod || (item.bankId ? 'bank_transfer' : 'cash');
 
@@ -97,6 +151,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const allowVoid = canVoidLedger(userRole);
   const getRecordPeriod = (item = formData, tab = activeSubTab) => {
     if (tab === 'gas') return item.yearMonth;
+    if (GAS_OPERATION_TABS.includes(tab)) return item.movementDate || item.startedAt || item.date || new Date().toISOString().split('T')[0];
     if (tab === 'loan') return item.startDate;
     if (tab === 'assets') return item.acquisitionDate;
     return item.date;
@@ -112,6 +167,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'loan' && !showLoans) setActiveSubTab('income');
     if (activeSubTab === 'log' && !showAuditLogs) setActiveSubTab('income');
     if (activeSubTab === 'gas' && !canWriteBasicLedger) setActiveSubTab('income');
+    if (GAS_OPERATION_TABS.includes(activeSubTab) && !canWriteBasicLedger) setActiveSubTab('income');
   }, [activeSubTab, showShareholderLedger, showLoans, showAuditLogs, canWriteBasicLedger]);
   
   // Modal States
@@ -119,6 +175,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const [editingItem, setEditingItem] = useState(null); // If null, we are adding new
 
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState('');
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [clearingItem, setClearingItem] = useState(null);
   const [clearData, setClearData] = useState({
     method: 'bank_transfer',
@@ -133,6 +191,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const [reconciliationBankId, setReconciliationBankId] = useState('');
   const [reconciliationDate, setReconciliationDate] = useState(new Date().toISOString().split('T')[0]);
   const [assetAsOfDate, setAssetAsOfDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => () => revokeCloudAttachmentUrl(viewingReceiptUrl), [viewingReceiptUrl]);
+
+  const closeReceiptPreview = () => {
+    revokeCloudAttachmentUrl(viewingReceiptUrl);
+    setViewingReceiptUrl(null);
+  };
+
+  const openReceiptPreview = async (attachment) => {
+    try {
+      const url = await getCloudAttachmentUrl(attachment);
+      setViewingReceiptUrl(url);
+    } catch (error) {
+      window.alert(error.message || '附件讀取失敗。');
+    }
+  };
 
   const checkItems = useMemo(() => {
     const incs = getIncomes().filter(i => i.companyId === companyId && i.paymentMethod === 'check' && i.status === 'approved');
@@ -168,7 +242,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const handleClearSubmit = (e) => {
     e.preventDefault();
     if (!clearingItem) return;
-    if (blockIfPeriodLocked(clearingItem.date, '結清原應收應付')) return;
     if (blockIfPeriodLocked(clearData.date, '結清入帳')) return;
 
     const isIncome = clearingItem.type === 'income';
@@ -178,31 +251,54 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
     const before = { ...db[index] };
     const isClearingCheck = clearingItem.paymentMethod === 'check';
+    const settlementId = `SET${Date.now()}`;
     let targetBankName = '';
     let methodLabel = '';
+    let settlementMethod = clearData.method;
+    let settlementBankId = '';
 
     if (isClearingCheck) {
       targetBankName = getBankName(clearData.bankId) || '未指定銀行';
-      db[index] = {
-        ...db[index],
-        bankId: clearData.bankId,
-        paymentStatus: 'paid',
-        remarks: `${db[index].remarks || ''} (${clearData.date} 支票兌現入帳：${targetBankName})`.trim()
-      };
+      settlementMethod = 'bank_transfer';
+      settlementBankId = clearData.bankId;
     } else {
       methodLabel = PAYMENT_METHOD_OPTIONS.find(o => o.value === clearData.method)?.label || clearData.method;
       targetBankName = clearData.method === 'bank_transfer' ? getBankName(clearData.bankId) : '現金';
-      db[index] = {
-        ...db[index],
-        paymentMethod: clearData.method,
-        bankId: clearData.method === 'bank_transfer' ? clearData.bankId : (clearData.method === 'cash' ? 'BANK_PETTY' : ''),
-        paymentStatus: 'paid',
-        remarks: `${db[index].remarks || ''} (${clearData.date} 以 ${methodLabel} 結清：${targetBankName})`.trim()
-      };
+      settlementBankId = clearData.method === 'bank_transfer' ? clearData.bankId : (clearData.method === 'cash' ? 'BANK_PETTY' : '');
     }
+
+    db[index] = {
+      ...db[index],
+      paymentStatus: 'paid',
+      paidAt: clearData.date,
+      paidByMethod: settlementMethod,
+      paidBankId: settlementBankId,
+      settlementId,
+      remarks: `${db[index].remarks || ''} (${clearData.date} ${isClearingCheck ? '支票兌現入帳' : `以 ${methodLabel} 結清`}：${targetBankName})`.trim()
+    };
+
+    const bankTransactions = getBankTransactions();
+    bankTransactions.push({
+      id: settlementId,
+      companyId,
+      bankId: settlementBankId,
+      date: clearData.date,
+      direction: isIncome ? 'in' : 'out',
+      transactionType: isIncome ? 'income' : 'expense',
+      sourceType: 'settlement',
+      sourceId: clearingItem.id,
+      paymentMethod: settlementMethod,
+      amount: Number(clearingItem.amount || 0),
+      counterpartyName: clearingItem.counterpartyName || '',
+      remarks: isClearingCheck ? `支票 ${clearingItem.checkNo || clearingItem.id} 兌現` : `結清 ${clearingItem.id}`,
+      createdBy: currentUser?.id || 'SYSTEM',
+      createdByName: operatorName,
+      createdAt: new Date().toISOString()
+    });
 
     if (isIncome) saveIncomes(db);
     else saveExpenses(db);
+    saveBankTransactions(bankTransactions);
 
     archiveChange({
       collection: isIncome ? 'incomes' : 'expenses',
@@ -226,6 +322,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const suppliers = useMemo(() => getSuppliers().filter(s => s.companyId === companyId && s.status !== 'inactive'), [companyId, triggerRefresh]);
   const auditLogs = useMemo(() => getLogs(), [triggerRefresh]);
   const bankReconciliations = useMemo(() => getBankReconciliations().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const gasCylinders = useMemo(() => getGasCylinders().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const gasCylinderMovements = useMemo(() => getGasCylinderMovements().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const gasDeliveryVehicles = useMemo(() => getGasDeliveryVehicles().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const customerCylinderDeposits = useMemo(() => getCustomerCylinderDeposits().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
   const agingReport = useMemo(() => getAgingReport(companyId, agingAsOfDate), [companyId, agingAsOfDate, triggerRefresh]);
   const fixedAssetSummary = useMemo(() => getFixedAssetSummary(companyId, assetAsOfDate), [companyId, assetAsOfDate, triggerRefresh]);
   const parsedStatementRows = useMemo(() => parseBankStatementText(statementText), [statementText]);
@@ -242,6 +342,20 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
   const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue'), [accounts]);
   const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense'), [accounts]);
+  const gasInventoryStats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const activeDeposits = customerCylinderDeposits.filter(item => item.depositStatus === 'active');
+    return {
+      total: gasCylinders.length,
+      warehouse: gasCylinders.filter(item => item.locationType === 'warehouse').length,
+      vehicle: gasCylinders.filter(item => item.locationType === 'vehicle').length,
+      customer: gasCylinders.filter(item => item.locationType === 'customer').length,
+      full: gasCylinders.filter(item => item.status === 'full').length,
+      empty: gasCylinders.filter(item => item.status === 'empty').length,
+      activeDeposits: activeDeposits.length,
+      overdueInspection: gasCylinders.filter(item => item.inspectionDueDate && item.inspectionDueDate < today && item.status !== 'scrapped').length
+    };
+  }, [gasCylinders, customerCylinderDeposits]);
 
   // Form States
   const [formData, setFormData] = useState({
@@ -274,6 +388,33 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     purchaseAmount: '',
     shrinkageKg: '',
     physicalEndingKg: '',
+    cylinderNo: '',
+    barcode: '',
+    qrCode: '',
+    specKg: '20',
+    ownershipStatus: 'owned',
+    locationType: 'warehouse',
+    locationId: '',
+    vehicleId: '',
+    depositAmount: '',
+    lastInspectionDate: '',
+    nextInspectionDate: '',
+    inspectionDueDate: '',
+    movementDate: new Date().toISOString().split('T')[0],
+    movementType: 'manual_adjustment',
+    customerName: '',
+    customerPhone: '',
+    customerAddress: '',
+    cylinderId: '',
+    cylinderSpecKg: '',
+    depositStatus: 'active',
+    startedAt: new Date().toISOString().split('T')[0],
+    returnedAt: '',
+    plateNo: '',
+    driverName: '',
+    capacityCylinders: '',
+    capacityKg: '',
+    active: true,
     // Shareholder specific
     shareholderId: '',
     type: 'increase', // join, increase, decrease
@@ -319,11 +460,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       return userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
     }
     if (activeSubTab === 'gas') return getGasInventoryPeriods().filter(item => item.companyId === companyId).sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+    if (activeSubTab === 'gasCylinders') return gasCylinders.sort((a, b) => String(a.cylinderNo || '').localeCompare(String(b.cylinderNo || '')));
+    if (activeSubTab === 'gasVehicles') return gasDeliveryVehicles.sort((a, b) => String(a.plateNo || a.id).localeCompare(String(b.plateNo || b.id)));
+    if (activeSubTab === 'gasDeposits') return customerCylinderDeposits.sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt));
+    if (activeSubTab === 'gasMovements') return gasCylinderMovements.sort((a, b) => new Date(b.createdAt || b.movementDate) - new Date(a.createdAt || a.movementDate));
     if (activeSubTab === 'assets') return getFixedAssets().filter(item => item.companyId === companyId).sort((a, b) => b.acquisitionDate.localeCompare(a.acquisitionDate));
     if (activeSubTab === 'shareholder') return getShareholderLedger().filter(s => s.companyId === companyId);
     if (activeSubTab === 'loan') return getLoans().filter(l => l.companyId === companyId);
     return [];
-  }, [activeSubTab, companyId, triggerRefresh, userRole, currentUser]);
+  }, [activeSubTab, companyId, triggerRefresh, userRole, currentUser, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements]);
 
   // Generate Unique ID
   const generateId = (type, date) => {
@@ -332,6 +477,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       income: `REV${datePrefix}`,
       expense: `EXP${datePrefix}`,
       gas: `GAS${datePrefix}`,
+      gasCylinder: `CYL${datePrefix}`,
+      gasVehicle: `VEH${datePrefix}`,
+      gasDeposit: `DEP${datePrefix}`,
+      gasMovement: `MOV${datePrefix}`,
       shareholder: `SHL${datePrefix}`,
       loan: 'LOAN',
       asset: `AST${datePrefix}`
@@ -342,6 +491,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (type === 'income') list = getIncomes();
     if (type === 'expense') list = getExpenses();
     if (type === 'gas') list = getGasInventoryPeriods();
+    if (type === 'gasCylinder') list = getGasCylinders();
+    if (type === 'gasVehicle') list = getGasDeliveryVehicles();
+    if (type === 'gasDeposit') list = getCustomerCylinderDeposits();
+    if (type === 'gasMovement') list = getGasCylinderMovements();
     if (type === 'shareholder') list = getShareholderLedger();
     if (type === 'loan') list = getLoans();
     if (type === 'asset') list = getFixedAssets();
@@ -362,6 +515,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Open modal to add
   const handleOpenAdd = () => {
     setEditingItem(null);
+    setAttachmentPreviewUrl('');
     setFormData({
       date: new Date().toISOString().split('T')[0],
       amount: '',
@@ -391,7 +545,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       pension: '',
       withholdingTax: '',
       remarks: '',
-      status: 'pending_admin_review',
+      status: activeSubTab === 'gasCylinders' ? 'empty' : activeSubTab === 'assets' ? 'active' : 'pending_admin_review',
       gasKg: '',
       cylinderQty: '',
       deliveryTrips: '',
@@ -403,6 +557,33 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       purchaseAmount: '',
       shrinkageKg: '',
       physicalEndingKg: '',
+      cylinderNo: '',
+      barcode: '',
+      qrCode: '',
+      specKg: '20',
+      ownershipStatus: 'owned',
+      locationType: 'warehouse',
+      locationId: '',
+      vehicleId: '',
+      depositAmount: '',
+      lastInspectionDate: '',
+      nextInspectionDate: '',
+      inspectionDueDate: '',
+      movementDate: new Date().toISOString().split('T')[0],
+      movementType: 'manual_adjustment',
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
+      cylinderId: '',
+      cylinderSpecKg: '',
+      depositStatus: 'active',
+      startedAt: new Date().toISOString().split('T')[0],
+      returnedAt: '',
+      plateNo: '',
+      driverName: '',
+      capacityCylinders: '',
+      capacityKg: '',
+      active: true,
       shareholderId: shareholders[0]?.id || '',
       type: 'increase',
       name: '',
@@ -427,6 +608,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Open modal to edit
   const handleOpenEdit = (item) => {
     setEditingItem(item);
+    setAttachmentPreviewUrl(typeof item.receiptAttachment === 'string' ? item.receiptAttachment : '');
     setFormData({
       ...formData,
       ...item,
@@ -446,6 +628,33 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       purchaseAmount: item.purchaseAmount ?? '',
       shrinkageKg: item.shrinkageKg ?? '',
       physicalEndingKg: item.physicalEndingKg ?? '',
+      cylinderNo: item.cylinderNo || '',
+      barcode: item.barcode || '',
+      qrCode: item.qrCode || '',
+      specKg: item.specKg || '',
+      ownershipStatus: item.ownershipStatus || 'owned',
+      locationType: item.locationType || 'warehouse',
+      locationId: item.locationId || '',
+      vehicleId: item.vehicleId || '',
+      depositAmount: item.depositAmount || '',
+      lastInspectionDate: item.lastInspectionDate || '',
+      nextInspectionDate: item.nextInspectionDate || '',
+      inspectionDueDate: item.inspectionDueDate || '',
+      movementDate: item.movementDate || new Date().toISOString().split('T')[0],
+      movementType: item.movementType || 'manual_adjustment',
+      customerName: item.customerName || '',
+      customerPhone: item.customerPhone || '',
+      customerAddress: item.customerAddress || '',
+      cylinderId: item.cylinderId || '',
+      cylinderSpecKg: item.cylinderSpecKg || '',
+      depositStatus: item.depositStatus || 'active',
+      startedAt: item.startedAt || new Date().toISOString().split('T')[0],
+      returnedAt: item.returnedAt || '',
+      plateNo: item.plateNo || '',
+      driverName: item.driverName || '',
+      capacityCylinders: item.capacityCylinders || '',
+      capacityKg: item.capacityKg || '',
+      active: item.active ?? true,
       paymentMethod: getStoredPaymentMethod(item),
       checkNo: item.checkNo || '',
       checkDueDate: item.checkDueDate || '',
@@ -492,6 +701,34 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       calculatedAmount,
       amount: calculatedAmount > 0 ? String(calculatedAmount) : next.amount
     });
+  };
+
+  const appendGasCylinderMovement = ({ before = null, after, movementType = 'manual_adjustment', remarks = '' }) => {
+    if (!after?.id) return;
+    const movementDate = formData.movementDate || new Date().toISOString().split('T')[0];
+    const db = getGasCylinderMovements();
+    const fromLocationType = before?.locationType || '';
+    const fromLocationId = before?.locationId || before?.vehicleId || before?.customerId || '';
+    const toLocationType = after.locationType || '';
+    const toLocationId = after.locationId || after.vehicleId || after.customerId || '';
+
+    db.push({
+      id: generateId('gasMovement', movementDate),
+      companyId,
+      cylinderId: after.id,
+      movementDate,
+      movementType,
+      fromLocationType,
+      fromLocationId,
+      toLocationType,
+      toLocationId,
+      customerId: after.customerId || '',
+      vehicleId: after.vehicleId || '',
+      operator: operatorName,
+      remarks: remarks || formData.remarks || '',
+      createdAt: new Date().toISOString()
+    });
+    saveGasCylinderMovements(db);
   };
 
   // Save form data
@@ -688,6 +925,215 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         addLog(operatorName, 'CREATE_GAS_INVENTORY', `Create gas inventory ${payload.yearMonth}: ${payload.purchaseKg.toLocaleString()} kg, $${payload.purchaseAmount.toLocaleString()}.`);
         success = true;
       }
+    } else if (activeSubTab === 'gasCylinders') {
+      const db = getGasCylinders();
+      const movementDate = formData.movementDate || new Date().toISOString().split('T')[0];
+      const selectedCustomer = customers.find(item => item.id === formData.customerId);
+      const selectedVehicle = gasDeliveryVehicles.find(item => item.id === formData.vehicleId);
+      const payload = {
+        companyId,
+        cylinderNo: String(formData.cylinderNo || '').trim(),
+        barcode: String(formData.barcode || '').trim(),
+        qrCode: String(formData.qrCode || '').trim(),
+        specKg: parseFloat(formData.specKg) || 0,
+        ownershipStatus: formData.ownershipStatus || 'owned',
+        status: formData.status || 'empty',
+        locationType: formData.locationType || 'warehouse',
+        locationId: formData.locationType === 'vehicle'
+          ? formData.vehicleId || ''
+          : formData.locationType === 'customer'
+            ? formData.customerId || ''
+            : formData.locationId || '',
+        customerId: formData.locationType === 'customer' ? formData.customerId || '' : '',
+        customerName: formData.locationType === 'customer' ? selectedCustomer?.name || formData.customerName || '' : '',
+        vehicleId: formData.locationType === 'vehicle' ? formData.vehicleId || '' : '',
+        vehicleName: formData.locationType === 'vehicle' ? selectedVehicle?.plateNo || formData.vehicleId || '' : '',
+        depositAmount: parseFloat(formData.depositAmount) || 0,
+        lastInspectionDate: formData.lastInspectionDate || '',
+        nextInspectionDate: formData.nextInspectionDate || '',
+        inspectionDueDate: formData.inspectionDueDate || '',
+        remarks: formData.remarks || '',
+        updatedAt: now
+      };
+
+      if (!payload.cylinderNo) {
+        window.alert('請輸入鋼瓶編號。');
+        return;
+      }
+
+      if (editingItem) {
+        const index = db.findIndex(item => item.id === editingItem.id);
+        if (index !== -1) {
+          const duplicated = db.some(item => item.id !== editingItem.id && item.companyId === companyId && item.cylinderNo === payload.cylinderNo);
+          if (duplicated) {
+            window.alert('鋼瓶編號已存在，請確認是否重複建立。');
+            return;
+          }
+          db[index] = { ...db[index], ...payload };
+          saveGasCylinders(db);
+          const locationChanged = editingItem.locationType !== db[index].locationType ||
+            editingItem.locationId !== db[index].locationId ||
+            editingItem.status !== db[index].status;
+          if (locationChanged) {
+            appendGasCylinderMovement({
+              before: editingItem,
+              after: db[index],
+              movementType: formData.movementType || 'manual_adjustment',
+              remarks: formData.remarks || `鋼瓶 ${payload.cylinderNo} 異動`
+            });
+          }
+          archiveChange({ collection: 'gasCylinders', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '鋼瓶資料修改' });
+          addLog(operatorName, 'UPDATE_GAS_CYLINDER', `Update gas cylinder ${payload.cylinderNo}.`);
+          success = true;
+        }
+      } else {
+        const duplicated = db.some(item => item.companyId === companyId && item.cylinderNo === payload.cylinderNo);
+        if (duplicated) {
+          window.alert('鋼瓶編號已存在，請確認是否重複建立。');
+          return;
+        }
+        const newId = generateId('gasCylinder', movementDate);
+        const newRecord = { id: newId, ...payload, createdAt: now };
+        db.push(newRecord);
+        saveGasCylinders(db);
+        appendGasCylinderMovement({
+          before: null,
+          after: newRecord,
+          movementType: formData.movementType || 'inbound',
+          remarks: formData.remarks || `新增鋼瓶 ${payload.cylinderNo}`
+        });
+        addLog(operatorName, 'CREATE_GAS_CYLINDER', `Create gas cylinder ${payload.cylinderNo}.`);
+        success = true;
+      }
+    } else if (activeSubTab === 'gasVehicles') {
+      const db = getGasDeliveryVehicles();
+      const payload = {
+        companyId,
+        plateNo: String(formData.plateNo || '').trim(),
+        name: formData.name || '',
+        driverName: formData.driverName || '',
+        capacityCylinders: parseInt(formData.capacityCylinders, 10) || 0,
+        capacityKg: parseFloat(formData.capacityKg) || 0,
+        active: formData.active ?? true,
+        remarks: formData.remarks || '',
+        updatedAt: now
+      };
+
+      if (!payload.plateNo) {
+        window.alert('請輸入車牌號碼。');
+        return;
+      }
+
+      if (editingItem) {
+        const index = db.findIndex(item => item.id === editingItem.id);
+        if (index !== -1) {
+          const duplicated = db.some(item => item.id !== editingItem.id && item.companyId === companyId && item.plateNo === payload.plateNo);
+          if (duplicated) {
+            window.alert('車牌號碼已存在，請確認是否重複建立。');
+            return;
+          }
+          db[index] = { ...db[index], ...payload };
+          saveGasDeliveryVehicles(db);
+          archiveChange({ collection: 'gasDeliveryVehicles', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '配送車資料修改' });
+          addLog(operatorName, 'UPDATE_GAS_VEHICLE', `Update gas delivery vehicle ${payload.plateNo}.`);
+          success = true;
+        }
+      } else {
+        const duplicated = db.some(item => item.companyId === companyId && item.plateNo === payload.plateNo);
+        if (duplicated) {
+          window.alert('車牌號碼已存在，請確認是否重複建立。');
+          return;
+        }
+        const newId = generateId('gasVehicle', formData.date);
+        db.push({ id: newId, ...payload, createdAt: now });
+        saveGasDeliveryVehicles(db);
+        addLog(operatorName, 'CREATE_GAS_VEHICLE', `Create gas delivery vehicle ${payload.plateNo}.`);
+        success = true;
+      }
+    } else if (activeSubTab === 'gasDeposits') {
+      const db = getCustomerCylinderDeposits();
+      const cylinders = getGasCylinders();
+      const selectedCylinder = cylinders.find(item => item.id === formData.cylinderId);
+      const selectedCustomer = customers.find(item => item.id === formData.customerId);
+      const payload = {
+        companyId,
+        customerId: formData.customerId || '',
+        customerName: formData.customerName || selectedCustomer?.name || '',
+        customerPhone: formData.customerPhone || selectedCustomer?.phone || '',
+        customerAddress: formData.customerAddress || selectedCustomer?.address || '',
+        cylinderId: formData.cylinderId || '',
+        cylinderSpecKg: parseFloat(formData.cylinderSpecKg) || selectedCylinder?.specKg || 0,
+        depositAmount: parseFloat(formData.depositAmount) || 0,
+        depositStatus: formData.depositStatus || 'active',
+        startedAt: formData.startedAt || new Date().toISOString().split('T')[0],
+        returnedAt: formData.depositStatus === 'returned' ? formData.returnedAt || new Date().toISOString().split('T')[0] : formData.returnedAt || '',
+        remarks: formData.remarks || '',
+        updatedAt: now
+      };
+
+      if (!payload.customerName) {
+        window.alert('請輸入客戶名稱。');
+        return;
+      }
+
+      let savedDeposit = null;
+      if (editingItem) {
+        const index = db.findIndex(item => item.id === editingItem.id);
+        if (index !== -1) {
+          db[index] = { ...db[index], ...payload };
+          savedDeposit = db[index];
+          saveCustomerCylinderDeposits(db);
+          archiveChange({ collection: 'customerCylinderDeposits', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '客戶押瓶修改' });
+          addLog(operatorName, 'UPDATE_GAS_DEPOSIT', `Update customer cylinder deposit ${payload.customerName}.`);
+          success = true;
+        }
+      } else {
+        const newId = generateId('gasDeposit', payload.startedAt);
+        savedDeposit = { id: newId, ...payload, createdAt: now };
+        db.push(savedDeposit);
+        saveCustomerCylinderDeposits(db);
+        addLog(operatorName, 'CREATE_GAS_DEPOSIT', `Create customer cylinder deposit ${payload.customerName}.`);
+        success = true;
+      }
+
+      if (savedDeposit?.cylinderId) {
+        const cylinderIndex = cylinders.findIndex(item => item.id === savedDeposit.cylinderId);
+        if (cylinderIndex !== -1) {
+          const beforeCylinder = { ...cylinders[cylinderIndex] };
+          if (savedDeposit.depositStatus === 'returned') {
+            cylinders[cylinderIndex] = {
+              ...cylinders[cylinderIndex],
+              locationType: 'warehouse',
+              locationId: '',
+              customerId: '',
+              customerName: '',
+              vehicleId: '',
+              status: 'empty',
+              updatedAt: now
+            };
+          } else if (savedDeposit.depositStatus === 'active') {
+            cylinders[cylinderIndex] = {
+              ...cylinders[cylinderIndex],
+              locationType: 'customer',
+              locationId: savedDeposit.customerId || savedDeposit.customerName,
+              customerId: savedDeposit.customerId || '',
+              customerName: savedDeposit.customerName,
+              vehicleId: '',
+              depositAmount: savedDeposit.depositAmount,
+              updatedAt: now
+            };
+          }
+          saveGasCylinders(cylinders);
+          appendGasCylinderMovement({
+            before: beforeCylinder,
+            after: cylinders[cylinderIndex],
+            movementType: savedDeposit.depositStatus === 'returned' ? 'return_from_customer' : 'deliver_customer',
+            remarks: savedDeposit.depositStatus === 'returned'
+              ? `Customer ${savedDeposit.customerName} returned cylinder`
+              : `Customer ${savedDeposit.customerName} cylinder deposit`
+          });
+        }
+      }
     } else if (activeSubTab === 'loan') {
       const db = getLoans();
       if (editingItem) {
@@ -852,6 +1298,30 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         saveGasInventoryPeriods(db.filter(g => g.id !== id));
         addLog(operatorName, '刪除瓦斯進貨設定', `刪除 ${item.yearMonth} 瓦斯進貨設定。`);
       }
+    } else if (activeSubTab === 'gasCylinders') {
+      const db = getGasCylinders();
+      const item = db.find(g => g.id === id);
+      if (item) {
+        archiveDeletion({ collection: 'gasCylinders', record: item, actor: operatorName, reason });
+        saveGasCylinders(db.filter(g => g.id !== id));
+        addLog(operatorName, '刪除鋼瓶資料', `刪除鋼瓶 ${item.cylinderNo || id}。`);
+      }
+    } else if (activeSubTab === 'gasVehicles') {
+      const db = getGasDeliveryVehicles();
+      const item = db.find(g => g.id === id);
+      if (item) {
+        archiveDeletion({ collection: 'gasDeliveryVehicles', record: item, actor: operatorName, reason });
+        saveGasDeliveryVehicles(db.filter(g => g.id !== id));
+        addLog(operatorName, '刪除配送車資料', `刪除配送車 ${item.plateNo || id}。`);
+      }
+    } else if (activeSubTab === 'gasDeposits') {
+      const db = getCustomerCylinderDeposits();
+      const item = db.find(g => g.id === id);
+      if (item) {
+        archiveDeletion({ collection: 'customerCylinderDeposits', record: item, actor: operatorName, reason });
+        saveCustomerCylinderDeposits(db.filter(g => g.id !== id));
+        addLog(operatorName, '刪除客戶押瓶', `刪除客戶押瓶 ${item.customerName || id}。`);
+      }
     } else if (activeSubTab === 'loan') {
       const db = getLoans();
       const item = db.find(l => l.id === id);
@@ -892,6 +1362,35 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
   const getShareholderName = (id) => {
     return shareholders.find(s => s.id === id)?.name || id || '未知股東';
+  };
+
+  const getCylinderLabel = (id) => {
+    const cylinder = gasCylinders.find(item => item.id === id);
+    return cylinder?.cylinderNo || id || '-';
+  };
+
+  const getVehicleLabel = (id) => {
+    const vehicle = gasDeliveryVehicles.find(item => item.id === id || item.plateNo === id);
+    return vehicle ? `${vehicle.plateNo}${vehicle.name ? ` / ${vehicle.name}` : ''}` : id || '-';
+  };
+
+  const getGasLocationDisplay = (type, id, item = {}) => {
+    if (type === 'vehicle') return getVehicleLabel(id || item.vehicleId);
+    if (type === 'customer') return item.customerName || customers.find(customer => customer.id === (id || item.customerId))?.name || id || '客戶';
+    return optionLabel(GAS_LOCATION_OPTIONS, type);
+  };
+
+  const getVehicleCylinderSummary = (vehicle) => {
+    const vehicleCylinders = gasCylinders.filter(cylinder =>
+      cylinder.locationType === 'vehicle' &&
+      (cylinder.vehicleId === vehicle.id || cylinder.locationId === vehicle.id || cylinder.locationId === vehicle.plateNo)
+    );
+    const fullCount = vehicleCylinders.filter(cylinder => cylinder.status === 'full').length;
+    const emptyCount = vehicleCylinders.filter(cylinder => cylinder.status === 'empty').length;
+    const totalKg = vehicleCylinders
+      .filter(cylinder => ['full', 'residual'].includes(cylinder.status))
+      .reduce((sum, cylinder) => sum + Number(cylinder.specKg || 0), 0);
+    return { fullCount, emptyCount, totalKg, totalCount: vehicleCylinders.length };
   };
 
   const handleCreateCorrection = (item) => {
@@ -1052,11 +1551,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               固定資產
             </button>
           )}
-          {canWriteBasicLedger && (
-            <button className={`tab-btn ${activeSubTab === 'gas' ? 'active' : ''}`} onClick={() => setActiveSubTab('gas')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
-              瓦斯進貨 / 毛利
-            </button>
-          )}
+
           {showShareholderLedger && (
             <button className={`tab-btn ${activeSubTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSubTab('shareholder')}>
               股東往來 (Shareholder Ledger)
@@ -1073,7 +1568,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             </button>
           )}
         </div>
-        {activeSubTab !== 'log' && activeSubTab !== 'arap' && activeSubTab !== 'checks' && activeSubTab !== 'bankRecon' && activeSubTab !== 'aging' && canWriteBasicLedger && (isAdmin || activeSubTab === 'gas' || manageShareholderLedger || (activeSubTab !== 'shareholder' && activeSubTab !== 'loan')) && (
+        {activeSubTab !== 'log' && activeSubTab !== 'arap' && activeSubTab !== 'checks' && activeSubTab !== 'bankRecon' && activeSubTab !== 'aging' && activeSubTab !== 'gasMovements' && canWriteBasicLedger && (isAdmin || activeSubTab === 'gas' || GAS_OPERATION_TABS.includes(activeSubTab) || manageShareholderLedger || (activeSubTab !== 'shareholder' && activeSubTab !== 'loan')) && (
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             新增記錄
           </button>
@@ -1168,7 +1663,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           type="button"
                           className="btn btn-secondary btn-sm" 
                           style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                          onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
+                          onClick={() => openReceiptPreview(item.receiptAttachment)}
                         >
                           查看附件
                         </button>
@@ -1410,7 +1905,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               type="button" 
                               className="btn btn-secondary btn-sm"
                               style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                              onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
+                              onClick={() => openReceiptPreview(item.receiptAttachment)}
                             >
                               查看附件
                             </button>
@@ -1448,6 +1943,33 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           </div>
         ) : (
           /* Normal Transaction Tables */
+          <>
+          {GAS_OPERATION_TABS.includes(activeSubTab) && (
+            <div className="summary-grid" style={{ marginBottom: '16px' }}>
+              <div className="summary-card">
+                <div className="summary-label">總鋼瓶數</div>
+                <div className="summary-value">{gasInventoryStats.total.toLocaleString()}</div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-label">倉庫鋼瓶</div>
+                <div className="summary-value income">{gasInventoryStats.warehouse.toLocaleString()}</div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-label">配送車上</div>
+                <div className="summary-value">{gasInventoryStats.vehicle.toLocaleString()}</div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-label">客戶押瓶</div>
+                <div className="summary-value">{gasInventoryStats.activeDeposits.toLocaleString()}</div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-label">檢驗逾期</div>
+                <div className={`summary-value ${gasInventoryStats.overdueInspection > 0 ? 'expense' : 'income'}`}>
+                  {gasInventoryStats.overdueInspection.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="table-responsive">
             <table className="data-table">
               <thead>
@@ -1493,6 +2015,56 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>期末庫存</th>
                     <th>備註</th>
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                  </tr>
+                )}
+                {activeSubTab === 'gasCylinders' && (
+                  <tr>
+                    <th>鋼瓶 ID</th>
+                    <th>瓶號 / 規格</th>
+                    <th>狀態</th>
+                    <th>目前位置</th>
+                    <th>條碼 / QR Code</th>
+                    <th>檢驗期限</th>
+                    <th>備註</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                  </tr>
+                )}
+                {activeSubTab === 'gasVehicles' && (
+                  <tr>
+                    <th>車輛 ID</th>
+                    <th>車牌 / 名稱</th>
+                    <th>司機</th>
+                    <th>車上實瓶</th>
+                    <th>車上空瓶</th>
+                    <th>車上公斤數</th>
+                    <th>容量 / 狀態</th>
+                    <th>備註</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                  </tr>
+                )}
+                {activeSubTab === 'gasDeposits' && (
+                  <tr>
+                    <th>押瓶 ID</th>
+                    <th>客戶</th>
+                    <th>鋼瓶</th>
+                    <th>規格</th>
+                    <th>押金</th>
+                    <th>狀態</th>
+                    <th>押瓶 / 退瓶日期</th>
+                    <th>備註</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                  </tr>
+                )}
+                {activeSubTab === 'gasMovements' && (
+                  <tr>
+                    <th>異動 ID</th>
+                    <th>日期</th>
+                    <th>鋼瓶</th>
+                    <th>異動類型</th>
+                    <th>從</th>
+                    <th>到</th>
+                    <th>操作人</th>
+                    <th>備註</th>
                   </tr>
                 )}
                 {activeSubTab === 'shareholder' && (
@@ -1576,7 +2148,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                 type="button" 
                                 className="btn btn-secondary btn-sm" 
                                 style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
+                                onClick={() => openReceiptPreview(item.receiptAttachment)}
                               >
                                 查看附件
                               </button>
@@ -1613,6 +2185,98 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       );
                     })()}
 
+                    {activeSubTab === 'gasCylinders' && (
+                      <>
+                        <td>
+                          <div style={{ fontWeight: 700 }}>{item.cylinderNo || '-'}</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {Number(item.specKg || 0).toLocaleString()} kg / {optionLabel(GAS_OWNERSHIP_OPTIONS, item.ownershipStatus)}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${item.status === 'full' ? 'approved' : item.status === 'scrapped' ? 'void' : item.status === 'maintenance' ? 'pending' : 'draft'}`}>
+                            {optionLabel(GAS_CYLINDER_STATUS_OPTIONS, item.status)}
+                          </span>
+                        </td>
+                        <td>
+                          <div>{optionLabel(GAS_LOCATION_OPTIONS, item.locationType)}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {getGasLocationDisplay(item.locationType, item.locationId, item)}
+                          </div>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>
+                          <div>{item.barcode || '-'}</div>
+                          <div style={{ color: 'var(--text-secondary)' }}>{item.qrCode || '-'}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontFamily: 'var(--font-mono)', color: item.inspectionDueDate && item.inspectionDueDate < new Date().toISOString().split('T')[0] ? 'var(--accent-red)' : 'var(--text-primary)', fontWeight: item.inspectionDueDate && item.inspectionDueDate < new Date().toISOString().split('T')[0] ? 700 : 400 }}>
+                            {item.inspectionDueDate || item.nextInspectionDate || '未填'}
+                          </div>
+                          {item.lastInspectionDate && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>上次：{item.lastInspectionDate}</div>
+                          )}
+                        </td>
+                        <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>{item.remarks}</td>
+                      </>
+                    )}
+
+                    {activeSubTab === 'gasVehicles' && (() => {
+                      const vehicleSummary = getVehicleCylinderSummary(item);
+                      return (
+                        <>
+                          <td>
+                            <div style={{ fontWeight: 700 }}>{item.plateNo || '-'}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.name || '配送車'}</div>
+                          </td>
+                          <td>{item.driverName || '-'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{vehicleSummary.fullCount.toLocaleString()}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{vehicleSummary.emptyCount.toLocaleString()}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: 700 }}>{vehicleSummary.totalKg.toLocaleString()} kg</td>
+                          <td>
+                            <div>{Number(item.capacityCylinders || 0).toLocaleString()} 支 / {Number(item.capacityKg || 0).toLocaleString()} kg</div>
+                            <span className={`badge ${item.active === false ? 'void' : 'approved'}`}>{item.active === false ? '停用' : '使用中'}</span>
+                          </td>
+                          <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>{item.remarks}</td>
+                        </>
+                      );
+                    })()}
+
+                    {activeSubTab === 'gasDeposits' && (
+                      <>
+                        <td>
+                          <div style={{ fontWeight: 700 }}>{item.customerName || '-'}</div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{item.customerPhone || '-'}</div>
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{getCylinderLabel(item.cylinderId)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.cylinderSpecKg || 0).toLocaleString()} kg</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', fontWeight: 700 }}>{formatCurrency(item.depositAmount || 0)}</td>
+                        <td>
+                          <span className={`badge ${item.depositStatus === 'active' ? 'approved' : item.depositStatus === 'returned' ? 'draft' : item.depositStatus === 'lost' ? 'void' : 'pending'}`}>
+                            {optionLabel(GAS_DEPOSIT_STATUS_OPTIONS, item.depositStatus)}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ fontFamily: 'var(--font-mono)' }}>{item.startedAt || '-'}</div>
+                          {item.returnedAt && <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>退：{item.returnedAt}</div>}
+                        </td>
+                        <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>{item.remarks}</td>
+                      </>
+                    )}
+
+                    {activeSubTab === 'gasMovements' && (
+                      <>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.movementDate || '-'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{getCylinderLabel(item.cylinderId)}</td>
+                        <td>
+                          <span className="badge pending">{optionLabel(GAS_MOVEMENT_TYPE_OPTIONS, item.movementType)}</span>
+                        </td>
+                        <td>{getGasLocationDisplay(item.fromLocationType, item.fromLocationId, item)}</td>
+                        <td>{getGasLocationDisplay(item.toLocationType, item.toLocationId, item)}</td>
+                        <td>{item.operator || '-'}</td>
+                        <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>{item.remarks}</td>
+                      </>
+                    )}
+
                     {activeSubTab === 'expense' && (
                       <>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
@@ -1646,7 +2310,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                 type="button" 
                                 className="btn btn-secondary btn-sm" 
                                 style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => setViewingReceiptUrl(item.receiptAttachment)}
+                                onClick={() => openReceiptPreview(item.receiptAttachment)}
                               >
                                 查看附件
                               </button>
@@ -1703,7 +2367,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       );
                     })()}
 
-                    {isAdmin && (
+                    {isAdmin && activeSubTab !== 'gasMovements' && (
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           {(activeSubTab === 'income' || activeSubTab === 'expense') && canReview && item.status.startsWith('pending') && (
@@ -1746,6 +2410,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
@@ -1760,6 +2425,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   activeSubTab === 'expense' ? '支出' :
                   activeSubTab === 'shareholder' ? '股東往來' :
                   activeSubTab === 'gas' ? '瓦斯進貨 / 毛利' :
+                  activeSubTab === 'gasCylinders' ? '鋼瓶清冊' :
+                  activeSubTab === 'gasVehicles' ? '配送車庫存' :
+                  activeSubTab === 'gasDeposits' ? '客戶押瓶' :
                   activeSubTab === 'loan' ? '貸款' :
                   activeSubTab === 'assets' ? '固定資產' : '資料'
                 }
@@ -1775,7 +2443,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 </div>
 
                 {/* 1. Date Field */}
-                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && (
+                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">記帳日期</label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
@@ -1820,6 +2488,231 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </div>
                     <div className="alert-box info" style={{ marginTop: 0 }}>
                       系統會以期初庫存加當月進貨計算平均成本，並依收入資料中的銷售公斤數估算銷貨成本與毛利。
+                    </div>
+                  </>
+                )}
+
+                {activeSubTab === 'gasCylinders' && (
+                  <>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">鋼瓶編號</label>
+                        <input type="text" required placeholder="例如：CYL-0001" className="form-control" value={formData.cylinderNo} onChange={e => setFormData({ ...formData, cylinderNo: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">規格公斤數</label>
+                        <input type="number" min="0" step="0.1" required className="form-control" value={formData.specKg} onChange={e => setFormData({ ...formData, specKg: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">鋼瓶狀態</label>
+                        <select className="select-dropdown" style={{ width: '100%' }} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                          {GAS_CYLINDER_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">瓶權狀態</label>
+                        <select className="select-dropdown" style={{ width: '100%' }} value={formData.ownershipStatus} onChange={e => setFormData({ ...formData, ownershipStatus: e.target.value })}>
+                          {GAS_OWNERSHIP_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">條碼欄位</label>
+                        <input type="text" placeholder="預留掃碼用" className="form-control" value={formData.barcode} onChange={e => setFormData({ ...formData, barcode: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">QR Code 欄位</label>
+                        <input type="text" placeholder="預留 QR Code 用" className="form-control" value={formData.qrCode} onChange={e => setFormData({ ...formData, qrCode: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">目前位置</label>
+                        <select className="select-dropdown" style={{ width: '100%' }} value={formData.locationType} onChange={e => setFormData({ ...formData, locationType: e.target.value, locationId: '', vehicleId: '', customerId: '' })}>
+                          {GAS_LOCATION_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">異動日期</label>
+                        <input type="date" className="form-control" value={formData.movementDate} onChange={e => setFormData({ ...formData, movementDate: e.target.value })} />
+                      </div>
+                    </div>
+                    {formData.locationType === 'vehicle' && (
+                      <div className="form-group">
+                        <label className="form-label">所在配送車</label>
+                        <select className="select-dropdown" style={{ width: '100%' }} value={formData.vehicleId || formData.locationId} onChange={e => setFormData({ ...formData, vehicleId: e.target.value, locationId: e.target.value })}>
+                          <option value="">請選擇配送車</option>
+                          {gasDeliveryVehicles.map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.plateNo} {vehicle.name ? `/ ${vehicle.name}` : ''}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {formData.locationType === 'customer' && (
+                      <>
+                        <div className="form-group">
+                          <label className="form-label">所在客戶</label>
+                          <select
+                            className="select-dropdown"
+                            style={{ width: '100%' }}
+                            value={formData.customerId}
+                            onChange={e => {
+                              const selected = customers.find(item => item.id === e.target.value);
+                              setFormData({
+                                ...formData,
+                                customerId: e.target.value,
+                                locationId: e.target.value,
+                                customerName: selected?.name || formData.customerName,
+                                customerPhone: selected?.phone || formData.customerPhone,
+                                customerAddress: selected?.address || formData.customerAddress
+                              });
+                            }}
+                          >
+                            <option value="">不綁定客戶主檔</option>
+                            {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">客戶名稱</label>
+                          <input type="text" className="form-control" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
+                        </div>
+                      </>
+                    )}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">上次檢驗日期</label>
+                        <input type="date" className="form-control" value={formData.lastInspectionDate} onChange={e => setFormData({ ...formData, lastInspectionDate: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">下次檢驗期限</label>
+                        <input type="date" className="form-control" value={formData.inspectionDueDate || formData.nextInspectionDate} onChange={e => setFormData({ ...formData, inspectionDueDate: e.target.value, nextInspectionDate: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">本次異動類型</label>
+                      <select className="select-dropdown" style={{ width: '100%' }} value={formData.movementType} onChange={e => setFormData({ ...formData, movementType: e.target.value })}>
+                        {GAS_MOVEMENT_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {activeSubTab === 'gasVehicles' && (
+                  <>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">車牌號碼</label>
+                        <input type="text" required placeholder="例如：ABC-1234" className="form-control" value={formData.plateNo} onChange={e => setFormData({ ...formData, plateNo: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">車輛名稱</label>
+                        <input type="text" placeholder="例如：1號車" className="form-control" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">司機 / 負責人</label>
+                      <input type="text" className="form-control" value={formData.driverName} onChange={e => setFormData({ ...formData, driverName: e.target.value })} />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">可載鋼瓶數</label>
+                        <input type="number" min="0" step="1" className="form-control" value={formData.capacityCylinders} onChange={e => setFormData({ ...formData, capacityCylinders: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">可載公斤數</label>
+                        <input type="number" min="0" step="0.1" className="form-control" value={formData.capacityKg} onChange={e => setFormData({ ...formData, capacityKg: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">車輛狀態</label>
+                      <select className="select-dropdown" style={{ width: '100%' }} value={formData.active === false ? 'inactive' : 'active'} onChange={e => setFormData({ ...formData, active: e.target.value === 'active' })}>
+                        <option value="active">使用中</option>
+                        <option value="inactive">停用</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {activeSubTab === 'gasDeposits' && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">客戶主檔</label>
+                      <select
+                        className="select-dropdown"
+                        style={{ width: '100%' }}
+                        value={formData.customerId}
+                        onChange={e => {
+                          const selected = customers.find(item => item.id === e.target.value);
+                          setFormData({
+                            ...formData,
+                            customerId: e.target.value,
+                            customerName: selected?.name || formData.customerName,
+                            customerPhone: selected?.phone || formData.customerPhone,
+                            customerAddress: selected?.address || formData.customerAddress
+                          });
+                        }}
+                      >
+                        <option value="">不綁定客戶主檔</option>
+                        {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">客戶名稱</label>
+                        <input type="text" required className="form-control" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">客戶電話</label>
+                        <input type="text" className="form-control" value={formData.customerPhone} onChange={e => setFormData({ ...formData, customerPhone: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">客戶地址</label>
+                      <input type="text" className="form-control" value={formData.customerAddress} onChange={e => setFormData({ ...formData, customerAddress: e.target.value })} />
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">押瓶鋼瓶</label>
+                        <select
+                          className="select-dropdown"
+                          style={{ width: '100%' }}
+                          value={formData.cylinderId}
+                          onChange={e => {
+                            const selected = gasCylinders.find(item => item.id === e.target.value);
+                            setFormData({ ...formData, cylinderId: e.target.value, cylinderSpecKg: selected?.specKg || formData.cylinderSpecKg });
+                          }}
+                        >
+                          <option value="">不指定鋼瓶</option>
+                          {gasCylinders.map(cylinder => <option key={cylinder.id} value={cylinder.id}>{cylinder.cylinderNo} / {Number(cylinder.specKg || 0).toLocaleString()}kg / {optionLabel(GAS_CYLINDER_STATUS_OPTIONS, cylinder.status)}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">規格公斤數</label>
+                        <input type="number" min="0" step="0.1" className="form-control" value={formData.cylinderSpecKg} onChange={e => setFormData({ ...formData, cylinderSpecKg: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">押金金額</label>
+                        <input type="number" min="0" step="1" className="form-control" value={formData.depositAmount} onChange={e => setFormData({ ...formData, depositAmount: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">押瓶狀態</label>
+                        <select className="select-dropdown" style={{ width: '100%' }} value={formData.depositStatus} onChange={e => setFormData({ ...formData, depositStatus: e.target.value })}>
+                          {GAS_DEPOSIT_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">押瓶日期</label>
+                        <input type="date" className="form-control" value={formData.startedAt} onChange={e => setFormData({ ...formData, startedAt: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">退瓶日期</label>
+                        <input type="date" className="form-control" value={formData.returnedAt} onChange={e => setFormData({ ...formData, returnedAt: e.target.value })} />
+                      </div>
                     </div>
                   </>
                 )}
@@ -1889,7 +2782,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   </>
                 )}
 
-                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && (
+                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">{activeSubTab === 'income' ? '收入金額' : '支出金額'}</label>
                     <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
@@ -2105,23 +2998,46 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, w, h);
                             const compressed = canvas.toDataURL('image/jpeg', 0.7);
-                            setFormData(prev => ({ ...prev, receiptAttachment: compressed }));
+                            setAttachmentPreviewUrl(compressed);
+                            setAttachmentUploading(true);
+                            uploadCloudAttachment({ dataUrl: compressed, filename: file.name })
+                              .then(attachment => {
+                                setFormData(prev => ({ ...prev, receiptAttachment: attachment }));
+                              })
+                              .catch(error => {
+                                setAttachmentPreviewUrl('');
+                                setFormData(prev => ({ ...prev, receiptAttachment: '' }));
+                                window.alert(error.message || '附件上傳失敗。');
+                              })
+                              .finally(() => setAttachmentUploading(false));
                           };
                           img.src = event.target.result;
                         };
                         reader.readAsDataURL(file);
                       }} 
                     />
+                    {attachmentUploading && (
+                      <div style={{ marginTop: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>附件正在上傳，完成後才能儲存。</div>
+                    )}
                     {formData.receiptAttachment && (
                       <div style={{ marginTop: '8px', position: 'relative', display: 'inline-block' }}>
-                        <img 
-                          src={formData.receiptAttachment} 
-                          alt="Receipt Attachment" 
-                          style={{ maxWidth: '120px', borderRadius: '4px', border: '1px solid var(--border-color)' }} 
-                        />
+                        {attachmentPreviewUrl ? (
+                          <img
+                            src={attachmentPreviewUrl}
+                            alt="憑證附件預覽"
+                            style={{ maxWidth: '120px', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                          />
+                        ) : (
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openReceiptPreview(formData.receiptAttachment)}>
+                            預覽已上傳附件
+                          </button>
+                        )}
                         <button 
                           type="button" 
-                          onClick={() => setFormData({ ...formData, receiptAttachment: '' })} 
+                          onClick={() => {
+                            setAttachmentPreviewUrl('');
+                            setFormData({ ...formData, receiptAttachment: '' });
+                          }}
                           style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: 'var(--accent-red)', color: 'white', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
                         >
                           x
@@ -2264,7 +3180,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 )}
 
                 {/* 7. Status field */}
-                {activeSubTab !== 'shareholder' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && (
+                {activeSubTab !== 'shareholder' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">審核狀態</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
@@ -2285,8 +3201,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                   取消
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  儲存資料
+                <button type="submit" className="btn btn-primary" disabled={attachmentUploading}>
+                  {attachmentUploading ? '附件上傳中' : '儲存資料'}
                 </button>
               </div>
             </form>
@@ -2394,11 +3310,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
       {/* Viewing Receipt Image Modal */}
       {viewingReceiptUrl && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setViewingReceiptUrl(null)}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={closeReceiptPreview}>
           <div className="modal-content" style={{ maxWidth: '800px', width: '90%', textAlign: 'center', padding: '16px' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">憑證 / 發票附件預覽</span>
-              <button type="button" className="modal-close" onClick={() => setViewingReceiptUrl(null)}>x</button>
+              <button type="button" className="modal-close" onClick={closeReceiptPreview}>x</button>
             </div>
             <div className="modal-body" style={{ padding: '16px 0', overflowY: 'auto' }}>
               <img 
@@ -2424,7 +3340,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </div>
             </div>
             <div className="modal-footer" style={{ paddingBottom: 0 }}>
-              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceiptUrl(null)}>關閉附件</button>
+              <button type="button" className="btn btn-secondary" onClick={closeReceiptPreview}>關閉附件</button>
             </div>
           </div>
         </div>
@@ -2432,7 +3348,4 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     </div>
   );
 }
-
-
-
 

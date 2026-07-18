@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getGasInventoryValuationAtDate, getJournalEntries, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers } from '../db/storage';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod } from '../utils/financials';
+import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
+import { getCloudAttachmentUrl, revokeCloudAttachmentUrl } from '../db/attachmentService';
 
 export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole }) {
   const [reportType, setReportType] = useState('pnl'); // pnl, balance, gas, investor, dividend
@@ -17,6 +18,21 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const [drillDownCode, setDrillDownCode] = useState(null);
   const [drillDownName, setDrillDownName] = useState('');
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
+
+  useEffect(() => () => revokeCloudAttachmentUrl(viewingReceiptUrl), [viewingReceiptUrl]);
+
+  const closeReceiptPreview = () => {
+    revokeCloudAttachmentUrl(viewingReceiptUrl);
+    setViewingReceiptUrl(null);
+  };
+
+  const openReceiptPreview = async (attachment) => {
+    try {
+      setViewingReceiptUrl(await getCloudAttachmentUrl(attachment));
+    } catch (error) {
+      showToast(error.message || '附件讀取失敗。', 'error');
+    }
+  };
 
   const monthPeriodVal = `${year}-${month}`;
   const activePeriodType = periodMode;
@@ -166,6 +182,18 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getJournalEntries(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
+  const trialBalance = useMemo(() => {
+    return getTrialBalance(companyId, activePeriodType, activePeriodVal);
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
+  const generalLedger = useMemo(() => {
+    return getGeneralLedger(companyId, activePeriodType, activePeriodVal);
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
+  const cashFlow = useMemo(() => {
+    return getCashFlowStatement(companyId, activePeriodType, activePeriodVal);
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
   const vatReport = useMemo(() => {
     return getVatReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
@@ -184,6 +212,119 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const supplierPayables = useMemo(() => getSupplierPayableSummary(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
   const customers = useMemo(() => getCustomers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
   const suppliers = useMemo(() => getSuppliers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+
+  const dailySales = useMemo(() => {
+    // Get all Incomes and Expenses in active period
+    const allIncomes = getIncomes().filter(item =>
+      item.companyId === companyId &&
+      item.status === 'approved' &&
+      isDateInPeriod(item.date, activePeriodType, activePeriodVal)
+    );
+    const allExpenses = getExpenses().filter(item =>
+      item.companyId === companyId &&
+      item.status === 'approved' &&
+      isDateInPeriod(item.date, activePeriodType, activePeriodVal)
+    );
+
+    // Gas Sales (4101)
+    const gasSales = allIncomes.filter(item => item.accountCode === '4101');
+    const gasSalesAmount = gasSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Gas Sales Already Collected (現收)
+    const gasSalesPaid = gasSales.filter(item => item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable');
+    const gasSalesPaidAmount = gasSalesPaid.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Repayments (還款金額)
+    const repayments = getBankTransactions().filter(bt =>
+      bt.companyId === companyId &&
+      bt.direction === 'in' &&
+      bt.sourceType === 'settlement' &&
+      isDateInPeriod(bt.date, activePeriodType, activePeriodVal)
+    );
+    const repaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Monthly Accounts Receivable (月結應收帳款)
+    const monthlyAr = gasSales.filter(item => item.paymentMethod === 'receivable');
+    const monthlyArAmount = monthlyAr.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Unpaid/Debt Amount (欠款金額)
+    const unpaidAr = gasSales.filter(item => item.paymentStatus === 'unpaid' && item.paymentMethod !== 'receivable');
+    const unpaidArAmount = unpaidAr.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Quantity & Weight
+    const cylinderQty = gasSales.reduce((sum, item) => sum + Number(item.cylinderQty || 0), 0);
+    const gasKg = gasSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
+
+    // Average price
+    const avgPricePerCylinder = cylinderQty > 0 ? gasSalesAmount / cylinderQty : 0;
+    const avgPricePerKg = gasKg > 0 ? gasSalesAmount / gasKg : 0;
+
+    // Daily Gross Profit
+    let totalGrossProfit = 0;
+    try {
+      if (activePeriodType === 'date') {
+        const profitRes = getGasGrossProfitForPeriod(companyId, 'date', activePeriodVal);
+        totalGrossProfit = profitRes.grossProfit || 0;
+      } else if (activePeriodType === 'month') {
+        const profitRes = getGasInventoryForMonth(companyId, activePeriodVal);
+        totalGrossProfit = profitRes.grossProfit || 0;
+      } else {
+        const start = new Date(activePeriodVal.startDate);
+        const end = new Date(activePeriodVal.endDate);
+        let curr = new Date(start);
+        while (curr <= end) {
+          const dateStr = curr.toISOString().split('T')[0];
+          const profitRes = getGasGrossProfitForPeriod(companyId, 'date', dateStr);
+          totalGrossProfit += profitRes.grossProfit || 0;
+          curr.setDate(curr.getDate() + 1);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Expense Categories Mapping
+    let buyCylinderAmount = 0;
+    let repairAmount = 0;
+    let stoveAmount = 0;
+    let otherExpenseAmount = 0;
+
+    allExpenses.forEach(exp => {
+      const code = exp.accountCode;
+      const accountName = getChartOfAccounts().find(a => a.code === code)?.name || '';
+
+      const isBuyCylinder = accountName.includes('買桶') || accountName.includes('鋼瓶') || accountName.includes('購桶');
+      const isRepair = accountName.includes('維修') || accountName.includes('修繕') || accountName.includes('保養');
+      const isStove = accountName.includes('爐具') || accountName.includes('零件') || accountName.includes('材料');
+
+      if (isBuyCylinder) {
+        buyCylinderAmount += Number(exp.amount || 0);
+      } else if (isRepair) {
+        repairAmount += Number(exp.amount || 0);
+      } else if (isStove) {
+        stoveAmount += Number(exp.amount || 0);
+      } else {
+        otherExpenseAmount += Number(exp.amount || 0);
+      }
+    });
+
+    return {
+      gasSalesAmount,
+      gasSalesPaidAmount,
+      repaymentAmount,
+      monthlyArAmount,
+      unpaidArAmount,
+      cylinderQty,
+      gasKg,
+      avgPricePerCylinder,
+      avgPricePerKg,
+      grossProfit: totalGrossProfit,
+      buyCylinderAmount,
+      repairAmount,
+      stoveAmount,
+      otherExpenseAmount
+    };
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const revenuePieItems = useMemo(() => (
     pnl.revenueItems.map(item => ({ label: `${item.code} ${item.name}`, amount: item.amount }))
@@ -253,6 +394,41 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         [],
         ['', '', '負債與權益總計 (Total L&E)', balanceSheet.liabilities.totalLiabilities + balanceSheet.equity.totalEquity]
       ];
+    } else if (reportType === 'trialBalance') {
+      csvRows = [
+        [`${companyName} - 試算表`],
+        [`報表期間: ${activePeriodLabel}`],
+        [],
+        ['科目代碼', '科目名稱', '借方發生額', '貸方發生額', '借方餘額', '貸方餘額'],
+        ...trialBalance.rows.map(row => [row.accountCode, row.accountName, row.debit, row.credit, row.debitBalance, row.creditBalance]),
+        ['合計', '', trialBalance.totalDebit, trialBalance.totalCredit, trialBalance.totalDebitBalance, trialBalance.totalCreditBalance]
+      ];
+    } else if (reportType === 'generalLedger') {
+      csvRows = [
+        [`${companyName} - 總分類帳`],
+        [`報表期間: ${activePeriodLabel}`],
+        [],
+        ['科目代碼', '科目名稱', '日期', '傳票編號', '摘要', '借方', '貸方', '餘額'],
+        ...generalLedger.flatMap(account => [
+          [account.accountCode, account.accountName, '', '', '期初餘額', '', '', account.openingBalance],
+          ...account.rows.map(row => [account.accountCode, account.accountName, row.date, row.entryId, row.description, row.debit, row.credit, row.runningBalance])
+        ])
+      ];
+    } else if (reportType === 'cashFlow') {
+      csvRows = [
+        [`${companyName} - 現金流量表`],
+        [`報表期間: ${activePeriodLabel}`],
+        [],
+        ['活動類別', '日期', '傳票編號', '摘要', '現金增減'],
+        ...Object.values(cashFlow.sections).flatMap(section => [
+          ...section.rows.map(row => [section.label, row.date, row.entryId, row.description, row.amount]),
+          [`${section.label}小計`, '', '', '', section.total]
+        ]),
+        [],
+        ['期初現金', '', '', '', cashFlow.openingCash],
+        ['本期現金淨增減', '', '', '', cashFlow.netChange],
+        ['期末現金', '', '', '', cashFlow.closingCash]
+      ];
     } else if (reportType === 'arap') {
       csvRows = [
         [`${companyName} - 應收應付帳齡表`],
@@ -267,6 +443,27 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         [],
         ['供應商', '統編', '未付款', '未付筆數', '最長帳齡'],
         ...supplierPayables.map(row => [row.name, row.taxId || '', row.payableTotal, row.unpaidCount, row.oldestDays])
+      ];
+    } else if (reportType === 'dailySales') {
+      csvRows = [
+        [`${companyName} - 單日銷售狀況`],
+        [`報表期間: ${activePeriodLabel}`],
+        [],
+        ['資料項目', '數值 / 金額'],
+        ['瓦斯銷售總金額', dailySales.gasSalesAmount],
+        ['瓦斯銷售已收款', dailySales.gasSalesPaidAmount],
+        ['還款金額', dailySales.repaymentAmount],
+        ['月結應收帳款', dailySales.monthlyArAmount],
+        ['欠款金額', dailySales.unpaidArAmount],
+        ['當日數量 (桶)', dailySales.cylinderQty],
+        ['當日重量 (kg)', dailySales.gasKg],
+        ['平均單價 (元/桶)', dailySales.avgPricePerCylinder ? dailySales.avgPricePerCylinder.toFixed(2) : '0.00'],
+        ['平均單價 (元/kg)', dailySales.avgPricePerKg ? dailySales.avgPricePerKg.toFixed(2) : '0.00'],
+        ['當日毛利', dailySales.grossProfit],
+        ['買桶金額', dailySales.buyCylinderAmount],
+        ['維修費用', dailySales.repairAmount],
+        ['爐具費用', dailySales.stoveAmount],
+        ['其他費用', dailySales.otherExpenseAmount]
       ];
     } else if (reportType === 'gas') {
       csvRows = [
@@ -359,7 +556,24 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    const filename = `${companyName}_${reportType === 'pnl' ? '損益表' : reportType === 'balance' ? '資產負債表' : reportType === 'equity' ? '股東權益變動表' : reportType === 'gas' ? '瓦斯毛利表' : reportType === 'investor' ? '投資人摘要' : '股東分紅表'}_${activePeriodLabel}.csv`;
+    const reportFileNames = {
+      pnl: '損益表',
+      balance: '資產負債表',
+      trialBalance: '試算表',
+      generalLedger: '總分類帳',
+      cashFlow: '現金流量表',
+      arap: '應收應付帳齡表',
+      equity: '股東權益變動表',
+      gas: '瓦斯毛利表',
+      dailySales: '單日銷售狀況',
+      investor: '投資人摘要',
+      journal: '傳票總覽',
+      vat: '營業稅彙整',
+      payroll: '薪資彙整',
+      auditReady: '查帳準備度',
+      dividend: '股東分紅表'
+    };
+    const filename = `${companyName}_${reportFileNames[reportType] || '營運報表'}_${activePeriodLabel}.csv`;
     
     link.href = URL.createObjectURL(blob);
     link.setAttribute('download', filename);
@@ -372,9 +586,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
-        <div className="card-header" style={{ borderBottom: 'none' }}>
-          {allowExportReports && (
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
+          {(allowExportReports || userRole === USER_ROLES.BOOKKEEPER || showShareholderReports) && (
+          <div className="report-tabs">
             <button className={`tab-btn ${reportType === 'pnl' ? 'active' : ''}`} onClick={() => setReportType('pnl')}>
               📊 損益表
             </button>
@@ -384,6 +598,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
             <button className={`tab-btn ${reportType === 'gas' ? 'active' : ''}`} onClick={() => setReportType('gas')}>
               🛢️ 瓦斯毛利表
             </button>
+            <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
+              🛍️ 單日銷售狀況
+            </button>
             <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
               應收/應付
             </button>
@@ -392,6 +609,15 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
             </button>
             <button className={`tab-btn ${reportType === 'journal' ? 'active' : ''}`} onClick={() => setReportType('journal')}>
               傳票總覽
+            </button>
+            <button className={`tab-btn ${reportType === 'trialBalance' ? 'active' : ''}`} onClick={() => setReportType('trialBalance')}>
+              試算表
+            </button>
+            <button className={`tab-btn ${reportType === 'generalLedger' ? 'active' : ''}`} onClick={() => setReportType('generalLedger')}>
+              總分類帳
+            </button>
+            <button className={`tab-btn ${reportType === 'cashFlow' ? 'active' : ''}`} onClick={() => setReportType('cashFlow')}>
+              現金流量表
             </button>
             <button className={`tab-btn ${reportType === 'vat' ? 'active' : ''}`} onClick={() => setReportType('vat')}>
               營業稅
@@ -415,7 +641,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
           )}
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="report-actions">
             <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
               🖨️ 列印報表
             </button>
@@ -807,6 +1033,87 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
         )}
 
+        {reportType === 'dailySales' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">🛍️ 營業報表 - 單日銷售狀況</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
+            </div>
+            <div className="card-body">
+              {/* Financial Metrics */}
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💰 銷貨金流指標</h3>
+              <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+                <div className="metric-card accent-blue">
+                  <span className="metric-label">瓦斯銷售總金額</span>
+                  <span className="metric-value">{formatCurrency(dailySales.gasSalesAmount)}</span>
+                </div>
+                <div className="metric-card accent-green">
+                  <span className="metric-label">瓦斯銷售已收款</span>
+                  <span className="metric-value">{formatCurrency(dailySales.gasSalesPaidAmount)}</span>
+                </div>
+                <div className="metric-card accent-gold">
+                  <span className="metric-label">還款金額 (收回舊欠)</span>
+                  <span className="metric-value">{formatCurrency(dailySales.repaymentAmount)}</span>
+                </div>
+                <div className="metric-card accent-purple">
+                  <span className="metric-label">月結應收帳款</span>
+                  <span className="metric-value">{formatCurrency(dailySales.monthlyArAmount)}</span>
+                </div>
+                <div className="metric-card accent-red">
+                  <span className="metric-label">欠款金額 (現結未付)</span>
+                  <span className="metric-value">{formatCurrency(dailySales.unpaidArAmount)}</span>
+                </div>
+              </div>
+
+              {/* Quantity & Weight Metrics */}
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-green)', paddingBottom: '6px', color: 'var(--text-primary)' }}>📦 數量與毛利指標</h3>
+              <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+                <div className="metric-card">
+                  <span className="metric-label">當日銷售數量</span>
+                  <span className="metric-value">{dailySales.cylinderQty.toLocaleString()} 桶</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">當日銷售重量</span>
+                  <span className="metric-value">{dailySales.gasKg.toLocaleString()} kg</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">平均單價 (元/桶)</span>
+                  <span className="metric-value">{formatCurrency(dailySales.avgPricePerCylinder)}</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">平均單價 (元/kg)</span>
+                  <span className="metric-value">${dailySales.avgPricePerKg.toFixed(2)}</span>
+                </div>
+                <div className="metric-card accent-green">
+                  <span className="metric-label">當日估算毛利</span>
+                  <span className="metric-value">{formatCurrency(dailySales.grossProfit)}</span>
+                </div>
+              </div>
+
+              {/* Expense Metrics */}
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-red)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💸 其它費用支出</h3>
+              <div className="metrics-grid" style={{ marginBottom: '12px' }}>
+                <div className="metric-card">
+                  <span className="metric-label">買桶金額</span>
+                  <span className="metric-value">{formatCurrency(dailySales.buyCylinderAmount)}</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">維修費用</span>
+                  <span className="metric-value">{formatCurrency(dailySales.repairAmount)}</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">爐具費用</span>
+                  <span className="metric-value">{formatCurrency(dailySales.stoveAmount)}</span>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">其他營業費用</span>
+                  <span className="metric-value">{formatCurrency(dailySales.otherExpenseAmount)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {reportType === 'gas' && (
           <div className="card">
             <div className="card-header">
@@ -967,6 +1274,86 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                     {journalEntries.length === 0 && (
                       <tr><td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>本期間沒有可產生傳票的資料</td></tr>
                     )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reportType === 'trialBalance' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">試算表</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
+            </div>
+            <div className="card-body">
+              <div className={`alert-box ${Math.abs(trialBalance.totalDebit - trialBalance.totalCredit) < 0.01 ? 'success' : 'warning'}`} style={{ marginTop: 0 }}>
+                借貸平衡檢查：借方 ${trialBalance.totalDebit.toLocaleString()}，貸方 ${trialBalance.totalCredit.toLocaleString()}。
+              </div>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>科目代碼</th><th>科目名稱</th><th>借方發生額</th><th>貸方發生額</th><th>借方餘額</th><th>貸方餘額</th></tr></thead>
+                  <tbody>
+                    {trialBalance.rows.map(row => (
+                      <tr key={`${row.accountCode}:${row.accountName}`}>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{row.accountCode}</td><td>{row.accountName}</td>
+                        <td>${row.debit.toLocaleString()}</td><td>${row.credit.toLocaleString()}</td>
+                        <td>${row.debitBalance.toLocaleString()}</td><td>${row.creditBalance.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ fontWeight: 800 }}><td colSpan="2">合計</td><td>${trialBalance.totalDebit.toLocaleString()}</td><td>${trialBalance.totalCredit.toLocaleString()}</td><td>${trialBalance.totalDebitBalance.toLocaleString()}</td><td>${trialBalance.totalCreditBalance.toLocaleString()}</td></tr>
+                    {trialBalance.rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>此期間尚無傳票資料</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reportType === 'generalLedger' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">總分類帳</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
+            </div>
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>日期</th><th>傳票編號</th><th>摘要</th><th>借方</th><th>貸方</th><th>餘額</th></tr></thead>
+                  <tbody>
+                    {generalLedger.flatMap(account => [
+                      <tr key={`account-${account.accountCode}`} style={{ background: 'var(--bg-secondary)', fontWeight: 800 }}><td colSpan="5">{account.accountCode} {account.accountName}（期初餘額）</td><td>${account.openingBalance.toLocaleString()}</td></tr>,
+                      ...account.rows.map(row => <tr key={`${account.accountCode}-${row.entryId}`}><td>{row.date}</td><td style={{ fontFamily: 'var(--font-mono)' }}>{row.entryId}</td><td>{row.description}</td><td>{row.debit ? `$${row.debit.toLocaleString()}` : ''}</td><td>{row.credit ? `$${row.credit.toLocaleString()}` : ''}</td><td>${row.runningBalance.toLocaleString()}</td></tr>)
+                    ])}
+                    {generalLedger.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-tertiary)' }}>此期間尚無總帳資料</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reportType === 'cashFlow' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">現金流量表</span>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
+            </div>
+            <div className="card-body">
+              <div className="summary-grid" style={{ marginBottom: '18px' }}>
+                <div className="summary-card"><div className="summary-label">期初現金</div><div className="summary-value">${cashFlow.openingCash.toLocaleString()}</div></div>
+                <div className="summary-card"><div className="summary-label">本期淨增減</div><div className={`summary-value ${cashFlow.netChange >= 0 ? 'income' : 'expense'}`}>${cashFlow.netChange.toLocaleString()}</div></div>
+                <div className="summary-card"><div className="summary-label">期末現金</div><div className="summary-value">${cashFlow.closingCash.toLocaleString()}</div></div>
+              </div>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>活動類別</th><th>日期</th><th>傳票編號</th><th>摘要</th><th>現金增減</th></tr></thead>
+                  <tbody>
+                    {Object.entries(cashFlow.sections).flatMap(([key, section]) => [
+                      ...section.rows.map(row => <tr key={`${key}-${row.entryId}`}><td>{section.label}</td><td>{row.date}</td><td style={{ fontFamily: 'var(--font-mono)' }}>{row.entryId}</td><td>{row.description}</td><td style={{ color: row.amount >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: 700 }}>${row.amount.toLocaleString()}</td></tr>),
+                      <tr key={`${key}-total`} style={{ fontWeight: 800 }}><td colSpan="4">{section.label}現金流量小計</td><td>${section.total.toLocaleString()}</td></tr>
+                    ])}
                   </tbody>
                 </table>
               </div>
@@ -1414,7 +1801,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                                   type="button"
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                                  onClick={() => setViewingReceiptUrl(tx.receiptAttachment)}
+                                  onClick={() => openReceiptPreview(tx.receiptAttachment)}
                                 >
                                   📷 檢視憑證
                                 </button>
@@ -1443,11 +1830,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
       {/* Zoom Receipt Modal */}
       {viewingReceiptUrl && (
-        <div className="modal-overlay no-print" style={{ zIndex: 1300 }} onClick={() => setViewingReceiptUrl(null)}>
+        <div className="modal-overlay no-print" style={{ zIndex: 1300 }} onClick={closeReceiptPreview}>
           <div className="modal-content" style={{ maxWidth: '600px', width: '90%' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">📷 憑證照片檢視</span>
-              <button type="button" className="modal-close" onClick={() => setViewingReceiptUrl(null)}>×</button>
+              <button type="button" className="modal-close" onClick={closeReceiptPreview}>×</button>
             </div>
             <div className="modal-body" style={{ textAlign: 'center', padding: '20px' }}>
               <img 
@@ -1457,7 +1844,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               />
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceiptUrl(null)}>
+              <button type="button" className="btn btn-secondary" onClick={closeReceiptPreview}>
                 關閉
               </button>
             </div>

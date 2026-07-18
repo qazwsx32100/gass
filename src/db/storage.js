@@ -26,6 +26,14 @@ const KEYS = {
   BANK_RECONCILIATIONS: 'bp_bank_reconciliations',
   FIXED_ASSETS: 'bp_fixed_assets',
   GAS_INVENTORY_PERIODS: 'bp_gas_inventory_periods',
+  GAS_PURCHASES: 'bp_gas_purchases',
+  GAS_CYLINDERS: 'bp_gas_cylinders',
+  GAS_CYLINDER_MOVEMENTS: 'bp_gas_cylinder_movements',
+  GAS_DELIVERY_VEHICLES: 'bp_gas_delivery_vehicles',
+  GAS_VEHICLE_INVENTORY: 'bp_gas_vehicle_inventory',
+  CUSTOMER_CYLINDER_DEPOSITS: 'bp_customer_cylinder_deposits',
+  JOURNAL_ENTRIES: 'bp_journal_entries',
+  JOURNAL_LINES: 'bp_journal_lines',
   LOGS: 'bp_logs',
   AUDIT_ARCHIVE: 'bp_audit_archive',
   RESET_SNAPSHOTS: 'bp_reset_snapshots',
@@ -143,7 +151,11 @@ export const normalizeTransaction = (item) => {
     correctedAt: item.correctedAt || null,
     correctionReason: item.correctionReason || null,
     correctionOf: item.correctionOf || null,
-    correctionType: item.correctionType || null
+    correctionType: item.correctionType || null,
+    paidAt: item.paidAt || null,
+    paidByMethod: item.paidByMethod || null,
+    paidBankId: item.paidBankId || null,
+    settlementId: item.settlementId || null
   };
 };
 
@@ -169,6 +181,7 @@ export const normalizeGasInventoryPeriod = (item) => {
   const purchaseKg = Number(item.purchaseKg) || 0;
   const purchaseAmount = Number(item.purchaseAmount) || 0;
   const shrinkageKg = Number(item.shrinkageKg) || 0;
+  const monthlyGasPrice = Number(item.monthlyGasPrice) || 0;
   const physicalEndingKg = item.physicalEndingKg === '' || item.physicalEndingKg === null || item.physicalEndingKg === undefined
     ? null
     : Number(item.physicalEndingKg) || 0;
@@ -180,12 +193,145 @@ export const normalizeGasInventoryPeriod = (item) => {
     purchaseKg,
     purchaseAmount,
     shrinkageKg,
+    monthlyGasPrice,
     physicalEndingKg,
     remarks: item.remarks || '',
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
   };
 };
+
+export const normalizeGasPurchase = (item = {}) => {
+  const qty50kg = Number(item.qty50kg) || 0;
+  const qty20kg = Number(item.qty20kg) || 0;
+  const qty16kg = Number(item.qty16kg) || 0;
+  const qty10kg = Number(item.qty10kg) || 0;
+  const qty4kg = Number(item.qty4kg) || 0;
+  const totalKg = qty50kg * 50 + qty20kg * 20 + qty16kg * 16 + qty10kg * 10 + qty4kg * 4;
+  const monthlyGasPrice = Number(item.monthlyGasPrice) || 0;
+  const amount = Math.round(totalKg * monthlyGasPrice);
+
+  return {
+    id: item.id || createArchiveId('GP'),
+    companyId: item.companyId || 'COMP001',
+    date: item.date || new Date().toISOString().split('T')[0],
+    qty50kg,
+    qty20kg,
+    qty16kg,
+    qty10kg,
+    qty4kg,
+    totalKg,
+    monthlyGasPrice,
+    amount,
+    remarks: item.remarks || '',
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+  };
+};
+
+export const normalizeGasDeliveryVehicle = (item = {}) => ({
+  id: item.id || createArchiveId('VEH'),
+  companyId: item.companyId || 'COMP001',
+  plateNo: item.plateNo || '',
+  name: item.name || '',
+  driverName: item.driverName || '',
+  capacityCylinders: Number(item.capacityCylinders) || 0,
+  capacityKg: Number(item.capacityKg) || 0,
+  active: item.active ?? true,
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeGasCylinder = (item = {}) => ({
+  id: item.id || createArchiveId('CYL'),
+  companyId: item.companyId || 'COMP001',
+  cylinderNo: item.cylinderNo || '',
+  barcode: item.barcode || '',
+  qrCode: item.qrCode || '',
+  specKg: Number(item.specKg) || 0,
+  ownershipStatus: item.ownershipStatus || 'owned',
+  status: item.status || 'empty',
+  locationType: item.locationType || 'warehouse',
+  locationId: item.locationId || '',
+  customerId: item.customerId || '',
+  vehicleId: item.vehicleId || '',
+  depositAmount: Number(item.depositAmount) || 0,
+  lastInspectionDate: item.lastInspectionDate || '',
+  nextInspectionDate: item.nextInspectionDate || '',
+  inspectionDueDate: item.inspectionDueDate || '',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeGasCylinderMovement = (item = {}) => ({
+  id: item.id || createArchiveId('MOV'),
+  companyId: item.companyId || 'COMP001',
+  cylinderId: item.cylinderId || '',
+  movementDate: item.movementDate || new Date().toISOString().split('T')[0],
+  movementType: item.movementType || 'manual_adjustment',
+  fromLocationType: item.fromLocationType || '',
+  fromLocationId: item.fromLocationId || '',
+  toLocationType: item.toLocationType || '',
+  toLocationId: item.toLocationId || '',
+  customerId: item.customerId || '',
+  vehicleId: item.vehicleId || '',
+  operator: item.operator || '',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString()
+});
+
+export const normalizeGasVehicleInventory = (item = {}) => ({
+  id: item.id || createArchiveId('VST'),
+  companyId: item.companyId || 'COMP001',
+  vehicleId: item.vehicleId || '',
+  cylinderId: item.cylinderId || '',
+  loadedAt: item.loadedAt || new Date().toISOString(),
+  unloadedAt: item.unloadedAt || '',
+  status: item.status || 'on_vehicle',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeCustomerCylinderDeposit = (item = {}) => ({
+  id: item.id || createArchiveId('DEP'),
+  companyId: item.companyId || 'COMP001',
+  customerId: item.customerId || '',
+  customerName: item.customerName || '',
+  cylinderId: item.cylinderId || '',
+  cylinderSpecKg: Number(item.cylinderSpecKg) || 0,
+  depositAmount: Number(item.depositAmount) || 0,
+  depositStatus: item.depositStatus || 'active',
+  startedAt: item.startedAt || new Date().toISOString().split('T')[0],
+  returnedAt: item.returnedAt || '',
+  remarks: item.remarks || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
+});
+
+export const normalizeJournalEntry = (item = {}) => ({
+  id: item.id || createArchiveId('JRN'),
+  companyId: item.companyId || 'COMP001',
+  date: item.date || new Date().toISOString().split('T')[0],
+  sourceType: item.sourceType || '',
+  sourceId: item.sourceId || '',
+  status: item.status || 'draft',
+  memo: item.memo || '',
+  createdAt: item.createdAt || new Date().toISOString(),
+  createdBy: item.createdBy || ''
+});
+
+export const normalizeJournalLine = (item = {}) => ({
+  id: item.id || createArchiveId('JLN'),
+  entryId: item.entryId || '',
+  lineNo: Number(item.lineNo) || 1,
+  side: item.side === 'credit' ? 'credit' : 'debit',
+  accountCode: item.accountCode || '',
+  amount: Number(item.amount) || 0,
+  memo: item.memo || ''
+});
 
 export const normalizeBankReconciliation = (item) => ({
   id: item.id || createArchiveId('REC'),
@@ -339,7 +485,7 @@ const DEFAULT_GO_LIVE_CHECKS = [
   { id: 'GLC_CUSTOMERS_AR', category: 'accounting', title: '客戶資料與應收帳款流程已確認' },
   { id: 'GLC_SUPPLIERS_AP', category: 'accounting', title: '供應商資料與應付帳款流程已確認' },
   { id: 'GLC_IMMUTABLE_LEDGER', category: 'accounting', title: '已核准資料改用作廢或更正流程' },
-  { id: 'GLC_GAS_INVENTORY_RESERVED', category: 'gas_inventory', title: '完整瓦斯庫存模組已預留欄位與頁面空間' }
+  { id: 'GLC_GAS_INVENTORY_RESERVED', category: 'gas_inventory', title: '完整瓦斯庫存模組已啟用並完成操作驗證' }
 ].map(normalizeGoLiveCheck);
 
 const DEFAULT_PRODUCTION_INITIALIZATION = {
@@ -357,19 +503,22 @@ const DEFAULT_PRODUCTION_INITIALIZATION = {
 };
 
 const DEFAULT_GAS_INVENTORY_MODULE_PLAN = {
-  enabled: false,
-  reserved: true,
+  enabled: true,
+  reserved: false,
   plannedFields: [
     '鋼瓶編號',
+    'QR Code / 條碼欄位',
     '瓦斯規格與公斤數',
     '空瓶/實瓶狀態',
     '客戶寄存瓶',
     '配送車庫存',
+    '客戶押瓶與押金',
+    '鋼瓶檢驗期限欄位',
     '盤點差異',
     '異動紀錄',
     '月結庫存成本'
   ],
-  notes: '目前先保留完整庫存模組空間；現階段仍以當月進貨公斤數與銷售公斤數計算毛利。'
+  notes: '逐瓶鋼瓶、配送車庫存、客戶押瓶與異動紀錄已可操作；QR/條碼與檢驗期限欄位已備妥，可再串接掃描器。'
 };
 
 const DEFAULT_DATABASE_TABLE_PLAN = [
@@ -387,8 +536,8 @@ const DEFAULT_DATABASE_TABLE_PLAN = [
     id: 'DBT_MASTER_DATA',
     phase: 'phase2',
     title: '拆分公司、股東、銀行、科目主檔',
-    targetTables: ['companies', 'shareholders', 'banks', 'chart_of_accounts'],
-    status: 'planned',
+    targetTables: ['erp_companies', 'erp_shareholders', 'erp_banks', 'erp_chart_of_accounts'],
+    status: 'active',
     risk: 'medium',
     owner: '主管理員',
     notes: '先建立平行表與匯入檢核，不直接取代現有正式資料。'
@@ -397,8 +546,8 @@ const DEFAULT_DATABASE_TABLE_PLAN = [
     id: 'DBT_LEDGER',
     phase: 'phase2',
     title: '拆分收入、支出、傳票與股東往來',
-    targetTables: ['incomes', 'expenses', 'journal_entries', 'journal_lines', 'shareholder_ledger'],
-    status: 'planned',
+    targetTables: ['erp_transactions', 'erp_journal_entries', 'erp_journal_lines', 'erp_shareholder_ledger'],
+    status: 'active',
     risk: 'high',
     owner: '主管理員',
     notes: '需要保留不可竄改稽核軌跡；已核准資料只能作廢或沖銷。'
@@ -417,18 +566,18 @@ const DEFAULT_DATABASE_TABLE_PLAN = [
     id: 'DBT_GAS_INVENTORY',
     phase: 'reserved',
     title: '瓦斯完整庫存資料表預留',
-    targetTables: ['gas_inventory_periods', 'gas_cylinders', 'gas_stock_movements'],
-    status: 'reserved',
+    targetTables: ['erp_gas_inventory_periods', 'erp_gas_cylinders', 'erp_gas_cylinder_movements', 'erp_delivery_vehicles', 'erp_vehicle_inventory', 'erp_customer_cylinder_deposits'],
+    status: 'active',
     risk: 'medium',
     owner: '主管理員',
-    notes: '目前先預留，不在本階段啟用逐瓶庫存。'
+    notes: '逐瓶管理、配送車庫存、客戶押瓶已建立資料結構；QR/條碼與檢驗期限欄位已預留。'
   },
   {
     id: 'DBT_AUDIT_BACKUP',
     phase: 'phase2',
     title: '拆分操作日誌、備份、還原演練',
-    targetTables: ['audit_logs', 'audit_archive', 'backups', 'backup_restore_drills'],
-    status: 'planned',
+    targetTables: ['erp_operation_logs', 'erp_audit_archive', 'erp_backups', 'erp_immutable_ledger_events', 'backup_restore_drills'],
+    status: 'active',
     risk: 'medium',
     owner: '主管理員',
     notes: '操作紀錄與刪修紀錄需保留一年，未來應改成只能追加不可覆蓋。'
@@ -496,7 +645,7 @@ const encodeHtmlEntities = (text) => String(text || '').replace(/[\u0080-\uFFFF]
 
 // Initialize database with mock data if empty or outdated
 export const initializeDB = (forceReset = false) => {
-  const currentDbVersion = 'v8';
+  const currentDbVersion = 'v9';
   let needsInitialization = forceReset || 
                          !localStorage.getItem(KEYS.COMPANIES) || 
                          localStorage.getItem('bp_db_version') !== currentDbVersion;
@@ -515,6 +664,13 @@ export const initializeDB = (forceReset = false) => {
     localStorage.setItem(KEYS.BANK_RECONCILIATIONS, JSON.stringify(keepOrSeed(KEYS.BANK_RECONCILIATIONS, []).map(normalizeBankReconciliation)));
     localStorage.setItem(KEYS.FIXED_ASSETS, JSON.stringify(keepOrSeed(KEYS.FIXED_ASSETS, []).map(normalizeFixedAsset)));
     localStorage.setItem(KEYS.GAS_INVENTORY_PERIODS, JSON.stringify(keepOrSeed(KEYS.GAS_INVENTORY_PERIODS, INITIAL_GAS_INVENTORY_PERIODS).map(normalizeGasInventoryPeriod)));
+    localStorage.setItem(KEYS.GAS_CYLINDERS, JSON.stringify(keepOrSeed(KEYS.GAS_CYLINDERS, []).map(normalizeGasCylinder)));
+    localStorage.setItem(KEYS.GAS_CYLINDER_MOVEMENTS, JSON.stringify(keepOrSeed(KEYS.GAS_CYLINDER_MOVEMENTS, []).map(normalizeGasCylinderMovement)));
+    localStorage.setItem(KEYS.GAS_DELIVERY_VEHICLES, JSON.stringify(keepOrSeed(KEYS.GAS_DELIVERY_VEHICLES, []).map(normalizeGasDeliveryVehicle)));
+    localStorage.setItem(KEYS.GAS_VEHICLE_INVENTORY, JSON.stringify(keepOrSeed(KEYS.GAS_VEHICLE_INVENTORY, []).map(normalizeGasVehicleInventory)));
+    localStorage.setItem(KEYS.CUSTOMER_CYLINDER_DEPOSITS, JSON.stringify(keepOrSeed(KEYS.CUSTOMER_CYLINDER_DEPOSITS, []).map(normalizeCustomerCylinderDeposit)));
+    localStorage.setItem(KEYS.JOURNAL_ENTRIES, JSON.stringify(keepOrSeed(KEYS.JOURNAL_ENTRIES, []).map(normalizeJournalEntry)));
+    localStorage.setItem(KEYS.JOURNAL_LINES, JSON.stringify(keepOrSeed(KEYS.JOURNAL_LINES, []).map(normalizeJournalLine)));
     localStorage.setItem(KEYS.LOGS, JSON.stringify(keepOrSeed(KEYS.LOGS, INITIAL_LOGS)));
     localStorage.setItem(KEYS.AUDIT_ARCHIVE, JSON.stringify(keepOrSeed(KEYS.AUDIT_ARCHIVE, [])));
     localStorage.setItem(KEYS.RESET_SNAPSHOTS, JSON.stringify(keepOrSeed(KEYS.RESET_SNAPSHOTS, [])));
@@ -585,6 +741,34 @@ export const initializeDB = (forceReset = false) => {
 
   if (!localStorage.getItem(KEYS.FIXED_ASSETS)) {
     localStorage.setItem(KEYS.FIXED_ASSETS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.GAS_CYLINDERS)) {
+    localStorage.setItem(KEYS.GAS_CYLINDERS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.GAS_CYLINDER_MOVEMENTS)) {
+    localStorage.setItem(KEYS.GAS_CYLINDER_MOVEMENTS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.GAS_DELIVERY_VEHICLES)) {
+    localStorage.setItem(KEYS.GAS_DELIVERY_VEHICLES, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.GAS_VEHICLE_INVENTORY)) {
+    localStorage.setItem(KEYS.GAS_VEHICLE_INVENTORY, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.CUSTOMER_CYLINDER_DEPOSITS)) {
+    localStorage.setItem(KEYS.CUSTOMER_CYLINDER_DEPOSITS, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.JOURNAL_ENTRIES)) {
+    localStorage.setItem(KEYS.JOURNAL_ENTRIES, JSON.stringify([]));
+  }
+
+  if (!localStorage.getItem(KEYS.JOURNAL_LINES)) {
+    localStorage.setItem(KEYS.JOURNAL_LINES, JSON.stringify([]));
   }
 
   if (!localStorage.getItem(KEYS.CUSTOMERS)) {
@@ -839,6 +1023,22 @@ export const getFixedAssets = () => read(KEYS.FIXED_ASSETS, []).map(normalizeFix
 export const saveFixedAssets = (data) => write(KEYS.FIXED_ASSETS, data.map(normalizeFixedAsset));
 export const getGasInventoryPeriods = () => read(KEYS.GAS_INVENTORY_PERIODS).map(normalizeGasInventoryPeriod);
 export const saveGasInventoryPeriods = (data) => write(KEYS.GAS_INVENTORY_PERIODS, data.map(normalizeGasInventoryPeriod));
+export const getGasPurchases = () => read(KEYS.GAS_PURCHASES, []).map(normalizeGasPurchase);
+export const saveGasPurchases = (data) => write(KEYS.GAS_PURCHASES, data.map(normalizeGasPurchase));
+export const getGasCylinders = () => read(KEYS.GAS_CYLINDERS, []).map(normalizeGasCylinder);
+export const saveGasCylinders = (data) => write(KEYS.GAS_CYLINDERS, data.map(normalizeGasCylinder));
+export const getGasCylinderMovements = () => read(KEYS.GAS_CYLINDER_MOVEMENTS, []).map(normalizeGasCylinderMovement);
+export const saveGasCylinderMovements = (data) => write(KEYS.GAS_CYLINDER_MOVEMENTS, data.map(normalizeGasCylinderMovement));
+export const getGasDeliveryVehicles = () => read(KEYS.GAS_DELIVERY_VEHICLES, []).map(normalizeGasDeliveryVehicle);
+export const saveGasDeliveryVehicles = (data) => write(KEYS.GAS_DELIVERY_VEHICLES, data.map(normalizeGasDeliveryVehicle));
+export const getGasVehicleInventory = () => read(KEYS.GAS_VEHICLE_INVENTORY, []).map(normalizeGasVehicleInventory);
+export const saveGasVehicleInventory = (data) => write(KEYS.GAS_VEHICLE_INVENTORY, data.map(normalizeGasVehicleInventory));
+export const getCustomerCylinderDeposits = () => read(KEYS.CUSTOMER_CYLINDER_DEPOSITS, []).map(normalizeCustomerCylinderDeposit);
+export const saveCustomerCylinderDeposits = (data) => write(KEYS.CUSTOMER_CYLINDER_DEPOSITS, data.map(normalizeCustomerCylinderDeposit));
+export const getJournalEntries = () => read(KEYS.JOURNAL_ENTRIES, []).map(normalizeJournalEntry);
+export const saveJournalEntries = (data) => write(KEYS.JOURNAL_ENTRIES, data.map(normalizeJournalEntry));
+export const getJournalLines = () => read(KEYS.JOURNAL_LINES, []).map(normalizeJournalLine);
+export const saveJournalLines = (data) => write(KEYS.JOURNAL_LINES, data.map(normalizeJournalLine));
 
 // Logs API
 export const getLogs = () => read(KEYS.LOGS);
@@ -960,6 +1160,14 @@ export const getDatabaseState = () => ({
   bankReconciliations: getBankReconciliations(),
   fixedAssets: getFixedAssets(),
   gasInventoryPeriods: getGasInventoryPeriods(),
+  gasPurchases: getGasPurchases(),
+  gasCylinders: getGasCylinders(),
+  gasCylinderMovements: getGasCylinderMovements(),
+  gasDeliveryVehicles: getGasDeliveryVehicles(),
+  gasVehicleInventory: getGasVehicleInventory(),
+  customerCylinderDeposits: getCustomerCylinderDeposits(),
+  journalEntries: getJournalEntries(),
+  journalLines: getJournalLines(),
   logs: getLogs(),
   auditArchive: getAuditArchive(),
   resetSnapshots: getResetSnapshots(),
@@ -1474,6 +1682,14 @@ export const exportBackup = () => {
     bankReconciliations: getBankReconciliations(),
     fixedAssets: getFixedAssets(),
     gasInventoryPeriods: getGasInventoryPeriods(),
+    gasPurchases: getGasPurchases(),
+    gasCylinders: getGasCylinders(),
+    gasCylinderMovements: getGasCylinderMovements(),
+    gasDeliveryVehicles: getGasDeliveryVehicles(),
+    gasVehicleInventory: getGasVehicleInventory(),
+    customerCylinderDeposits: getCustomerCylinderDeposits(),
+    journalEntries: getJournalEntries(),
+    journalLines: getJournalLines(),
     logs: getLogs(),
     auditArchive: getAuditArchive(),
     resetSnapshots: getResetSnapshots(),
@@ -1518,6 +1734,14 @@ export const importBackup = (jsonString) => {
     write(KEYS.BANK_RECONCILIATIONS, (backup.bankReconciliations || []).map(normalizeBankReconciliation));
     write(KEYS.FIXED_ASSETS, (backup.fixedAssets || []).map(normalizeFixedAsset));
     write(KEYS.GAS_INVENTORY_PERIODS, (backup.gasInventoryPeriods || []).map(normalizeGasInventoryPeriod));
+    write(KEYS.GAS_PURCHASES, (backup.gasPurchases || []).map(normalizeGasPurchase));
+    write(KEYS.GAS_CYLINDERS, (backup.gasCylinders || []).map(normalizeGasCylinder));
+    write(KEYS.GAS_CYLINDER_MOVEMENTS, (backup.gasCylinderMovements || []).map(normalizeGasCylinderMovement));
+    write(KEYS.GAS_DELIVERY_VEHICLES, (backup.gasDeliveryVehicles || []).map(normalizeGasDeliveryVehicle));
+    write(KEYS.GAS_VEHICLE_INVENTORY, (backup.gasVehicleInventory || []).map(normalizeGasVehicleInventory));
+    write(KEYS.CUSTOMER_CYLINDER_DEPOSITS, (backup.customerCylinderDeposits || []).map(normalizeCustomerCylinderDeposit));
+    write(KEYS.JOURNAL_ENTRIES, (backup.journalEntries || []).map(normalizeJournalEntry));
+    write(KEYS.JOURNAL_LINES, (backup.journalLines || []).map(normalizeJournalLine));
     write(KEYS.LOGS, backup.logs || INITIAL_LOGS);
     write(KEYS.AUDIT_ARCHIVE, backup.auditArchive || []);
     write(KEYS.RESET_SNAPSHOTS, backup.resetSnapshots || []);

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink';
+const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
 
 const base64url = (input) => Buffer.from(input).toString('base64url');
 
@@ -89,6 +90,90 @@ const getAccessToken = () => {
     return getOAuthAccessToken();
   }
   return getServiceAccountAccessToken();
+};
+
+const safeFilename = (value) => String(value || 'attachment')
+  .replace(/[^a-zA-Z0-9._-]+/g, '_')
+  .slice(0, 140);
+
+export const uploadPrivateFileToGoogleDrive = async ({ filename, mimeType, buffer, description = '' }) => {
+  if (!isGoogleDriveBackupConfigured()) {
+    throw new Error('Google Drive private storage is not configured.');
+  }
+
+  const accessToken = await getAccessToken();
+  const boundary = `erp_file_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
+  const metadata = {
+    name: safeFilename(filename),
+    parents: [process.env.GOOGLE_DRIVE_ATTACHMENTS_FOLDER_ID || process.env.GOOGLE_DRIVE_FOLDER_ID],
+    mimeType,
+    description: String(description || '').slice(0, 500)
+  };
+  const head = Buffer.from([
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata),
+    `--${boundary}`,
+    `Content-Type: ${mimeType}`,
+    'Content-Transfer-Encoding: binary',
+    '',
+    ''
+  ].join('\r\n'));
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+  const body = Buffer.concat([head, Buffer.from(buffer), tail]);
+
+  const response = await fetch(DRIVE_UPLOAD_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+      'Content-Length': String(body.length)
+    },
+    body
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.id) {
+    throw new Error(data.error?.message || 'Google Drive attachment upload failed.');
+  }
+
+  return {
+    id: data.id,
+    name: data.name || metadata.name,
+    mimeType,
+    size: Buffer.byteLength(buffer),
+    webViewLink: data.webViewLink || ''
+  };
+};
+
+export const downloadPrivateFileFromGoogleDrive = async (fileId) => {
+  if (!isGoogleDriveBackupConfigured()) {
+    throw new Error('Google Drive private storage is not configured.');
+  }
+  const accessToken = await getAccessToken();
+  const metadataResponse = await fetch(
+    `${DRIVE_FILES_URL}/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,trashed`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const metadata = await metadataResponse.json().catch(() => ({}));
+  if (!metadataResponse.ok || metadata.trashed) {
+    throw new Error(metadata.error?.message || 'Attachment was not found.');
+  }
+
+  const contentResponse = await fetch(
+    `${DRIVE_FILES_URL}/${encodeURIComponent(fileId)}?alt=media`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!contentResponse.ok) {
+    const data = await contentResponse.json().catch(() => ({}));
+    throw new Error(data.error?.message || 'Attachment download failed.');
+  }
+
+  return {
+    name: metadata.name || 'attachment',
+    mimeType: metadata.mimeType || 'application/octet-stream',
+    buffer: Buffer.from(await contentResponse.arrayBuffer())
+  };
 };
 
 export const uploadBackupToGoogleDrive = async ({ filename, jsonText }) => {

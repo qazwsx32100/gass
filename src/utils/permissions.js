@@ -1,6 +1,6 @@
 import { USER_ROLES } from '../db/storage';
 
-const ALL_TABS = ['dashboard', 'reports', 'inputs', 'settings', 'firebase'];
+const ALL_TABS = ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'firebase'];
 
 export const SENSITIVE_BOOKKEEPER_TABS = ['dashboard', 'reports'];
 
@@ -8,18 +8,21 @@ export const getAllowedTabsForUser = (userRole, user) => {
   if (userRole === USER_ROLES.ADMIN) return ALL_TABS;
 
   const configuredTabs = user?.allowedTabs || [];
+  const baseTabs = configuredTabs.includes('inputs') && !configuredTabs.includes('cylinders')
+    ? [...configuredTabs, 'cylinders']
+    : configuredTabs;
 
   if (userRole === USER_ROLES.BOOKKEEPER) {
-    return configuredTabs.filter(tab => ['dashboard', 'reports', 'inputs'].includes(tab));
+    return baseTabs.filter(tab => ['dashboard', 'reports', 'inputs', 'cylinders'].includes(tab));
   }
 
   if (userRole === USER_ROLES.READONLY_SHAREHOLDER) {
-    const tabs = configuredTabs.filter(tab => ['dashboard', 'reports', 'settings'].includes(tab));
+    const tabs = baseTabs.filter(tab => ['dashboard', 'reports', 'settings'].includes(tab));
     return tabs.includes('settings') ? tabs : [...tabs, 'settings'];
   }
 
   if (userRole === USER_ROLES.BUSINESS_REVIEWER) {
-    const tabs = configuredTabs.filter(tab => ['dashboard', 'reports', 'inputs', 'settings'].includes(tab));
+    const tabs = baseTabs.filter(tab => ['dashboard', 'reports', 'inputs', 'cylinders', 'settings'].includes(tab));
     return tabs.includes('settings') ? tabs : [...tabs, 'settings'];
   }
 

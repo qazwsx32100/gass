@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { prepareStateForPersistence } from '../src/utils/stateIntegrity.js';
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const PASSWORD_ALGO = 'pbkdf2_sha256_120000';
@@ -213,15 +214,16 @@ export const fetchAppState = async () => {
   return row || { state: null, updated_at: null, updated_by: null };
 };
 
-export const saveAppState = async ({ state, updatedBy, requestIp = null, previousState = null }) => {
+export const saveAppState = async ({ state, updatedBy, requestIp = null, previousState = null, expectedUpdatedAt = null }) => {
   const supabase = getSupabase();
   const previous = previousState || (await fetchAppState()).state || {};
-  const securedState = secureStateForSave(state, previous);
+  const securedState = secureStateForSave(prepareStateForPersistence(state), previous);
   const { data, error } = await supabase.rpc('erp_set_app_state', {
     p_secret: getSyncSecret(),
     p_state: securedState,
     p_updated_by: updatedBy,
-    p_request_ip: requestIp
+    p_request_ip: requestIp,
+    p_expected_updated_at: expectedUpdatedAt || null
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;

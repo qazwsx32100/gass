@@ -1,4 +1,5 @@
 import { fetchAppState, getBearerToken, getClientIp, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
+import { validateGasInventoryState } from '../src/utils/stateIntegrity.js';
 
 const isApprovedDevice = (security, deviceId) => (
   Boolean(deviceId) &&
@@ -38,11 +39,13 @@ const changedRecordKeys = (before = {}, after = {}) => {
 };
 
 const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
-  'paymentMethod',
-  'bankId',
   'paymentStatus',
   'remarks',
   'receiptAttachment',
+  'paidAt',
+  'paidByMethod',
+  'paidBankId',
+  'settlementId',
   'correctionStatus',
   'correctedBy',
   'correctedByName',
@@ -106,12 +109,46 @@ const validateApprovedTransactionIntegrity = (previousState = {}, nextState = {}
   return { ok: true };
 };
 
+const validateSettlementIntegrity = (previousState = {}, nextState = {}) => {
+  const settlements = new Map(
+    (Array.isArray(nextState.bankTransactions) ? nextState.bankTransactions : [])
+      .filter(item => item?.sourceType === 'settlement')
+      .map(item => [item.id, item])
+  );
+
+  for (const [key, transactionType] of [['incomes', 'income'], ['expenses', 'expense']]) {
+    const previousRows = new Map((Array.isArray(previousState[key]) ? previousState[key] : []).map(item => [item.id, item]));
+    for (const nextRow of (Array.isArray(nextState[key]) ? nextState[key] : [])) {
+      const previousRow = previousRows.get(nextRow.id);
+      if (!previousRow || previousRow.paymentStatus === 'paid' || nextRow.paymentStatus !== 'paid') continue;
+      const settlement = settlements.get(nextRow.settlementId);
+      if (!settlement || settlement.sourceId !== nextRow.id || settlement.transactionType !== transactionType) {
+        return { ok: false, error: `Settlement record is required for ${transactionType} ${nextRow.id}.` };
+      }
+      if (Math.abs(Number(settlement.amount || 0) - Number(nextRow.amount || 0)) >= 0.01) {
+        return { ok: false, error: `Settlement amount does not match ${transactionType} ${nextRow.id}.` };
+      }
+    }
+  }
+
+  return { ok: true };
+};
+
+const MAX_STATE_BYTES = 8 * 1024 * 1024;
+
 const allowedWriteKeysByRole = {
   bookkeeper: new Set([
     'incomes',
     'expenses',
     'bankTransactions',
     'bankReconciliations',
+    'gasInventoryPeriods',
+    'gasPurchases',
+    'gasCylinders',
+    'gasCylinderMovements',
+    'gasDeliveryVehicles',
+    'gasVehicleInventory',
+    'customerCylinderDeposits',
     'logs',
     'auditArchive',
     'outboundEmails'
@@ -121,6 +158,13 @@ const allowedWriteKeysByRole = {
     'expenses',
     'bankTransactions',
     'bankReconciliations',
+    'gasInventoryPeriods',
+    'gasPurchases',
+    'gasCylinders',
+    'gasCylinderMovements',
+    'gasDeliveryVehicles',
+    'gasVehicleInventory',
+    'customerCylinderDeposits',
     'shareholderLedger',
     'loans',
     'logs',
@@ -151,6 +195,12 @@ const isWriteRateLimited = (req, session) => {
 export const validateStateWriteScope = (previousState, nextState, sessionUser) => {
   const approvedIntegrity = validateApprovedTransactionIntegrity(previousState, nextState);
   if (!approvedIntegrity.ok) return approvedIntegrity;
+
+  const settlementIntegrity = validateSettlementIntegrity(previousState, nextState);
+  if (!settlementIntegrity.ok) return settlementIntegrity;
+
+  const gasIntegrity = validateGasInventoryState(previousState, nextState);
+  if (!gasIntegrity.ok) return gasIntegrity;
 
   if (sessionUser?.role === 'admin') return { ok: true };
   const allowedKeys = allowedWriteKeysByRole[sessionUser?.role];
@@ -282,6 +332,10 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Invalid app state payload.' });
     }
 
+    if (Buffer.byteLength(JSON.stringify(body.state), 'utf8') > MAX_STATE_BYTES) {
+      return sendJson(res, 413, { error: 'Cloud state is too large. Upload attachments to private storage instead.' });
+    }
+
     const sessionUser = getSessionUser(current.state, session);
     const comparablePreviousState = sanitizeStateForClient(current.state || {}, sessionUser);
     const writeScope = validateStateWriteScope(comparablePreviousState, body.state, sessionUser);
@@ -294,7 +348,8 @@ export default async function handler(req, res) {
       state: body.state,
       updatedBy,
       requestIp: getClientIp(req),
-      previousState: current.state
+      previousState: current.state,
+      expectedUpdatedAt: body.expectedUpdatedAt || null
     });
     const updated = await fetchAppState();
     return sendJson(res, 200, {
@@ -304,6 +359,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('app-state API failed', error);
+    if (error?.code === '40001' || /state conflict/i.test(error?.message || '')) {
+      return sendJson(res, 409, { error: 'Cloud data changed before this save. Refresh before trying again.' });
+    }
     return sendJson(res, 500, { error: 'Cloud sync failed.' });
   }
 }
