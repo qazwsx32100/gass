@@ -229,17 +229,16 @@ export const normalizeGasPurchase = (item = {}) => {
   const scrap10kg = Number(item.scrap10kg) || 0;
   const scrap4kg = Number(item.scrap4kg) || 0;
 
-  // 存氣 (回收空桶中殘留的瓦斯公斤數)
-  const gas50kg = Number(item.gas50kg) || 0;
-  const gas20kg = Number(item.gas20kg) || 0;
-  const gas16kg = Number(item.gas16kg) || 0;
-  const gas10kg = Number(item.gas10kg) || 0;
-  const gas4kg = Number(item.gas4kg) || 0;
+  // 存氣 (回收空桶中殘留的瓦斯總公斤數 - 簡化為單一總數)
+  const totalGasKg = Number(item.totalGasKg) || 
+                     (Number(item.gas50kg) || 0) + 
+                     (Number(item.gas20kg) || 0) + 
+                     (Number(item.gas16kg) || 0) + 
+                     (Number(item.gas10kg) || 0) + 
+                     (Number(item.gas4kg) || 0);
 
   // 總進氣重量 (進實瓶的公斤數)
   const grossKg = qty50kg * 50 + qty20kg * 20 + qty16kg * 16 + qty10kg * 10 + qty4kg * 4;
-  // 存氣總公斤數 (要扣掉，不計費)
-  const totalGasKg = gas50kg + gas20kg + gas16kg + gas10kg + gas4kg;
   // 淨進貨重量 (計費基礎)
   const totalKg = Math.max(0, grossKg - totalGasKg);
 
@@ -264,7 +263,12 @@ export const normalizeGasPurchase = (item = {}) => {
     empty50kg, empty20kg, empty16kg, empty10kg, empty4kg,
     test50kg, test20kg, test16kg, test10kg, test4kg,
     scrap50kg, scrap20kg, scrap16kg, scrap10kg, scrap4kg,
-    gas50kg, gas20kg, gas16kg, gas10kg, gas4kg,
+    // 為相容舊資料庫與 Supabase，總存氣寫入 gas50kg，其他欄位設為 0
+    gas50kg: totalGasKg,
+    gas20kg: 0,
+    gas16kg: 0,
+    gas10kg: 0,
+    gas4kg: 0,
     grossKg,
     totalGasKg,
     totalKg,

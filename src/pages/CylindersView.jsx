@@ -87,6 +87,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     test50kg: '', test20kg: '', test16kg: '', test10kg: '', test4kg: '',
     scrap50kg: '', scrap20kg: '', scrap16kg: '', scrap10kg: '', scrap4kg: '',
     gas50kg: '', gas20kg: '', gas16kg: '', gas10kg: '', gas4kg: '',
+    totalGasKg: '',
     remarks: '',
     yearMonth: new Date().toISOString().substring(0, 7),
     openingKg: '',
@@ -242,12 +243,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   }, [formData.qty50kg, formData.qty20kg, formData.qty16kg, formData.qty10kg, formData.qty4kg]);
 
   const purchaseResidualGasKg = useMemo(() => {
-    return (Number(formData.gas50kg) || 0)
-         + (Number(formData.gas20kg) || 0)
-         + (Number(formData.gas16kg) || 0)
-         + (Number(formData.gas10kg) || 0)
-         + (Number(formData.gas4kg)  || 0);
-  }, [formData.gas50kg, formData.gas20kg, formData.gas16kg, formData.gas10kg, formData.gas4kg]);
+    return Number(formData.totalGasKg) || 0;
+  }, [formData.totalGasKg]);
 
   // Net kg billed = gross - residual gas (存氣)
   const purchaseTotalKg = useMemo(() => Math.max(0, purchaseGrossKg - purchaseResidualGasKg),
@@ -359,6 +356,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       test50kg: '', test20kg: '', test16kg: '', test10kg: '', test4kg: '',
       scrap50kg: '', scrap20kg: '', scrap16kg: '', scrap10kg: '', scrap4kg: '',
       gas50kg: '', gas20kg: '', gas16kg: '', gas10kg: '', gas4kg: '',
+      totalGasKg: '',
       remarks: '',
       yearMonth: new Date().toISOString().substring(0, 7),
       openingKg: '',
@@ -422,6 +420,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       gas16kg: item.gas16kg?.toString() || '',
       gas10kg: item.gas10kg?.toString() || '',
       gas4kg: item.gas4kg?.toString() || '',
+      totalGasKg: (item.totalGasKg !== undefined ? item.totalGasKg : ((Number(item.gas50kg)||0)+(Number(item.gas20kg)||0)+(Number(item.gas16kg)||0)+(Number(item.gas10kg)||0)+(Number(item.gas4kg)||0)))?.toString() || '',
       openingKg: item.openingKg?.toString() || '',
       openingCost: item.openingCost?.toString() || '',
       purchaseKg: item.purchaseKg?.toString() || '',
@@ -478,11 +477,12 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         scrap16kg: parseInt(formData.scrap16kg, 10) || 0,
         scrap10kg: parseInt(formData.scrap10kg, 10) || 0,
         scrap4kg: parseInt(formData.scrap4kg, 10) || 0,
-        gas50kg: parseFloat(formData.gas50kg) || 0,
-        gas20kg: parseFloat(formData.gas20kg) || 0,
-        gas16kg: parseFloat(formData.gas16kg) || 0,
-        gas10kg: parseFloat(formData.gas10kg) || 0,
-        gas4kg: parseFloat(formData.gas4kg) || 0,
+        gas50kg: parseFloat(formData.totalGasKg) || 0,
+        gas20kg: 0,
+        gas16kg: 0,
+        gas10kg: 0,
+        gas4kg: 0,
+        totalGasKg: parseFloat(formData.totalGasKg) || 0,
         grossKg: purchaseGrossKg,
         totalGasKg: purchaseResidualGasKg,
         totalKg: purchaseTotalKg,
@@ -1198,7 +1198,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
 
       {/* CRUD Add/Edit Modal */}
       {isModalOpen && (
-        <div className="modal-backdrop">
+        <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '850px', width: '95%' }}>
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
@@ -1307,53 +1307,46 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     </div>
                     {/* 存氣 */}
                     <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--accent-gold)', borderLeftWidth: '4px' }}>
-                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-gold)' }}>💡 各規格空桶存氣量 (kg)（回收空桶內尚有殘氣，需從進氣費用中扣除）</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-                        {[['50kg', 'gas50kg'], ['20kg', 'gas20kg'], ['16kg', 'gas16kg'], ['10kg', 'gas10kg'], ['4kg', 'gas4kg']].map(([label, key]) => (
-                          <div className="form-group" style={{ margin: 0 }} key={key}>
-                            <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>{label}</label>
-                            <input type="number" min="0" step="0.1" className="form-control" style={{ textAlign: 'center' }} value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} />
-                          </div>
-                        ))}
-                      </div>
-                      {purchaseResidualGasKg > 0 && (
-                        <div style={{ marginTop: '8px', fontSize: '0.82rem', color: 'var(--accent-gold)' }}>
-                          ⚡ 存氣合計：{purchaseResidualGasKg} kg，進氣費用自動扣除此部分
+                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', color: 'var(--accent-gold)' }}>💡 回收空桶存氣總量 (kg)（回收空桶內尚有殘氣，將自進氣量中扣除）</label>
+                      <div className="form-group" style={{ margin: 0, maxWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="number" min="0" step="0.1" className="form-control" style={{ textAlign: 'left' }} placeholder="請輸入存氣總公斤數" value={formData.totalGasKg} onChange={e => setFormData({ ...formData, totalGasKg: e.target.value })} />
+                          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>kg</span>
                         </div>
-                      )}
+                      </div>
                     </div>
                     {/* Summary */}
-                    <div style={{ background: 'var(--bg-secondary)', padding: '14px 16px', borderRadius: '10px', marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-                      <div>
+                    <div style={{ background: 'var(--bg-secondary)', padding: '14px 16px', borderRadius: '10px', marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px 24px' }}>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>收桶合計（送出桶）</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{purchaseTotalCollected} 桶</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>= 空桶 + 檢驗桶</div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>進桶（回來桶）</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-green)' }}>{purchaseTotalReceived} 桶</div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>尚未回來</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: purchaseTotalCollected - purchaseTotalReceived > 0 ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>
                           {purchaseTotalCollected - purchaseTotalReceived} 桶
                         </div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>報廢桶合計</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: purchaseTotalScrapped > 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
                           {purchaseTotalScrapped} 桶
                         </div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>毛進氣 (kg)</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{purchaseGrossKg.toLocaleString()} kg</div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>扣除存氣後淨量</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-blue)' }}>{purchaseTotalKg.toLocaleString()} kg</div>
                       </div>
-                      <div>
+                      <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>進氣金額</div>
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-blue)' }}>{formatCurrency(purchaseTotalAmount)}</div>
                       </div>
