@@ -2623,13 +2623,76 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
             <form onSubmit={handleSave}>
               <div className="modal-body">
+                {/* ===== 每日營業額 獨立表單 (完全隔離，避免其他 required 欄位干擾) ===== */}
+                {activeSubTab === 'dailySummary' ? (() => {
+                  const paid = Number(formData.paidAmount) || 0;
+                  const ar = Number(formData.arAmount) || 0;
+                  const unpaid = Number(formData.unpaidAmount) || 0;
+                  const computedSales = paid + ar + unpaid;
+                  return (
+                    <>
+                      <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '8px 12px', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-blue)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        建立人：<strong>{operatorName}</strong>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">記帳日期</label>
+                          <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">當日營業額 (系統自動加總：已收＋應收＋欠款)</label>
+                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', fontSize: '1.1rem' }} value={formatCurrency(computedSales)} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">已收金額 (現收)</label>
+                          <input type="number" min="0" required placeholder="請輸入當日已收款" className="form-control" value={formData.paidAmount} onChange={e => setFormData({ ...formData, paidAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">應收帳款 (月結簽單)</label>
+                          <input type="number" min="0" placeholder="請輸入當日應收帳款" className="form-control" value={formData.arAmount} onChange={e => setFormData({ ...formData, arAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">欠款金額 (現結未付)</label>
+                          <input type="number" min="0" placeholder="請輸入當日欠款金額" className="form-control" value={formData.unpaidAmount} onChange={e => setFormData({ ...formData, unpaidAmount: e.target.value })} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">還款金額 (收回舊欠)</label>
+                          <input type="number" min="0" placeholder="請輸入收回舊欠金額" className="form-control" value={formData.repaymentAmount} onChange={e => setFormData({ ...formData, repaymentAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">合計重量 (kg)</label>
+                          <input type="number" min="0" placeholder="請輸入當日總公斤數" className="form-control" value={formData.totalWeight} onChange={e => setFormData({ ...formData, totalWeight: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">合計桶數</label>
+                          <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">爐具收入</label>
+                          <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">維修收入</label>
+                          <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })() : (
+                  <>
                 {/* Operator tag for visual reference in modal */}
                 <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '8px 12px', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-blue)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   建立人：<strong>{operatorName}</strong>
                 </div>
 
                 {/* 1. Date Field */}
-                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && activeSubTab !== 'dailySummary' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
+                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">記帳日期</label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
@@ -2902,65 +2965,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </div>
                   </>
                 )}
-
-                {activeSubTab === 'dailySummary' && (() => {
-                  const paid = Number(formData.paidAmount) || 0;
-                  const ar = Number(formData.arAmount) || 0;
-                  const unpaid = Number(formData.unpaidAmount) || 0;
-                  const computedSales = paid + ar + unpaid;
-                  return (
-                    <>
-                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-                        <div className="form-group">
-                          <label className="form-label">記帳日期</label>
-                          <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">當日營業額 (系統自動加總)</label>
-                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold' }} value={formatCurrency(computedSales)} />
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
-                        <div className="form-group">
-                          <label className="form-label">已收金額 (現收)</label>
-                          <input type="number" min="0" required placeholder="請輸入當日已收款" className="form-control" value={formData.paidAmount} onChange={e => setFormData({ ...formData, paidAmount: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">應收帳款 (月結簽單)</label>
-                          <input type="number" min="0" placeholder="請輸入當日應收帳款" className="form-control" value={formData.arAmount} onChange={e => setFormData({ ...formData, arAmount: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">欠款金額 (現結未付)</label>
-                          <input type="number" min="0" placeholder="請輸入當日欠款金額" className="form-control" value={formData.unpaidAmount} onChange={e => setFormData({ ...formData, unpaidAmount: e.target.value })} />
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
-                        <div className="form-group">
-                          <label className="form-label">還款金額 (收回舊欠)</label>
-                          <input type="number" min="0" placeholder="請輸入收回舊欠金額" className="form-control" value={formData.repaymentAmount} onChange={e => setFormData({ ...formData, repaymentAmount: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">合計重量 (kg)</label>
-                          <input type="number" min="0" placeholder="請輸入當日總公斤數" className="form-control" value={formData.totalWeight} onChange={e => setFormData({ ...formData, totalWeight: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">合計桶數</label>
-                          <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
-                        </div>
-                      </div>
-                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
-                        <div className="form-group">
-                          <label className="form-label">爐具收入</label>
-                          <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                          <label className="form-label">維修收入</label>
-                          <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
 
                 {/* 2. Amount Field */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
@@ -3440,6 +3444,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <label className="form-label">備註 / 補充說明</label>
                   <input type="text" placeholder="可輸入備註" className="form-control" value={formData.remarks} onChange={e => setFormData({ ...formData, remarks: e.target.value })} />
                 </div>
+                  </>
+                )}
               </div>
 
               <div className="modal-footer">
