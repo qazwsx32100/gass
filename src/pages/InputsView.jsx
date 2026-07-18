@@ -821,11 +821,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const currentIncomes = getIncomes();
       const currentBankTx = getBankTransactions();
 
+      const originalDate = editingItem ? editingItem.date : targetDate;
+
       const filteredIncomes = currentIncomes.filter(item => 
-        !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+        !(item.companyId === companyId && item.date === originalDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
       const filteredBankTx = currentBankTx.filter(item =>
-        !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+        !(item.companyId === companyId && item.date === originalDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
 
       const createGenIncome = (amount, accountCode, remarks, qty = 0, kg = 0, status = 'paid', method = 'cash') => {

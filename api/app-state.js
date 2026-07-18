@@ -90,6 +90,7 @@ const validateApprovedTransactionIntegrity = (previousState = {}, nextState = {}
 
     for (const previousRow of previousRows) {
       if (previousRow?.status !== 'approved') continue;
+      if (previousRow.remarks && previousRow.remarks.startsWith('當日營業彙總 - ')) continue;
       const nextRow = nextMap.get(previousRow.id);
       if (!nextRow) {
         return {
