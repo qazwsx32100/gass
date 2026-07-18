@@ -2637,49 +2637,49 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
                         <div className="form-group">
-                          <label className="form-label">記帳日期</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>記帳日期</label>
                           <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">當日營業額 (系統自動加總：已收＋應收＋欠款)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>當日營業額 (自動加總：已收＋應收＋欠款)</label>
                           <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', fontSize: '1.1rem' }} value={formatCurrency(computedSales)} />
                         </div>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
                         <div className="form-group">
-                          <label className="form-label">已收金額 (現收)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>已收金額 (現收)</label>
                           <input type="number" min="0" required placeholder="請輸入當日已收款" className="form-control" value={formData.paidAmount} onChange={e => setFormData({ ...formData, paidAmount: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">應收帳款 (月結簽單)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>應收帳款 (月結簽單)</label>
                           <input type="number" min="0" placeholder="請輸入當日應收帳款" className="form-control" value={formData.arAmount} onChange={e => setFormData({ ...formData, arAmount: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">欠款金額 (現結未付)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>欠款金額 (現結未付)</label>
                           <input type="number" min="0" placeholder="請輸入當日欠款金額" className="form-control" value={formData.unpaidAmount} onChange={e => setFormData({ ...formData, unpaidAmount: e.target.value })} />
                         </div>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
                         <div className="form-group">
-                          <label className="form-label">還款金額 (收回舊欠)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>還款金額 (收回舊欠)</label>
                           <input type="number" min="0" placeholder="請輸入收回舊欠金額" className="form-control" value={formData.repaymentAmount} onChange={e => setFormData({ ...formData, repaymentAmount: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">合計重量 (kg)</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>合計重量 (kg)</label>
                           <input type="number" min="0" placeholder="請輸入當日總公斤數" className="form-control" value={formData.totalWeight} onChange={e => setFormData({ ...formData, totalWeight: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">合計桶數</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>合計桶數</label>
                           <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
                         </div>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
                         <div className="form-group">
-                          <label className="form-label">爐具收入</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>爐具收入</label>
                           <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label">維修收入</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>維修收入</label>
                           <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
                         </div>
                       </div>
