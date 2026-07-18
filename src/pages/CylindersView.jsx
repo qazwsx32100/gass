@@ -72,6 +72,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const [activeSubTab, setActiveSubTab] = useState('gasPurchases');
   const [editingItem, setEditingItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingDetailItem, setViewingDetailItem] = useState(null);
+  const [showStockPanel, setShowStockPanel] = useState(false);
 
   // Filters
   const [searchText, setSearchText] = useState('');
@@ -135,6 +137,48 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const customerCylinderDeposits = useMemo(() => getCustomerCylinderDeposits().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
   const gasCylinderMovements = useMemo(() => getGasCylinderMovements().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
   const customers = useMemo(() => getCustomers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+
+  const cylinderStockSummary = useMemo(() => {
+    const summary = {
+      warehouseFull: { '50': 0, '20': 0, '16': 0, '10': 0, '4': 0, total: 0 },
+      warehouseEmpty: { '50': 0, '20': 0, '16': 0, '10': 0, '4': 0, total: 0 },
+      locations: {
+        warehouse: 0,
+        vehicle: 0,
+        customer: 0,
+        filling_station: 0,
+        maintenance_vendor: 0,
+        total: 0
+      }
+    };
+
+    gasCylinders.forEach(cyl => {
+      const spec = String(cyl.specKg || '20');
+      const status = cyl.status || 'empty';
+      const loc = cyl.locationType || 'warehouse';
+
+      if (summary.locations[loc] !== undefined) {
+        summary.locations[loc]++;
+        summary.locations.total++;
+      }
+
+      if (loc === 'warehouse') {
+        if (status === 'full') {
+          if (summary.warehouseFull[spec] !== undefined) {
+            summary.warehouseFull[spec]++;
+          }
+          summary.warehouseFull.total++;
+        } else if (status === 'empty') {
+          if (summary.warehouseEmpty[spec] !== undefined) {
+            summary.warehouseEmpty[spec]++;
+          }
+          summary.warehouseEmpty.total++;
+        }
+      }
+    });
+
+    return summary;
+  }, [gasCylinders]);
 
   // Helpers
   const getCylinderLabel = (id) => {
@@ -912,6 +956,92 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         )}
       </div>
 
+      {/* 鋼瓶庫存概要 */}
+      {activeSubTab === 'gasPurchases' && (
+        <div style={{ marginBottom: '20px' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={() => setShowStockPanel(!showStockPanel)}
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              background: 'var(--bg-card)', 
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '0.88rem'
+            }}
+          >
+            <span>📊</span> {showStockPanel ? '隱藏目前倉庫鋼瓶庫存' : '查看目前倉庫鋼瓶庫存'} {showStockPanel ? '▲' : '▼'}
+          </button>
+
+          {showStockPanel && (
+            <div style={{ 
+              background: 'var(--bg-secondary)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '12px', 
+              padding: '16px', 
+              marginTop: '12px',
+              animation: 'fadeIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {/* 倉庫實瓶庫存 */}
+                <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', borderLeft: '4px solid var(--accent-green)' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--accent-green)' }}>🟢 倉庫實瓶存量</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {['50', '20', '16', '10', '4'].map(spec => (
+                      <div key={spec} style={{ background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '6px', textAlign: 'center', flex: '1 1 50px' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{spec}kg</div>
+                        <div style={{ fontWeight: '700', fontSize: '1rem' }}>{cylinderStockSummary.warehouseFull[spec] || 0} 桶</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
+                    總計：<strong>{cylinderStockSummary.warehouseFull.total} 桶</strong>
+                  </div>
+                </div>
+
+                {/* 倉庫空瓶庫存 */}
+                <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', borderLeft: '4px solid var(--accent-gold)' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--accent-gold)' }}>🟡 倉庫空瓶存量</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {['50', '20', '16', '10', '4'].map(spec => (
+                      <div key={spec} style={{ background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '6px', textAlign: 'center', flex: '1 1 50px' }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{spec}kg</div>
+                        <div style={{ fontWeight: '700', fontSize: '1rem' }}>{cylinderStockSummary.warehouseEmpty[spec] || 0} 桶</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
+                    總計：<strong>{cylinderStockSummary.warehouseEmpty.total} 桶</strong>
+                  </div>
+                </div>
+
+                {/* 鋼瓶分佈位置 */}
+                <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', borderLeft: '4px solid var(--accent-blue)' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--accent-blue)' }}>📍 鋼瓶分佈位置 (含所有狀態)</div>
+                  <div style={{ gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem', display: 'grid' }}>
+                    <div>倉庫：<strong>{cylinderStockSummary.locations.warehouse}</strong> 桶</div>
+                    <div>配送車：<strong>{cylinderStockSummary.locations.vehicle}</strong> 桶</div>
+                    <div>客戶端：<strong>{cylinderStockSummary.locations.customer}</strong> 桶</div>
+                    <div>分裝廠：<strong>{cylinderStockSummary.locations.filling_station}</strong> 桶</div>
+                    <div>維修中：<strong>{cylinderStockSummary.locations.maintenance_vendor}</strong> 桶</div>
+                    <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '4px', gridColumn: 'span 2' }}>
+                      公司總資產鋼瓶數：<strong>{cylinderStockSummary.locations.total} 桶</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Data Table */}
       <div className="table-responsive">
         <table className="data-table">
@@ -1021,7 +1151,27 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     const gasDeduct   = (item.gas50kg||0)+(item.gas20kg||0)+(item.gas16kg||0)+(item.gas10kg||0)+(item.gas4kg||0);
                     return (
                       <>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>
+                          <button
+                            type="button"
+                            className="btn-link"
+                            onClick={() => setViewingDetailItem(item)}
+                            title="點選查看進貨明細"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--accent-blue)',
+                              textDecoration: 'underline',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontFamily: 'inherit',
+                              fontWeight: 'bold',
+                              textAlign: 'left'
+                            }}
+                          >
+                            {item.date}
+                          </button>
+                        </td>
                         <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(5,178,165,0.05)', textAlign: 'center' }}>
                           <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{totalIn}</span>
                           <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
@@ -1652,6 +1802,97 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                 <button type="submit" className="btn btn-primary">儲存變更</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Daily Purchase Detail Modal */}
+      {viewingDetailItem && (
+        <div className="modal-overlay" onClick={() => setViewingDetailItem(null)}>
+          <div className="modal-content" style={{ maxWidth: '650px', width: '90%' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
+                📅 瓦斯進貨明細 ({viewingDetailItem.date})
+              </h3>
+              <button type="button" className="modal-close" onClick={() => setViewingDetailItem(null)}>&times;</button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                {/* Left: Inbound/Outbound counts */}
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', borderBottom: '2px solid var(--accent-green)', paddingBottom: '4px', fontSize: '0.95rem' }}>🟢 回來實瓶 (進桶)</h4>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    <li>50kg: <strong>{viewingDetailItem.qty50kg || 0}</strong> 桶</li>
+                    <li>20kg: <strong>{viewingDetailItem.qty20kg || 0}</strong> 桶</li>
+                    <li>16kg: <strong>{viewingDetailItem.qty16kg || 0}</strong> 桶</li>
+                    <li>10kg: <strong>{viewingDetailItem.qty10kg || 0}</strong> 桶</li>
+                    <li>4kg: <strong>{viewingDetailItem.qty4kg || 0}</strong> 桶</li>
+                    <li style={{ borderTop: '1px dashed var(--border-color)', marginTop: '4px', paddingTop: '4px', listStyle: 'none', marginLeft: '-20px' }}>
+                      ⚖️ 估算毛重：<strong>{Number(viewingDetailItem.grossKg || 0).toLocaleString()} kg</strong>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '4px', fontSize: '0.95rem' }}>🟡 回收空桶 (送出)</h4>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    <li>50kg: <strong>{viewingDetailItem.empty50kg || 0}</strong> 桶</li>
+                    <li>20kg: <strong>{viewingDetailItem.empty20kg || 0}</strong> 桶</li>
+                    <li>16kg: <strong>{viewingDetailItem.empty16kg || 0}</strong> 桶</li>
+                    <li>10kg: <strong>{viewingDetailItem.empty10kg || 0}</strong> 桶</li>
+                    <li>4kg: <strong>{viewingDetailItem.empty4kg || 0}</strong> 桶</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '4px', fontSize: '0.95rem' }}>🧪 送檢鋼瓶</h4>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    <li>50kg: <strong>{viewingDetailItem.test50kg || 0}</strong> 桶</li>
+                    <li>20kg: <strong>{viewingDetailItem.test20kg || 0}</strong> 桶</li>
+                    <li>16kg: <strong>{viewingDetailItem.test16kg || 0}</strong> 桶</li>
+                    <li>10kg: <strong>{viewingDetailItem.test10kg || 0}</strong> 桶</li>
+                    <li>4kg: <strong>{viewingDetailItem.test4kg || 0}</strong> 桶</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', borderBottom: '2px solid var(--accent-red)', paddingBottom: '4px', fontSize: '0.95rem' }}>🗑️ 報廢鋼瓶</h4>
+                  <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.9rem', lineHeight: '1.6' }}>
+                    <li>50kg: <strong>{viewingDetailItem.scrap50kg || 0}</strong> 桶</li>
+                    <li>20kg: <strong>{viewingDetailItem.scrap20kg || 0}</strong> 桶</li>
+                    <li>16kg: <strong>{viewingDetailItem.scrap16kg || 0}</strong> 桶</li>
+                    <li>10kg: <strong>{viewingDetailItem.scrap10kg || 0}</strong> 桶</li>
+                    <li>4kg: <strong>{viewingDetailItem.scrap4kg || 0}</strong> 桶</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Summary and Financials */}
+              <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '10px', fontSize: '0.9rem', lineHeight: '1.7', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>📊 進銷對帳與金額彙總</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+                  <div>收桶合計（空桶+檢驗）：<strong>{viewingDetailItem.totalCollected || 0}</strong> 桶</div>
+                  <div>進桶（回來實瓶）：<strong>{viewingDetailItem.totalReceived || 0}</strong> 桶</div>
+                  <div>留在工廠（尚未回來）：<strong style={{ color: viewingDetailItem.cylinderBalance > 0 ? 'var(--accent-gold)' : 'inherit' }}>{viewingDetailItem.cylinderBalance || 0}</strong> 桶</div>
+                  <div>報廢桶合計：<strong style={{ color: viewingDetailItem.totalScrapped > 0 ? 'var(--accent-red)' : 'inherit' }}>{viewingDetailItem.totalScrapped || 0}</strong> 桶</div>
+                  <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }}></div>
+                  <div>扣抵存氣總量：<strong>{viewingDetailItem.totalGasKg || 0} kg</strong></div>
+                  <div>扣除後進氣淨量：<strong>{Number(viewingDetailItem.totalKg || 0).toLocaleString()} kg</strong></div>
+                  <div>當月單價：<strong>${viewingDetailItem.monthlyGasPrice || 0} / kg</strong></div>
+                  <div style={{ color: 'var(--accent-blue)', fontWeight: 'bold' }}>進貨費用金額：{formatCurrency(viewingDetailItem.amount)}</div>
+                </div>
+                {viewingDetailItem.remarks && (
+                  <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    📝 <strong>備註</strong>：{viewingDetailItem.remarks}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setViewingDetailItem(null)}>關閉視窗</button>
+            </div>
           </div>
         </div>
       )}
