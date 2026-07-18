@@ -201,7 +201,8 @@ export const normalizeGasInventoryPeriod = (item) => {
   };
 };
 
-export const normalizeGasPurchase = (item = {}) => {
+export const normalizeGasPurchase = (rawItem) => {
+  const item = rawItem || {};
   const qty50kg = Number(item.qty50kg) || 0;
   const qty20kg = Number(item.qty20kg) || 0;
   const qty16kg = Number(item.qty16kg) || 0;

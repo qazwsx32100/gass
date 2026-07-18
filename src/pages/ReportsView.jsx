@@ -5,6 +5,8 @@ import { canExportReports, canViewShareholderReports } from '../utils/permission
 import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl } from '../db/attachmentService';
 
+const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
+
 export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole }) {
   const [reportType, setReportType] = useState('pnl'); // pnl, balance, gas, investor, dividend
   const [reserveRatio, setReserveRatio] = useState(0.1); // 10% reserve by default

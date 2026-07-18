@@ -845,11 +845,12 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
 };
 
 export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
+  const targetYearMonth = toYearMonth(dateStr);
   const periods = getGasInventoryPeriods()
-    .filter(item => item.companyId === companyId && item.yearMonth <= toYearMonth(dateStr))
+    .filter(item => item.companyId === companyId && item.yearMonth && typeof item.yearMonth === 'string' && targetYearMonth && item.yearMonth <= targetYearMonth)
     .map(item => getGasInventoryForMonth(companyId, item.yearMonth))
-    .sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
-  return periods[0] || getGasInventoryForMonth(companyId, toYearMonth(dateStr));
+    .sort((a, b) => (b.yearMonth || '').localeCompare(a.yearMonth || ''));
+  return periods[0] || getGasInventoryForMonth(companyId, targetYearMonth);
 };
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
@@ -881,7 +882,7 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
       grossProfit: row.revenue - row.cogs,
       grossMargin: row.revenue > 0 ? ((row.revenue - row.cogs) / row.revenue) * 100 : 0
     }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   return {
     dailyRows,
