@@ -318,6 +318,12 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     return (Number(formData.scrap50kg)||0)+(Number(formData.scrap20kg)||0)+(Number(formData.scrap16kg)||0)+(Number(formData.scrap10kg)||0)+(Number(formData.scrap4kg)||0);
   }, [formData.scrap50kg, formData.scrap20kg, formData.scrap16kg, formData.scrap10kg, formData.scrap4kg]);
 
+  const purchaseBal50 = useMemo(() => ((Number(formData.empty50kg)||0)+(Number(formData.test50kg)||0)) - (Number(formData.qty50kg)||0), [formData.empty50kg, formData.test50kg, formData.qty50kg]);
+  const purchaseBal20 = useMemo(() => ((Number(formData.empty20kg)||0)+(Number(formData.test20kg)||0)) - (Number(formData.qty20kg)||0), [formData.empty20kg, formData.test20kg, formData.qty20kg]);
+  const purchaseBal16 = useMemo(() => ((Number(formData.empty16kg)||0)+(Number(formData.test16kg)||0)) - (Number(formData.qty16kg)||0), [formData.empty16kg, formData.test16kg, formData.qty16kg]);
+  const purchaseBal10 = useMemo(() => ((Number(formData.empty10kg)||0)+(Number(formData.test10kg)||0)) - (Number(formData.qty10kg)||0), [formData.empty10kg, formData.test10kg, formData.qty10kg]);
+  const purchaseBal4  = useMemo(() => ((Number(formData.empty4kg)||0) +(Number(formData.test4kg)||0))  - (Number(formData.qty4kg)||0),  [formData.empty4kg,  formData.test4kg,  formData.qty4kg]);
+
   // Computed fields during Monthly Period Config entry
   const monthlySumPurchaseKg = useMemo(() => {
     return gasPurchases
@@ -1056,6 +1062,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                 <th style={{ background: 'rgba(248,113,113,0.1)' }}>報廢桶</th>
                 <th style={{ background: 'rgba(251,191,36,0.1)' }}>收桶合計</th>
                 <th style={{ background: 'rgba(251,191,36,0.1)' }}>尚未回來</th>
+                <th>進貨量 (kg)</th>
                 <th>淨進貨 (kg)</th>
                 <th>存氣扣抵 (kg)</th>
                 <th>當月單價</th>
@@ -1149,6 +1156,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     const collected   = totalEmpty + totalTest;
                     const balance     = collected - totalIn;
                     const gasDeduct   = (item.gas50kg||0)+(item.gas20kg||0)+(item.gas16kg||0)+(item.gas10kg||0)+(item.gas4kg||0);
+                    const bal50 = ((item.empty50kg||0)+(item.test50kg||0)) - (item.qty50kg||0);
+                    const bal20 = ((item.empty20kg||0)+(item.test20kg||0)) - (item.qty20kg||0);
+                    const bal16 = ((item.empty16kg||0)+(item.test16kg||0)) - (item.qty16kg||0);
+                    const bal10 = ((item.empty10kg||0)+(item.test10kg||0)) - (item.qty10kg||0);
+                    const bal4  = ((item.empty4kg||0)+(item.test4kg||0)) - (item.qty4kg||0);
                     return (
                       <>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>
@@ -1197,8 +1209,14 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                           {collected||'-'}
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', background: 'rgba(251,191,36,0.07)', textAlign: 'center', color: balance>0?'var(--accent-gold)':balance<0?'var(--accent-red)':'var(--text-secondary)' }}>
-                          {balance !== 0 ? balance : '-'}
+                          <span style={{ fontWeight: 700 }}>{balance !== 0 ? balance : '-'}</span>
+                          {balance !== 0 && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                              {[bal50, bal20, bal16, bal10, bal4].map((v,i)=>v !== 0?`${[50,20,16,10,4][i]}×${v}`:null).filter(Boolean).join(' ')}
+                            </div>
+                          )}
                         </td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{(item.grossKg||0).toLocaleString()} kg</td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{(item.totalKg||0).toLocaleString()} kg</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                           {gasDeduct > 0 ? `${gasDeduct} kg` : '-'}
@@ -1481,6 +1499,17 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                         <div style={{ fontWeight: 700, fontSize: '1.1rem', color: purchaseTotalCollected - purchaseTotalReceived > 0 ? 'var(--accent-gold)' : 'var(--text-secondary)' }}>
                           {purchaseTotalCollected - purchaseTotalReceived} 桶
                         </div>
+                        {purchaseTotalCollected - purchaseTotalReceived !== 0 && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {[
+                              [50, purchaseBal50],
+                              [20, purchaseBal20],
+                              [16, purchaseBal16],
+                              [10, purchaseBal10],
+                              [4, purchaseBal4]
+                            ].map(([size, val]) => val !== 0 ? `${size}kg×${val}` : null).filter(Boolean).join(' ')}
+                          </div>
+                        )}
                       </div>
                       <div style={{ flex: '1 1 120px', minWidth: '120px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>報廢桶合計</div>
@@ -1875,7 +1904,23 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
                   <div>收桶合計（空桶+檢驗）：<strong>{viewingDetailItem.totalCollected || 0}</strong> 桶</div>
                   <div>進桶（回來實瓶）：<strong>{viewingDetailItem.totalReceived || 0}</strong> 桶</div>
-                  <div>留在工廠（尚未回來）：<strong style={{ color: viewingDetailItem.cylinderBalance > 0 ? 'var(--accent-gold)' : 'inherit' }}>{viewingDetailItem.cylinderBalance || 0}</strong> 桶</div>
+                  <div>
+                    留在工廠（尚未回來）：
+                    <strong style={{ color: viewingDetailItem.cylinderBalance > 0 ? 'var(--accent-gold)' : 'inherit' }}>
+                      {viewingDetailItem.cylinderBalance || 0}
+                    </strong> 桶
+                    {viewingDetailItem.cylinderBalance !== 0 && (
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginLeft: '6px' }}>
+                        ({[
+                          [50, ((viewingDetailItem.empty50kg||0)+(viewingDetailItem.test50kg||0)) - (viewingDetailItem.qty50kg||0)],
+                          [20, ((viewingDetailItem.empty20kg||0)+(viewingDetailItem.test20kg||0)) - (viewingDetailItem.qty20kg||0)],
+                          [16, ((viewingDetailItem.empty16kg||0)+(viewingDetailItem.test16kg||0)) - (viewingDetailItem.qty16kg||0)],
+                          [10, ((viewingDetailItem.empty10kg||0)+(viewingDetailItem.test10kg||0)) - (viewingDetailItem.qty10kg||0)],
+                          [4,  ((viewingDetailItem.empty4kg||0) +(viewingDetailItem.test4kg||0))  - (viewingDetailItem.qty4kg||0)]
+                        ].map(([size, val]) => val !== 0 ? `${size}kg×${val}` : null).filter(Boolean).join(' ')})
+                      </span>
+                    )}
+                  </div>
                   <div>報廢桶合計：<strong style={{ color: viewingDetailItem.totalScrapped > 0 ? 'var(--accent-red)' : 'inherit' }}>{viewingDetailItem.totalScrapped || 0}</strong> 桶</div>
                   <div style={{ gridColumn: 'span 2', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }}></div>
                   <div>扣抵存氣總量：<strong>{viewingDetailItem.totalGasKg || 0} kg</strong></div>
