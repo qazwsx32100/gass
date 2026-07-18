@@ -814,16 +814,18 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const handleSave = (e) => {
     e.preventDefault();
     if (activeSubTab === 'dailySummary') {
-      const db = loadDatabase();
       const companyId = currentCompanyId || 'COMP001';
       const targetDate = formData.date;
 
       if (blockIfPeriodLocked(targetDate, editingItem ? '修改資料' : '新增資料')) return;
 
-      db.incomes = (db.incomes || []).filter(item => 
+      const currentIncomes = getIncomes();
+      const currentBankTx = getBankTransactions();
+
+      const filteredIncomes = currentIncomes.filter(item => 
         !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
-      db.bankTransactions = (db.bankTransactions || []).filter(item =>
+      const filteredBankTx = currentBankTx.filter(item =>
         !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
 
@@ -857,11 +859,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         createGenIncome(formData.repairIncome, '4102', '當日營業彙總 - 維修收入', 0, 0, 'paid', 'cash')
       ].filter(Boolean);
 
-      db.incomes.push(...newIncomes);
+      filteredIncomes.push(...newIncomes);
 
       const repaymentVal = Number(formData.repaymentAmount) || 0;
       if (repaymentVal > 0) {
-        const defaultBank = (db.banks || []).find(b => b.companyId === companyId) || { id: 'BANK001' };
+        const defaultBank = getBanks().find(b => b.companyId === companyId) || { id: 'BANK001' };
         const newBankTx = {
           id: `BTX-GEN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           companyId,
@@ -875,11 +877,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           remarks: '當日營業彙總 - 還款',
           createdAt: new Date().toISOString()
         };
-        db.bankTransactions.push(newBankTx);
+        filteredBankTx.push(newBankTx);
       }
 
-      saveIncomes(db.incomes);
-      saveBankTransactions(db.bankTransactions);
+      saveIncomes(filteredIncomes);
+      saveBankTransactions(filteredBankTx);
       onDataChange();
       setIsModalOpen(false);
       return;
@@ -1407,13 +1409,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'dailySummary') {
       const date = id;
       if (blockIfPeriodLocked(date, '刪除資料')) return;
-      const db = loadDatabase();
       const companyId = currentCompanyId || 'COMP001';
 
-      const incs = (db.incomes || []).filter(item => 
+      const currentIncomes = getIncomes();
+      const currentBankTx = getBankTransactions();
+
+      const incs = currentIncomes.filter(item => 
         item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
       );
-      const btxs = (db.bankTransactions || []).filter(item =>
+      const btxs = currentBankTx.filter(item =>
         item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
       );
 
@@ -1424,15 +1428,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         archiveDeletion({ collection: 'bankTransactions', record: bt, actor: operatorName, reason });
       });
 
-      db.incomes = (db.incomes || []).filter(item => 
+      const filteredIncomes = currentIncomes.filter(item => 
         !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
-      db.bankTransactions = (db.bankTransactions || []).filter(item =>
+      const filteredBankTx = currentBankTx.filter(item =>
         !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
 
-      saveIncomes(db.incomes);
-      saveBankTransactions(db.bankTransactions);
+      saveIncomes(filteredIncomes);
+      saveBankTransactions(filteredBankTx);
       addLog(operatorName, '刪除每日營業彙總', `刪除 ${date} 的每日營業彙總資料。`);
       onDataChange();
       return;
