@@ -814,7 +814,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const handleSave = (e) => {
     e.preventDefault();
     if (activeSubTab === 'dailySummary') {
-      const companyId = currentCompanyId || 'COMP001';
       const targetDate = formData.date;
 
       if (blockIfPeriodLocked(targetDate, editingItem ? '修改資料' : '新增資料')) return;
@@ -1409,8 +1408,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'dailySummary') {
       const date = id;
       if (blockIfPeriodLocked(date, '刪除資料')) return;
-      const companyId = currentCompanyId || 'COMP001';
-
       const currentIncomes = getIncomes();
       const currentBankTx = getBankTransactions();
 
