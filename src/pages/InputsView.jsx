@@ -161,7 +161,76 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     window.alert(`此月份已鎖帳，不能${actionLabel}。請改用更正沖銷或請系統管理員重新開放月份。`);
     return true;
   };
+  const getDailySalesSummaries = () => {
+    const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
+    const allBankTransactions = getBankTransactions().filter(item => item.companyId === companyId && item.status === 'approved');
 
+    const summaryByDate = {};
+
+    allIncomes.forEach(inc => {
+      if (inc.remarks && inc.remarks.startsWith('當日營業彙總 - ')) {
+        const date = inc.date;
+        if (!summaryByDate[date]) {
+          summaryByDate[date] = {
+            date,
+            salesAmount: 0,
+            paidAmount: 0,
+            arAmount: 0,
+            unpaidAmount: 0,
+            totalCylinders: 0,
+            totalWeight: 0,
+            stoveIncome: 0,
+            repairIncome: 0,
+            repaymentAmount: 0
+          };
+        }
+
+        if (inc.remarks === '當日營業彙總 - 現收') {
+          summaryByDate[date].paidAmount = Number(inc.amount || 0);
+          summaryByDate[date].totalCylinders = Number(inc.cylinderQty || 0);
+          summaryByDate[date].totalWeight = Number(inc.gasKg || 0);
+        } else if (inc.remarks === '當日營業彙總 - 月結') {
+          summaryByDate[date].arAmount = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 賒欠') {
+          summaryByDate[date].unpaidAmount = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 爐具收入') {
+          summaryByDate[date].stoveIncome = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 維修收入') {
+          summaryByDate[date].repairIncome = Number(inc.amount || 0);
+        }
+      }
+    });
+
+    allBankTransactions.forEach(bt => {
+      if (bt.remarks && bt.remarks.startsWith('當日營業彙總 - ')) {
+        const date = bt.date;
+        if (!summaryByDate[date]) {
+          summaryByDate[date] = {
+            date,
+            salesAmount: 0,
+            paidAmount: 0,
+            arAmount: 0,
+            unpaidAmount: 0,
+            totalCylinders: 0,
+            totalWeight: 0,
+            stoveIncome: 0,
+            repairIncome: 0,
+            repaymentAmount: 0
+          };
+        }
+
+        if (bt.remarks === '當日營業彙總 - 還款') {
+          summaryByDate[date].repaymentAmount = Number(bt.amount || 0);
+        }
+      }
+    });
+
+    return Object.values(summaryByDate).map(s => {
+      s.salesAmount = s.paidAmount + s.arAmount + s.unpaidAmount;
+      s.avgPrice = s.totalWeight > 0 ? s.salesAmount / s.totalWeight : 0;
+      return s;
+    }).sort((a, b) => b.date.localeCompare(a.date));
+  };
   useEffect(() => {
     if (activeSubTab === 'shareholder' && !showShareholderLedger) setActiveSubTab('income');
     if (activeSubTab === 'loan' && !showLoans) setActiveSubTab('income');
@@ -467,6 +536,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'assets') return getFixedAssets().filter(item => item.companyId === companyId).sort((a, b) => b.acquisitionDate.localeCompare(a.acquisitionDate));
     if (activeSubTab === 'shareholder') return getShareholderLedger().filter(s => s.companyId === companyId);
     if (activeSubTab === 'loan') return getLoans().filter(l => l.companyId === companyId);
+    if (activeSubTab === 'dailySummary') return getDailySalesSummaries();
     return [];
   }, [activeSubTab, companyId, triggerRefresh, userRole, currentUser, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements]);
 
@@ -600,7 +670,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       residualValue: '',
       depreciationMethod: 'straight_line',
       disposalDate: '',
-      disposalAmount: ''
+      disposalAmount: '',
+      // dailySummary fields
+      paidAmount: '',
+      arAmount: '',
+      unpaidAmount: '',
+      repaymentAmount: '',
+      totalCylinders: '',
+      totalWeight: '',
+      stoveIncome: '',
+      repairIncome: ''
     });
     setIsModalOpen(true);
   };
@@ -734,6 +813,77 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Save form data
   const handleSave = (e) => {
     e.preventDefault();
+    if (activeSubTab === 'dailySummary') {
+      const db = loadDatabase();
+      const companyId = currentCompanyId || 'COMP001';
+      const targetDate = formData.date;
+
+      if (blockIfPeriodLocked(targetDate, editingItem ? '修改資料' : '新增資料')) return;
+
+      db.incomes = (db.incomes || []).filter(item => 
+        !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
+      db.bankTransactions = (db.bankTransactions || []).filter(item =>
+        !(item.companyId === companyId && item.date === targetDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
+
+      const createGenIncome = (amount, accountCode, remarks, qty = 0, kg = 0, status = 'paid', method = 'cash') => {
+        const val = Number(amount) || 0;
+        if (val <= 0) return null;
+        return {
+          id: `INC-GEN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          companyId,
+          date: targetDate,
+          accountCode,
+          paymentMethod: method,
+          paymentStatus: status,
+          price: 0,
+          qty: 0,
+          cylinderQty: qty,
+          gasKg: kg,
+          amount: val,
+          status: 'approved',
+          operator: currentUser?.name || '系統自動生成',
+          remarks,
+          createdAt: new Date().toISOString()
+        };
+      };
+
+      const newIncomes = [
+        createGenIncome(formData.paidAmount, '4101', '當日營業彙總 - 現收', Number(formData.totalCylinders) || 0, Number(formData.totalWeight) || 0, 'paid', 'cash'),
+        createGenIncome(formData.arAmount, '4101', '當日營業彙總 - 月結', 0, 0, 'unpaid', 'receivable'),
+        createGenIncome(formData.unpaidAmount, '4101', '當日營業彙總 - 賒欠', 0, 0, 'unpaid', 'cash'),
+        createGenIncome(formData.stoveIncome, '4104', '當日營業彙總 - 爐具收入', 0, 0, 'paid', 'cash'),
+        createGenIncome(formData.repairIncome, '4102', '當日營業彙總 - 維修收入', 0, 0, 'paid', 'cash')
+      ].filter(Boolean);
+
+      db.incomes.push(...newIncomes);
+
+      const repaymentVal = Number(formData.repaymentAmount) || 0;
+      if (repaymentVal > 0) {
+        const defaultBank = (db.banks || []).find(b => b.companyId === companyId) || { id: 'BANK001' };
+        const newBankTx = {
+          id: `BTX-GEN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          companyId,
+          bankId: defaultBank.id,
+          date: targetDate,
+          direction: 'in',
+          sourceType: 'settlement',
+          amount: repaymentVal,
+          status: 'approved',
+          operator: currentUser?.name || '系統自動生成',
+          remarks: '當日營業彙總 - 還款',
+          createdAt: new Date().toISOString()
+        };
+        db.bankTransactions.push(newBankTx);
+      }
+
+      saveIncomes(db.incomes);
+      saveBankTransactions(db.bankTransactions);
+      onDataChange();
+      setIsModalOpen(false);
+      return;
+    }
     if (blockIfPeriodLocked(getRecordPeriod(formData, activeSubTab), editingItem ? '修改資料' : '新增資料')) return;
     if (editingItem && blockIfPeriodLocked(getRecordPeriod(editingItem, activeSubTab), '修改原資料')) return;
     const unitPriceVal = parseFloat(formData.unitPrice) || 0;
@@ -1254,6 +1404,40 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       return;
     }
 
+    if (activeSubTab === 'dailySummary') {
+      const date = id;
+      if (blockIfPeriodLocked(date, '刪除資料')) return;
+      const db = loadDatabase();
+      const companyId = currentCompanyId || 'COMP001';
+
+      const incs = (db.incomes || []).filter(item => 
+        item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
+      );
+      const btxs = (db.bankTransactions || []).filter(item =>
+        item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
+      );
+
+      incs.forEach(inc => {
+        archiveDeletion({ collection: 'incomes', record: inc, actor: operatorName, reason });
+      });
+      btxs.forEach(bt => {
+        archiveDeletion({ collection: 'bankTransactions', record: bt, actor: operatorName, reason });
+      });
+
+      db.incomes = (db.incomes || []).filter(item => 
+        !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
+      db.bankTransactions = (db.bankTransactions || []).filter(item =>
+        !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
+
+      saveIncomes(db.incomes);
+      saveBankTransactions(db.bankTransactions);
+      addLog(operatorName, '刪除每日營業彙總', `刪除 ${date} 的每日營業彙總資料。`);
+      onDataChange();
+      return;
+    }
+
     if (activeSubTab === 'income') {
       const db = getIncomes();
       const item = db.find(i => i.id === id);
@@ -1529,6 +1713,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           </button>
           <button className={`tab-btn ${activeSubTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveSubTab('expense')}>
             支出
+          </button>
+          <button className={`tab-btn ${activeSubTab === 'dailySummary' ? 'active' : ''}`} onClick={() => setActiveSubTab('dailySummary')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
+            每日營業額
           </button>
           <button className={`tab-btn ${activeSubTab === 'arap' ? 'active' : ''}`} onClick={() => setActiveSubTab('arap')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
             應收應付
@@ -1956,6 +2143,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
+                {activeSubTab === 'dailySummary' && (
+                  <tr>
+                    <th>記帳日期</th>
+                    <th>營業額</th>
+                    <th>已收金額</th>
+                    <th>欠款金額</th>
+                    <th>應收帳款</th>
+                    <th>還款金額</th>
+                    <th>合計重量</th>
+                    <th>合計桶數</th>
+                    <th>平均單價</th>
+                    <th>爐具收入</th>
+                    <th>維修收入</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                  </tr>
+                )}
                 {activeSubTab === 'gas' && (
                   <tr>
                     <th>月份</th>
@@ -2061,7 +2264,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={idx}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{activeSubTab === 'dailySummary' ? '營業彙總' : item.id}</td>
                     
                     {activeSubTab === 'income' && (
                       <>
@@ -2107,6 +2310,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                             </div>
                           )}
                         </td>
+                      </>
+                    )}
+
+                    {activeSubTab === 'dailySummary' && (
+                      <>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{formatCurrency(item.salesAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>{formatCurrency(item.paidAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(item.unpaidAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-purple)' }}>{formatCurrency(item.arAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>{formatCurrency(item.repaymentAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.totalWeight).toLocaleString()} kg</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{Number(item.totalCylinders).toLocaleString()} 桶</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>${Number(item.avgPrice).toFixed(1)} / kg</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.stoveIncome)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.repairIncome)}</td>
                       </>
                     )}
 
@@ -2322,30 +2541,44 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {isAdmin && activeSubTab !== 'gasMovements' && (
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          {(activeSubTab === 'income' || activeSubTab === 'expense') && canReview && item.status.startsWith('pending') && (
+                          {activeSubTab === 'dailySummary' && (
                             <>
-                              <button className="btn btn-primary btn-sm" onClick={() => updateReviewStatus(item.id, 'approved')}>
-                                核准
+                              <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
+                                編輯
                               </button>
-                              <button className="btn btn-secondary btn-sm" onClick={() => updateReviewStatus(item.id, 'returned')}>
-                                退回
+                              <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.date)}>
+                                刪除
                               </button>
                             </>
                           )}
-                          {(activeSubTab === 'income' || activeSubTab === 'expense') && allowVoid && item.status === 'approved' && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleCreateCorrection(item)}>
-                              更正
-                            </button>
-                          )}
-                          {item.status !== 'approved' && item.status !== 'void' && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
-                              編輯
-                            </button>
-                          )}
-                          {item.status !== 'approved' && (
-                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.id)}>
-                              刪除
-                            </button>
+                          {activeSubTab !== 'dailySummary' && (
+                            <>
+                              {(activeSubTab === 'income' || activeSubTab === 'expense') && canReview && item.status.startsWith('pending') && (
+                                <>
+                                  <button className="btn btn-primary btn-sm" onClick={() => updateReviewStatus(item.id, 'approved')}>
+                                    核准
+                                  </button>
+                                  <button className="btn btn-secondary btn-sm" onClick={() => updateReviewStatus(item.id, 'returned')}>
+                                    退回
+                                  </button>
+                                </>
+                              )}
+                              {(activeSubTab === 'income' || activeSubTab === 'expense') && allowVoid && item.status === 'approved' && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleCreateCorrection(item)}>
+                                  更正
+                                </button>
+                              )}
+                              {item.status !== 'approved' && item.status !== 'void' && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
+                                  編輯
+                                </button>
+                              )}
+                              {item.status !== 'approved' && (
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.id)}>
+                                  刪除
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -2373,6 +2606,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             <div className="modal-header">
               <span className="modal-title">
                 {editingItem ? '編輯' : '新增'} - {
+                  activeSubTab === 'dailySummary' ? '當日營業額' :
                   activeSubTab === 'income' ? '收入' :
                   activeSubTab === 'expense' ? '支出' :
                   activeSubTab === 'shareholder' ? '股東往來' :
@@ -2395,7 +2629,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 </div>
 
                 {/* 1. Date Field */}
-                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
+                {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && activeSubTab !== 'dailySummary' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
                     <label className="form-label">記帳日期</label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
@@ -2668,6 +2902,65 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </div>
                   </>
                 )}
+
+                {activeSubTab === 'dailySummary' && (() => {
+                  const paid = Number(formData.paidAmount) || 0;
+                  const ar = Number(formData.arAmount) || 0;
+                  const unpaid = Number(formData.unpaidAmount) || 0;
+                  const computedSales = paid + ar + unpaid;
+                  return (
+                    <>
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">記帳日期</label>
+                          <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">當日營業額 (系統自動加總)</label>
+                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold' }} value={formatCurrency(computedSales)} />
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">已收金額 (現收)</label>
+                          <input type="number" min="0" required placeholder="請輸入當日已收款" className="form-control" value={formData.paidAmount} onChange={e => setFormData({ ...formData, paidAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">應收帳款 (月結簽單)</label>
+                          <input type="number" min="0" placeholder="請輸入當日應收帳款" className="form-control" value={formData.arAmount} onChange={e => setFormData({ ...formData, arAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">欠款金額 (現結未付)</label>
+                          <input type="number" min="0" placeholder="請輸入當日欠款金額" className="form-control" value={formData.unpaidAmount} onChange={e => setFormData({ ...formData, unpaidAmount: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">還款金額 (收回舊欠)</label>
+                          <input type="number" min="0" placeholder="請輸入收回舊欠金額" className="form-control" value={formData.repaymentAmount} onChange={e => setFormData({ ...formData, repaymentAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">合計重量 (kg)</label>
+                          <input type="number" min="0" placeholder="請輸入當日總公斤數" className="form-control" value={formData.totalWeight} onChange={e => setFormData({ ...formData, totalWeight: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">合計桶數</label>
+                          <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                        <div className="form-group">
+                          <label className="form-label">爐具收入</label>
+                          <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">維修收入</label>
+                          <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {/* 2. Amount Field */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
