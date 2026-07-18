@@ -234,8 +234,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     });
 
     return Object.values(summaryByDate).map(s => {
-      s.salesAmount = s.paidAmount + s.arAmount + s.unpaidAmount;
-      s.avgPrice = s.totalWeight > 0 ? s.salesAmount / s.totalWeight : 0;
+      s.gasTotalIncome = s.paidAmount + s.arAmount + s.unpaidAmount;
+      s.avgPrice = s.totalWeight > 0 ? s.gasTotalIncome / s.totalWeight : 0;
+      s.salesAmount = s.gasTotalIncome + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome;
       return s;
     }).sort((a, b) => b.date.localeCompare(a.date));
   };
@@ -2162,7 +2163,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'dailySummary' && (
                   <tr>
                     <th>記帳日期</th>
-                    <th>營業額</th>
+                    <th>瓦斯總收入</th>
                     <th>已收金額</th>
                     <th>欠款金額</th>
                     <th>應收帳款</th>
@@ -2174,6 +2175,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>維修/安裝 收入</th>
                     <th>買桶收入</th>
                     <th>檢驗費收入</th>
+                    <th>營業額</th>
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
@@ -2336,7 +2338,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {activeSubTab === 'dailySummary' && (
                       <>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{formatCurrency(item.salesAmount)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.gasTotalIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>{formatCurrency(item.paidAmount)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(item.unpaidAmount)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-purple)' }}>{formatCurrency(item.arAmount)}</td>
@@ -2348,6 +2350,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.repairIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.cylinderIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.inspectionIncome)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{formatCurrency(item.salesAmount)}</td>
                       </>
                     )}
 
@@ -2651,19 +2654,30 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   const ar = Number(formData.arAmount) || 0;
                   const unpaid = Number(formData.unpaidAmount) || 0;
                   const computedSales = paid + ar + unpaid;
+                  const repayment = Number(formData.repaymentAmount) || 0;
+                  const stove = Number(formData.stoveIncome) || 0;
+                  const repair = Number(formData.repairIncome) || 0;
+                  const cylinder = Number(formData.cylinderIncome) || 0;
+                  const inspection = Number(formData.inspectionIncome) || 0;
+                  const totalRevenue = computedSales + repayment + stove + repair + cylinder + inspection;
+
                   return (
                     <>
                       <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '8px 12px', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-blue)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         建立人：<strong>{operatorName}</strong>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>記帳日期</label>
                           <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                         </div>
                         <div className="form-group">
-                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>當日營業額 (自動加總：已收＋應收＋欠款)</label>
-                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', fontSize: '1.1rem' }} value={formatCurrency(computedSales)} />
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>瓦斯總收入 (自動加總)</label>
+                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', color: 'var(--accent-blue)' }} value={formatCurrency(computedSales)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>營業額 (當日總收入加總)</label>
+                          <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)', fontWeight: 'bold', color: 'var(--accent-green)' }} value={formatCurrency(totalRevenue)} />
                         </div>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px', marginBottom: '16px' }}>
