@@ -181,6 +181,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             totalWeight: 0,
             stoveIncome: 0,
             repairIncome: 0,
+            cylinderIncome: 0,
             repaymentAmount: 0
           };
         }
@@ -197,6 +198,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           summaryByDate[date].stoveIncome = Number(inc.amount || 0);
         } else if (inc.remarks === '當日營業彙總 - 維修收入') {
           summaryByDate[date].repairIncome = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 買桶收入') {
+          summaryByDate[date].cylinderIncome = Number(inc.amount || 0);
         }
       }
     });
@@ -215,6 +218,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             totalWeight: 0,
             stoveIncome: 0,
             repairIncome: 0,
+            cylinderIncome: 0,
             repaymentAmount: 0
           };
         }
@@ -679,7 +683,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       totalCylinders: '',
       totalWeight: '',
       stoveIncome: '',
-      repairIncome: ''
+      repairIncome: '',
+      cylinderIncome: ''
     });
     setIsModalOpen(true);
   };
@@ -762,9 +767,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       acquisitionCost: item.acquisitionCost || '',
       usefulLifeMonths: item.usefulLifeMonths || '60',
       residualValue: item.residualValue || '',
-      depreciationMethod: item.depreciationMethod || 'straight_line',
       disposalDate: item.disposalDate || '',
-      disposalAmount: item.disposalAmount || ''
+      disposalAmount: item.disposalAmount || '',
+      cylinderIncome: item.cylinderIncome ?? ''
     });
     setIsModalOpen(true);
   };
@@ -857,7 +862,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         createGenIncome(formData.arAmount, '4101', '當日營業彙總 - 月結', 0, 0, 'unpaid', 'receivable'),
         createGenIncome(formData.unpaidAmount, '4101', '當日營業彙總 - 賒欠', 0, 0, 'unpaid', 'cash'),
         createGenIncome(formData.stoveIncome, '4104', '當日營業彙總 - 爐具收入', 0, 0, 'paid', 'cash'),
-        createGenIncome(formData.repairIncome, '4102', '當日營業彙總 - 維修收入', 0, 0, 'paid', 'cash')
+        createGenIncome(formData.repairIncome, '4102', '當日營業彙總 - 維修收入', 0, 0, 'paid', 'cash'),
+        createGenIncome(formData.cylinderIncome, '4103', '當日營業彙總 - 買桶收入', 0, 0, 'paid', 'cash')
       ].filter(Boolean);
 
       filteredIncomes.push(...newIncomes);
@@ -2159,6 +2165,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>平均單價</th>
                     <th>爐具收入</th>
                     <th>維修收入</th>
+                    <th>買桶收入</th>
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
@@ -2331,6 +2338,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontFamily: 'var(--font-mono)' }}>${Number(item.avgPrice).toFixed(2)} / kg</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.stoveIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.repairIncome)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.cylinderIncome)}</td>
                       </>
                     )}
 
@@ -2677,7 +2685,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>爐具收入</label>
                           <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
@@ -2685,6 +2693,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>維修收入</label>
                           <input type="number" min="0" placeholder="請輸入檢修收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>買桶收入</label>
+                          <input type="number" min="0" placeholder="請輸入買桶收入" className="form-control" value={formData.cylinderIncome} onChange={e => setFormData({ ...formData, cylinderIncome: e.target.value })} />
                         </div>
                       </div>
                     </>
