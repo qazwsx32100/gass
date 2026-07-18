@@ -2265,7 +2265,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={idx}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{activeSubTab === 'dailySummary' ? '營業彙總' : item.id}</td>
+                    {!['dailySummary', 'gas'].includes(activeSubTab) && (
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
+                    )}
                     
                     {activeSubTab === 'income' && (
                       <>
