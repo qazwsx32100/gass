@@ -1092,7 +1092,173 @@ export const getJournalLines = () => read(KEYS.JOURNAL_LINES, []).map(normalizeJ
 export const saveJournalLines = (data) => write(KEYS.JOURNAL_LINES, data.map(normalizeJournalLine));
 
 // Logs API
-export const getLogs = () => read(KEYS.LOGS);
+const ACTION_TRANSLATION_MAP = {
+  'LOGIN_BLOCKED': '登入受阻',
+  'DEVICE_APPROVED': '核准裝置',
+  'DEVICE_PENDING': '裝置待核准',
+  'LOGIN_SUCCESS': '登入成功',
+  'LOGIN_FAILED': '登入失敗',
+  'PASSWORD_CHANGED': '修改密碼',
+  'ACCOUNT_DISABLED': '停用帳號',
+  'ACCOUNT_ENABLED': '啟用帳號',
+  'EMAIL_VERIFICATION_SENT': '寄送驗證信',
+  'EMAIL_VERIFIED': '完成驗證',
+  'DEVICE_REJECTED': '拒絕裝置',
+  'DEVICE_REVOKED': '撤銷裝置',
+  'PERIOD_LOCKED': '月份關帳',
+  'PERIOD_UNLOCKED': '月份開帳',
+  'UPDATE_INCOME': '修改收入',
+  'CREATE_INCOME': '建立收入',
+  'UPDATE_EXPENSE': '修改支出',
+  'CREATE_EXPENSE': '建立支出',
+  'UPDATE_SHAREHOLDER_LEDGER': '修改股東往來',
+  'CREATE_SHAREHOLDER_LEDGER': '建立股東往來',
+  'UPDATE_GAS_PURCHASE': '修改瓦斯進貨',
+  'CREATE_GAS_PURCHASE': '建立瓦斯進貨',
+  'DELETE_GAS_PURCHASE': '刪除瓦斯進貨',
+  'UPDATE_GAS_INVENTORY': '修改瓦斯月度設定',
+  'CREATE_GAS_INVENTORY': '建立瓦斯月度設定',
+  'DELETE_GAS_INVENTORY': '刪除瓦斯月度設定',
+  'UPDATE_GAS_CYLINDER': '修改鋼瓶資料',
+  'CREATE_GAS_CYLINDER': '建立鋼瓶資料',
+  'DELETE_GAS_CYLINDER': '刪除鋼瓶資料',
+  'UPDATE_GAS_VEHICLE': '修改配送車資料',
+  'CREATE_GAS_VEHICLE': '建立配送車資料',
+  'DELETE_GAS_VEHICLE': '刪除配送車資料',
+  'UPDATE_GAS_DEPOSIT': '修改客戶押瓶',
+  'CREATE_GAS_DEPOSIT': '建立客戶押瓶',
+  'DELETE_GAS_DEPOSIT': '刪除客戶押瓶',
+  'UPDATE_LOAN': '修改貸款',
+  'CREATE_LOAN': '建立貸款',
+  'DELETE_LOAN': '刪除貸款',
+  'UPDATE_FIXED_ASSET': '修改固定資產',
+  'CREATE_FIXED_ASSET': '建立固定資產',
+  'DELETE_FIXED_ASSET': '刪除固定資產'
+};
+
+export const translateAction = (act) => ACTION_TRANSLATION_MAP[act] || act || '';
+
+export const translateDetails = (details = '') => {
+  if (!details) return '';
+  let zh = details;
+  zh = zh.replace('管理員帳號已停用。', '管理員帳號已停用。');
+  zh = zh.replace('帳號已停用。', '帳號已停用。');
+  zh = zh.replace('管理員首次登入裝置已自動核准。', '管理員首次登入裝置已自動核准。');
+  zh = zh.replace('管理員新裝置登入待核准。', '管理員新裝置登入待核准。');
+  zh = zh.replace('新裝置登入待核准。', '新裝置登入待核准。');
+  zh = zh.replace('管理員登入成功。', '管理員登入成功。');
+  zh = zh.replace('登入成功。', '登入成功。');
+  zh = zh.replace('帳號或密碼錯誤。', '帳號或密碼錯誤。');
+  zh = zh.replace('已建立 Email 驗證信。', '已建立 Email 驗證信。');
+  zh = zh.replace('已建立 Email 驗證信：', '已建立 Email 驗證信：');
+  zh = zh.replace('管理員 Email 已驗證。', '管理員 Email 已驗證。');
+  zh = zh.replace('Email 已驗證：', 'Email 已驗證：');
+  zh = zh.replace('管理員已完成 Email 驗證。', '管理員已完成 Email 驗證。');
+  zh = zh.replace('使用者已完成 Email 驗證。', '使用者已完成 Email 驗證。');
+  zh = zh.replace('管理員已修改登入密碼。', '管理員已修改登入密碼。');
+  zh = zh.replace('使用者已完成首次改密碼。', '使用者已完成首次改密碼。');
+
+  zh = zh.replace(/Update daily gas purchase (\d{4}-\d{2}-\d{2}): (\d+(?:\.\d+)?) kg, \$?([\d,]+)\.?/, (match, date, kg, amt) => {
+    return `修改瓦斯進貨 日期:${date}，公斤數:${kg} kg，金額:$${amt}。`;
+  });
+  zh = zh.replace(/Create daily gas purchase (\d{4}-\d{2}-\d{2}): (\d+(?:\.\d+)?) kg, \$?([\d,]+)\.?/, (match, date, kg, amt) => {
+    return `建立瓦斯進貨 日期:${date}，公斤數:${kg} kg，金額:$${amt}。`;
+  });
+  zh = zh.replace(/Delete daily gas purchase (\d{4}-\d{2}-\d{2}) \(([^)]+)\)\.?/, (match, date, id) => {
+    return `刪除瓦斯進貨 日期:${date} (${id})。`;
+  });
+
+  zh = zh.replace(/Update monthly gas settings (\d{4}-\d{2}): Price \$?([\d.,]+)\/kg\.?/, (match, ym, price) => {
+    return `修改瓦斯月度設定 期間:${ym}，單價:$${price}/kg。`;
+  });
+  zh = zh.replace(/Create monthly gas settings (\d{4}-\d{2}): Price \$?([\d.,]+)\/kg\.?/, (match, ym, price) => {
+    return `建立瓦斯月度設定 期間:${ym}，單價:$${price}/kg。`;
+  });
+  zh = zh.replace(/Delete monthly gas settings (\d{4}-\d{2})\.?/, (match, ym) => {
+    return `刪除瓦斯月度設定 期間:${ym}。`;
+  });
+
+  zh = zh.replace(/Update gas cylinder ([^.]+)\.?/, (match, no) => {
+    return `修改鋼瓶資料 鋼瓶編號:${no}。`;
+  });
+  zh = zh.replace(/Create gas cylinder ([^.]+)\.?/, (match, no) => {
+    return `建立鋼瓶資料 鋼瓶編號:${no}。`;
+  });
+  zh = zh.replace(/Delete gas cylinder ([^.]+)\.?/, (match, no) => {
+    return `刪除鋼瓶資料 鋼瓶編號:${no}。`;
+  });
+
+  zh = zh.replace(/Update gas delivery vehicle ([^.]+)\.?/, (match, plate) => {
+    return `修改配送車資料 車牌:${plate}。`;
+  });
+  zh = zh.replace(/Create gas delivery vehicle ([^.]+)\.?/, (match, plate) => {
+    return `建立配送車資料 車牌:${plate}。`;
+  });
+  zh = zh.replace(/Delete gas delivery vehicle ([^.]+)\.?/, (match, plate) => {
+    return `刪除配送車資料 車牌:${plate}。`;
+  });
+
+  zh = zh.replace(/Update customer cylinder deposit ([^.]+)\.?/, (match, cust) => {
+    return `修改客戶押瓶 客戶:${cust}。`;
+  });
+  zh = zh.replace(/Create customer cylinder deposit ([^.]+)\.?/, (match, cust) => {
+    return `建立客戶押瓶 客戶:${cust}。`;
+  });
+  zh = zh.replace(/Delete customer cylinder deposit ([^.]+)\.?/, (match, cust) => {
+    return `刪除客戶押瓶 客戶:${cust}。`;
+  });
+
+  zh = zh.replace(/Update income ([^:]+): \$?([\d,]+)\s*->\s*\$?([\d,]+)\.?/, (match, id, oldAmt, newAmt) => {
+    return `修改收入 ${id}，金額從 $${oldAmt} 變更為 $${newAmt}。`;
+  });
+  zh = zh.replace(/Create income ([^:]+): \$?([\d,]+)\.?/, (match, id, amt) => {
+    return `建立收入 ${id}，金額 $${amt}。`;
+  });
+
+  zh = zh.replace(/Update expense ([^:]+): \$?([\d,]+)\s*->\s*\$?([\d,]+)\.?/, (match, id, oldAmt, newAmt) => {
+    return `修改支出 ${id}，金額從 $${oldAmt} 變更為 $${newAmt}。`;
+  });
+  zh = zh.replace(/Create expense ([^:]+): \$?([\d,]+)\.?/, (match, id, amt) => {
+    return `建立支出 ${id}，金額 $${amt}。`;
+  });
+
+  zh = zh.replace(/Update shareholder ledger ([^:]+): \$?([\d,]+)\.?/, (match, id, amt) => {
+    return `修改股東往來 ${id}，金額 $${amt}。`;
+  });
+  zh = zh.replace(/Create shareholder ledger ([^:]+): \$?([\d,]+)\.?/, (match, id, amt) => {
+    return `建立股東往來 ${id}，金額 $${amt}。`;
+  });
+
+  zh = zh.replace(/Update loan ([^ ]+) \(([^)]+)\): \$?([\d,]+)\.?/, (match, id, name, amt) => {
+    return `修改貸款 ${id} (${name})，金額 $${amt}。`;
+  });
+  zh = zh.replace(/Create loan ([^ ]+) \(([^)]+)\): \$?([\d,]+)\.?/, (match, id, name, amt) => {
+    return `建立貸款 ${id} (${name})，金額 $${amt}。`;
+  });
+
+  zh = zh.replace(/Update fixed asset ([^ ]+) \(([^)]+)\): \$?([\d,]+)\.?/, (match, id, name, amt) => {
+    return `修改固定資產 ${id} (${name})，金額 $${amt}。`;
+  });
+  zh = zh.replace(/Create fixed asset ([^ ]+) \(([^)]+)\): \$?([\d,]+)\.?/, (match, id, name, amt) => {
+    return `建立固定資產 ${id} (${name})，金額 $${amt}。`;
+  });
+
+  zh = zh.replace(/([A-Za-z0-9_]+)\s+(\d{4}-\d{2})/, (match, company, month) => {
+    return `公司 ${company} 月份 ${month}`;
+  });
+
+  return zh;
+};
+
+export const getLogs = () => {
+  const data = read(KEYS.LOGS) || [];
+  return data.map(log => ({
+    ...log,
+    action: translateAction(log.action),
+    details: translateDetails(log.details)
+  }));
+};
+
 export const saveLogs = (data) => write(KEYS.LOGS, data);
 export const getAuditArchive = () => read(KEYS.AUDIT_ARCHIVE);
 export const saveAuditArchive = (data) => write(KEYS.AUDIT_ARCHIVE, data);

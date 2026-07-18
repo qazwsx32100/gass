@@ -1525,16 +1525,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       <div className="card-header" style={{ borderBottom: 'none' }}>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button className={`tab-btn ${activeSubTab === 'income' ? 'active' : ''}`} onClick={() => setActiveSubTab('income')}>
-            收入 (Income)
+            收入
           </button>
           <button className={`tab-btn ${activeSubTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveSubTab('expense')}>
-            支出 (Expense)
+            支出
           </button>
           <button className={`tab-btn ${activeSubTab === 'arap' ? 'active' : ''}`} onClick={() => setActiveSubTab('arap')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
-            應收應付 (AR/AP)
+            應收應付
           </button>
           <button className={`tab-btn ${activeSubTab === 'checks' ? 'active' : ''}`} onClick={() => setActiveSubTab('checks')} style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>
-            支票管理 (Check Ledger)
+            支票管理
           </button>
           {isAdmin && (
             <button className={`tab-btn ${activeSubTab === 'bankRecon' ? 'active' : ''}`} onClick={() => setActiveSubTab('bankRecon')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
@@ -1554,17 +1554,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
           {showShareholderLedger && (
             <button className={`tab-btn ${activeSubTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSubTab('shareholder')}>
-              股東往來 (Shareholder Ledger)
+              股東往來
             </button>
           )}
           {showLoans && (
             <button className={`tab-btn ${activeSubTab === 'loan' ? 'active' : ''}`} onClick={() => setActiveSubTab('loan')}>
-              貸款 (Loans)
-            </button>
-          )}
-          {showAuditLogs && (
-            <button className={`tab-btn ${activeSubTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSubTab('log')} style={{ color: 'var(--accent-gold)' }}>
-              操作稽核日誌 (Audit Logs)
+              貸款
             </button>
           )}
         </div>
@@ -1576,50 +1571,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       </div>
 
       <div className="card-body" style={{ paddingTop: 0 }}>
-        {/* Audit Log Table (Only visible to Admin) */}
-        {activeSubTab === 'log' ? (
-          <div className="table-responsive">
-            <div className="alert-box info" style={{ marginBottom: '16px' }}>
-              記錄系統操作、審核、退回、作廢、更正與資料異動，方便後續追蹤責任。
-            </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>日誌 ID</th>
-                  <th>操作時間</th>
-                  <th>操作人員</th>
-                  <th>操作類型</th>
-                  <th>操作內容</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log, idx) => (
-                  <tr key={idx}>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.id}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.timestamp}</td>
-                    <td style={{ fontWeight: '600', color: log.operator === '主管理員' ? 'var(--accent-blue)' : 'var(--accent-gold)' }}>
-                      {log.operator}
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        log.action.includes('核准') || log.action.includes('成功') ? 'approved' :
-                        log.action.includes('待') ? 'pending' : 'void'
-                      }`}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.details}</td>
-                  </tr>
-                ))}
-                {auditLogs.length === 0 && (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>目前沒有操作紀錄</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : activeSubTab === 'arap' ? (
+        {activeSubTab === 'arap' ? (
           <div className="table-responsive">
             <div className="alert-box info" style={{ marginBottom: '16px' }}>
               這裡彙整尚未結清的應收款、應付款與支票資料，結清後會保留原始紀錄並更新付款狀態。

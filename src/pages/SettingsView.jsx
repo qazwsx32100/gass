@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   getCompanies, saveCompanies,
   getShareholders, saveShareholders,
@@ -13,7 +13,8 @@ import {
   getPeriodLocks, setPeriodLock,
   setAccountDisabled, approveDevice, rejectDevice, revokeDevice,
   getBudgets, saveBudgets,
-  getSystemConfig, saveSystemConfig
+  getSystemConfig, saveSystemConfig,
+  getLogs
 } from '../db/storage';
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
@@ -34,6 +35,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   const companies = useMemo(() => getCompanies(), [triggerRefresh]);
   const adminSecurity = useMemo(() => getAdminSecurity(), [triggerRefresh]);
   const periodLocks = useMemo(() => getPeriodLocks(), [triggerRefresh]);
+  const auditLogs = useMemo(() => getLogs(), [triggerRefresh]);
   
   // Budget & System Config States
   const [systemConfig, setSystemConfig] = useState(() => getSystemConfig());
@@ -690,12 +692,15 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
             上線檢查
           </button>
+          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('log')}>
+            操作審查日誌
+          </button>
         </div>
       )}
 
       {/* 2. Main content container */}
       <div style={{ width: '100%' }}>
-        {activeSettingsTab !== 'backup' && activeSettingsTab !== 'security' && activeSettingsTab !== 'periodLocks' && activeSettingsTab !== 'budgets' && activeSettingsTab !== 'goLive' && (
+        {activeSettingsTab !== 'backup' && activeSettingsTab !== 'security' && activeSettingsTab !== 'periodLocks' && activeSettingsTab !== 'budgets' && activeSettingsTab !== 'goLive' && activeSettingsTab !== 'log' && (
           <div className="card">
             <div className="card-header">
               <span className="card-title">
@@ -1183,6 +1188,58 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                         <td>{lock.remarks}</td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 操作審查日誌 */}
+        {activeSettingsTab === 'log' && (
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">🛍️ 操作審查日誌</span>
+            </div>
+            <div className="card-body">
+              <div className="alert-box info" style={{ marginBottom: '16px' }}>
+                記錄系統操作、審核、退回、作廢、更正與資料異動，方便後續追蹤責任。
+              </div>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>日誌 ID</th>
+                      <th>操作時間</th>
+                      <th>操作人員</th>
+                      <th>操作類型</th>
+                      <th>操作內容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs.map((log, idx) => (
+                      <tr key={idx}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.id}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.timestamp}</td>
+                        <td style={{ fontWeight: '600', color: log.operator === '主管理員' ? 'var(--accent-blue)' : 'var(--accent-gold)' }}>
+                          {log.operator}
+                        </td>
+                        <td>
+                          <span className={`badge ${
+                            log.action.includes('核准') || log.action.includes('成功') || log.action.includes('核准裝置') || log.action.includes('登入成功') ? 'approved' :
+                            log.action.includes('待') || log.action.includes('裝置待核准') ? 'pending' : 'void'
+                          }`}>
+                            {log.action}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{log.details}</td>
+                      </tr>
+                    ))}
+                    {auditLogs.length === 0 && (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>目前沒有操作紀錄</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
