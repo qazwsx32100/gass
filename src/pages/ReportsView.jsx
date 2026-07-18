@@ -310,6 +310,24 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       }
     });
 
+    // Stove Income (爐具收入) - Code 4104 or name containing "爐具"
+    const stoveIncomes = allIncomes.filter(item => item.accountCode === '4104' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('爐具'));
+    const stoveIncomeAmount = stoveIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Repair Income (維修收入) - Code 4102 or name containing "維修" / "服務"
+    const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務'));
+    const repairIncomeAmount = repairIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Other Incomes (其他營業收入) - Code 4103 or not matching gas, stove, or repair
+    const otherIncomes = allIncomes.filter(item =>
+      item.accountCode === '4103' ||
+      (!['4101', '4102', '4104'].includes(item.accountCode) &&
+       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') &&
+       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務') &&
+       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('爐具'))
+    );
+    const otherIncomeAmount = otherIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
     return {
       gasSalesAmount: gasSalesAmount || 0,
       gasSalesPaidAmount: gasSalesPaidAmount || 0,
@@ -324,7 +342,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       buyCylinderAmount: buyCylinderAmount || 0,
       repairAmount: repairAmount || 0,
       stoveAmount: stoveAmount || 0,
-      otherExpenseAmount: otherExpenseAmount || 0
+      otherExpenseAmount: otherExpenseAmount || 0,
+      stoveIncomeAmount: stoveIncomeAmount || 0,
+      repairIncomeAmount: repairIncomeAmount || 0,
+      otherIncomeAmount: otherIncomeAmount || 0
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -462,6 +483,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['平均單價 (元/桶)', dailySales.avgPricePerCylinder ? dailySales.avgPricePerCylinder.toFixed(2) : '0.00'],
         ['平均單價 (元/kg)', dailySales.avgPricePerKg ? dailySales.avgPricePerKg.toFixed(2) : '0.00'],
         ['當日毛利', dailySales.grossProfit],
+        ['爐具收入', dailySales.stoveIncomeAmount],
+        ['維修收入', dailySales.repairIncomeAmount],
+        ['其他營業收入', dailySales.otherIncomeAmount],
         ['買桶金額', dailySales.buyCylinderAmount],
         ['維修費用', dailySales.repairAmount],
         ['爐具費用', dailySales.stoveAmount],
@@ -1077,6 +1101,23 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 <div className="metric-card accent-red">
                   <span className="metric-label">欠款金額 (現結未付)</span>
                   <span className="metric-value">{formatCurrency(dailySales.unpaidArAmount)}</span>
+                </div>
+              </div>
+
+              {/* Other Revenues */}
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💵 其它營業收入</h3>
+              <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+                <div className="metric-card accent-blue">
+                  <span className="metric-label">爐具收入</span>
+                  <span className="metric-value">{formatCurrency(dailySales.stoveIncomeAmount)}</span>
+                </div>
+                <div className="metric-card accent-green">
+                  <span className="metric-label">維修收入</span>
+                  <span className="metric-value">{formatCurrency(dailySales.repairIncomeAmount)}</span>
+                </div>
+                <div className="metric-card accent-gold">
+                  <span className="metric-label">其他營業收入</span>
+                  <span className="metric-value">{formatCurrency(dailySales.otherIncomeAmount)}</span>
                 </div>
               </div>
 
