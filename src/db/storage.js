@@ -207,6 +207,13 @@ export const normalizeGasPurchase = (item = {}) => {
   const qty16kg = Number(item.qty16kg) || 0;
   const qty10kg = Number(item.qty10kg) || 0;
   const qty4kg = Number(item.qty4kg) || 0;
+
+  const empty50kg = Number(item.empty50kg) || 0;
+  const empty20kg = Number(item.empty20kg) || 0;
+  const empty16kg = Number(item.empty16kg) || 0;
+  const empty10kg = Number(item.empty10kg) || 0;
+  const empty4kg = Number(item.empty4kg) || 0;
+
   const totalKg = qty50kg * 50 + qty20kg * 20 + qty16kg * 16 + qty10kg * 10 + qty4kg * 4;
   const monthlyGasPrice = Number(item.monthlyGasPrice) || 0;
   const amount = Math.round(totalKg * monthlyGasPrice);
@@ -220,6 +227,11 @@ export const normalizeGasPurchase = (item = {}) => {
     qty16kg,
     qty10kg,
     qty4kg,
+    empty50kg,
+    empty20kg,
+    empty16kg,
+    empty10kg,
+    empty4kg,
     totalKg,
     monthlyGasPrice,
     amount,

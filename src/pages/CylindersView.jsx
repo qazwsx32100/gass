@@ -87,6 +87,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     qty16kg: '',
     qty10kg: '',
     qty4kg: '',
+    empty50kg: '',
+    empty20kg: '',
+    empty16kg: '',
+    empty10kg: '',
+    empty4kg: '',
     remarks: '',
     yearMonth: new Date().toISOString().substring(0, 7),
     openingKg: '',
@@ -331,6 +336,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       qty16kg: '',
       qty10kg: '',
       qty4kg: '',
+      empty50kg: '',
+      empty20kg: '',
+      empty16kg: '',
+      empty10kg: '',
+      empty4kg: '',
       remarks: '',
       yearMonth: new Date().toISOString().substring(0, 7),
       openingKg: '',
@@ -374,6 +384,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       qty16kg: item.qty16kg?.toString() || '',
       qty10kg: item.qty10kg?.toString() || '',
       qty4kg: item.qty4kg?.toString() || '',
+      empty50kg: item.empty50kg?.toString() || '',
+      empty20kg: item.empty20kg?.toString() || '',
+      empty16kg: item.empty16kg?.toString() || '',
+      empty10kg: item.empty10kg?.toString() || '',
+      empty4kg: item.empty4kg?.toString() || '',
       openingKg: item.openingKg?.toString() || '',
       openingCost: item.openingCost?.toString() || '',
       purchaseKg: item.purchaseKg?.toString() || '',
@@ -415,6 +430,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         qty16kg: parseInt(formData.qty16kg, 10) || 0,
         qty10kg: parseInt(formData.qty10kg, 10) || 0,
         qty4kg: parseInt(formData.qty4kg, 10) || 0,
+        empty50kg: parseInt(formData.empty50kg, 10) || 0,
+        empty20kg: parseInt(formData.empty20kg, 10) || 0,
+        empty16kg: parseInt(formData.empty16kg, 10) || 0,
+        empty10kg: parseInt(formData.empty10kg, 10) || 0,
+        empty4kg: parseInt(formData.empty4kg, 10) || 0,
         totalKg: purchaseTotalKg,
         monthlyGasPrice: purchasePrice,
         amount: purchaseTotalAmount,
@@ -840,17 +860,22 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
 
       {/* Data Table */}
       <div className="table-responsive">
-        <table className="table">
+        <table className="data-table">
           <thead>
             {activeSubTab === 'gasPurchases' && (
               <tr>
                 <th>交易 ID</th>
                 <th>日期</th>
-                <th>50kg (桶)</th>
-                <th>20kg (桶)</th>
-                <th>16kg (桶)</th>
-                <th>10kg (桶)</th>
-                <th>4kg (桶)</th>
+                <th>50kg (進)</th>
+                <th>20kg (進)</th>
+                <th>16kg (進)</th>
+                <th>10kg (進)</th>
+                <th>4kg (進)</th>
+                <th>50kg (收空)</th>
+                <th>20kg (收空)</th>
+                <th>16kg (收空)</th>
+                <th>10kg (收空)</th>
+                <th>4kg (收空)</th>
                 <th>總進貨 (kg)</th>
                 <th>當月單價</th>
                 <th>進氣金額</th>
@@ -943,6 +968,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                       <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty16kg || '-'}</td>
                       <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty10kg || '-'}</td>
                       <td style={{ fontFamily: 'var(--font-mono)' }}>{item.qty4kg || '-'}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty50kg || '-'}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty20kg || '-'}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty16kg || '-'}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty10kg || '-'}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{item.empty4kg || '-'}</td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{item.totalKg.toLocaleString()} kg</td>
                       <td style={{ fontFamily: 'var(--font-mono)' }}>{item.monthlyGasPrice ? `$${item.monthlyGasPrice}` : '-'}</td>
                       <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontWeight: 'bold' }}>{formatCurrency(item.amount)}</td>
@@ -1089,7 +1119,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       {/* CRUD Add/Edit Modal */}
       {isModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '600px', width: '90%' }}>
+          <div className="modal-content" style={{ maxWidth: '850px', width: '95%' }}>
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
                 {editingItem ? '✏️ 修改' : '➕ 建立'}{
@@ -1143,6 +1173,31 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>4 kg</label>
                           <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.qty4kg} onChange={e => setFormData({ ...formData, qty4kg: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--border-color)' }}>
+                      <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>各規格回收空瓶數量 (桶)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>50 kg</label>
+                          <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty50kg} onChange={e => setFormData({ ...formData, empty50kg: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>20 kg</label>
+                          <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty20kg} onChange={e => setFormData({ ...formData, empty20kg: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>16 kg</label>
+                          <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty16kg} onChange={e => setFormData({ ...formData, empty16kg: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>10 kg</label>
+                          <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty10kg} onChange={e => setFormData({ ...formData, empty10kg: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.78rem', textAlign: 'center', display: 'block' }}>4 kg</label>
+                          <input type="number" min="0" className="form-control" style={{ textAlign: 'center' }} value={formData.empty4kg} onChange={e => setFormData({ ...formData, empty4kg: e.target.value })} />
                         </div>
                       </div>
                     </div>
