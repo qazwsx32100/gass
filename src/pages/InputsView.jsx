@@ -303,8 +303,20 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
 
   const checkItems = useMemo(() => {
-    const incs = getIncomes().filter(i => i.companyId === companyId && i.paymentMethod === 'check' && i.status === 'approved');
-    const exps = getExpenses().filter(e => e.companyId === companyId && e.paymentMethod === 'check' && e.status === 'approved');
+    const incs = getIncomes().filter(i => 
+      i.companyId === companyId && 
+      i.paymentMethod === 'check' && 
+      i.status === 'approved' &&
+      i.correctionStatus !== 'corrected' &&
+      i.correctionType !== 'reversal'
+    );
+    const exps = getExpenses().filter(e => 
+      e.companyId === companyId && 
+      e.paymentMethod === 'check' && 
+      e.status === 'approved' &&
+      e.correctionStatus !== 'corrected' &&
+      e.correctionType !== 'reversal'
+    );
 
     const all = [
       ...incs.map(i => ({ ...i, type: 'income', label: '應收支票' })),
@@ -532,8 +544,20 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
   // Combined unpaid AR/AP items
   const unpaidArapItems = useMemo(() => {
-    const incomes = getIncomes().filter(i => i.companyId === companyId && i.paymentStatus === 'unpaid' && i.status === 'approved');
-    const expenses = getExpenses().filter(e => e.companyId === companyId && e.paymentStatus === 'unpaid' && e.status === 'approved');
+    const incomes = getIncomes().filter(i => 
+      i.companyId === companyId && 
+      i.paymentStatus === 'unpaid' && 
+      i.status === 'approved' &&
+      i.correctionStatus !== 'corrected' &&
+      i.correctionType !== 'reversal'
+    );
+    const expenses = getExpenses().filter(e => 
+      e.companyId === companyId && 
+      e.paymentStatus === 'unpaid' && 
+      e.status === 'approved' &&
+      e.correctionStatus !== 'corrected' &&
+      e.correctionType !== 'reversal'
+    );
     
     const combined = [
       ...incomes.map(i => ({ ...i, type: 'income' })),
@@ -546,11 +570,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Load items based on active sub tab
   const items = useMemo(() => {
     if (activeSubTab === 'income') {
-      const rows = getIncomes().filter(i => i.companyId === companyId);
+      const rows = getIncomes().filter(i => 
+        i.companyId === companyId &&
+        i.correctionStatus !== 'corrected' &&
+        i.correctionType !== 'reversal'
+      );
       return userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
     }
     if (activeSubTab === 'expense') {
-      const rows = getExpenses().filter(e => e.companyId === companyId);
+      const rows = getExpenses().filter(e => 
+        e.companyId === companyId &&
+        e.correctionStatus !== 'corrected' &&
+        e.correctionType !== 'reversal'
+      );
       return userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
     }
     if (activeSubTab === 'gas') return getGasInventoryPeriods().filter(item => item.companyId === companyId).sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
