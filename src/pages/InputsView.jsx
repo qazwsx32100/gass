@@ -451,8 +451,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (!reconciliationBankId && banks[0]?.id) setReconciliationBankId(banks[0].id);
   }, [banks, reconciliationBankId]);
 
-  const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue'), [accounts]);
-  const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense'), [accounts]);
+  const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
+  const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
   const gasInventoryStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const activeDeposits = customerCylinderDeposits.filter(item => item.depositStatus === 'active');
@@ -3180,8 +3180,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <label className="form-label">會計科目</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.accountCode} onChange={e => setFormData({ ...formData, accountCode: e.target.value })}>
                       {activeSubTab === 'income' 
-                        ? revenueAccounts.map(a => <option key={a.code} value={a.code}>{a.code} - {a.name} ({a.desc})</option>)
-                        : cogsExpenseAccounts.map(a => <option key={a.code} value={a.code}>{a.code} - {a.name} ({a.desc})</option>)
+                        ? revenueAccounts.map(a => {
+                            const isSub = revenueAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                            return <option key={a.code} value={a.code}>{isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})</option>;
+                          })
+                        : cogsExpenseAccounts.map(a => {
+                            const isSub = cogsExpenseAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                            return <option key={a.code} value={a.code}>{isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})</option>;
+                          })
                       }
                     </select>
                   </div>

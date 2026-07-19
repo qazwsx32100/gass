@@ -54,7 +54,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   });
 
   const expenseAndCogsAccounts = useMemo(() => {
-    return accounts.filter(a => a.type === 'expense' || a.type === 'cogs');
+    return accounts.filter(a => a.type === 'expense' || a.type === 'cogs').sort((a, b) => a.code.localeCompare(b.code));
   }, [accounts]);
 
   useEffect(() => {
@@ -832,24 +832,37 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       </tr>
                     ))}
 
-                    {activeSettingsTab === 'accounts' && accounts.map((a, idx) => (
-                      <tr key={idx}>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{a.code}</td>
-                        <td style={{ fontWeight: '700' }}>{a.name}</td>
-                        <td>
-                          <span className={`badge ${a.type === 'revenue' ? 'approved' : a.type === 'cogs' ? 'pending' : 'void'}`}>
-                            {a.type === 'revenue' ? '收入' : a.type === 'cogs' ? '銷貨成本' : '支出'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{a.desc}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(a)}>編輯</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(a.code)}>刪除</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {activeSettingsTab === 'accounts' && (() => {
+                      const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
+                      return sorted.map((a, idx) => {
+                        const isSub = sorted.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                        return (
+                          <tr key={idx} style={{ backgroundColor: isSub ? 'rgba(0, 0, 0, 0.015)' : 'transparent' }}>
+                            <td style={{ fontFamily: 'var(--font-mono)', paddingLeft: isSub ? '24px' : '12px' }}>
+                              {isSub ? <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>↳</span> : null}
+                              {a.code}
+                            </td>
+                            <td style={{ 
+                              fontWeight: isSub ? '400' : '700',
+                              color: isSub ? 'var(--text-secondary)' : 'var(--text-primary)'
+                            }}>{a.name}</td>
+                            <td>
+                              <span className={`badge ${a.type === 'revenue' ? 'approved' : a.type === 'cogs' ? 'pending' : 'void'}`} style={{ opacity: isSub ? 0.85 : 1 }}>
+                                {a.type === 'revenue' ? '收入' : a.type === 'cogs' ? '銷貨成本' : '支出'}
+                                {isSub ? ' (子)' : ''}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{a.desc}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(a)}>編輯</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(a.code)}>刪除</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
 
                     {activeSettingsTab === 'company' && companies.map((c, idx) => (
                       <tr key={idx}>
@@ -943,15 +956,23 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   </thead>
                   <tbody>
                     {expenseAndCogsAccounts.map(acc => {
+                      const isSub = expenseAndCogsAccounts.some(p => p.code !== acc.code && acc.code.startsWith(p.code));
                       const budgetKey = `${budgetCompanyId}_${budgetYear}_${budgetMonth}_${acc.code}`;
                       const currentVal = budgetDrafts[budgetKey] ?? '';
                       return (
-                        <tr key={acc.code}>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{acc.code}</td>
-                          <td style={{ fontWeight: '600' }}>{acc.name}</td>
+                        <tr key={acc.code} style={{ backgroundColor: isSub ? 'rgba(0, 0, 0, 0.015)' : 'transparent' }}>
+                          <td style={{ fontFamily: 'var(--font-mono)', paddingLeft: isSub ? '24px' : '12px' }}>
+                            {isSub ? <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>↳</span> : null}
+                            {acc.code}
+                          </td>
+                          <td style={{ 
+                            fontWeight: isSub ? '400' : '600',
+                            color: isSub ? 'var(--text-secondary)' : 'var(--text-primary)'
+                          }}>{acc.name}</td>
                           <td>
-                            <span className={`badge ${acc.type === 'cogs' ? 'danger' : 'warning'}`}>
+                            <span className={`badge ${acc.type === 'cogs' ? 'danger' : 'warning'}`} style={{ opacity: isSub ? 0.85 : 1 }}>
                               {acc.type === 'cogs' ? '銷貨成本' : '營業費用'}
+                              {isSub ? ' (子)' : ''}
                             </span>
                           </td>
                           <td>

@@ -701,7 +701,7 @@ const encodeHtmlEntities = (text) => String(text || '').replace(/[\u0080-\uFFFF]
 
 // Initialize database with mock data if empty or outdated
 export const initializeDB = (forceReset = false) => {
-  const currentDbVersion = 'v9';
+  const currentDbVersion = 'v10';
   let needsInitialization = forceReset || 
                          !localStorage.getItem(KEYS.COMPANIES) || 
                          localStorage.getItem('bp_db_version') !== currentDbVersion;
@@ -711,7 +711,16 @@ export const initializeDB = (forceReset = false) => {
     localStorage.setItem(KEYS.COMPANIES, JSON.stringify(keepOrSeed(KEYS.COMPANIES, INITIAL_COMPANIES)));
     localStorage.setItem(KEYS.SHAREHOLDERS, JSON.stringify(keepOrSeed(KEYS.SHAREHOLDERS, INITIAL_SHAREHOLDERS).map(normalizeShareholder)));
     localStorage.setItem(KEYS.BANKS, JSON.stringify(keepOrSeed(KEYS.BANKS, INITIAL_BANKS)));
-    localStorage.setItem(KEYS.CHART_OF_ACCOUNTS, JSON.stringify(keepOrSeed(KEYS.CHART_OF_ACCOUNTS, INITIAL_CHART_OF_ACCOUNTS)));
+    const coaSeed = keepOrSeed(KEYS.CHART_OF_ACCOUNTS, INITIAL_CHART_OF_ACCOUNTS);
+    if (Array.isArray(coaSeed)) {
+      if (!coaSeed.some(a => a.code === '510201')) {
+        coaSeed.push({ code: '510201', name: '爐具商品採購', type: 'cogs', desc: '主營爐具與熱水器進貨（子項目）' });
+      }
+      if (!coaSeed.some(a => a.code === '610101')) {
+        coaSeed.push({ code: '610101', name: '司機配送薪資', type: 'expense', desc: '小貨車配送司機月薪（子項目）' });
+      }
+    }
+    localStorage.setItem(KEYS.CHART_OF_ACCOUNTS, JSON.stringify(coaSeed));
     localStorage.setItem(KEYS.SHAREHOLDER_LEDGER, JSON.stringify(keepOrSeed(KEYS.SHAREHOLDER_LEDGER, INITIAL_SHAREHOLDER_LEDGER)));
     localStorage.setItem(KEYS.INCOMES, JSON.stringify(keepOrSeed(KEYS.INCOMES, INITIAL_INCOMES).map(normalizeTransaction)));
     localStorage.setItem(KEYS.EXPENSES, JSON.stringify(keepOrSeed(KEYS.EXPENSES, INITIAL_EXPENSES).map(normalizeTransaction)));

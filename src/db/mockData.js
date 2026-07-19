@@ -57,9 +57,11 @@ export const INITIAL_CHART_OF_ACCOUNTS = [
   // Cost of Goods Sold (COGS)
   { code: '5101', name: '進氣成本', type: 'cogs', desc: '瓦斯分裝廠進氣成本' },
   { code: '5102', name: '材料零件成本', type: 'cogs', desc: '爐具、管線與安全閥進貨' },
+  { code: '510201', name: '爐具商品採購', type: 'cogs', desc: '主營爐具與熱水器進貨（子項目）' },
   
   // Operating Expenses
   { code: '6101', name: '員工薪資', type: 'expense', desc: '正職員工及配送司機薪資' },
+  { code: '610101', name: '司機配送薪資', type: 'expense', desc: '小貨車配送司機月薪（子項目）' },
   { code: '6102', name: '店租費用', type: 'expense', desc: '店面與鋼瓶放置場租金' },
   { code: '6103', name: '車輛油資', type: 'expense', desc: '送貨小貨車之加油費用' },
   { code: '6104', name: '車輛折舊與維修', type: 'expense', desc: '貨車牌照、檢驗、損耗修繕' },
