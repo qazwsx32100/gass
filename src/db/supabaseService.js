@@ -45,6 +45,9 @@ const DATA_KEYS = {
 
 let pollTimer = null;
 let isSyncing = false;
+let hasPendingSync = false;
+let pendingSyncOperator = '系統';
+let pendingSyncPromiseResolvers = [];
 
 export const getSupabaseConfig = () => ({ viaApi: true });
 export const isSupabaseConnected = () => true;
@@ -176,23 +179,36 @@ export const pullSupabaseToLocal = async () => {
 };
 
 export const syncLocalToSupabase = async (operatorName = '系統') => {
-  if (isSyncing) return false;
   if (!getCloudSessionToken()) {
     setLastCloudSyncError({ status: 401, error: '雲端登入已失效，請重新登入後再儲存。' });
     return false;
   }
 
+  if (isSyncing) {
+    hasPendingSync = true;
+    if (operatorName !== '系統') {
+      pendingSyncOperator = operatorName;
+    }
+    return new Promise((resolve) => {
+      pendingSyncPromiseResolvers.push(resolve);
+    });
+  }
+
   isSyncing = true;
+  let success = false;
   try {
     clearLastCloudSyncError();
     const now = new Date().toISOString();
+    const currentState = readLocalState();
+    const expectedUpdatedAt = localStorage.getItem(CLOUD_UPDATED_AT_KEY) || null;
+
     const response = await apiFetch('/api/app-state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...authHeaders() },
       body: JSON.stringify({
-        state: readLocalState(),
+        state: currentState,
         updatedBy: operatorName,
-        expectedUpdatedAt: localStorage.getItem(CLOUD_UPDATED_AT_KEY) || null
+        expectedUpdatedAt: expectedUpdatedAt
       })
     });
 
@@ -201,18 +217,34 @@ export const syncLocalToSupabase = async (operatorName = '系統') => {
       setLastCloudSyncError({ status: response.status, error });
       if (response.status === 401) clearCloudSessionToken();
       console.error('Supabase sync failed', error);
-      return false;
+      success = false;
+    } else {
+      const data = await response.json().catch(() => ({}));
+      if (data?.state && !hasPendingSync) {
+        writeLocalState(data.state);
+      }
+      rememberCloudUpdatedAt(data.updated_at || now);
+      success = true;
     }
-
-    const data = await response.json().catch(() => ({}));
-    if (data?.state) {
-      writeLocalState(data.state);
-    }
-    rememberCloudUpdatedAt(data.updated_at || now);
-    return true;
+  } catch (err) {
+    const errorMsg = err.message || '雲端同步時發生非預期錯誤。';
+    setLastCloudSyncError({ status: 500, error: errorMsg });
+    console.error('Supabase sync caught error', err);
+    success = false;
   } finally {
     isSyncing = false;
+
+    if (hasPendingSync) {
+      hasPendingSync = false;
+      const nextOperator = pendingSyncOperator;
+      const resolvers = [...pendingSyncPromiseResolvers];
+      pendingSyncPromiseResolvers = [];
+
+      const nextSuccess = await syncLocalToSupabase(nextOperator);
+      resolvers.forEach(resolve => resolve(nextSuccess));
+    }
   }
+  return success;
 };
 
 export const seedSupabaseIfEmpty = async (operatorName = '系統') => {
