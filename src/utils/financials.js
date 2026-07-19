@@ -905,6 +905,181 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
   };
 };
 
+export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
+  const allIncomes = getIncomes().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const allExpenses = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const dailyMap = {};
+
+  const ensureDateRow = (date) => {
+    if (!dailyMap[date]) {
+      dailyMap[date] = {
+        date,
+        gasKg: 0,
+        gasRevenue: 0,
+        gasCogs: 0,
+        stoveRevenue: 0,
+        stoveCogs: 0,
+        repairRevenue: 0,
+        repairCogs: 0,
+        cylinderRevenue: 0,
+        cylinderCogs: 0,
+        inspectionRevenue: 0,
+        inspectionCogs: 0,
+        otherRevenue: 0,
+        otherCogs: 0,
+        totalRevenue: 0,
+        totalCogs: 0,
+        totalProfit: 0,
+        totalMargin: 0
+      };
+    }
+    return dailyMap[date];
+  };
+
+  allIncomes.forEach(item => {
+    const row = ensureDateRow(item.date);
+    const remarks = item.remarks || '';
+    const accountCode = item.accountCode || '';
+    const accountName = getChartOfAccounts().find(a => a.code === accountCode)?.name || '';
+
+    if (remarks === '當日營業彙總 - 現收') {
+      const kg = Number(item.gasKg || 0);
+      const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
+      const cogs = Math.round(kg * monthCost.averageCostPerKg);
+
+      const sameDayExtra = allIncomes.filter(inc =>
+        inc.date === item.date &&
+        inc.remarks &&
+        (inc.remarks === '當日營業彙總 - 月結' || inc.remarks === '當日營業彙總 - 賒欠')
+      );
+      const revenue = Number(item.amount || 0) + sameDayExtra.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+
+      row.gasKg += kg;
+      row.gasRevenue += revenue;
+      row.gasCogs += cogs;
+    } else if (remarks === '當日營業彙總 - 月結' || remarks === '當日營業彙總 - 賒欠') {
+      return;
+    } else if (accountCode === '4101') {
+      const kg = Number(item.gasKg || 0);
+      const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
+      const cogs = Math.round(kg * monthCost.averageCostPerKg);
+      row.gasKg += kg;
+      row.gasRevenue += Number(item.amount || 0);
+      row.gasCogs += cogs;
+    } else if (remarks === '當日營業彙總 - 爐具收入' || accountCode === '4104' || accountName.includes('爐具')) {
+      row.stoveRevenue += Number(item.amount || 0);
+    } else if (remarks === '當日營業彙總 - 維修收入' || accountCode === '4102' || accountName.includes('維修') || accountName.includes('服務') || remarks.includes('安裝')) {
+      row.repairRevenue += Number(item.amount || 0);
+    } else if (remarks === '當日營業彙總 - 買桶收入' || remarks.includes('買桶') || accountName.includes('買桶') || accountName.includes('鋼瓶') || accountName.includes('購桶')) {
+      row.cylinderRevenue += Number(item.amount || 0);
+    } else if (remarks === '當日營業彙總 - 檢驗費收入' || remarks.includes('檢驗') || accountName.includes('檢驗')) {
+      row.inspectionRevenue += Number(item.amount || 0);
+    } else {
+      row.otherRevenue += Number(item.amount || 0);
+    }
+  });
+
+  allExpenses.forEach(item => {
+    const row = ensureDateRow(item.date);
+    const remarks = item.remarks || '';
+    const accountCode = item.accountCode || '';
+    const accountName = getChartOfAccounts().find(a => a.code === accountCode)?.name || '';
+
+    const isBuyCylinder = remarks.includes('買桶') || remarks.includes('鋼瓶') || remarks.includes('購桶') || accountName.includes('買桶') || accountName.includes('鋼瓶') || accountName.includes('購桶');
+    const isRepair = remarks.includes('維修') || remarks.includes('修繕') || remarks.includes('保養') || remarks.includes('安裝') || accountName.includes('維修') || accountName.includes('修繕') || accountName.includes('保養');
+    const isStove = remarks.includes('爐具') || remarks.includes('零件') || remarks.includes('材料') || accountName.includes('爐具') || accountName.includes('零件') || accountName.includes('材料');
+    const isInspection = remarks.includes('檢驗') || accountName.includes('檢驗');
+
+    if (isStove) {
+      row.stoveCogs += Number(item.amount || 0);
+    } else if (isRepair) {
+      row.repairCogs += Number(item.amount || 0);
+    } else if (isBuyCylinder) {
+      row.cylinderCogs += Number(item.amount || 0);
+    } else if (isInspection) {
+      row.inspectionCogs += Number(item.amount || 0);
+    } else {
+      row.otherCogs += Number(item.amount || 0);
+    }
+  });
+
+  const dailyRows = Object.values(dailyMap).map(row => {
+    row.totalRevenue = row.gasRevenue + row.stoveRevenue + row.repairRevenue + row.cylinderRevenue + row.inspectionRevenue + row.otherRevenue;
+    row.totalCogs = row.gasCogs + row.stoveCogs + row.repairCogs + row.cylinderCogs + row.inspectionCogs + row.otherCogs;
+    row.totalProfit = row.totalRevenue - row.totalCogs;
+    row.totalMargin = row.totalRevenue > 0 ? (row.totalProfit / row.totalRevenue) * 100 : 0;
+    return row;
+  }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  let totalKg = 0;
+  let totalGasRevenue = 0;
+  let totalGasCogs = 0;
+  let totalStoveRevenue = 0;
+  let totalStoveCogs = 0;
+  let totalRepairRevenue = 0;
+  let totalRepairCogs = 0;
+  let totalCylinderRevenue = 0;
+  let totalCylinderCogs = 0;
+  let totalInspectionRevenue = 0;
+  let totalInspectionCogs = 0;
+  let totalOtherRevenue = 0;
+  let totalOtherCogs = 0;
+  let totalRevenue = 0;
+  let totalCogs = 0;
+
+  dailyRows.forEach(row => {
+    totalKg += row.gasKg;
+    totalGasRevenue += row.gasRevenue;
+    totalGasCogs += row.gasCogs;
+    totalStoveRevenue += row.stoveRevenue;
+    totalStoveCogs += row.stoveCogs;
+    totalRepairRevenue += row.repairRevenue;
+    totalRepairCogs += row.repairCogs;
+    totalCylinderRevenue += row.cylinderRevenue;
+    totalCylinderCogs += row.cylinderCogs;
+    totalInspectionRevenue += row.inspectionRevenue;
+    totalInspectionCogs += row.inspectionCogs;
+    totalOtherRevenue += row.otherRevenue;
+    totalOtherCogs += row.otherCogs;
+    totalRevenue += row.totalRevenue;
+    totalCogs += row.totalCogs;
+  });
+
+  const grossProfit = totalRevenue - totalCogs;
+  const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+  return {
+    dailyRows,
+    totalKg,
+    totalGasRevenue,
+    totalGasCogs,
+    totalStoveRevenue,
+    totalStoveCogs,
+    totalRepairRevenue,
+    totalRepairCogs,
+    totalCylinderRevenue,
+    totalCylinderCogs,
+    totalInspectionRevenue,
+    totalInspectionCogs,
+    totalOtherRevenue,
+    totalOtherCogs,
+    totalRevenue,
+    totalCogs,
+    grossProfit,
+    grossMargin
+  };
+};
+
 /**
  * 1. Dynamic Shareholder Equity Timeline
  * Calculates the active capital and ratio of all shareholders for a company up to a specific date.

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod } from '../utils/financials';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod } from '../utils/financials';
 import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -176,6 +176,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getGasGrossProfitForPeriod(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
+  const companyProfit = useMemo(() => {
+    return getCompanyProfitReport(companyId, activePeriodType, activePeriodVal);
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
   const gasInventory = useMemo(() => {
     return getGasInventoryValuationAtDate(companyId, getPeriodEndDate(activePeriodType, activePeriodVal));
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
@@ -318,13 +322,29 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務'));
     const repairIncomeAmount = repairIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    // Other Incomes (其他營業收入) - Code 4103 or not matching gas, stove, or repair
+    // Cylinder Incomes (買桶收入)
+    const cylinderIncomes = allIncomes.filter(item => 
+      item.remarks?.includes('買桶') || 
+      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('買桶') ||
+      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('鋼瓶') ||
+      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('購桶')
+    );
+    const cylinderIncomeAmount = cylinderIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Inspection Incomes (檢驗費收入)
+    const inspectionIncomes = allIncomes.filter(item => 
+      item.remarks?.includes('檢驗') || 
+      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('檢驗')
+    );
+    const inspectionIncomeAmount = inspectionIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    // Other Incomes (其他營業收入)
     const otherIncomes = allIncomes.filter(item =>
-      item.accountCode === '4103' ||
-      (!['4101', '4102', '4104'].includes(item.accountCode) &&
-       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') &&
-       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務') &&
-       !(getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('爐具'))
+      !gasSales.some(g => g.id === item.id) &&
+      !stoveIncomes.some(s => s.id === item.id) &&
+      !repairIncomes.some(r => r.id === item.id) &&
+      !cylinderIncomes.some(c => c.id === item.id) &&
+      !inspectionIncomes.some(i => i.id === item.id)
     );
     const otherIncomeAmount = otherIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
@@ -345,6 +365,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       otherExpenseAmount: otherExpenseAmount || 0,
       stoveIncomeAmount: stoveIncomeAmount || 0,
       repairIncomeAmount: repairIncomeAmount || 0,
+      cylinderIncomeAmount: cylinderIncomeAmount || 0,
+      inspectionIncomeAmount: inspectionIncomeAmount || 0,
       otherIncomeAmount: otherIncomeAmount || 0
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
@@ -469,7 +491,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ];
     } else if (reportType === 'dailySales') {
       csvRows = [
-        [`${companyName} - 單日銷售狀況`],
+        [`${companyName} - 營業狀況`],
         [`報表期間: ${activePeriodLabel}`],
         [],
         ['資料項目', '數值 / 金額'],
@@ -484,7 +506,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['平均單價 (元/kg)', dailySales.avgPricePerKg ? dailySales.avgPricePerKg.toFixed(2) : '0.00'],
         ['當日毛利', dailySales.grossProfit],
         ['爐具收入', dailySales.stoveIncomeAmount],
-        ['維修收入', dailySales.repairIncomeAmount],
+        ['維修/安裝 收入', dailySales.repairIncomeAmount],
+        ['買桶收入', dailySales.cylinderIncomeAmount],
+        ['檢驗費收入', dailySales.inspectionIncomeAmount],
         ['其他營業收入', dailySales.otherIncomeAmount],
         ['買桶金額', dailySales.buyCylinderAmount],
         ['維修費用', dailySales.repairAmount],
@@ -493,20 +517,37 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ];
     } else if (reportType === 'gas') {
       csvRows = [
-        [`${companyName} - 瓦斯銷售毛利表`],
+        [`${companyName} - 毛利表`],
         [`報表期間: ${activePeriodLabel}`],
         [],
-        ['日期', '銷售公斤', '瓦斯收入', '銷貨成本', '毛利', '毛利率'],
-        ...gasProfit.dailyRows.map(row => [
+        ['日期', '瓦斯毛利', '爐具毛利', '維修安裝毛利', '買桶毛利', '檢驗費毛利', '其它毛利', '總收入', '總成本', '總毛利', '毛利率'],
+        ...companyProfit.dailyRows.map(row => [
           row.date,
-          row.gasKg,
-          row.revenue,
-          row.cogs,
-          row.grossProfit,
-          `${row.grossMargin.toFixed(2)}%`
+          row.gasRevenue - row.gasCogs,
+          row.stoveRevenue - row.stoveCogs,
+          row.repairRevenue - row.repairCogs,
+          row.cylinderRevenue - row.cylinderCogs,
+          row.inspectionRevenue - row.inspectionCogs,
+          row.otherRevenue - row.otherCogs,
+          row.totalRevenue,
+          row.totalCogs,
+          row.totalProfit,
+          `${row.totalMargin.toFixed(2)}%`
         ]),
         [],
-        ['合計', gasProfit.totalKg, gasProfit.totalRevenue, gasProfit.totalCogs, gasProfit.grossProfit, `${gasProfit.grossMargin.toFixed(2)}%`]
+        [
+          '合計',
+          companyProfit.totalGasRevenue - companyProfit.totalGasCogs,
+          companyProfit.totalStoveRevenue - companyProfit.totalStoveCogs,
+          companyProfit.totalRepairRevenue - companyProfit.totalRepairCogs,
+          companyProfit.totalCylinderRevenue - companyProfit.totalCylinderCogs,
+          companyProfit.totalInspectionRevenue - companyProfit.totalInspectionCogs,
+          companyProfit.totalOtherRevenue - companyProfit.totalOtherCogs,
+          companyProfit.totalRevenue,
+          companyProfit.totalCogs,
+          companyProfit.grossProfit,
+          `${companyProfit.grossMargin.toFixed(2)}%`
+        ]
       ];
     } else if (reportType === 'investor') {
       csvRows = [
@@ -590,8 +631,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       cashFlow: '現金流量表',
       arap: '應收應付帳齡表',
       equity: '股東權益變動表',
-      gas: '瓦斯毛利表',
-      dailySales: '單日銷售狀況',
+      gas: '毛利表',
+      dailySales: '營業狀況',
       investor: '投資人摘要',
       journal: '傳票總覽',
       vat: '營業稅彙整',
@@ -622,10 +663,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               ⚖️ 資產負債表
             </button>
             <button className={`tab-btn ${reportType === 'gas' ? 'active' : ''}`} onClick={() => setReportType('gas')}>
-              🛢️ 瓦斯毛利表
+              🛢️ 毛利表
             </button>
             <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
-              🛍️ 單日銷售狀況
+              🛍️ 營業狀況
             </button>
             <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
               應收/應付
@@ -1062,7 +1103,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         {reportType === 'dailySales' && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🛍️ 營業報表 - 單日銷售狀況</span>
+              <span className="card-title">🛍️ 營業報表 - 營業狀況</span>
               <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
             </div>
             <div className="card-body">
@@ -1112,10 +1153,18 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-value">{formatCurrency(dailySales.stoveIncomeAmount)}</span>
                 </div>
                 <div className="metric-card accent-green">
-                  <span className="metric-label">維修收入</span>
+                  <span className="metric-label">維修/安裝 收入</span>
                   <span className="metric-value">{formatCurrency(dailySales.repairIncomeAmount)}</span>
                 </div>
                 <div className="metric-card accent-gold">
+                  <span className="metric-label">買桶收入</span>
+                  <span className="metric-value">{formatCurrency(dailySales.cylinderIncomeAmount)}</span>
+                </div>
+                <div className="metric-card accent-purple">
+                  <span className="metric-label">檢驗費收入</span>
+                  <span className="metric-value">{formatCurrency(dailySales.inspectionIncomeAmount)}</span>
+                </div>
+                <div className="metric-card accent-blue">
                   <span className="metric-label">其他營業收入</span>
                   <span className="metric-value">{formatCurrency(dailySales.otherIncomeAmount)}</span>
                 </div>
@@ -1184,32 +1233,99 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         {reportType === 'gas' && (
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🛢️ 瓦斯銷售毛利表</span>
+              <span className="card-title">🛢️ 營運毛利表</span>
               <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
             </div>
             <div className="card-body">
               <div className="metrics-grid" style={{ marginBottom: '24px' }}>
-                <div className="metric-card accent-green">
-                  <span className="metric-label">瓦斯銷售公斤</span>
-                  <span className="metric-value">{gasProfit.totalKg.toLocaleString()} kg</span>
-                </div>
                 <div className="metric-card accent-blue">
-                  <span className="metric-label">瓦斯銷售收入</span>
-                  <span className="metric-value">${gasProfit.totalRevenue.toLocaleString()}</span>
+                  <span className="metric-label">營業總收入</span>
+                  <span className="metric-value">{formatCurrency(companyProfit.totalRevenue)}</span>
                 </div>
                 <div className="metric-card accent-red">
                   <span className="metric-label">自動銷貨成本</span>
-                  <span className="metric-value">${gasProfit.totalCogs.toLocaleString()}</span>
+                  <span className="metric-value">{formatCurrency(companyProfit.totalCogs)}</span>
                 </div>
                 <div className="metric-card accent-gold">
-                  <span className="metric-label">瓦斯毛利 / 毛利率</span>
-                  <span className={`metric-value ${gasProfit.grossProfit < 0 ? 'text-danger' : ''}`}>${gasProfit.grossProfit.toLocaleString()}</span>
-                  <span className="metric-change neutral">{gasProfit.grossMargin.toFixed(1)}%</span>
+                  <span className="metric-label">營業總毛利 / 毛利率</span>
+                  <span className={`metric-value ${companyProfit.grossProfit < 0 ? 'text-danger' : ''}`}>{formatCurrency(companyProfit.grossProfit)}</span>
+                  <span className="metric-change neutral">{companyProfit.grossMargin.toFixed(1)}%</span>
+                </div>
+              </div>
+
+              {/* Category Profit Summary Table */}
+              <div className="card" style={{ boxShadow: 'none', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
+                <div className="card-header" style={{ padding: '12px 16px', backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>📊 各類銷售項目毛利彙總</span>
+                </div>
+                <div className="table-responsive">
+                  <table className="data-table" style={{ margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th>項目</th>
+                        <th style={{ textAlign: 'right' }}>營業收入</th>
+                        <th style={{ textAlign: 'right' }}>銷貨成本</th>
+                        <th style={{ textAlign: 'right' }}>銷貨毛利</th>
+                        <th style={{ textAlign: 'right' }}>毛利率</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>🛢️ 瓦斯銷售</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalGasRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalGasCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalGasRevenue - companyProfit.totalGasCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalGasRevenue - companyProfit.totalGasCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalGasRevenue > 0 ? ((companyProfit.totalGasRevenue - companyProfit.totalGasCogs) / companyProfit.totalGasRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr>
+                        <td>🍳 爐具銷售</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalStoveRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalStoveCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalStoveRevenue - companyProfit.totalStoveCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalStoveRevenue - companyProfit.totalStoveCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalStoveRevenue > 0 ? ((companyProfit.totalStoveRevenue - companyProfit.totalStoveCogs) / companyProfit.totalStoveRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr>
+                        <td>🔧 維修/安裝</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalRepairRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalRepairCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalRepairRevenue - companyProfit.totalRepairCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalRepairRevenue - companyProfit.totalRepairCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalRepairRevenue > 0 ? ((companyProfit.totalRepairRevenue - companyProfit.totalRepairCogs) / companyProfit.totalRepairRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr>
+                        <td>🪣 鋼瓶/買桶</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalCylinderRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalCylinderCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalCylinderRevenue - companyProfit.totalCylinderCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalCylinderRevenue - companyProfit.totalCylinderCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalCylinderRevenue > 0 ? ((companyProfit.totalCylinderRevenue - companyProfit.totalCylinderCogs) / companyProfit.totalCylinderRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr>
+                        <td>🔍 檢驗費</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalInspectionRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalInspectionCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalInspectionRevenue - companyProfit.totalInspectionCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalInspectionRevenue - companyProfit.totalInspectionCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalInspectionRevenue > 0 ? ((companyProfit.totalInspectionRevenue - companyProfit.totalInspectionCogs) / companyProfit.totalInspectionRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr>
+                        <td>📦 其它銷售</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalOtherRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalOtherCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: companyProfit.totalOtherRevenue - companyProfit.totalOtherCogs >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalOtherRevenue - companyProfit.totalOtherCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.totalOtherRevenue > 0 ? ((companyProfit.totalOtherRevenue - companyProfit.totalOtherCogs) / companyProfit.totalOtherRevenue * 100).toFixed(1) : '0.0'}%</td>
+                      </tr>
+                      <tr style={{ fontWeight: 'bold', backgroundColor: 'var(--bg-secondary)' }}>
+                        <td>合計</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(companyProfit.totalRevenue)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(companyProfit.totalCogs)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: companyProfit.grossProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.grossProfit)}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.grossMargin.toFixed(1)}%</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
               <div className="alert-box info" style={{ marginTop: 0 }}>
-                本表採月加權平均成本法。平均成本 =（期初瓦斯成本 + 本月進貨金額）/（期初公斤 + 本月進貨公斤）。
+                本表包含瓦斯（採月加權平均）、爐具、維修/安裝、買桶、檢驗費及其它銷售項目之毛利統計。非瓦斯類項目成本由相應支出的科目（材料、修繕等）依日期歸帳。
               </div>
 
               <div className="table-responsive">
@@ -1217,28 +1333,47 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <thead>
                     <tr>
                       <th>日期</th>
-                      <th>銷售公斤</th>
-                      <th>瓦斯收入</th>
-                      <th>銷貨成本</th>
-                      <th>每日毛利</th>
-                      <th>毛利率</th>
+                      <th style={{ textAlign: 'right' }}>瓦斯毛利</th>
+                      <th style={{ textAlign: 'right' }}>爐具毛利</th>
+                      <th style={{ textAlign: 'right' }}>維修安裝毛利</th>
+                      <th style={{ textAlign: 'right' }}>買桶毛利</th>
+                      <th style={{ textAlign: 'right' }}>檢驗費毛利</th>
+                      <th style={{ textAlign: 'right' }}>其它毛利</th>
+                      <th style={{ textAlign: 'right' }}>當日總收入</th>
+                      <th style={{ textAlign: 'right' }}>當日總成本</th>
+                      <th style={{ textAlign: 'right' }}>當日總毛利</th>
+                      <th style={{ textAlign: 'right' }}>毛利率</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {gasProfit.dailyRows.map(row => (
-                      <tr key={row.date}>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{row.date}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{row.gasKg.toLocaleString()} kg</td>
-                        <td style={{ color: 'var(--accent-green)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${row.revenue.toLocaleString()}</td>
-                        <td style={{ color: 'var(--accent-red)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${row.cogs.toLocaleString()}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${row.grossProfit.toLocaleString()}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{row.grossMargin.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                    {gasProfit.dailyRows.length === 0 && (
+                    {companyProfit.dailyRows.map(row => {
+                      const gasProfitVal = row.gasRevenue - row.gasCogs;
+                      const stoveProfitVal = row.stoveRevenue - row.stoveCogs;
+                      const repairProfitVal = row.repairRevenue - row.repairCogs;
+                      const cylinderProfitVal = row.cylinderRevenue - row.cylinderCogs;
+                      const inspectionProfitVal = row.inspectionRevenue - row.inspectionCogs;
+                      const otherProfitVal = row.otherRevenue - row.otherCogs;
+
+                      return (
+                        <tr key={row.date}>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{row.date}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: gasProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(gasProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: stoveProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(stoveProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: repairProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(repairProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: cylinderProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(cylinderProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: inspectionProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(inspectionProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: otherProfitVal >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(otherProfitVal)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>{formatCurrency(row.totalRevenue)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(row.totalCogs)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: row.totalProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(row.totalProfit)}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{row.totalMargin.toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
+                    {companyProfit.dailyRows.length === 0 && (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
-                          此期間尚未有已核准且填寫瓦斯公斤數的收入資料。
+                        <td colSpan="11" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
+                          此期間尚未有已核准的銷售或收入資料。
                         </td>
                       </tr>
                     )}
