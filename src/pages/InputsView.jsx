@@ -3656,6 +3656,40 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         const { type, item } = detailItem;
         const fmtVal = (val) => `$${Number(val || 0).toLocaleString()}`;
         
+        // Compute correction history chain
+        const chain = ['income', 'expense'].includes(type) ? (() => {
+          const isIncome = type === 'income';
+          const db = isIncome ? getIncomes() : getExpenses();
+          const list = [];
+          
+          let current = item;
+          // Traverse up to find root
+          while (current && current.correctionOf) {
+            const parent = db.find(row => row.id === current.correctionOf);
+            if (!parent) break;
+            current = parent;
+          }
+          
+          if (!current) return [];
+          list.push({ role: 'original', item: current });
+          
+          const findCorrectionsFor = (parentId) => {
+            const children = db.filter(row => row.correctionOf === parentId);
+            children.forEach(child => {
+              list.push({
+                role: child.correctionType || (child.amount < 0 ? 'reversal' : 'replacement'),
+                item: child
+              });
+              if (child.correctionStatus === 'corrected') {
+                findCorrectionsFor(child.id);
+              }
+            });
+          };
+          
+          findCorrectionsFor(current.id);
+          return list;
+        })() : [];
+
         const DetailRow = ({ label, value, isBold, color }) => (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{label}</span>
@@ -3669,7 +3703,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
         return (
           <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setDetailItem(null)}>
-            <div className="modal-content" style={{ maxWidth: '650px', width: '90%', textAlign: 'left', padding: '20px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-content" style={{ maxWidth: '650px', width: '90%', textAlign: 'left', padding: '20px', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
               <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
                 <span className="modal-title" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   📋 明細詳情 {['income', 'expense'].includes(type) ? `(${item.id})` : ''}
@@ -3677,7 +3711,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 <button type="button" className="modal-close" onClick={() => setDetailItem(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
               </div>
 
-              <div className="modal-body" style={{ padding: '12px 0', overflowY: 'auto', maxHeight: '70vh' }}>
+              <div className="modal-body" style={{ padding: '12px 0', overflowY: 'auto', flex: 1 }}>
                 
                 {['income', 'expense'].includes(type) && (
                   <div>
@@ -3716,6 +3750,59 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     </div>
                     <DetailRow label="經辦人員" value={item.createdByName || '系統管理員'} />
                     <DetailRow label="建立時間" value={formatDateTime(item.createdAt)} />
+
+                    {/* History Chain Timeline */}
+                    {chain.length > 1 && (
+                      <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', border: '1px dashed var(--accent-blue)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--accent-blue)', fontSize: '0.95rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🔄 沖銷與更正歷史紀錄
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '20px', borderLeft: '2px solid var(--border-color)', margin: '10px 0' }}>
+                          {chain.map((step, sIdx) => {
+                            const stepItem = step.item;
+                            const isCurrent = stepItem.id === item.id;
+                            const isReversal = step.role === 'reversal' || stepItem.amount < 0;
+                            
+                            return (
+                              <div key={stepItem.id} style={{ position: 'relative', fontSize: '0.85rem' }}>
+                                {/* Timeline Dot */}
+                                <div style={{
+                                  position: 'absolute',
+                                  left: '-27px',
+                                  top: '2px',
+                                  width: '12px',
+                                  height: '12px',
+                                  borderRadius: '50%',
+                                  backgroundColor: isCurrent ? 'var(--accent-blue)' : isReversal ? 'var(--accent-red)' : 'var(--text-tertiary)',
+                                  border: '2px solid var(--bg-secondary)'
+                                }} />
+                                
+                                {/* Step Card Content */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 'bold', color: isCurrent ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
+                                      {stepItem.id} ({step.role === 'original' ? '原始單據' : isReversal ? '沖銷傳票' : '更正後新單據'})
+                                      {isCurrent && <span style={{ marginLeft: '6px', fontSize: '0.72rem', padding: '1px 5px', borderRadius: '4px', backgroundColor: 'var(--accent-blue)', color: '#fff' }}>本單據</span>}
+                                    </span>
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{stepItem.date}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                                    <span>金額：<strong style={{ color: stepItem.amount < 0 ? 'var(--accent-red)' : 'var(--accent-green)', fontFamily: 'var(--font-mono)' }}>{fmtVal(stepItem.amount)}</strong></span>
+                                    <span>經辦：{stepItem.createdByName || '系統'}</span>
+                                    {stepItem.status && <span>狀態：{STATUS_LABELS[stepItem.status] || stepItem.status}</span>}
+                                  </div>
+                                  {stepItem.remarks && (
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px', fontStyle: 'italic' }}>
+                                      備註/更正原因：{stepItem.remarks}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {item.status === 'void' && (
                       <div style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-red)' }}>
