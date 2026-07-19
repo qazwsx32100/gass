@@ -211,7 +211,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     });
 
     allBankTransactions.forEach(bt => {
-      if (bt.remarks && bt.remarks.startsWith('當日營業彙總 - ')) {
+      const isRepayment = 
+        (bt.remarks && bt.remarks.startsWith('當日營業彙總 - 還款')) || 
+        (bt.sourceType === 'settlement' && bt.direction === 'in');
+
+      if (isRepayment) {
         const date = bt.date;
         if (!summaryByDate[date]) {
           summaryByDate[date] = {
@@ -230,10 +234,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             repaymentAmount: 0
           };
         }
-
-        if (bt.remarks === '當日營業彙總 - 還款') {
-          summaryByDate[date].repaymentAmount = Number(bt.amount || 0);
-        }
+        summaryByDate[date].repaymentAmount += Number(bt.amount || 0);
       }
     });
 
