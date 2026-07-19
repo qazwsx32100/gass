@@ -251,6 +251,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null); // If null, we are adding new
+  const [detailItem, setDetailItem] = useState(null);
+
+  const handleRowClick = (e, item, type) => {
+    if (
+      e.target.closest('button') ||
+      e.target.closest('a') ||
+      e.target.closest('input') ||
+      e.target.closest('select') ||
+      e.target.closest('.btn') ||
+      e.target.tagName === 'BUTTON' ||
+      e.target.tagName === 'A'
+    ) {
+      return;
+    }
+    setDetailItem({ type, item });
+  };
 
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
   const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState('');
@@ -1797,7 +1813,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </thead>
               <tbody>
                 {unpaidArapItems.map((item, idx) => (
-                  <tr key={idx}>
+                  <tr key={idx} onClick={(e) => handleRowClick(e, item, item.type)} style={{ cursor: 'pointer' }}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
                     <td>
@@ -1970,7 +1986,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 </thead>
                 <tbody>
                   {bankReconciliations.map(item => (
-                    <tr key={item.id}>
+                    <tr key={item.id} onClick={(e) => handleRowClick(e, item, 'bankReconciliation')} style={{ cursor: 'pointer' }}>
                       <td style={{ fontFamily: 'var(--font-mono)' }}>{item.id}</td>
                       <td>{item.statementDate}</td>
                       <td>{getBankName(item.bankId)}</td>
@@ -2035,7 +2051,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     const isPaid = item.paymentStatus === 'paid';
                     
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.id} onClick={(e) => handleRowClick(e, item, 'checks')} style={{ cursor: 'pointer' }}>
                         <td>
                           <span className={`badge ${isIncome ? 'success' : 'danger'}`}>
                             {isIncome ? '應收支票' : '應付支票'}
@@ -2283,7 +2299,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </thead>
               <tbody>
                 {items.map((item, idx) => (
-                  <tr key={idx}>
+                  <tr key={idx} onClick={(e) => handleRowClick(e, item, activeSubTab)} style={{ cursor: 'pointer' }}>
                     {!['dailySummary', 'gas'].includes(activeSubTab) && (
                       <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
                     )}
@@ -3602,6 +3618,299 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           </div>
         </div>
       )}
+
+      {/* Detail Viewer Modal */}
+      {detailItem && (() => {
+        const { type, item } = detailItem;
+        const fmtVal = (val) => `$${Number(val || 0).toLocaleString()}`;
+        
+        const DetailRow = ({ label, value, isBold, color }) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{label}</span>
+            <span style={{ fontWeight: isBold ? 700 : 400, color: color || 'var(--text-primary)', textAlign: 'right', fontSize: '0.95rem' }}>{value || '-'}</span>
+          </div>
+        );
+
+        const SectionHeader = ({ title }) => (
+          <h4 style={{ margin: '18px 0 8px 0', fontSize: '0.92rem', color: 'var(--accent-blue)', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '4px', fontWeight: 'bold' }}>{title}</h4>
+        );
+
+        return (
+          <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setDetailItem(null)}>
+            <div className="modal-content" style={{ maxWidth: '650px', width: '90%', textAlign: 'left', padding: '20px' }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                <span className="modal-title" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  📋 明細詳情 {['income', 'expense'].includes(type) ? `(${item.id})` : ''}
+                </span>
+                <button type="button" className="modal-close" onClick={() => setDetailItem(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>&times;</button>
+              </div>
+
+              <div className="modal-body" style={{ padding: '12px 0', overflowY: 'auto', maxHeight: '70vh' }}>
+                
+                {['income', 'expense'].includes(type) && (
+                  <div>
+                    <SectionHeader title="💰 基本交易明細" />
+                    <DetailRow label="交易單號 (ID)" value={item.id} isBold={true} />
+                    <DetailRow label="記帳日期" value={item.date} />
+                    <DetailRow label="交易類型" value={type === 'income' ? '收入' : '支出'} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    <DetailRow label="會計科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} isBold={true} />
+                    
+                    <SectionHeader title="💵 金流與計量資訊" />
+                    {item.unitPrice && <DetailRow label="交易單價" value={fmtVal(item.unitPrice)} />}
+                    {item.quantity && <DetailRow label="交易數量" value={`${item.quantity} 桶`} />}
+                    {item.gasKg && <DetailRow label="瓦斯重量" value={`${Number(item.gasKg).toLocaleString()} kg`} isBold={true} />}
+                    {item.cylinderQty && <DetailRow label="鋼瓶數量" value={`${item.cylinderQty} 桶`} />}
+                    {item.deliveryTrips && <DetailRow label="配送車次" value={`${item.deliveryTrips} 次`} />}
+                    <DetailRow label="實收/實付金額" value={fmtVal(item.amount)} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    
+                    <SectionHeader title="👤 交易對象與憑證" />
+                    <DetailRow label="交易對象名稱" value={item.counterpartyName} />
+                    {item.taxId && <DetailRow label="統一編號" value={item.taxId} />}
+                    {item.invoiceNo && <DetailRow label="發票號碼" value={item.invoiceNo} />}
+                    {item.invoiceDate && <DetailRow label="發票日期" value={item.invoiceDate} />}
+                    
+                    <SectionHeader title="💳 收付款與審核狀態" />
+                    <DetailRow label="付款方式" value={getPaymentDisplay(item)} />
+                    <DetailRow label="付款狀態" value={item.paymentStatus === 'paid' ? '已結清' : '未結清'} color={item.paymentStatus === 'paid' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    {item.bankId && <DetailRow label="交易銀行" value={getBankName(item.bankId)} />}
+                    {item.checkNo && <DetailRow label="支票號碼" value={item.checkNo} />}
+                    {item.checkDueDate && <DetailRow label="支票到期日" value={item.checkDueDate} />}
+                    <DetailRow label="審核狀態" value={STATUS_LABELS[item.status] || item.status} color={item.status === 'approved' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    
+                    <SectionHeader title="📝 備註與建立資訊" />
+                    <div style={{ padding: '8px 0', borderBottom: '1px solid var(--border-color)', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                      <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>備註</span>
+                      <div style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{item.remarks || '（無備註說明）'}</div>
+                    </div>
+                    <DetailRow label="經辦人員" value={item.createdByName || '系統管理員'} />
+                    <DetailRow label="建立時間" value={formatDateTime(item.createdAt)} />
+
+                    {item.status === 'void' && (
+                      <div style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-red)' }}>
+                        <div style={{ fontWeight: 'bold', color: 'var(--accent-red)', fontSize: '0.9rem', marginBottom: '6px' }}>🚫 此單據已沖銷/更正</div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>更正經辦：{item.voidedBy || item.correctedBy || '系統'}</div>
+                        {item.correctionReason && <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginTop: '4px' }}>更正原因：{item.correctionReason}</div>}
+                      </div>
+                    )}
+
+                    {item.receiptAttachment && (
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', marginTop: '16px', backgroundColor: 'var(--bg-secondary)' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '0.9rem' }}>📎 憑證附件預覽</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <img 
+                            src={getCloudAttachmentUrl(item.receiptAttachment)} 
+                            alt="Attachment Preview" 
+                            style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '4px', cursor: 'pointer', objectFit: 'contain' }} 
+                            onClick={() => openReceiptPreview(item.receiptAttachment)}
+                            title="點擊圖片放大檢視憑證"
+                          />
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                            點擊圖片可放大檢視憑證
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {type === 'dailySummary' && (() => {
+                  const relatedEntries = [
+                    ...getIncomes().filter(inc => inc.companyId === companyId && inc.date === item.date && inc.remarks && inc.remarks.startsWith('當日營業彙總 -')),
+                    ...getExpenses().filter(exp => exp.companyId === companyId && exp.date === item.date && exp.remarks && exp.remarks.startsWith('當日營業彙總 -')),
+                    ...getBankTransactions().filter(bt => bt.companyId === companyId && bt.date === item.date && bt.remarks && bt.remarks.startsWith('當日營業彙總 -'))
+                  ];
+
+                  return (
+                    <div>
+                      <SectionHeader title="📅 每日彙總主資訊" />
+                      <DetailRow label="彙總日期" value={item.date} isBold={true} />
+                      <DetailRow label="瓦斯總收入 (應計)" value={fmtVal(item.gasTotalIncome)} isBold={true} />
+                      <DetailRow label="當日總營業額 (合計)" value={fmtVal(item.salesAmount)} color="var(--accent-green)" isBold={true} />
+                      
+                      <SectionHeader title="💵 營收金流拆分" />
+                      <DetailRow label="現場收款 (現收)" value={fmtVal(item.paidAmount)} color="var(--accent-green)" />
+                      <DetailRow label="欠款金額 (現結未付)" value={fmtVal(item.unpaidAmount)} color="var(--accent-red)" />
+                      <DetailRow label="月結應收帳款 (月結)" value={fmtVal(item.arAmount)} color="var(--accent-purple)" />
+                      <DetailRow label="還款金額 (收回舊欠)" value={fmtVal(item.repaymentAmount)} color="var(--accent-gold)" />
+
+                      <SectionHeader title="📦 數量與計量指標" />
+                      <DetailRow label="合計銷售重量" value={`${Number(item.totalWeight).toLocaleString()} kg`} />
+                      <DetailRow label="合計銷售數量" value={`${Number(item.totalCylinders).toLocaleString()} 桶`} />
+                      <DetailRow label="平均公斤單價" value={`$${Number(item.avgPrice).toFixed(2)} / kg`} />
+
+                      <SectionHeader title="🍳 其它營業收入" />
+                      <DetailRow label="爐具收入" value={fmtVal(item.stoveIncome)} />
+                      <DetailRow label="維修/安裝 收入" value={fmtVal(item.repairIncome)} />
+                      <DetailRow label="買桶收入" value={fmtVal(item.cylinderIncome)} />
+                      <DetailRow label="檢驗費收入" value={fmtVal(item.inspectionIncome)} />
+
+                      <SectionHeader title={`📋 系統關聯拆帳傳票 (${relatedEntries.length} 筆)`} />
+                      <div className="table-responsive" style={{ maxHeight: '200px', border: '1px solid var(--border-color)', borderRadius: '6px', marginTop: '8px' }}>
+                        <table className="data-table" style={{ margin: 0, fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                              <th>流水號</th>
+                              <th>會計科目</th>
+                              <th>付款方式</th>
+                              <th style={{ textAlign: 'right' }}>金額</th>
+                              <th>狀態</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {relatedEntries.map(entry => (
+                              <tr key={entry.id} style={{ cursor: 'pointer' }} onClick={() => setDetailItem({ type: entry.gasKg !== undefined ? 'income' : 'expense', item: entry })}>
+                                <td style={{ fontFamily: 'var(--font-mono)' }}>{entry.id}</td>
+                                <td>{getAccountName(entry.accountCode)}</td>
+                                <td>{getPaymentDisplay(entry)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 600, color: entry.remarks.includes('支出') || entry.amount < 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>{fmtVal(entry.amount)}</td>
+                                <td><span className="badge approved" style={{ padding: '2px 4px', fontSize: '0.7rem' }}>已核准</span></td>
+                              </tr>
+                            ))}
+                            {relatedEntries.length === 0 && (
+                              <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>無自動拆帳明細 (可能以歷史方式保留)</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                        * 點擊上方表格中的拆帳單據，可進一步查看該筆單據的詳細明細。
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {type === 'checks' && (
+                  <div>
+                    <SectionHeader title="🧾 支票票據明細" />
+                    <DetailRow label="支票號碼" value={item.checkNo || '未填寫'} isBold={true} />
+                    <DetailRow label="到期日" value={item.checkDueDate || '未填寫'} isBold={true} color="var(--accent-blue)" />
+                    <DetailRow label="票據類型" value={item.type === 'income' ? '應收支票 (客票)' : '應付支票 (本票)'} color={item.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    <DetailRow label="對象 (客戶/廠商)" value={item.counterpartyName} />
+                    <DetailRow label="票面金額" value={fmtVal(item.amount)} isBold={true} color={item.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} />
+                    <DetailRow label="關聯科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} />
+                    <DetailRow label="兌現狀態" value={item.paymentStatus === 'paid' ? '已結清兌現' : '未兌現 (待兌現)'} color={item.paymentStatus === 'paid' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    {item.bankId && <DetailRow label="入帳/扣款銀行" value={getBankName(item.bankId)} />}
+                    <DetailRow label="備註" value={item.remarks} />
+
+                    {item.receiptAttachment && (
+                      <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', marginTop: '16px', backgroundColor: 'var(--bg-secondary)' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '0.9rem' }}>📎 支票正反面影本預覽</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <img 
+                            src={getCloudAttachmentUrl(item.receiptAttachment)} 
+                            alt="Attachment Preview" 
+                            style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '4px', cursor: 'pointer', objectFit: 'contain' }} 
+                            onClick={() => openReceiptPreview(item.receiptAttachment)}
+                            title="點擊圖片放大檢視憑證"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {type === 'bankReconciliation' && (
+                  <div>
+                    <SectionHeader title="⚖️ 銀行對帳明細" />
+                    <DetailRow label="對帳單號 (ID)" value={item.id} isBold={true} />
+                    <DetailRow label="對帳截止日" value={item.statementDate} isBold={true} />
+                    <DetailRow label="核對銀行" value={getBankName(item.bankId)} isBold={true} />
+                    <DetailRow label="對帳單銀行餘額" value={fmtVal(item.statementBalance)} />
+                    <DetailRow label="系統帳面餘額" value={fmtVal(item.systemBalance)} />
+                    <DetailRow label="對帳差額" value={fmtVal(item.difference)} color={Math.abs(item.difference) < 1 ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    <DetailRow label="對帳結果" value={item.status === 'balanced' ? '核對平衡' : '核對有差額'} color={item.status === 'balanced' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                  </div>
+                )}
+
+                {type === 'gasCylinders' && (
+                  <div>
+                    <SectionHeader title="🛢️ 鋼瓶基本規格" />
+                    <DetailRow label="鋼瓶序號" value={item.cylinderNo} isBold={true} />
+                    <DetailRow label="規格容量 (kg)" value={`${item.specKg} kg`} isBold={true} />
+                    <DetailRow label="所有權屬" value={optionLabel(GAS_OWNERSHIP_OPTIONS, item.ownershipStatus)} />
+                    <DetailRow label="條碼 (Barcode)" value={item.barcode} />
+                    <DetailRow label="QR Code 內容" value={item.qrCode} />
+                    
+                    <SectionHeader title="📦 存放位置與檢驗期限" />
+                    <DetailRow label="目前位置" value={`${optionLabel(GAS_LOCATION_OPTIONS, item.locationType)} - ${getGasLocationDisplay(item.locationType, item.locationId, item)}`} isBold={true} />
+                    <DetailRow label="鋼瓶狀態" value={optionLabel(GAS_CYLINDER_STATUS_OPTIONS, item.status)} isBold={true} />
+                    <DetailRow label="上次檢驗日期" value={item.lastInspectionDate} />
+                    <DetailRow label="檢驗到期日" value={item.inspectionDueDate || item.nextInspectionDate} color={item.inspectionDueDate && item.inspectionDueDate < new Date().toISOString().split('T')[0] ? 'var(--accent-red)' : 'var(--accent-blue)'} isBold={true} />
+                    
+                    <DetailRow label="備註說明" value={item.remarks} />
+                  </div>
+                )}
+
+                {type === 'assets' && (() => {
+                  const assetWithDep = fixedAssetSummary.assets.find(asset => asset.id === item.id);
+                  const depreciation = assetWithDep?.depreciation || {};
+                  return (
+                    <div>
+                      <SectionHeader title="🚒 固定資產規格" />
+                      <DetailRow label="資產代號 (ID)" value={item.id} isBold={true} />
+                      <DetailRow label="資產名稱" value={item.assetName} isBold={true} />
+                      <DetailRow label="資產類別" value={item.category} />
+                      <DetailRow label="購入日期" value={item.acquisitionDate} />
+                      
+                      <SectionHeader title="📈 折舊與帳面估值" />
+                      <DetailRow label="購置取得成本" value={fmtVal(item.acquisitionCost)} isBold={true} />
+                      <DetailRow label="折舊年限 (月)" value={`${item.depreciationMonths || '-'} 個月`} />
+                      <DetailRow label="月折舊額" value={fmtVal(depreciation.monthlyDepreciation || 0)} />
+                      <DetailRow label="累計已折舊金額" value={fmtVal(depreciation.accumulatedDepreciation || 0)} color="var(--accent-red)" isBold={true} />
+                      <DetailRow label="目前資產帳面淨值" value={fmtVal(depreciation.bookValue || item.acquisitionCost || 0)} color="var(--accent-blue)" isBold={true} />
+                      <DetailRow label="資產狀態" value={item.status === 'active' ? '使用中固定資產' : '已處分'} color={item.status === 'active' ? 'var(--accent-green)' : 'var(--text-secondary)'} isBold={true} />
+                      
+                      <DetailRow label="備註說明" value={item.remarks} />
+                    </div>
+                  );
+                })()}
+
+                {type === 'shareholder' && (
+                  <div>
+                    <SectionHeader title="👤 股東權益異動" />
+                    <DetailRow label="流水號 (ID)" value={item.id} isBold={true} />
+                    <DetailRow label="記帳日期" value={item.date} />
+                    <DetailRow label="股東姓名" value={getShareholderName(item.shareholderId)} isBold={true} />
+                    <DetailRow label="權益異動類型" value={item.type === 'join' ? '原始入股' : item.type === 'increase' ? '股東增資' : '減資提領'} color={item.type === 'decrease' ? 'var(--accent-red)' : 'var(--accent-gold)'} isBold={true} />
+                    <DetailRow label="異動金額" value={fmtVal(item.amount)} color={item.type === 'decrease' ? 'var(--accent-red)' : 'var(--accent-gold)'} isBold={true} />
+                    <DetailRow label="備註說明" value={item.remarks} />
+                  </div>
+                )}
+
+                {type === 'loan' && (
+                  <div>
+                    <SectionHeader title="🏦 銀行借貸款資訊" />
+                    <DetailRow label="貸款合約 ID" value={item.id} isBold={true} />
+                    <DetailRow label="貸款名稱" value={item.name} isBold={true} />
+                    <DetailRow label="承貸銀行" value={getBankName(item.bankId)} isBold={true} />
+                    <DetailRow label="貸款本金金額" value={fmtVal(item.principal)} isBold={true} />
+                    <DetailRow label="貸款年利率" value={`${item.interestRate}%`} />
+                    <DetailRow label="償還總期數" value={`${item.months} 個月`} />
+                    <DetailRow label="每月應付本息" value={fmtVal(item.monthlyPayment)} color="var(--accent-blue)" isBold={true} />
+                    <DetailRow label="備註說明" value={item.remarks} />
+                  </div>
+                )}
+
+                {!['income', 'expense', 'dailySummary', 'checks', 'bankReconciliation', 'gasCylinders', 'assets', 'shareholder', 'loan'].includes(type) && (
+                  <div>
+                    <SectionHeader title="📋 詳細屬性資料" />
+                    {Object.entries(item).map(([key, val]) => {
+                      if (typeof val === 'object' && val !== null) {
+                        return <DetailRow key={key} label={key} value={JSON.stringify(val)} />;
+                      }
+                      return <DetailRow key={key} label={key} value={String(val || '')} />;
+                    })}
+                  </div>
+                )}
+
+              </div>
+              <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setDetailItem(null)}>關閉詳情</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Viewing Receipt Image Modal */}
       {viewingReceiptUrl && (
