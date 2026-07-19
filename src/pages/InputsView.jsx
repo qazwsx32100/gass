@@ -579,7 +579,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         i.correctionStatus !== 'corrected' &&
         i.correctionType !== 'reversal'
       );
-      return userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
+      const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
+      return filtered.sort((a, b) => {
+        const dateComp = (b.date || '').localeCompare(a.date || '');
+        if (dateComp !== 0) return dateComp;
+        return (b.id || '').localeCompare(a.id || '');
+      });
     }
     if (activeSubTab === 'expense') {
       const rows = getExpenses().filter(e => 
@@ -587,7 +592,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         e.correctionStatus !== 'corrected' &&
         e.correctionType !== 'reversal'
       );
-      return userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
+      const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
+      return filtered.sort((a, b) => {
+        const dateComp = (b.date || '').localeCompare(a.date || '');
+        if (dateComp !== 0) return dateComp;
+        return (b.id || '').localeCompare(a.id || '');
+      });
     }
     if (activeSubTab === 'gas') return getGasInventoryPeriods().filter(item => item.companyId === companyId).sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
     if (activeSubTab === 'gasCylinders') return gasCylinders.sort((a, b) => String(a.cylinderNo || '').localeCompare(String(b.cylinderNo || '')));
