@@ -920,7 +920,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
 
   const dailyMap = {};
 
-  const ensureDateRow = (date) => {
+  const ensureDateRow = (dateStr) => {
+    const date = dateStr || '未知日期';
     if (!dailyMap[date]) {
       dailyMap[date] = {
         date,
@@ -935,6 +936,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
         cylinderCogs: 0,
         inspectionRevenue: 0,
         inspectionCogs: 0,
+        depositRevenue: 0,
+        depositCogs: 0,
         otherRevenue: 0,
         otherCogs: 0,
         totalRevenue: 0,
@@ -984,6 +987,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
       row.cylinderRevenue += Number(item.amount || 0);
     } else if (remarks === '當日營業彙總 - 檢驗費收入' || remarks.includes('檢驗') || accountName.includes('檢驗')) {
       row.inspectionRevenue += Number(item.amount || 0);
+    } else if (remarks === '當日營業彙總 - 押瓶收入' || remarks.includes('押瓶') || remarks.includes('押金') || accountName.includes('押瓶') || accountName.includes('押金')) {
+      row.depositRevenue += Number(item.amount || 0);
     } else {
       row.otherRevenue += Number(item.amount || 0);
     }
@@ -999,6 +1004,7 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     const isRepair = remarks.includes('維修') || remarks.includes('修繕') || remarks.includes('保養') || remarks.includes('安裝') || accountName.includes('維修') || accountName.includes('修繕') || accountName.includes('保養');
     const isStove = remarks.includes('爐具') || remarks.includes('零件') || remarks.includes('材料') || accountName.includes('爐具') || accountName.includes('零件') || accountName.includes('材料');
     const isInspection = remarks.includes('檢驗') || accountName.includes('檢驗');
+    const isDeposit = remarks.includes('押瓶') || remarks.includes('押金') || accountName.includes('押瓶') || accountName.includes('押金');
 
     if (isStove) {
       row.stoveCogs += Number(item.amount || 0);
@@ -1008,14 +1014,16 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
       row.cylinderCogs += Number(item.amount || 0);
     } else if (isInspection) {
       row.inspectionCogs += Number(item.amount || 0);
+    } else if (isDeposit) {
+      row.depositCogs += Number(item.amount || 0);
     } else {
       row.otherCogs += Number(item.amount || 0);
     }
   });
 
   const dailyRows = Object.values(dailyMap).map(row => {
-    row.totalRevenue = row.gasRevenue + row.stoveRevenue + row.repairRevenue + row.cylinderRevenue + row.inspectionRevenue + row.otherRevenue;
-    row.totalCogs = row.gasCogs + row.stoveCogs + row.repairCogs + row.cylinderCogs + row.inspectionCogs + row.otherCogs;
+    row.totalRevenue = row.gasRevenue + row.stoveRevenue + row.repairRevenue + row.cylinderRevenue + row.inspectionRevenue + row.depositRevenue + row.otherRevenue;
+    row.totalCogs = row.gasCogs + row.stoveCogs + row.repairCogs + row.cylinderCogs + row.inspectionCogs + row.depositCogs + row.otherCogs;
     row.totalProfit = row.totalRevenue - row.totalCogs;
     row.totalMargin = row.totalRevenue > 0 ? (row.totalProfit / row.totalRevenue) * 100 : 0;
     return row;
@@ -1032,6 +1040,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
   let totalCylinderCogs = 0;
   let totalInspectionRevenue = 0;
   let totalInspectionCogs = 0;
+  let totalDepositRevenue = 0;
+  let totalDepositCogs = 0;
   let totalOtherRevenue = 0;
   let totalOtherCogs = 0;
   let totalRevenue = 0;
@@ -1049,6 +1059,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     totalCylinderCogs += row.cylinderCogs;
     totalInspectionRevenue += row.inspectionRevenue;
     totalInspectionCogs += row.inspectionCogs;
+    totalDepositRevenue += row.depositRevenue;
+    totalDepositCogs += row.depositCogs;
     totalOtherRevenue += row.otherRevenue;
     totalOtherCogs += row.otherCogs;
     totalRevenue += row.totalRevenue;
@@ -1071,6 +1083,8 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     totalCylinderCogs,
     totalInspectionRevenue,
     totalInspectionCogs,
+    totalDepositRevenue,
+    totalDepositCogs,
     totalOtherRevenue,
     totalOtherCogs,
     totalRevenue,

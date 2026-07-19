@@ -183,6 +183,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             repairIncome: 0,
             cylinderIncome: 0,
             inspectionIncome: 0,
+            depositIncome: 0,
             repaymentAmount: 0
           };
         }
@@ -203,6 +204,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           summaryByDate[date].cylinderIncome = Number(inc.amount || 0);
         } else if (inc.remarks === '當日營業彙總 - 檢驗費收入') {
           summaryByDate[date].inspectionIncome = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 押瓶收入') {
+          summaryByDate[date].depositIncome = Number(inc.amount || 0);
         }
       }
     });
@@ -223,6 +226,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             repairIncome: 0,
             cylinderIncome: 0,
             inspectionIncome: 0,
+            depositIncome: 0,
             repaymentAmount: 0
           };
         }
@@ -236,7 +240,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     return Object.values(summaryByDate).map(s => {
       s.gasTotalIncome = s.paidAmount + s.arAmount + s.unpaidAmount;
       s.avgPrice = s.totalWeight > 0 ? s.gasTotalIncome / s.totalWeight : 0;
-      s.salesAmount = s.gasTotalIncome + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome;
+      s.salesAmount = s.gasTotalIncome + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0);
       return s;
     }).sort((a, b) => b.date.localeCompare(a.date));
   };
@@ -738,7 +742,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       stoveIncome: '',
       repairIncome: '',
       cylinderIncome: '',
-      inspectionIncome: ''
+      inspectionIncome: '',
+      depositIncome: ''
     });
     setIsModalOpen(true);
   };
@@ -824,7 +829,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       disposalDate: item.disposalDate || '',
       disposalAmount: item.disposalAmount || '',
       cylinderIncome: item.cylinderIncome ?? '',
-      inspectionIncome: item.inspectionIncome ?? ''
+      inspectionIncome: item.inspectionIncome ?? '',
+      depositIncome: item.depositIncome ?? ''
     });
     setIsModalOpen(true);
   };
@@ -919,7 +925,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         createGenIncome(formData.stoveIncome, '4104', '當日營業彙總 - 爐具收入', 0, 0, 'paid', 'cash'),
         createGenIncome(formData.repairIncome, '4102', '當日營業彙總 - 維修收入', 0, 0, 'paid', 'cash'),
         createGenIncome(formData.cylinderIncome, '4103', '當日營業彙總 - 買桶收入', 0, 0, 'paid', 'cash'),
-        createGenIncome(formData.inspectionIncome, '4103', '當日營業彙總 - 檢驗費收入', 0, 0, 'paid', 'cash')
+        createGenIncome(formData.inspectionIncome, '4103', '當日營業彙總 - 檢驗費收入', 0, 0, 'paid', 'cash'),
+        createGenIncome(formData.depositIncome, '4103', '當日營業彙總 - 押瓶收入', 0, 0, 'paid', 'cash')
       ].filter(Boolean);
 
       filteredIncomes.push(...newIncomes);
@@ -2223,6 +2230,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>維修/安裝 收入</th>
                     <th>買桶收入</th>
                     <th>檢驗費收入</th>
+                    <th>押瓶收入</th>
                     <th>營業額</th>
                     {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
@@ -2398,6 +2406,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.repairIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.cylinderIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.inspectionIncome)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.depositIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{formatCurrency(item.salesAmount)}</td>
                       </>
                     )}
@@ -2707,7 +2716,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   const repair = Number(formData.repairIncome) || 0;
                   const cylinder = Number(formData.cylinderIncome) || 0;
                   const inspection = Number(formData.inspectionIncome) || 0;
-                  const totalRevenue = computedSales + repayment + stove + repair + cylinder + inspection;
+                  const deposit = Number(formData.depositIncome) || 0;
+                  const totalRevenue = computedSales + repayment + stove + repair + cylinder + inspection + deposit;
 
                   return (
                     <>
@@ -2756,7 +2766,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           <input type="number" min="0" placeholder="請輸入當日總桶數" className="form-control" value={formData.totalCylinders} onChange={e => setFormData({ ...formData, totalCylinders: e.target.value })} />
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>爐具收入</label>
                           <input type="number" min="0" placeholder="請輸入爐具收入" className="form-control" value={formData.stoveIncome} onChange={e => setFormData({ ...formData, stoveIncome: e.target.value })} />
@@ -2765,13 +2775,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>維修/安裝 收入</label>
                           <input type="number" min="0" placeholder="請輸入檢修/安裝收入" className="form-control" value={formData.repairIncome} onChange={e => setFormData({ ...formData, repairIncome: e.target.value })} />
                         </div>
-                        <div className="form-group" style={{ marginTop: '12px' }}>
+                        <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>買桶收入</label>
                           <input type="number" min="0" placeholder="請輸入買桶收入" className="form-control" value={formData.cylinderIncome} onChange={e => setFormData({ ...formData, cylinderIncome: e.target.value })} />
                         </div>
                         <div className="form-group" style={{ marginTop: '12px' }}>
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>檢驗費收入</label>
                           <input type="number" min="0" placeholder="請輸入檢驗費收入" className="form-control" value={formData.inspectionIncome} onChange={e => setFormData({ ...formData, inspectionIncome: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginTop: '12px' }}>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>押瓶收入</label>
+                          <input type="number" min="0" placeholder="請輸入押瓶收入" className="form-control" value={formData.depositIncome} onChange={e => setFormData({ ...formData, depositIncome: e.target.value })} />
                         </div>
                       </div>
                     </>
@@ -3862,6 +3876,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       <DetailRow label="維修/安裝 收入" value={fmtVal(item.repairIncome)} />
                       <DetailRow label="買桶收入" value={fmtVal(item.cylinderIncome)} />
                       <DetailRow label="檢驗費收入" value={fmtVal(item.inspectionIncome)} />
+                      <DetailRow label="押瓶收入" value={fmtVal(item.depositIncome)} />
 
                       <SectionHeader title={`📋 系統關聯拆帳傳票 (${relatedEntries.length} 筆)`} />
                       <div className="table-responsive" style={{ maxHeight: '200px', border: '1px solid var(--border-color)', borderRadius: '6px', marginTop: '8px' }}>
