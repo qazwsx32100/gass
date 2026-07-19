@@ -2543,7 +2543,26 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {activeSubTab === 'expense' && (
                       <>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
-                        <td>{getAccountName(item.accountCode)}</td>
+                        <td>
+                          <div>{getAccountName(item.accountCode)}</div>
+                          {item.accountCode && item.accountCode.startsWith('6101') && item.employeeName && (
+                            <div style={{ 
+                              fontSize: '0.78rem', 
+                              color: 'var(--accent-blue)', 
+                              marginTop: '3px', 
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(59, 130, 246, 0.15)'
+                            }}>
+                              👤 {item.employeeName}
+                            </div>
+                          )}
+                        </td>
                         <td>{getPaymentDisplay(item)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>
                           {item.unitPrice ? formatCurrency(item.unitPrice) : '-'}
@@ -3286,7 +3305,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   </>
                 )}
 
-                {activeSubTab === 'expense' && formData.accountCode === '6101' && (
+                {activeSubTab === 'expense' && formData.accountCode && formData.accountCode.startsWith('6101') && (
                   <>
                     <div className="form-row">
                       <div className="form-group">
@@ -3744,10 +3763,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <DetailRow label="記帳日期" value={item.date} />
                     <DetailRow label="交易類型" value={type === 'income' ? '收入' : '支出'} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
                     <DetailRow label="會計科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} isBold={true} />
-                    {item.accountCode === '6101' && item.employeeName && (
+                    {item.accountCode && item.accountCode.startsWith('6101') && item.employeeName && (
                       <DetailRow label="員工姓名" value={item.employeeName} isBold={true} color="var(--accent-blue)" />
                     )}
-                    {item.accountCode === '6101' && item.payrollMonth && (
+                    {item.accountCode && item.accountCode.startsWith('6101') && item.payrollMonth && (
                       <DetailRow label="薪資月份" value={item.payrollMonth} />
                     )}
                     
@@ -3759,7 +3778,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {item.deliveryTrips && <DetailRow label="配送車次" value={`${item.deliveryTrips} 次`} />}
                     <DetailRow label="實收/實付金額" value={fmtVal(item.amount)} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
                     
-                    {item.accountCode === '6101' && (Number(item.laborInsurance) > 0 || Number(item.healthInsurance) > 0 || Number(item.pension) > 0 || Number(item.withholdingTax) > 0) && (
+                    {item.accountCode && item.accountCode.startsWith('6101') && (Number(item.laborInsurance) > 0 || Number(item.healthInsurance) > 0 || Number(item.pension) > 0 || Number(item.withholdingTax) > 0) && (
                       <>
                         <SectionHeader title="📝 薪資扣款明細" />
                         {Number(item.laborInsurance) > 0 && <DetailRow label="勞保扣款" value={fmtVal(item.laborInsurance)} />}

@@ -659,7 +659,7 @@ export const getVatReport = (companyId, periodType = 'month', periodVal = new Da
   const taxableExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
-    item.accountCode !== '6101' &&
+    !(item.accountCode && item.accountCode.startsWith('6101')) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
@@ -696,7 +696,7 @@ export const getPayrollReport = (companyId, periodType = 'month', periodVal = ne
   const salaryRows = getExpenses().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
-    item.accountCode === '6101' &&
+    item.accountCode && item.accountCode.startsWith('6101') &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
   const grossSalary = salaryRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
