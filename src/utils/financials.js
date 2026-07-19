@@ -1,6 +1,6 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
-import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines } from '../db/storage';
+import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions } from '../db/storage';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -815,7 +815,34 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const averageCostPerKg = availableKg > 0 ? availableCost / availableKg : 0;
   const monthSales = getApprovedGasSales(companyId, 'month', yearMonth);
   const soldKg = monthSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
-  const gasRevenue = monthSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  
+  // Scheme B: Cash Basis gas sales revenue = (paidAmount of daily summary sales + repayments of the month)
+  let gasRevenue = 0;
+  monthSales.forEach(item => {
+    if (item.remarks === '當日營業彙總 - 現收') {
+      gasRevenue += Number(item.amount || 0);
+    } else if (item.remarks === '當日營業彙總 - 月結' || item.remarks === '當日營業彙總 - 賒欠') {
+      // skip
+    } else if (item.accountCode === '4101') {
+      const isCashPaid = item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable';
+      if (isCashPaid) {
+        gasRevenue += Number(item.amount || 0);
+      }
+    } else {
+      gasRevenue += Number(item.amount || 0);
+    }
+  });
+
+  const repayments = getBankTransactions().filter(bt =>
+    bt.companyId === companyId &&
+    bt.status === 'approved' &&
+    bt.direction === 'in' &&
+    (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isDateInPeriod(bt.date, 'month', yearMonth)
+  );
+  const repaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  gasRevenue += repaymentAmount;
+
   const gasCogs = Math.round(soldKg * averageCostPerKg);
   const bookEndingKg = Math.max(0, availableKg - soldKg - shrinkageKg);
   const endingKg = config?.physicalEndingKg === null || config?.physicalEndingKg === undefined ? bookEndingKg : Number(config.physicalEndingKg || 0);
@@ -855,7 +882,14 @@ export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
   const sales = getApprovedGasSales(companyId, periodType, periodVal);
-  const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
+  const allRepayments = getBankTransactions().filter(bt =>
+    bt.companyId === companyId &&
+    bt.status === 'approved' &&
+    bt.direction === 'in' &&
+    (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isDateInPeriod(bt.date, periodType, periodVal)
+  );
+
   const dailyMap = {};
   let totalKg = 0;
   let totalRevenue = 0;
@@ -865,14 +899,16 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
     const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
     const kg = Number(item.gasKg || 0);
     
-    let revenue = Number(item.amount || 0);
+    let revenue = 0;
     if (item.remarks === '當日營業彙總 - 現收') {
-      const sameDayIncomes = allIncomes.filter(inc => 
-        inc.date === item.date && 
-        inc.remarks && 
-        (inc.remarks === '當日營業彙總 - 月結' || inc.remarks === '當日營業彙總 - 賒欠')
-      );
-      revenue += sameDayIncomes.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+      revenue = Number(item.amount || 0);
+    } else if (item.remarks === '當日營業彙總 - 月結' || item.remarks === '當日營業彙總 - 賒欠') {
+      revenue = 0;
+    } else if (item.accountCode === '4101') {
+      const isCashPaid = item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable';
+      revenue = isCashPaid ? Number(item.amount || 0) : 0;
+    } else {
+      revenue = Number(item.amount || 0);
     }
 
     const cogs = Math.round(kg * monthCost.averageCostPerKg);
@@ -885,6 +921,14 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
     totalKg += kg;
     totalRevenue += revenue;
     totalCogs += cogs;
+  });
+
+  allRepayments.forEach(bt => {
+    if (!dailyMap[bt.date]) {
+      dailyMap[bt.date] = { date: bt.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
+    }
+    dailyMap[bt.date].revenue += Number(bt.amount || 0);
+    totalRevenue += Number(bt.amount || 0);
   });
 
   const dailyRows = Object.values(dailyMap)
@@ -916,6 +960,14 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     item.companyId === companyId &&
     item.status === 'approved' &&
     isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const allRepayments = getBankTransactions().filter(bt =>
+    bt.companyId === companyId &&
+    bt.status === 'approved' &&
+    bt.direction === 'in' &&
+    (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isDateInPeriod(bt.date, periodType, periodVal)
   );
 
   const dailyMap = {};
@@ -960,12 +1012,7 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
       const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
       const cogs = Math.round(kg * monthCost.averageCostPerKg);
 
-      const sameDayExtra = allIncomes.filter(inc =>
-        inc.date === item.date &&
-        inc.remarks &&
-        (inc.remarks === '當日營業彙總 - 月結' || inc.remarks === '當日營業彙總 - 賒欠')
-      );
-      const revenue = Number(item.amount || 0) + sameDayExtra.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+      const revenue = Number(item.amount || 0);
 
       row.gasKg += kg;
       row.gasRevenue += revenue;
@@ -973,12 +1020,15 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     } else if (remarks === '當日營業彙總 - 月結' || remarks === '當日營業彙總 - 賒欠') {
       return;
     } else if (accountCode === '4101') {
-      const kg = Number(item.gasKg || 0);
-      const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
-      const cogs = Math.round(kg * monthCost.averageCostPerKg);
-      row.gasKg += kg;
-      row.gasRevenue += Number(item.amount || 0);
-      row.gasCogs += cogs;
+      const isCashPaid = item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable';
+      if (isCashPaid) {
+        const kg = Number(item.gasKg || 0);
+        const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
+        const cogs = Math.round(kg * monthCost.averageCostPerKg);
+        row.gasKg += kg;
+        row.gasRevenue += Number(item.amount || 0);
+        row.gasCogs += cogs;
+      }
     } else if (remarks === '當日營業彙總 - 爐具收入' || accountCode === '4104' || accountName.includes('爐具')) {
       row.stoveRevenue += Number(item.amount || 0);
     } else if (remarks === '當日營業彙總 - 維修收入' || accountCode === '4102' || accountName.includes('維修') || accountName.includes('服務') || remarks.includes('安裝')) {
@@ -992,6 +1042,11 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     } else {
       row.otherRevenue += Number(item.amount || 0);
     }
+  });
+
+  allRepayments.forEach(bt => {
+    const row = ensureDateRow(bt.date);
+    row.gasRevenue += Number(bt.amount || 0);
   });
 
   allExpenses.forEach(item => {

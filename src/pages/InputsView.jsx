@@ -3734,6 +3734,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <DetailRow label="記帳日期" value={item.date} />
                     <DetailRow label="交易類型" value={type === 'income' ? '收入' : '支出'} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
                     <DetailRow label="會計科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} isBold={true} />
+                    {item.accountCode === '6101' && item.employeeName && (
+                      <DetailRow label="員工姓名" value={item.employeeName} isBold={true} color="var(--accent-blue)" />
+                    )}
+                    {item.accountCode === '6101' && item.payrollMonth && (
+                      <DetailRow label="薪資月份" value={item.payrollMonth} />
+                    )}
                     
                     <SectionHeader title="💵 金流與計量資訊" />
                     {item.unitPrice && <DetailRow label="交易單價" value={fmtVal(item.unitPrice)} />}
@@ -3742,6 +3748,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     {item.cylinderQty && <DetailRow label="鋼瓶數量" value={`${item.cylinderQty} 桶`} />}
                     {item.deliveryTrips && <DetailRow label="配送車次" value={`${item.deliveryTrips} 次`} />}
                     <DetailRow label="實收/實付金額" value={fmtVal(item.amount)} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
+                    
+                    {item.accountCode === '6101' && (Number(item.laborInsurance) > 0 || Number(item.healthInsurance) > 0 || Number(item.pension) > 0 || Number(item.withholdingTax) > 0) && (
+                      <>
+                        <SectionHeader title="📝 薪資扣款明細" />
+                        {Number(item.laborInsurance) > 0 && <DetailRow label="勞保扣款" value={fmtVal(item.laborInsurance)} />}
+                        {Number(item.healthInsurance) > 0 && <DetailRow label="健保扣款" value={fmtVal(item.healthInsurance)} />}
+                        {Number(item.pension) > 0 && <DetailRow label="勞退自提" value={fmtVal(item.pension)} />}
+                        {Number(item.withholdingTax) > 0 && <DetailRow label="代扣所得稅" value={fmtVal(item.withholdingTax)} />}
+                      </>
+                    )}
                     
                     <SectionHeader title="👤 交易對象與憑證" />
                     <DetailRow label="交易對象名稱" value={item.counterpartyName} />
