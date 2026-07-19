@@ -240,7 +240,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     return Object.values(summaryByDate).map(s => {
       s.gasTotalIncome = s.paidAmount + s.arAmount + s.unpaidAmount;
       s.avgPrice = s.totalWeight > 0 ? s.gasTotalIncome / s.totalWeight : 0;
-      s.salesAmount = s.gasTotalIncome + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0);
+      s.salesAmount = s.paidAmount + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0);
       return s;
     }).sort((a, b) => b.date.localeCompare(a.date));
   };
@@ -2746,7 +2746,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   const cylinder = Number(formData.cylinderIncome) || 0;
                   const inspection = Number(formData.inspectionIncome) || 0;
                   const deposit = Number(formData.depositIncome) || 0;
-                  const totalRevenue = computedSales + repayment + stove + repair + cylinder + inspection + deposit;
+                  const totalRevenue = paid + repayment + stove + repair + cylinder + inspection + deposit;
 
                   return (
                     <>
