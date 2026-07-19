@@ -14,7 +14,9 @@ import {
   setAccountDisabled, approveDevice, rejectDevice, revokeDevice,
   getBudgets, saveBudgets,
   getSystemConfig, saveSystemConfig,
-  getLogs
+  getLogs,
+  getIncomes, saveIncomes,
+  getExpenses, saveExpenses
 } from '../db/storage';
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
@@ -482,16 +484,78 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       }
     } else if (activeSettingsTab === 'accounts') {
       const db = getChartOfAccounts();
+      const oldCode = editingItem ? editingItem.code : '';
+      const newCode = (formData.code || '').trim();
+
+      if (!newCode) {
+        showToast('科目代碼不能為空。', 'error');
+        return;
+      }
+
+      // Check uniqueness if code is new or changed
+      if (!editingItem || oldCode !== newCode) {
+        if (db.some(a => a.code === newCode)) {
+          showToast(`科目代碼 ${newCode} 已存在，請使用不同的代碼。`, 'error');
+          return;
+        }
+      }
+
       if (editingItem) {
-        const idx = db.findIndex(a => a.code === editingItem.code);
+        const idx = db.findIndex(a => a.code === oldCode);
         if (idx !== -1) {
-          db[idx] = { ...db[idx], name: formData.accountName, type: formData.type, desc: formData.desc };
-          archiveChange({ collection: 'chartOfAccounts', recordId: editingItem.code, action: 'update', before: editingItem, after: db[idx], actor: '系統管理員', reason: '會計科目修改' });
+          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc };
+          db[idx] = updatedAccount;
+          archiveChange({ 
+            collection: 'chartOfAccounts', 
+            recordId: oldCode, 
+            action: 'update', 
+            before: editingItem, 
+            after: updatedAccount, 
+            actor: '系統管理員', 
+            reason: `會計科目修改 (代碼由 ${oldCode} 改為 ${newCode})` 
+          });
           saveChartOfAccounts(db);
+
+          // Perform migration if code changed
+          if (oldCode !== newCode) {
+            // 1. Migrate Incomes
+            const incomes = getIncomes();
+            let incomesChanged = false;
+            incomes.forEach(i => {
+              if (i.accountCode === oldCode) {
+                i.accountCode = newCode;
+                incomesChanged = true;
+              }
+            });
+            if (incomesChanged) saveIncomes(incomes);
+
+            // 2. Migrate Expenses
+            const expenses = getExpenses();
+            let expensesChanged = false;
+            expenses.forEach(e => {
+              if (e.accountCode === oldCode) {
+                e.accountCode = newCode;
+                expensesChanged = true;
+              }
+            });
+            if (expensesChanged) saveExpenses(expenses);
+
+            // 3. Migrate Budgets
+            const budgets = getBudgets();
+            let budgetsChanged = false;
+            budgets.forEach(b => {
+              if (b.accountCode === oldCode) {
+                b.accountCode = newCode;
+                budgetsChanged = true;
+              }
+            });
+            if (budgetsChanged) saveBudgets(budgets);
+          }
+
           success = true;
         }
       } else {
-        db.push({ code: formData.code, name: formData.accountName, type: formData.type, desc: formData.desc });
+        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc });
         saveChartOfAccounts(db);
         success = true;
       }
@@ -1521,7 +1585,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   <>
                     <div className="form-group">
                       <label className="form-label">科目代碼</label>
-                      <input type="text" required placeholder="例如：6101" className="form-control" disabled={!!editingItem} value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} />
+                      <input type="text" required placeholder="例如：6101" className="form-control" value={formData.code} onChange={e => setFormData({ ...formData, code: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">科目名稱</label>
