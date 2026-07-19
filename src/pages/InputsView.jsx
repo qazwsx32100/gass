@@ -605,7 +605,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'gasDeposits') return customerCylinderDeposits.sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt));
     if (activeSubTab === 'gasMovements') return gasCylinderMovements.sort((a, b) => new Date(b.createdAt || b.movementDate) - new Date(a.createdAt || a.movementDate));
     if (activeSubTab === 'assets') return getFixedAssets().filter(item => item.companyId === companyId).sort((a, b) => b.acquisitionDate.localeCompare(a.acquisitionDate));
-    if (activeSubTab === 'shareholder') return getShareholderLedger().filter(s => s.companyId === companyId);
+    if (activeSubTab === 'shareholder') return getShareholderLedger().filter(s => s.companyId === companyId).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
     if (activeSubTab === 'loan') return getLoans().filter(l => l.companyId === companyId);
     if (activeSubTab === 'dailySummary') return getDailySalesSummaries();
     return [];
