@@ -50,7 +50,8 @@ const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
   'correctedBy',
   'correctedByName',
   'correctedAt',
-  'correctionReason'
+  'correctionReason',
+  'accountCode'
 ]);
 
 const APPROVED_TRANSACTION_VOID_KEYS = new Set([
