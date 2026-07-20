@@ -134,6 +134,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     role: USER_ROLES.READONLY_SHAREHOLDER,
     allowedCompanies: [], // Array of company IDs
     allowedTabs: ['dashboard'], // dashboard, reports, inputs
+    initialCapital: '0',
     
     // Bank
     companyId: '',
@@ -222,6 +223,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       role: USER_ROLES.BOOKKEEPER,
       allowedCompanies: companies.map(c => c.id), // Authorize all companies by default
       allowedTabs: ['dashboard', 'reports', 'inputs'],
+      initialCapital: '0',
       
       companyId: companies[0]?.id || '',
       bankName: '', 
@@ -255,7 +257,8 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         allowedCompanies: item.allowedCompanies || [],
         allowedTabs: item.allowedTabs || [],
         requiresPasswordChange: item.requiresPasswordChange ?? true,
-        disabled: item.disabled ?? false
+        disabled: item.disabled ?? false,
+        initialCapital: String(item.initialCapital || 0)
       });
     } else if (activeSettingsTab === 'bank') {
       setFormData({
@@ -386,6 +389,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             role: formData.role,
             allowedCompanies: formData.allowedCompanies,
             allowedTabs: formData.allowedTabs,
+            initialCapital: Number(formData.initialCapital || 0),
             requiresPasswordChange: db[idx].requiresPasswordChange ?? true,
             disabled: db[idx].disabled ?? false,
             approvedDevices: db[idx].approvedDevices || [],
@@ -423,6 +427,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               role: formData.role || archivedMatch.before.role,
               allowedCompanies: formData.allowedCompanies.length ? formData.allowedCompanies : archivedMatch.before.allowedCompanies || [],
               allowedTabs: formData.allowedTabs.length ? formData.allowedTabs : archivedMatch.before.allowedTabs || [],
+              initialCapital: Number(formData.initialCapital || 0),
               requiresPasswordChange: true
             };
             db.push(restored);
@@ -455,6 +460,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           role: formData.role,
           allowedCompanies: formData.allowedCompanies,
           allowedTabs: formData.allowedTabs,
+          initialCapital: Number(formData.initialCapital || 0),
           requiresPasswordChange: true,
           disabled: false,
           disabledAt: null,
@@ -1574,6 +1580,20 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                         <label className="form-label">聯絡手機</label>
                         <input type="text" placeholder="例如：0912-345678" className="form-control" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                       </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">原始出資額 (TWD)</label>
+                      <input 
+                        type="number" 
+                        placeholder="例如：500000" 
+                        className="form-control" 
+                        value={formData.initialCapital} 
+                        onChange={e => setFormData({ ...formData, initialCapital: e.target.value })} 
+                      />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                        💡 系統會將此金額作為起始資本，並結合日常股東往來交易自動重新計算每位股東持股比例與分紅。
+                      </span>
                     </div>
 
                     {/* Company authorization checks */}

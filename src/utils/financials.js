@@ -1162,7 +1162,7 @@ export const getShareholderSharesAtDate = (companyId, endDateStr) => {
   // Group capital by shareholder
   const capitalMap = {};
   shareholders.forEach(sh => {
-    capitalMap[sh.id] = 0;
+    capitalMap[sh.id] = Number(sh.initialCapital || 0);
   });
 
   ledger.forEach(tx => {
