@@ -251,6 +251,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </span>
         </div>
 
+        <div className="metric-card accent-red" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('inputs')}>
+          <div className="metric-card-header">
+            <span className="metric-label">應收帳款 (客戶欠款)</span>
+            <div className="metric-icon-wrapper red">💵</div>
+          </div>
+          <span className="metric-value">${receivablesTotal.toLocaleString()}</span>
+          <span className="metric-change neutral">截至月底未收餘額 ➔</span>
+        </div>
+
         <div className="metric-card accent-red">
           <div className="metric-card-header">
             <span className="metric-label">當月支出總額</span>
@@ -309,15 +318,6 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
           <span className="metric-value">{gasInventory.endingKg.toLocaleString()} kg</span>
           <span className="metric-change neutral">${gasInventory.endingCost.toLocaleString()} 存貨金額</span>
-        </div>
-
-        <div className="metric-card accent-red" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('inputs')}>
-          <div className="metric-card-header">
-            <span className="metric-label">應收帳款 (客戶欠款)</span>
-            <div className="metric-icon-wrapper red">💵</div>
-          </div>
-          <span className="metric-value">${receivablesTotal.toLocaleString()}</span>
-          <span className="metric-change neutral">截至月底未收餘額 ➔</span>
         </div>
       </div>
 
