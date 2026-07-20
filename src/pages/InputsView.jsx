@@ -3184,10 +3184,94 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                             const isSub = revenueAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
                             return <option key={a.code} value={a.code}>{isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})</option>;
                           })
-                        : cogsExpenseAccounts.map(a => {
-                            const isSub = cogsExpenseAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
-                            return <option key={a.code} value={a.code}>{isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})</option>;
-                          })
+                        : (() => {
+                            // 1. Separate 5102 sub-accounts from others
+                            const sub5102 = cogsExpenseAccounts.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+                            
+                            // Categorize 5102 sub-accounts dynamically based on keywords
+                            const stoves = [];
+                            const regulators = [];
+                            const heaters = [];
+                            const other5102 = [];
+                            
+                            sub5102.forEach(a => {
+                              const searchStr = `${a.name} ${a.desc || ''}`;
+                              if (searchStr.includes('爐具') || searchStr.includes('爐')) {
+                                stoves.push(a);
+                              } else if (searchStr.includes('調整器') || searchStr.includes('中壓') || searchStr.includes('低壓')) {
+                                regulators.push(a);
+                              } else if (searchStr.includes('熱水器')) {
+                                heaters.push(a);
+                              } else {
+                                other5102.push(a);
+                              }
+                            });
+
+                            // Remaining accounts (non-5102 sub-accounts and the main 5102 itself)
+                            const mainAndOtherSubAccounts = cogsExpenseAccounts.filter(a => !a.code.startsWith('5102') || a.code === '5102');
+
+                            // Build the final select options array
+                            const optionsList = [];
+
+                            mainAndOtherSubAccounts.forEach(a => {
+                              const isSub = cogsExpenseAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                              optionsList.push(
+                                <option key={a.code} value={a.code}>
+                                  {isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})
+                                </option>
+                              );
+
+                              // If it is the main '5102' account, insert all its sub-groups
+                              if (a.code === '5102') {
+                                if (stoves.length > 0) {
+                                  optionsList.push(
+                                    <optgroup key="group-stoves" label="　　▼ 5102 材料零件 - 爐具類">
+                                      {stoves.map(sub => (
+                                        <option key={sub.code} value={sub.code}>
+                                          　　↳ {sub.code} - {sub.name} ({sub.desc})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                }
+                                if (regulators.length > 0) {
+                                  optionsList.push(
+                                    <optgroup key="group-regulators" label="　　▼ 5102 材料零件 - 調整器類">
+                                      {regulators.map(sub => (
+                                        <option key={sub.code} value={sub.code}>
+                                          　　↳ {sub.code} - {sub.name} ({sub.desc})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                }
+                                if (heaters.length > 0) {
+                                  optionsList.push(
+                                    <optgroup key="group-heaters" label="　　▼ 5102 材料零件 - 熱水器類">
+                                      {heaters.map(sub => (
+                                        <option key={sub.code} value={sub.code}>
+                                          　　↳ {sub.code} - {sub.name} ({sub.desc})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                }
+                                if (other5102.length > 0) {
+                                  optionsList.push(
+                                    <optgroup key="group-other5102" label="　　▼ 5102 材料零件 - 其他零件類">
+                                      {other5102.map(sub => (
+                                        <option key={sub.code} value={sub.code}>
+                                          　　↳ {sub.code} - {sub.name} ({sub.desc})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  );
+                                }
+                              }
+                            });
+
+                            return optionsList;
+                          })()
                       }
                     </select>
                   </div>

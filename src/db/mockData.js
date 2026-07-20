@@ -57,7 +57,9 @@ export const INITIAL_CHART_OF_ACCOUNTS = [
   // Cost of Goods Sold (COGS)
   { code: '5101', name: '進氣成本', type: 'cogs', desc: '瓦斯分裝廠進氣成本' },
   { code: '5102', name: '材料零件成本', type: 'cogs', desc: '爐具、管線與安全閥進貨' },
-  { code: '510201', name: '爐具商品採購', type: 'cogs', desc: '主營爐具與熱水器進貨（子項目）' },
+  { code: '510201', name: '雙口瓦斯爐', type: 'cogs', desc: '家用雙口防乾燒瓦斯爐（子項目）' },
+  { code: '510202', name: '強制排氣熱水器', type: 'cogs', desc: '16L 數位恆溫強制排氣熱水器（子項目）' },
+  { code: '510203', name: '低壓安全調整器', type: 'cogs', desc: 'R280 帶超流切斷安全防護調整器（子項目）' },
   
   // Operating Expenses
   { code: '6101', name: '員工薪資', type: 'expense', desc: '正職員工及配送司機薪資' },
