@@ -701,7 +701,7 @@ const encodeHtmlEntities = (text) => String(text || '').replace(/[\u0080-\uFFFF]
 
 // Initialize database with mock data if empty or outdated
 export const initializeDB = (forceReset = false) => {
-  const currentDbVersion = 'v11';
+  const currentDbVersion = 'v12';
   let needsInitialization = forceReset || 
                          !localStorage.getItem(KEYS.COMPANIES) || 
                          localStorage.getItem('bp_db_version') !== currentDbVersion;
@@ -737,6 +737,22 @@ export const initializeDB = (forceReset = false) => {
       if (!coaSeed.some(a => a.code === '610101')) {
         coaSeed.push({ code: '610101', name: '司機配送薪資', type: 'expense', desc: '小貨車配送司機月薪（子項目）' });
       }
+
+      // Automatically migrate and sync counterparts for any existing 5102 sub-accounts in user db
+      const existingSub5102 = coaSeed.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+      existingSub5102.forEach(a => {
+        const suffix = a.code.replace('5102', '');
+        const targetCode = '4104' + suffix;
+        if (!coaSeed.some(x => x.code === targetCode)) {
+          coaSeed.push({
+            code: targetCode,
+            name: a.name,
+            type: 'revenue',
+            desc: a.desc || '',
+            subGroup: a.subGroup || ''
+          });
+        }
+      });
     }
     localStorage.setItem(KEYS.CHART_OF_ACCOUNTS, JSON.stringify(coaSeed));
     localStorage.setItem(KEYS.SHAREHOLDER_LEDGER, JSON.stringify(keepOrSeed(KEYS.SHAREHOLDER_LEDGER, INITIAL_SHAREHOLDER_LEDGER)));
