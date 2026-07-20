@@ -146,6 +146,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     accountName: '',
     type: 'expense', // revenue, cogs, expense
     desc: '',
+    subGroup: '',
     
     // Company
     compName: '',
@@ -231,6 +232,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       accountName: '', 
       type: 'expense', 
       desc: '',
+      subGroup: '',
       
       compName: '', 
       compDesc: ''
@@ -269,7 +271,8 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         code: item.code || '',
         accountName: item.name || '',
         type: item.type || 'expense',
-        desc: item.desc || ''
+        desc: item.desc || '',
+        subGroup: item.subGroup || ''
       });
     } else if (activeSettingsTab === 'company') {
       setFormData({
@@ -503,7 +506,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       if (editingItem) {
         const idx = db.findIndex(a => a.code === oldCode);
         if (idx !== -1) {
-          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc };
+          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' };
           db[idx] = updatedAccount;
           archiveChange({ 
             collection: 'chartOfAccounts', 
@@ -555,7 +558,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           success = true;
         }
       } else {
-        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc });
+        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' });
         saveChartOfAccounts(db);
         success = true;
       }
@@ -1603,6 +1606,26 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       <label className="form-label">科目備註</label>
                       <input type="text" placeholder="科目用途說明" className="form-control" value={formData.desc} onChange={e => setFormData({ ...formData, desc: e.target.value })} />
                     </div>
+                    {formData.code && (formData.code.length > 4 || accounts.some(p => p.code !== formData.code && formData.code.startsWith(p.code))) && (
+                      <div className="form-group">
+                        <label className="form-label">子項目分類 (留空將自動辨識分類)</label>
+                        <input 
+                          type="text" 
+                          placeholder="例如：爐具類、調整器類、熱水器類" 
+                          className="form-control" 
+                          value={formData.subGroup || ''} 
+                          onChange={e => setFormData({ ...formData, subGroup: e.target.value })} 
+                          list="suggested-subgroups"
+                        />
+                        <datalist id="suggested-subgroups">
+                          <option value="爐具類" />
+                          <option value="調整器類" />
+                          <option value="熱水器類" />
+                          <option value="其他零件類" />
+                          <option value="薪資類" />
+                        </datalist>
+                      </div>
+                    )}
                   </>
                 )}
 
