@@ -80,6 +80,45 @@ function App() {
             }
           }
 
+          // Migrate 5102 accounts to 4104
+          const migrateAccountCounterparts = async () => {
+            const coaKey = 'bp_chart_of_accounts';
+            const coaStr = localStorage.getItem(coaKey);
+            if (coaStr) {
+              try {
+                const coa = JSON.parse(coaStr);
+                let changed = false;
+                if (!coa.some(a => a.code === '4104')) {
+                  coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+                  changed = true;
+                }
+                const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+                sub5102.forEach(a => {
+                  const suffix = a.code.replace('5102', '');
+                  const targetCode = '4104' + suffix;
+                  if (!coa.some(x => x.code === targetCode)) {
+                    coa.push({
+                      code: targetCode,
+                      name: a.name,
+                      type: 'revenue',
+                      desc: a.desc || '',
+                      subGroup: a.subGroup || ''
+                    });
+                    changed = true;
+                  }
+                });
+                if (changed) {
+                  localStorage.setItem(coaKey, JSON.stringify(coa));
+                  await syncLocalToSupabase('系統管理員(建立對照收入科目)');
+                  console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }
+          };
+          await migrateAccountCounterparts();
+
           const backupCreated = createDailyBackupIfNeeded('系統每日備份');
           if (backupCreated) {
             await syncLocalToSupabase('系統每日備份');
@@ -104,6 +143,45 @@ function App() {
               setIsLoggedIn(true);
               setUserRole(session.role);
               setCurrentUser(session.user);
+              
+              // Run migration for logged in users too
+              const migrateAccountCounterparts = async () => {
+                const coaKey = 'bp_chart_of_accounts';
+                const coaStr = localStorage.getItem(coaKey);
+                if (coaStr) {
+                  try {
+                    const coa = JSON.parse(coaStr);
+                    let changed = false;
+                    if (!coa.some(a => a.code === '4104')) {
+                      coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+                      changed = true;
+                    }
+                    const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+                    sub5102.forEach(a => {
+                      const suffix = a.code.replace('5102', '');
+                      const targetCode = '4104' + suffix;
+                      if (!coa.some(x => x.code === targetCode)) {
+                        coa.push({
+                          code: targetCode,
+                          name: a.name,
+                          type: 'revenue',
+                          desc: a.desc || '',
+                          subGroup: a.subGroup || ''
+                        });
+                        changed = true;
+                      }
+                    });
+                    if (changed) {
+                      localStorage.setItem(coaKey, JSON.stringify(coa));
+                      await syncLocalToSupabase('系統管理員(建立對照收入科目)');
+                      console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }
+              };
+              await migrateAccountCounterparts();
             } else {
               localStorage.removeItem('bp_login_session');
               clearCloudSessionToken();
