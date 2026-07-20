@@ -1180,7 +1180,8 @@ export const getShareholderSharesAtDate = (companyId, endDateStr) => {
   const results = shareholders
     .map(sh => {
       const activeCapital = capitalMap[sh.id] || 0;
-      const ratio = totalCapital > 0 ? (activeCapital / totalCapital) * 100 : 0;
+      const hasManualRatio = sh.shareRatio !== undefined && sh.shareRatio !== null && String(sh.shareRatio).trim() !== '';
+      const ratio = hasManualRatio ? Number(sh.shareRatio) : (totalCapital > 0 ? (activeCapital / totalCapital) * 100 : 0);
       return {
         shareholderId: sh.id,
         name: sh.name,
@@ -1188,7 +1189,7 @@ export const getShareholderSharesAtDate = (companyId, endDateStr) => {
         ratio: Math.round(ratio * 100) / 100 // 2 decimal places
       };
     })
-    .filter(item => item.activeCapital > 0); // Only return active shareholders
+    .filter(item => item.activeCapital > 0 || item.ratio > 0);
 
   return {
     shareholders: results,
