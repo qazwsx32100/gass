@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth } from '../utils/financials';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary } from '../utils/financials';
 import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -60,6 +60,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     const balances = getBankBalancesAtDate(companyId, lastDayStr);
     const petty = balances.find(b => b.bankId === 'BANK_PETTY');
     return petty ? petty.currentBalance : 0;
+  }, [companyId, periodVal, triggerRefresh]);
+
+  // Accounts Receivable at the end of the month
+  const receivablesTotal = useMemo(() => {
+    const lastDayStr = getPeriodEndDate('month', periodVal);
+    const summary = getCustomerReceivableSummary(companyId, lastDayStr);
+    return summary.reduce((sum, item) => sum + (item.receivableTotal || 0), 0);
   }, [companyId, periodVal, triggerRefresh]);
 
   // Budgets & Actual Expenditures
@@ -302,6 +309,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
           <span className="metric-value">{gasInventory.endingKg.toLocaleString()} kg</span>
           <span className="metric-change neutral">${gasInventory.endingCost.toLocaleString()} 存貨金額</span>
+        </div>
+
+        <div className="metric-card accent-red" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('inputs')}>
+          <div className="metric-card-header">
+            <span className="metric-label">應收帳款 (客戶欠款)</span>
+            <div className="metric-icon-wrapper red">💵</div>
+          </div>
+          <span className="metric-value">${receivablesTotal.toLocaleString()}</span>
+          <span className="metric-change neutral">截至月底未收餘額 ➔</span>
         </div>
       </div>
 
