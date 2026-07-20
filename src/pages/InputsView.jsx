@@ -3180,10 +3180,69 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <label className="form-label">會計科目</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.accountCode} onChange={e => setFormData({ ...formData, accountCode: e.target.value })}>
                       {activeSubTab === 'income' 
-                        ? revenueAccounts.map(a => {
-                            const isSub = revenueAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
-                            return <option key={a.code} value={a.code}>{isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})</option>;
-                          })
+                        ? (() => {
+                            // 1. Separate 4104 sub-accounts from others
+                            const sub4104 = revenueAccounts.filter(a => a.code.startsWith('4104') && a.code !== '4104');
+                            
+                            // Group 4104 sub-accounts dynamically based on custom subGroup field, with keyword fallback
+                            const groupsMap = {};
+                            
+                            sub4104.forEach(a => {
+                              let groupName = (a.subGroup || '').trim();
+                              if (!groupName) {
+                                const searchStr = `${a.name} ${a.desc || ''}`;
+                                if (searchStr.includes('爐具') || searchStr.includes('爐')) {
+                                  groupName = '爐具類';
+                                } else if (searchStr.includes('調整器') || searchStr.includes('中壓') || searchStr.includes('低壓')) {
+                                  groupName = '調整器類';
+                                } else if (searchStr.includes('熱水器')) {
+                                  groupName = '熱水器類';
+                                } else {
+                                  groupName = '其他零件類';
+                                }
+                              }
+                              
+                              if (!groupsMap[groupName]) {
+                                groupsMap[groupName] = [];
+                              }
+                              groupsMap[groupName].push(a);
+                            });
+
+                            // Remaining accounts (non-4104 sub-accounts and the main 4104 itself)
+                            const mainAndOtherSubAccounts = revenueAccounts.filter(a => !a.code.startsWith('4104') || a.code === '4104');
+
+                            // Build the final select options array
+                            const optionsList = [];
+
+                            mainAndOtherSubAccounts.forEach(a => {
+                              const isSub = revenueAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                              optionsList.push(
+                                <option key={a.code} value={a.code}>
+                                  {isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})
+                                </option>
+                              );
+
+                              // If it is the main '4104' account, insert all its sub-groups
+                              if (a.code === '4104') {
+                                Object.keys(groupsMap).sort().forEach(gName => {
+                                  const groupAccounts = groupsMap[gName];
+                                  if (groupAccounts.length > 0) {
+                                    optionsList.push(
+                                      <optgroup key={`group-rev-${gName}`} label={`　　▼ 4104 爐具/零件 - ${gName}`}>
+                                        {groupAccounts.map(sub => (
+                                          <option key={sub.code} value={sub.code}>
+                                            　　↳ {sub.code} - {sub.name} ({sub.desc})
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    );
+                                  }
+                                });
+                              }
+                            });
+
+                            return optionsList;
+                          })()
                         : (() => {
                             // 1. Separate 5102 sub-accounts from others
                             const sub5102 = cogsExpenseAccounts.filter(a => a.code.startsWith('5102') && a.code !== '5102');
