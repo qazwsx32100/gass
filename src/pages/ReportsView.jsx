@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts } from '../db/storage';
+import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
-import { getCloudAttachmentUrl, revokeCloudAttachmentUrl } from '../db/attachmentService';
+import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
+import { syncLocalToSupabase } from '../db/supabaseService';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -20,6 +21,36 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const [drillDownCode, setDrillDownCode] = useState(null);
   const [drillDownName, setDrillDownName] = useState('');
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
+  const [selectedAuditCategory, setSelectedAuditCategory] = useState(null);
+
+  const handleQuickUpdate = async (id, isIncome, updates) => {
+    if (isIncome) {
+      const list = getIncomes();
+      const idx = list.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...updates };
+        saveIncomes(list);
+      }
+    } else {
+      const list = getExpenses();
+      const idx = list.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...updates };
+        saveExpenses(list);
+      }
+    }
+
+    // Dispatch global refresh event
+    window.dispatchEvent(new Event('bp_data_changed'));
+
+    // Sync to Supabase in the background
+    try {
+      await syncLocalToSupabase('系統查帳快速核對更新');
+      showToast('☁️ 變更已成功同步至雲端。', 'success');
+    } catch (err) {
+      showToast('❌ 同步失敗，已先儲存於本機。', 'error');
+    }
+  };
 
   useEffect(() => () => revokeCloudAttachmentUrl(viewingReceiptUrl), [viewingReceiptUrl]);
 
@@ -1857,24 +1888,140 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>期間：{activePeriodLabel}</span>
             </div>
             <div className="card-body">
-              <div className="summary-grid" style={{ marginBottom: '16px' }}>
-                <div className="summary-card">
+              <div className="summary-grid" style={{ marginBottom: '24px' }}>
+                <div className="summary-card" style={{ padding: '16px', borderRadius: 'var(--border-radius)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                   <div className="summary-label">查帳準備分數</div>
-                  <div className="summary-value">{auditReadiness.score}</div>
+                  <div className="summary-value" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-green)' }}>{auditReadiness.score}</div>
                 </div>
-                <div className="summary-card">
-                  <div className="summary-label">缺憑證筆數</div>
-                  <div className="summary-value expense">{auditReadiness.approvedWithoutAttachment.length}</div>
+                <div 
+                  className={`summary-card ${selectedAuditCategory === 'missingAttachment' ? 'active-card' : ''}`} 
+                  onClick={() => setSelectedAuditCategory(selectedAuditCategory === 'missingAttachment' ? null : 'missingAttachment')}
+                  style={{ 
+                    padding: '16px', 
+                    borderRadius: 'var(--border-radius)', 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    border: selectedAuditCategory === 'missingAttachment' ? '2px solid var(--accent-red)' : '1px solid var(--border-color)', 
+                    cursor: 'pointer',
+                    transform: selectedAuditCategory === 'missingAttachment' ? 'scale(1.02)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div className="summary-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>缺憑證筆數</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>👉 點擊查核</span>
+                  </div>
+                  <div className="summary-value expense" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-red)' }}>{auditReadiness.approvedWithoutAttachment.length}</div>
                 </div>
-                <div className="summary-card">
-                  <div className="summary-label">未完成審核</div>
-                  <div className="summary-value">{auditReadiness.pendingRows.length}</div>
+                <div 
+                  className={`summary-card ${selectedAuditCategory === 'pending' ? 'active-card' : ''}`}
+                  onClick={() => setSelectedAuditCategory(selectedAuditCategory === 'pending' ? null : 'pending')}
+                  style={{ 
+                    padding: '16px', 
+                    borderRadius: 'var(--border-radius)', 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    border: selectedAuditCategory === 'pending' ? '2px solid var(--accent-gold)' : '1px solid var(--border-color)', 
+                    cursor: 'pointer',
+                    transform: selectedAuditCategory === 'pending' ? 'scale(1.02)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div className="summary-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>未完成審核</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>👉 點擊查核</span>
+                  </div>
+                  <div className="summary-value" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-gold)' }}>{auditReadiness.pendingRows.length}</div>
                 </div>
-                <div className="summary-card">
-                  <div className="summary-label">應稅缺發票</div>
-                  <div className="summary-value expense">{auditReadiness.taxableWithoutInvoice.length}</div>
+                <div 
+                  className={`summary-card ${selectedAuditCategory === 'missingInvoice' ? 'active-card' : ''}`}
+                  onClick={() => setSelectedAuditCategory(selectedAuditCategory === 'missingInvoice' ? null : 'missingInvoice')}
+                  style={{ 
+                    padding: '16px', 
+                    borderRadius: 'var(--border-radius)', 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    border: selectedAuditCategory === 'missingInvoice' ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)', 
+                    cursor: 'pointer',
+                    transform: selectedAuditCategory === 'missingInvoice' ? 'scale(1.02)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div className="summary-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>應稅缺發票</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>👉 點擊查核</span>
+                  </div>
+                  <div className="summary-value expense" style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-blue)' }}>{auditReadiness.taxableWithoutInvoice.length}</div>
                 </div>
               </div>
+
+              {selectedAuditCategory && (
+                <div className="card" style={{ marginTop: '0px', marginBottom: '24px', border: '1px solid var(--border-color)', boxShadow: 'none' }}>
+                  <div className="card-header" style={{ padding: '12px 16px', backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                      {selectedAuditCategory === 'missingAttachment' && '📂 缺憑證項目明細'}
+                      {selectedAuditCategory === 'pending' && '⏳ 待審核項目明細'}
+                      {selectedAuditCategory === 'missingInvoice' && '🧾 應稅缺發票項目明細'}
+                    </span>
+                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.8rem' }} onClick={() => setSelectedAuditCategory(null)}>關閉明細</button>
+                  </div>
+                  <div className="table-responsive">
+                    <table className="data-table" style={{ margin: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>日期</th>
+                          <th>類型</th>
+                          <th>會計科目</th>
+                          <th>金額</th>
+                          <th>備註</th>
+                          <th style={{ width: '220px', textAlign: 'center' }}>快速查核 / 修正操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const list = 
+                            selectedAuditCategory === 'missingAttachment' ? auditReadiness.approvedWithoutAttachment :
+                            selectedAuditCategory === 'pending' ? auditReadiness.pendingRows :
+                            auditReadiness.taxableWithoutInvoice;
+
+                          if (list.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px' }}>
+                                  該分類目前無任何異常傳票。
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return list.map(item => {
+                            const isRealIncome = getIncomes().some(x => x.id === item.id);
+                            return (
+                              <tr key={item.id}>
+                                <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                                <td>
+                                  <span className={`badge ${isRealIncome ? 'badge-success' : 'badge-danger'}`} style={{ padding: '2px 6px', fontSize: '0.8rem' }}>
+                                    {isRealIncome ? '收入' : '支出'}
+                                  </span>
+                                </td>
+                                <td>{item.accountCode} - {item.accountName || ''}</td>
+                                <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{formatCurrency(item.amount || item.calculatedAmount)}</td>
+                                <td style={{ fontSize: '0.85rem' }}>{item.remarks || item.desc || '-'}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <QuickAuditAction 
+                                    item={item} 
+                                    isIncome={isRealIncome} 
+                                    category={selectedAuditCategory} 
+                                    onUpdate={handleQuickUpdate} 
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div className="table-responsive">
                 <table className="data-table">
                   <thead>
@@ -1891,17 +2038,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                       <td>不平衡傳票需先修正才能交給會計師。</td>
                     </tr>
                     <tr>
-                      <td>已核准資料憑證</td>
+                      <td style={{ cursor: 'pointer', color: 'var(--accent-red)', textDecoration: 'underline' }} onClick={() => setSelectedAuditCategory('missingAttachment')}>已核准資料憑證</td>
                       <td>{auditReadiness.approvedWithoutAttachment.length === 0 ? '通過' : `${auditReadiness.approvedWithoutAttachment.length} 筆缺憑證`}</td>
                       <td>補上發票、收據、匯款或支票影像。</td>
                     </tr>
                     <tr>
-                      <td>待審資料</td>
+                      <td style={{ cursor: 'pointer', color: 'var(--accent-gold)', textDecoration: 'underline' }} onClick={() => setSelectedAuditCategory('pending')}>待審資料</td>
                       <td>{auditReadiness.pendingRows.length === 0 ? '通過' : `${auditReadiness.pendingRows.length} 筆待審`}</td>
                       <td>月底關帳前需核准、退回或作廢。</td>
                     </tr>
                     <tr>
-                      <td>營業稅發票資訊</td>
+                      <td style={{ cursor: 'pointer', color: 'var(--accent-blue)', textDecoration: 'underline' }} onClick={() => setSelectedAuditCategory('missingInvoice')}>營業稅發票資訊</td>
                       <td>{auditReadiness.taxableWithoutInvoice.length === 0 ? '通過' : `${auditReadiness.taxableWithoutInvoice.length} 筆應稅資料缺發票號碼`}</td>
                       <td>補上發票號碼、發票日期與統編，方便401申報整理。</td>
                     </tr>
@@ -2217,4 +2364,126 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       )}
     </div>
   );
+}
+
+function QuickAuditAction({ item, isIncome, category, onUpdate }) {
+  const [invoiceNo, setInvoiceNo] = useState(item.invoiceNo || '');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  if (category === 'pending') {
+    return (
+      <button 
+        className="btn btn-success btn-sm" 
+        onClick={async () => {
+          setSaving(true);
+          try {
+            await onUpdate(item.id, isIncome, { status: 'approved' });
+          } finally {
+            setSaving(false);
+          }
+        }}
+        disabled={saving}
+        style={{ padding: '4px 10px', fontSize: '0.8rem', backgroundColor: 'var(--accent-green)', borderColor: 'var(--accent-green)', color: '#fff' }}
+      >
+        {saving ? '處理中...' : '👍 快速核准'}
+      </button>
+    );
+  }
+
+  if (category === 'missingAttachment') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <input 
+          type="file" 
+          accept="image/*" 
+          id={`upload-audit-${item.id}`} 
+          style={{ display: 'none' }} 
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setUploading(true);
+            try {
+              const reader = new FileReader();
+              reader.onload = async (event) => {
+                const img = new Image();
+                img.onload = async () => {
+                  const canvas = document.createElement('canvas');
+                  let w = img.width;
+                  let h = img.height;
+                  const MAX_WIDTH = 1200;
+                  const MAX_HEIGHT = 1200;
+                  if (w > h) {
+                    if (w > MAX_WIDTH) {
+                      h *= MAX_WIDTH / w;
+                      w = MAX_WIDTH;
+                    }
+                  } else {
+                    if (h > MAX_HEIGHT) {
+                      w *= MAX_HEIGHT / h;
+                      h = MAX_HEIGHT;
+                    }
+                  }
+                  canvas.width = w;
+                  canvas.height = h;
+                  const ctx = canvas.getContext('2d');
+                  ctx.drawImage(img, 0, 0, w, h);
+                  const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                  
+                  const attachment = await uploadCloudAttachment({ dataUrl: compressed, filename: file.name });
+                  await onUpdate(item.id, isIncome, { receiptAttachment: attachment });
+                };
+                img.src = event.target.result;
+              };
+              reader.readAsDataURL(file);
+            } catch (err) {
+              window.alert(err.message || '上傳失敗');
+            } finally {
+              setUploading(false);
+            }
+          }}
+        />
+        <label 
+          htmlFor={`upload-audit-${item.id}`} 
+          className="btn btn-primary btn-sm" 
+          style={{ cursor: 'pointer', padding: '4px 10px', fontSize: '0.8rem', margin: 0 }}
+        >
+          {uploading ? '上傳中...' : '📂 上傳憑證'}
+        </label>
+      </div>
+    );
+  }
+
+  if (category === 'missingInvoice') {
+    return (
+      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+        <input 
+          type="text" 
+          className="form-input" 
+          placeholder="發票號碼"
+          value={invoiceNo}
+          onChange={(e) => setInvoiceNo(e.target.value)}
+          style={{ width: '120px', padding: '4px 8px', fontSize: '0.8rem', margin: 0, height: '28px', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+        />
+        <button 
+          className="btn btn-primary btn-sm" 
+          onClick={async () => {
+            if (!invoiceNo.trim()) return;
+            setSaving(true);
+            try {
+              await onUpdate(item.id, isIncome, { invoiceNo: invoiceNo.trim() });
+            } finally {
+              setSaving(false);
+            }
+          }}
+          disabled={saving || !invoiceNo.trim()}
+          style={{ padding: '4px 8px', fontSize: '0.8rem', height: '28px' }}
+        >
+          儲存
+        </button>
+      </div>
+    );
+  }
+
+  return null;
 }

@@ -214,6 +214,14 @@ function App() {
     boot();
   }, []);
 
+  useEffect(() => {
+    const handleDataChanged = () => {
+      setDbVersion(prev => prev + 1);
+    };
+    window.addEventListener('bp_data_changed', handleDataChanged);
+    return () => window.removeEventListener('bp_data_changed', handleDataChanged);
+  }, []);
+
   // Toast Helper
   const showToast = (message, type = 'success') => {
     const id = Date.now();
