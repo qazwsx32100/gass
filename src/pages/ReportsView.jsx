@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod } from '../utils/financials';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
 import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -178,6 +178,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   const companyProfit = useMemo(() => {
     return getCompanyProfitReport(companyId, activePeriodType, activePeriodVal);
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
+  const partsProfitReport = useMemo(() => {
+    return getPartsGrossProfitReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const gasInventory = useMemo(() => {
@@ -1343,6 +1347,137 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: companyProfit.grossProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(companyProfit.grossProfit)}</td>
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{companyProfit.grossMargin.toFixed(1)}%</td>
                       </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Materials & Parts Detailed Profit Analysis Table */}
+              <div className="card" style={{ boxShadow: 'none', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
+                <div className="card-header" style={{ padding: '12px 16px', backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>📦 材料與零件商品明細毛利分析表</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>依子分類分組小計</span>
+                </div>
+                <div className="table-responsive">
+                  <table className="data-table" style={{ margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th>分類 / 商品科目</th>
+                        <th style={{ textAlign: 'center' }}>出貨量</th>
+                        <th style={{ textAlign: 'right' }}>出貨金額 (收入)</th>
+                        <th style={{ textAlign: 'center' }}>進貨量</th>
+                        <th style={{ textAlign: 'right' }}>進貨金額 (成本)</th>
+                        <th style={{ textAlign: 'right' }}>商品毛利</th>
+                        <th style={{ textAlign: 'right' }}>毛利率</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        if (!partsProfitReport || partsProfitReport.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px' }}>
+                                該期間無任何材料零件（5102 / 4104）交易紀錄。
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        // Group rows by subGroup
+                        const groups = {};
+                        partsProfitReport.forEach(row => {
+                          const gName = row.subGroup || '其他零件';
+                          if (!groups[gName]) groups[gName] = [];
+                          groups[gName].push(row);
+                        });
+
+                        const elements = [];
+                        let grandSalesQty = 0;
+                        let grandSalesRev = 0;
+                        let grandPurQty = 0;
+                        let grandPurCost = 0;
+
+                        Object.keys(groups).sort().forEach(gName => {
+                          const items = groups[gName];
+                          let groupSalesQty = 0;
+                          let groupSalesRev = 0;
+                          let groupPurQty = 0;
+                          let groupPurCost = 0;
+
+                          items.forEach(item => {
+                            groupSalesQty += item.salesQty;
+                            groupSalesRev += item.salesRevenue;
+                            groupPurQty += item.purchaseQty;
+                            groupPurCost += item.purchaseCost;
+                          });
+
+                          grandSalesQty += groupSalesQty;
+                          grandSalesRev += groupSalesRev;
+                          grandPurQty += groupPurQty;
+                          grandPurCost += groupPurCost;
+
+                          const groupProfit = groupSalesRev - groupPurCost;
+                          const groupMargin = groupSalesRev > 0 ? (groupProfit / groupSalesRev) * 100 : 0;
+
+                          // Render group header
+                          elements.push(
+                            <tr key={`gheader-${gName}`} style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 600 }}>
+                              <td colSpan={7} style={{ color: 'var(--text-primary)' }}>
+                                📁 {gName}
+                              </td>
+                            </tr>
+                          );
+
+                          // Render group items
+                          items.forEach(item => {
+                            elements.push(
+                              <tr key={`item-${item.cogsCode}`}>
+                                <td style={{ paddingLeft: '24px' }}>
+                                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>[{item.cogsCode.replace('5102', '')}] </span>
+                                  {item.name}
+                                </td>
+                                <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{item.salesQty || '-'}</td>
+                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.salesRevenue)}</td>
+                                <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{item.purchaseQty || '-'}</td>
+                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(item.purchaseCost)}</td>
+                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: item.grossProfit >= 0 ? 'var(--text-primary)' : 'var(--accent-red)' }}>{formatCurrency(item.grossProfit)}</td>
+                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{item.salesRevenue > 0 ? `${item.grossMargin.toFixed(1)}%` : '-'}</td>
+                              </tr>
+                            );
+                          });
+
+                          // Render group subtotal
+                          elements.push(
+                            <tr key={`gsubtotal-${gName}`} style={{ fontWeight: 600, borderBottom: '1.5px solid var(--border-color)', backgroundColor: 'rgba(5, 178, 165, 0.03)' }}>
+                              <td style={{ paddingLeft: '24px', fontStyle: 'italic' }}>↳ {gName} 小計</td>
+                              <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{groupSalesQty || '-'}</td>
+                              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(groupSalesRev)}</td>
+                              <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{groupPurQty || '-'}</td>
+                              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(groupPurCost)}</td>
+                              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: groupProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(groupProfit)}</td>
+                              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{groupSalesRev > 0 ? `${groupMargin.toFixed(1)}%` : '0.0%'}</td>
+                            </tr>
+                          );
+                        });
+
+                        // Render grand total row
+                        const grandProfit = grandSalesRev - grandPurCost;
+                        const grandMargin = grandSalesRev > 0 ? (grandProfit / grandSalesRev) * 100 : 0;
+
+                        elements.push(
+                          <tr key="grandtotal" style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 700 }}>
+                            <td>材料與零件商品 合計</td>
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{grandSalesQty || '-'}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{formatCurrency(grandSalesRev)}</td>
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{grandPurQty || '-'}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{formatCurrency(grandPurCost)}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: grandProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(grandProfit)}</td>
+                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{grandSalesRev > 0 ? `${grandMargin.toFixed(1)}%` : '0.0%'}</td>
+                          </tr>
+                        );
+
+                        return elements;
+                      })()}
                     </tbody>
                   </table>
                 </div>

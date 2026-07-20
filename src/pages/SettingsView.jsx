@@ -503,6 +503,41 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         }
       }
 
+      // Helper to dynamically sync counterparts between 5102 and 4104
+      const syncMatchingAccount = (accountsList, oldC, newC, name, desc, subG) => {
+        const isCogs = oldC.startsWith('5102') && oldC !== '5102';
+        const isRev = oldC.startsWith('4104') && oldC !== '4104';
+        if (!isCogs && !isRev) return null;
+
+        const suffix = isCogs ? oldC.replace('5102', '') : oldC.replace('4104', '');
+        const targetOldCode = isCogs ? ('4104' + suffix) : ('5102' + suffix);
+
+        const newIsCogs = newC.startsWith('5102') && newC !== '5102';
+        const newIsRev = newC.startsWith('4104') && newC !== '4104';
+        const newSuffix = newIsCogs ? newC.replace('5102', '') : newC.replace('4104', '');
+        const targetNewCode = isCogs ? ('4104' + newSuffix) : ('5102' + newSuffix);
+
+        const idx = accountsList.findIndex(a => a.code === targetOldCode);
+        if (idx !== -1) {
+          accountsList[idx] = {
+            ...accountsList[idx],
+            code: targetNewCode,
+            name: name,
+            desc: desc,
+            subGroup: subG || ''
+          };
+        } else {
+          accountsList.push({
+            code: targetNewCode,
+            name: name,
+            type: isCogs ? 'revenue' : 'cogs',
+            desc: desc,
+            subGroup: subG || ''
+          });
+        }
+        return { targetOldCode, targetNewCode };
+      };
+
       if (editingItem) {
         const idx = db.findIndex(a => a.code === oldCode);
         if (idx !== -1) {
@@ -517,18 +552,30 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             actor: '系統管理員', 
             reason: `會計科目修改 (代碼由 ${oldCode} 改為 ${newCode})` 
           });
+
+          const syncResult = syncMatchingAccount(db, oldCode, newCode, formData.accountName, formData.desc, formData.subGroup);
           saveChartOfAccounts(db);
 
           // Perform migration if code changed
+          const migrations = [];
           if (oldCode !== newCode) {
+            migrations.push({ old: oldCode, next: newCode });
+          }
+          if (syncResult && syncResult.targetOldCode !== syncResult.targetNewCode) {
+            migrations.push({ old: syncResult.targetOldCode, next: syncResult.targetNewCode });
+          }
+
+          if (migrations.length > 0) {
             // 1. Migrate Incomes
             const incomes = getIncomes();
             let incomesChanged = false;
             incomes.forEach(i => {
-              if (i.accountCode === oldCode) {
-                i.accountCode = newCode;
-                incomesChanged = true;
-              }
+              migrations.forEach(pair => {
+                if (i.accountCode === pair.old) {
+                  i.accountCode = pair.next;
+                  incomesChanged = true;
+                }
+              });
             });
             if (incomesChanged) saveIncomes(incomes);
 
@@ -536,10 +583,12 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             const expenses = getExpenses();
             let expensesChanged = false;
             expenses.forEach(e => {
-              if (e.accountCode === oldCode) {
-                e.accountCode = newCode;
-                expensesChanged = true;
-              }
+              migrations.forEach(pair => {
+                if (e.accountCode === pair.old) {
+                  e.accountCode = pair.next;
+                  expensesChanged = true;
+                }
+              });
             });
             if (expensesChanged) saveExpenses(expenses);
 
@@ -547,10 +596,12 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
             const budgets = getBudgets();
             let budgetsChanged = false;
             budgets.forEach(b => {
-              if (b.accountCode === oldCode) {
-                b.accountCode = newCode;
-                budgetsChanged = true;
-              }
+              migrations.forEach(pair => {
+                if (b.accountCode === pair.old) {
+                  b.accountCode = pair.next;
+                  budgetsChanged = true;
+                }
+              });
             });
             if (budgetsChanged) saveBudgets(budgets);
           }
@@ -559,6 +610,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         }
       } else {
         db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' });
+        syncMatchingAccount(db, newCode, newCode, formData.accountName, formData.desc, formData.subGroup);
         saveChartOfAccounts(db);
         success = true;
       }
@@ -633,7 +685,20 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     } else if (activeSettingsTab === 'accounts') {
       const item = getChartOfAccounts().find(a => a.code === id);
       if (item) archiveDeletion({ collection: 'chartOfAccounts', record: item, actor: '系統管理員', reason });
-      saveChartOfAccounts(getChartOfAccounts().filter(a => a.code !== id));
+      let coaList = getChartOfAccounts().filter(a => a.code !== id);
+
+      const isCogs = id.startsWith('5102') && id !== '5102';
+      const isRev = id.startsWith('4104') && id !== '4104';
+      if (isCogs || isRev) {
+        const suffix = isCogs ? id.replace('5102', '') : id.replace('4104', '');
+        const counterpartOldCode = isCogs ? ('4104' + suffix) : ('5102' + suffix);
+        const counterpart = coaList.find(a => a.code === counterpartOldCode);
+        if (counterpart) {
+          archiveDeletion({ collection: 'chartOfAccounts', record: counterpart, actor: '系統管理員', reason: `連動刪除對照科目 (${reason})` });
+          coaList = coaList.filter(a => a.code !== counterpartOldCode);
+        }
+      }
+      saveChartOfAccounts(coaList);
     } else if (activeSettingsTab === 'company') {
       const item = getCompanies().find(c => c.id === id);
       if (item) archiveDeletion({ collection: 'companies', record: item, actor: '系統管理員', reason });

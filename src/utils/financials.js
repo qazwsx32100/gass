@@ -1505,3 +1505,76 @@ export const generateLineShareText = (companyName, divData) => {
   text += `💡 本報表由 BusinessPilot ERP 自動生成。`;
   return text;
 };
+
+/**
+ * 7. Materials & Parts Gross Profit Report
+ */
+export const getPartsGrossProfitReport = (companyId, periodType, periodVal) => {
+  const allAccounts = getChartOfAccounts();
+  const allIncomes = getIncomes().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  const allExpenses = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+
+  // Find all 5102 sub-accounts
+  const cogs5102 = allAccounts.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+
+  const rows = cogs5102.map(cogsAcc => {
+    // Extract suffix
+    const suffix = cogsAcc.code.replace('5102', '');
+    const revenueCode = '4104' + suffix;
+    const revAcc = allAccounts.find(a => a.code === revenueCode) || null;
+
+    // Filter transactions
+    const itemIncomes = allIncomes.filter(i => i.accountCode === revenueCode);
+    const itemExpenses = allExpenses.filter(e => e.accountCode === cogsAcc.code);
+
+    // Sum quantities & amounts
+    const salesQty = itemIncomes.reduce((sum, i) => sum + Number(i.quantity || i.cylinderQty || 0), 0);
+    const salesRevenue = itemIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
+    const purchaseQty = itemExpenses.reduce((sum, e) => sum + Number(e.quantity || e.cylinderQty || 0), 0);
+    const purchaseCost = itemExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+    const grossProfit = salesRevenue - purchaseCost;
+    const grossMargin = salesRevenue > 0 ? (grossProfit / salesRevenue) * 100 : 0;
+
+    // Determine subGroup category name
+    let groupName = (cogsAcc.subGroup || revAcc?.subGroup || '').trim();
+    if (!groupName) {
+      const searchStr = `${cogsAcc.name} ${cogsAcc.desc || ''}`;
+      if (searchStr.includes('爐具') || searchStr.includes('爐')) {
+        groupName = '爐具類';
+      } else if (searchStr.includes('調整器') || searchStr.includes('中壓') || searchStr.includes('低壓')) {
+        groupName = '調整器類';
+      } else if (searchStr.includes('熱水器')) {
+        groupName = '熱水器類';
+      } else {
+        groupName = '其他零件類';
+      }
+    }
+
+    return {
+      cogsCode: cogsAcc.code,
+      revenueCode: revenueCode,
+      name: cogsAcc.name,
+      subGroup: groupName,
+      salesQty,
+      salesRevenue,
+      purchaseQty,
+      purchaseCost,
+      grossProfit,
+      grossMargin
+    };
+  });
+
+  return rows;
+};
+

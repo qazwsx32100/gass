@@ -53,13 +53,17 @@ export const INITIAL_CHART_OF_ACCOUNTS = [
   { code: '4101', name: '銷貨收入', type: 'revenue', desc: '主要商品營業收入' },
   { code: '4102', name: '維修服務收入', type: 'revenue', desc: '安裝及爐具檢修收入' },
   { code: '4103', name: '其他營業收入', type: 'revenue', desc: '非主營業務之金流' },
+  { code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' },
+  { code: '410401', name: '雙口瓦斯爐', type: 'revenue', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' },
+  { code: '410402', name: '強制排氣熱水器', type: 'revenue', desc: '16L 數位恆溫強制排氣熱水器（子項目）', subGroup: '熱水器類' },
+  { code: '410403', name: '低壓安全調整器', type: 'revenue', desc: 'R280 帶超流切斷安全防護調整器（子項目）', subGroup: '調整器類' },
   
   // Cost of Goods Sold (COGS)
   { code: '5101', name: '進氣成本', type: 'cogs', desc: '瓦斯分裝廠進氣成本' },
   { code: '5102', name: '材料零件成本', type: 'cogs', desc: '爐具、管線與安全閥進貨' },
-  { code: '510201', name: '雙口瓦斯爐', type: 'cogs', desc: '家用雙口防乾燒瓦斯爐（子項目）' },
-  { code: '510202', name: '強制排氣熱水器', type: 'cogs', desc: '16L 數位恆溫強制排氣熱水器（子項目）' },
-  { code: '510203', name: '低壓安全調整器', type: 'cogs', desc: 'R280 帶超流切斷安全防護調整器（子項目）' },
+  { code: '510201', name: '雙口瓦斯爐', type: 'cogs', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' },
+  { code: '510202', name: '強制排氣熱水器', type: 'cogs', desc: '16L 數位恆溫強制排氣熱水器（子項目）', subGroup: '熱水器類' },
+  { code: '510203', name: '低壓安全調整器', type: 'cogs', desc: 'R280 帶超流切斷安全防護調整器（子項目）', subGroup: '調整器類' },
   
   // Operating Expenses
   { code: '6101', name: '員工薪資', type: 'expense', desc: '正職員工及配送司機薪資' },

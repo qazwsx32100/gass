@@ -701,7 +701,7 @@ const encodeHtmlEntities = (text) => String(text || '').replace(/[\u0080-\uFFFF]
 
 // Initialize database with mock data if empty or outdated
 export const initializeDB = (forceReset = false) => {
-  const currentDbVersion = 'v10';
+  const currentDbVersion = 'v11';
   let needsInitialization = forceReset || 
                          !localStorage.getItem(KEYS.COMPANIES) || 
                          localStorage.getItem('bp_db_version') !== currentDbVersion;
@@ -713,8 +713,26 @@ export const initializeDB = (forceReset = false) => {
     localStorage.setItem(KEYS.BANKS, JSON.stringify(keepOrSeed(KEYS.BANKS, INITIAL_BANKS)));
     const coaSeed = keepOrSeed(KEYS.CHART_OF_ACCOUNTS, INITIAL_CHART_OF_ACCOUNTS);
     if (Array.isArray(coaSeed)) {
+      if (!coaSeed.some(a => a.code === '4104')) {
+        coaSeed.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+      }
+      if (!coaSeed.some(a => a.code === '410401')) {
+        coaSeed.push({ code: '410401', name: '雙口瓦斯爐', type: 'revenue', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' });
+      }
+      if (!coaSeed.some(a => a.code === '410402')) {
+        coaSeed.push({ code: '410402', name: '強制排氣熱水器', type: 'revenue', desc: '16L 數位恆溫強制排氣熱水器（子項目）', subGroup: '熱水器類' });
+      }
+      if (!coaSeed.some(a => a.code === '410403')) {
+        coaSeed.push({ code: '410403', name: '低壓安全調整器', type: 'revenue', desc: 'R280 帶超流切斷安全防護調整器（子項目）', subGroup: '調整器類' });
+      }
       if (!coaSeed.some(a => a.code === '510201')) {
-        coaSeed.push({ code: '510201', name: '爐具商品採購', type: 'cogs', desc: '主營爐具與熱水器進貨（子項目）' });
+        coaSeed.push({ code: '510201', name: '雙口瓦斯爐', type: 'cogs', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' });
+      }
+      if (!coaSeed.some(a => a.code === '510202')) {
+        coaSeed.push({ code: '510202', name: '強制排氣熱水器', type: 'cogs', desc: '16L 數位恆溫強制排氣熱水器（子項目）', subGroup: '熱水器類' });
+      }
+      if (!coaSeed.some(a => a.code === '510203')) {
+        coaSeed.push({ code: '510203', name: '低壓安全調整器', type: 'cogs', desc: 'R280 帶超流切斷安全防護調整器（子項目）', subGroup: '調整器類' });
       }
       if (!coaSeed.some(a => a.code === '610101')) {
         coaSeed.push({ code: '610101', name: '司機配送薪資', type: 'expense', desc: '小貨車配送司機月薪（子項目）' });
