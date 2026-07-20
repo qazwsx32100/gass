@@ -854,15 +854,15 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   <thead>
                     {activeSettingsTab === 'shareholder' && (
                       <tr>
+                        <th>股東代號</th>
                         <th>股東姓名</th>
-                        <th>持股比例</th>
+                        <th style={{ textAlign: 'right' }}>實時出資金額</th>
+                        <th style={{ textAlign: 'right' }}>持股比例</th>
                         {canEditShareholders && <th>電子信箱</th>}
                         {canEditShareholders && <th>登入密碼</th>}
                         {canEditShareholders && <th>身分證字號</th>}
                         {canEditShareholders && <th>聯絡手機</th>}
                         {canEditShareholders && <th>權限角色</th>}
-                        {!canEditShareholders && <th style={{ textAlign: 'right' }}>出資金額</th>}
-                        {!canEditShareholders && <th style={{ textAlign: 'right' }}>可分配比例</th>}
                         {canEditShareholders && <th>可看公司</th>}
                         {canEditShareholders && <th>可用功能</th>}
                         {canEditShareholders && <th style={{ textAlign: 'right' }}>操作</th>}
@@ -897,56 +897,58 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     )}
                   </thead>
                   <tbody>
-                    {activeSettingsTab === 'shareholder' && shareholders.map((sh, idx) => (
-                      <tr key={idx}>
-                        <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.id}</td>
-                        <td style={{ fontWeight: '700' }}>{sh.name}</td>
-                        {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.email}</td>}
-                        {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '750', color: 'var(--accent-blue)' }}>****</td>}
-                        {canEditShareholders && (
-                          <td>
-                            <span className={`badge ${sh.role === USER_ROLES.ADMIN ? 'approved' : sh.role === USER_ROLES.BOOKKEEPER ? 'pending' : sh.role === USER_ROLES.BUSINESS_REVIEWER ? 'approved' : 'draft'}`}>
-                              {getRoleLabel(sh.role)}
-                            </span>
+                    {activeSettingsTab === 'shareholder' && shareholders.map((sh, idx) => {
+                      const summary = shareholderSummary[sh.id] || {};
+                      const ratio = summary.ratio !== undefined ? summary.ratio : 0;
+                      const activeCapital = summary.activeCapital !== undefined ? summary.activeCapital : 0;
+
+                      return (
+                        <tr key={idx}>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.id}</td>
+                          <td style={{ fontWeight: '700' }}>{sh.name}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                            ${activeCapital.toLocaleString()}
                           </td>
-                        )}
-                        {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.idCard}</td>}
-                        {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.phone}</td>}
-                        {!canEditShareholders && (
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
-                            ${(shareholderSummary[sh.id]?.activeCapital || 0).toLocaleString()}
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-green)' }}>
+                            {ratio.toFixed(2)}%
                           </td>
-                        )}
-                        {!canEditShareholders && (
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
-                            {shareholderSummary[sh.id]?.ratio || 0}%
-                          </td>
-                        )}
-                        {canEditShareholders && (
-                          <td style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: '600' }}>
-                            {(sh.allowedCompanies || []).join(', ')}
-                          </td>
-                        )}
-                        {canEditShareholders && (
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {(sh.allowedTabs || []).map(t => {
-                              if (t === 'dashboard') return '營運總覽';
-                              if (t === 'reports') return '報表中心';
-                              if (t === 'inputs') return '日常金流';
-                              return t;
-                            }).join(', ')}
-                          </td>
-                        )}
-                        {canEditShareholders && (
-                          <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                              <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(sh)}>編輯</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleDelete(sh.id)}>刪除</button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
+                          {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.email}</td>}
+                          {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '750', color: 'var(--accent-blue)' }}>****</td>}
+                          {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.idCard}</td>}
+                          {canEditShareholders && <td style={{ fontFamily: 'var(--font-mono)' }}>{sh.phone}</td>}
+                          {canEditShareholders && (
+                            <td>
+                              <span className={`badge ${sh.role === USER_ROLES.ADMIN ? 'approved' : sh.role === USER_ROLES.BOOKKEEPER ? 'pending' : sh.role === USER_ROLES.BUSINESS_REVIEWER ? 'approved' : 'draft'}`}>
+                                {getRoleLabel(sh.role)}
+                              </span>
+                            </td>
+                          )}
+                          {canEditShareholders && (
+                            <td style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: '600' }}>
+                              {(sh.allowedCompanies || []).join(', ')}
+                            </td>
+                          )}
+                          {canEditShareholders && (
+                            <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              {(sh.allowedTabs || []).map(t => {
+                                if (t === 'dashboard') return '營運總覽';
+                                if (t === 'reports') return '報表中心';
+                                if (t === 'inputs') return '日常金流';
+                                return t;
+                              }).join(', ')}
+                            </td>
+                          )}
+                          {canEditShareholders && (
+                            <td style={{ textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(sh)}>編輯</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(sh.id)}>刪除</button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
 
                     {activeSettingsTab === 'bank' && banks.map((b, idx) => (
                       <tr key={idx}>
