@@ -116,6 +116,23 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getDividendsForPeriod(companyId, activePeriodType, activePeriodVal, reserveRatio);
   }, [companyId, activePeriodType, activePeriodVal, reserveRatio, triggerRefresh]);
 
+  const [customAmountText, setCustomAmountText] = useState('');
+  const [reservePercentText, setReservePercentText] = useState('');
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const [isPercentFocused, setIsPercentFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isAmountFocused && dividends) {
+      setCustomAmountText(String(Math.round(dividends.reserveAmount || 0)));
+    }
+  }, [dividends?.reserveAmount, isAmountFocused]);
+
+  useEffect(() => {
+    if (!isPercentFocused) {
+      setReservePercentText(String(Math.round(reserveRatio * 100)));
+    }
+  }, [reserveRatio, isPercentFocused]);
+
   // 4. Drill Down Transactions Query
   const drillDownTransactions = useMemo(() => {
     if (!drillDownCode) return [];
@@ -2144,9 +2161,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           type="number" 
                           className="form-control" 
                           placeholder="例如：20000" 
-                          value={Math.round(dividends.reserveAmount)} 
+                          value={customAmountText} 
+                          onFocus={() => setIsAmountFocused(true)}
+                          onBlur={() => {
+                            setIsAmountFocused(false);
+                            setCustomAmountText(String(Math.round(dividends.reserveAmount || 0)));
+                          }}
                           onChange={e => {
-                            const val = Math.max(0, Number(e.target.value || 0));
+                            const valText = e.target.value;
+                            setCustomAmountText(valText);
+                            const valNum = Number(valText || 0);
+                            const val = Math.max(0, isNaN(valNum) ? 0 : valNum);
                             const maxVal = dividends.netProfit;
                             const finalVal = val > maxVal ? maxVal : val;
                             setReserveRatio(dividends.netProfit > 0 ? finalVal / dividends.netProfit : 0);
@@ -2162,9 +2187,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                             type="number" 
                             className="form-control" 
                             style={{ width: '80px' }}
-                            value={Math.round(reserveRatio * 100)} 
+                            value={reservePercentText} 
+                            onFocus={() => setIsPercentFocused(true)}
+                            onBlur={() => {
+                              setIsPercentFocused(false);
+                              setReservePercentText(String(Math.round(reserveRatio * 100)));
+                            }}
                             onChange={e => {
-                              const val = Math.max(0, Math.min(100, Number(e.target.value || 0)));
+                              const valText = e.target.value;
+                              setReservePercentText(valText);
+                              const valNum = Number(valText || 0);
+                              const val = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
                               setReserveRatio(val / 100);
                             }} 
                           />
