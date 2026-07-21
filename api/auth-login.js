@@ -185,10 +185,7 @@ export default async function handler(req, res) {
       }
 
       if (!isDeviceApproved(security, device)) {
-        security.pendingDevices = upsertDevice(security.pendingDevices, device, 'pending');
-        state = appendLog({ ...state, adminSecurity: security }, displayName, 'DEVICE_PENDING', '主管理員裝置等待核准');
-        await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
-        return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請由主管理員核准後再登入。' });
+        security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
       }
 
       state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '主管理員登入成功');

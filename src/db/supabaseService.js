@@ -178,6 +178,59 @@ export const pullSupabaseToLocal = async () => {
   return true;
 };
 
+export const pullAndMergeCloudState = async () => {
+  if (!getCloudSessionToken()) return false;
+  const response = await apiFetch('/api/app-state', {
+    method: 'GET',
+    headers: { Accept: 'application/json', ...authHeaders() }
+  });
+
+  if (!response.ok) return false;
+
+  const data = await response.json();
+  if (!data?.state) return false;
+
+  const cloudState = data.state;
+  const localState = readLocalState();
+  const mergedState = {};
+
+  Object.keys(DATA_KEYS).forEach(key => {
+    const localList = localState[key] || [];
+    const cloudList = cloudState[key] || [];
+
+    if (Array.isArray(localList) && Array.isArray(cloudList)) {
+      const mergedMap = new Map();
+      
+      cloudList.forEach(item => {
+        if (item && typeof item === 'object') {
+          const itemId = item.id || item.code || JSON.stringify(item);
+          mergedMap.set(itemId, item);
+        }
+      });
+
+      localList.forEach(item => {
+        if (item && typeof item === 'object') {
+          const itemId = item.id || item.code || JSON.stringify(item);
+          if (mergedMap.has(itemId)) {
+            const cloudItem = mergedMap.get(itemId);
+            mergedMap.set(itemId, { ...cloudItem, ...item });
+          } else {
+            mergedMap.set(itemId, item);
+          }
+        }
+      });
+
+      mergedState[key] = Array.from(mergedMap.values());
+    } else {
+      mergedState[key] = localList || cloudList;
+    }
+  });
+
+  writeLocalState(mergedState);
+  rememberCloudUpdatedAt(data.updated_at);
+  return true;
+};
+
 export const syncLocalToSupabase = async (operatorName = '系統') => {
   if (!getCloudSessionToken()) {
     setLastCloudSyncError({ status: 401, error: '雲端登入已失效，請重新登入後再儲存。' });
@@ -213,6 +266,14 @@ export const syncLocalToSupabase = async (operatorName = '系統') => {
     });
 
     if (!response.ok) {
+      if (response.status === 409) {
+        console.warn('Sync conflict (409) detected. Pulling latest cloud state to merge...');
+        const merged = await pullAndMergeCloudState();
+        if (merged) {
+          isSyncing = false;
+          return await syncLocalToSupabase(operatorName);
+        }
+      }
       const error = normalizeCloudError(response.status, await getResponseError(response, '雲端同步失敗。'));
       setLastCloudSyncError({ status: response.status, error });
       if (response.status === 401) clearCloudSessionToken();
