@@ -1217,29 +1217,35 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
     accountMap[acc.code] = acc;
   });
 
-  // Aggregate Revenues
+  // Aggregate Revenues by 4-digit main account
   const revenueItems = {};
   incomes.forEach(inc => {
-    const acc = accountMap[inc.accountCode] || { name: '其他收入', type: 'revenue' };
-    if (!revenueItems[inc.accountCode]) {
-      revenueItems[inc.accountCode] = { code: inc.accountCode, name: acc.name, amount: 0 };
+    const originalCode = inc.accountCode || '';
+    const mainCode = originalCode.length >= 4 ? originalCode.substring(0, 4) : originalCode;
+    const acc = accountMap[mainCode] || accountMap[originalCode] || { name: '其他收入', type: 'revenue' };
+    
+    if (!revenueItems[mainCode]) {
+      revenueItems[mainCode] = { code: mainCode, name: acc.name, amount: 0 };
     }
-    revenueItems[inc.accountCode].amount += inc.amount;
+    revenueItems[mainCode].amount += inc.amount;
   });
 
-  // Aggregate Expenses and COGS
+  // Aggregate Expenses and COGS by 4-digit main account
   const cogsItems = {};
   const expenseItems = {};
   expenses.forEach(exp => {
-    const acc = accountMap[exp.accountCode] || { name: '其他支出', type: 'expense' };
-    const isGasPurchaseInventory = exp.accountCode === '5101';
+    const originalCode = exp.accountCode || '';
+    const isGasPurchaseInventory = originalCode === '5101';
     if (isGasPurchaseInventory) return;
-    const targetMap = acc.type === 'cogs' && !isGasPurchaseInventory ? cogsItems : expenseItems;
-    if (!targetMap[exp.accountCode]) {
-      targetMap[exp.accountCode] = { code: exp.accountCode, name: isGasPurchaseInventory ? `${acc.name}（進貨付款/存貨，不列銷貨成本）` : acc.name, amount: 0 };
+
+    const mainCode = originalCode.length >= 4 ? originalCode.substring(0, 4) : originalCode;
+    const acc = accountMap[mainCode] || accountMap[originalCode] || { name: '其他支出', type: 'expense' };
+    
+    const targetMap = acc.type === 'cogs' ? cogsItems : expenseItems;
+    if (!targetMap[mainCode]) {
+      targetMap[mainCode] = { code: mainCode, name: acc.name, amount: 0 };
     }
-    if (isGasPurchaseInventory) return;
-    targetMap[exp.accountCode].amount += exp.amount;
+    targetMap[mainCode].amount += exp.amount;
   });
 
   const totalRevenue = Object.values(revenueItems).reduce((sum, i) => sum + i.amount, 0);
