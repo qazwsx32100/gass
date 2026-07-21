@@ -46,6 +46,8 @@ const STATUS_LABELS = {
   pending_admin_review: '待管理員審核',
   pending_business_review: '待審核管理者審核',
   pending_second_admin_review: '待第二管理員覆核',
+  pending_edit_review: '待核准修改',
+  pending_delete_review: '待核准刪除',
   approved: '已核准',
   returned: '已退回',
   void: '已作廢'
@@ -128,6 +130,8 @@ const getStatusBadgeClass = (status) => {
   if (status === 'approved') return 'approved';
   if (status === 'void' || status === 'returned') return 'void';
   if (status === 'draft') return 'draft';
+  if (status === 'pending_delete_review') return 'void';
+  if (status === 'pending_edit_review') return 'paid';
   return 'pending';
 };
 
@@ -1073,25 +1077,42 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'income') {
       const db = getIncomes();
       if (editingItem) {
-        if (editingItem.status === 'approved' && !isAdmin) {
-          window.alert('已核准的收入只有系統管理員可以直接修改。');
-          return;
-        }
         if (editingItem.status === 'void') {
           window.alert('已作廢的收入不能修改。');
           return;
         }
         const index = db.findIndex(i => i.id === editingItem.id);
         if (index !== -1) {
-          db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: formData.status };
-          archiveChange({ collection: 'incomes', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '收入資料修改' });
-          saveIncomes(db);
-          addLog(operatorName, 'UPDATE_INCOME', `Update income ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
-          success = true;
+          if (!isAdmin) {
+            db[index] = {
+              ...db[index],
+              status: 'pending_edit_review',
+              pendingChanges: {
+                date: formData.date,
+                accountCode: formData.accountCode,
+                ...paymentFields,
+                ...calculationFields,
+                amount: amountVal,
+                remarks: formData.remarks
+              },
+              editRequestedBy: operatorName,
+              editRequestedAt: new Date().toISOString()
+            };
+            saveIncomes(db);
+            addLog(operatorName, 'SUBMIT_EDIT_REQUEST', `Submit edit request for income ${editingItem.id}`);
+            showToast('已提交修改申請，等待管理員核准！', 'info');
+            success = true;
+          } else {
+            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
+            archiveChange({ collection: 'incomes', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '收入資料修改' });
+            saveIncomes(db);
+            addLog(operatorName, 'UPDATE_INCOME', `Update income ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
+            success = true;
+          }
         }
       } else {
         const newId = generateId('income', formData.date);
-        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
+        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields, status: 'approved' });
         saveIncomes(db);
         addLog(operatorName, 'CREATE_INCOME', `Create income ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
@@ -1099,21 +1120,38 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
       if (editingItem) {
-        if (editingItem.status === 'approved' && !isAdmin) {
-          window.alert('已核准的支出只有系統管理員可以直接修改。');
-          return;
-        }
         if (editingItem.status === 'void') {
           window.alert('已作廢的支出不能修改。');
           return;
         }
         const index = db.findIndex(e => e.id === editingItem.id);
         if (index !== -1) {
-          db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: formData.status };
-          archiveChange({ collection: 'expenses', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '支出資料修改' });
-          saveExpenses(db);
-          addLog(operatorName, 'UPDATE_EXPENSE', `Update expense ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
-          success = true;
+          if (!isAdmin) {
+            db[index] = {
+              ...db[index],
+              status: 'pending_edit_review',
+              pendingChanges: {
+                date: formData.date,
+                accountCode: formData.accountCode,
+                ...paymentFields,
+                ...calculationFields,
+                amount: amountVal,
+                remarks: formData.remarks
+              },
+              editRequestedBy: operatorName,
+              editRequestedAt: new Date().toISOString()
+            };
+            saveExpenses(db);
+            addLog(operatorName, 'SUBMIT_EDIT_REQUEST', `Submit edit request for expense ${editingItem.id}`);
+            showToast('已提交修改申請，等待管理員核准！', 'info');
+            success = true;
+          } else {
+            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
+            archiveChange({ collection: 'expenses', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '支出資料修改' });
+            saveExpenses(db);
+            addLog(operatorName, 'UPDATE_EXPENSE', `Update expense ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
+            success = true;
+          }
         }
       } else {
         const newId = generateId('expense', formData.date);
@@ -1470,22 +1508,44 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const actorId = currentUser?.id || 'UNKNOWN';
 
     if (nextStatus === 'approved') {
-      db[index] = {
-        ...item,
-        status: 'approved',
-        adminReviewedBy: isAdmin ? actorId : item.adminReviewedBy,
-        adminReviewedByName: isAdmin ? actor : item.adminReviewedByName,
-        adminReviewedAt: isAdmin ? now : item.adminReviewedAt,
-        firstReviewedBy: !isAdmin ? actorId : item.firstReviewedBy,
-        firstReviewedByName: !isAdmin ? actor : item.firstReviewedByName,
-        firstReviewedByRole: !isAdmin ? userRole : item.firstReviewedByRole,
-        firstReviewedAt: !isAdmin ? now : item.firstReviewedAt
-      };
-      addLog(actor, '核准資料', `已核准${isIncome ? '收入' : '支出'} ${id}，金額 $${item.amount.toLocaleString()}。`);
+      if (item.status === 'pending_delete_review') {
+        archiveDeletion({ collection: isIncome ? 'incomes' : 'expenses', record: item, actor, reason: item.deleteReason || '管理員核准刪除' });
+        const filtered = db.filter(i => i.id !== id);
+        if (isIncome) saveIncomes(filtered);
+        else saveExpenses(filtered);
+        addLog(actor, '核准刪除', `已核准刪除 ${id}。`);
+        onDataChange();
+        return;
+      }
+      if (item.status === 'pending_edit_review' && item.pendingChanges) {
+        db[index] = {
+          ...item,
+          ...item.pendingChanges,
+          status: 'approved',
+          pendingChanges: null,
+          adminReviewedBy: actorId,
+          adminReviewedByName: actor,
+          adminReviewedAt: now
+        };
+        addLog(actor, '核准修改', `已核准修改 ${id}，新金額 $${(item.pendingChanges.amount || item.amount).toLocaleString()}。`);
+      } else {
+        db[index] = {
+          ...item,
+          status: 'approved',
+          adminReviewedBy: isAdmin ? actorId : item.adminReviewedBy,
+          adminReviewedByName: isAdmin ? actor : item.adminReviewedByName,
+          adminReviewedAt: isAdmin ? now : item.adminReviewedAt,
+          firstReviewedBy: !isAdmin ? actorId : item.firstReviewedBy,
+          firstReviewedByName: !isAdmin ? actor : item.firstReviewedByName,
+          firstReviewedByRole: !isAdmin ? userRole : item.firstReviewedByRole,
+          firstReviewedAt: !isAdmin ? now : item.firstReviewedAt
+        };
+        addLog(actor, '核准資料', `已核准${isIncome ? '收入' : '支出'} ${id}，金額 $${item.amount.toLocaleString()}。`);
+      }
     } else if (nextStatus === 'returned') {
       const reason = window.prompt('請輸入退回原因。') || '管理員退回';
-      db[index] = { ...item, status: 'returned', returnedBy: actorId, returnedByName: actor, returnedAt: now, returnReason: reason };
-      addLog(actor, '退回資料', `已退回${isIncome ? '收入' : '支出'} ${id}，原因：${reason}`);
+      db[index] = { ...item, status: 'approved', pendingChanges: null, deleteReason: null, returnedBy: actorId, returnedByName: actor, returnedAt: now, returnReason: reason };
+      addLog(actor, '退回申請', `已退回 ${id} 的修改/刪除申請，原因：${reason}`);
     } else if (nextStatus === 'void') {
       window.alert('已核准資料請使用更正沖銷流程，不直接作廢。');
       return;
@@ -1552,8 +1612,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const item = db.find(i => i.id === id);
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
-        if (item.status === 'approved' && !isAdmin) {
-          window.alert('已核准收入不能刪除。');
+        if (!isAdmin) {
+          const index = db.findIndex(i => i.id === id);
+          db[index] = {
+            ...db[index],
+            status: 'pending_delete_review',
+            deleteRequestedBy: operatorName,
+            deleteRequestedAt: new Date().toISOString(),
+            deleteReason: reason
+          };
+          saveIncomes(db);
+          addLog(operatorName, 'SUBMIT_DELETE_REQUEST', `提交刪除申請：收入 ${id}，原因：${reason}`);
+          showToast('已提交刪除申請，等待管理員核准！', 'info');
+          onDataChange();
           return;
         }
         archiveDeletion({ collection: 'incomes', record: item, actor: operatorName, reason });
@@ -1565,8 +1636,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const item = db.find(e => e.id === id);
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
-        if (item.status === 'approved' && !isAdmin) {
-          window.alert('已核准支出不能刪除。');
+        if (!isAdmin) {
+          const index = db.findIndex(e => e.id === id);
+          db[index] = {
+            ...db[index],
+            status: 'pending_delete_review',
+            deleteRequestedBy: operatorName,
+            deleteRequestedAt: new Date().toISOString(),
+            deleteReason: reason
+          };
+          saveExpenses(db);
+          addLog(operatorName, 'SUBMIT_DELETE_REQUEST', `提交刪除申請：支出 ${id}，原因：${reason}`);
+          showToast('已提交刪除申請，等待管理員核准！', 'info');
+          onDataChange();
           return;
         }
         archiveDeletion({ collection: 'expenses', record: item, actor: operatorName, reason });

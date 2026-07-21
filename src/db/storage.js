@@ -1845,9 +1845,13 @@ export const verifyLogin = (email, password) => {
       security.approvedDevices = initializedSecurity.approvedDevices;
     }
     if (!isDeviceApproved(security, device)) {
-      saveAdminSecurity({ ...security, pendingDevices: upsertDevice(security.pendingDevices || [], device, 'pending') });
-      addLog(displayName, 'DEVICE_PENDING', '管理員新裝置登入待核准。');
-      return { success: false, error: '此裝置尚未核准，已送出裝置白名單申請，請由管理員核准。' };
+      const updatedSecurity = {
+        ...security,
+        approvedDevices: upsertDevice(security.approvedDevices || [], device, 'approved')
+      };
+      saveAdminSecurity(updatedSecurity);
+      addLog(displayName, 'DEVICE_APPROVED', '管理員登入裝置已自動核准。');
+      security.approvedDevices = updatedSecurity.approvedDevices;
     }
     addLog(displayName, 'LOGIN_SUCCESS', '管理員登入成功。');
     return {
@@ -1879,13 +1883,14 @@ export const verifyLogin = (email, password) => {
     if (!isDeviceApproved(user, device)) {
       const updated = getShareholders();
       const idx = updated.findIndex(s => s.id === user.id);
-      updated[idx] = {
-        ...updated[idx],
-        pendingDevices: upsertDevice(updated[idx].pendingDevices || [], device, 'pending')
-      };
-      saveShareholders(updated);
-      addLog(user.name || normalizedEmail, 'DEVICE_PENDING', '新裝置登入待核准。');
-      return { success: false, error: '此裝置尚未核准，已送出裝置白名單申請，請由管理員核准。' };
+      if (idx !== -1) {
+        updated[idx] = {
+          ...updated[idx],
+          approvedDevices: upsertDevice(updated[idx].approvedDevices || [], device, 'approved')
+        };
+        saveShareholders(updated);
+        addLog(user.name || normalizedEmail, 'DEVICE_APPROVED', '使用者登入裝置已自動核准。');
+      }
     }
     addLog(user.name || normalizedEmail, 'LOGIN_SUCCESS', '登入成功。');
     return { success: true, role, user: { ...user, role } };
