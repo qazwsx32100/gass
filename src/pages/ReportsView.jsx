@@ -2093,16 +2093,64 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   </div>
                 </div>
 
-                {/* Interactive Reserve Slider */}
+                {/* Interactive Reserve Input & Slider */}
                 {!dividends.isLoss && (
-                  <div className="form-group" style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label className="form-label">調整提撥保留公積金比例</label>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--accent-green)', fontWeight: 'bold' }}>{Math.round(reserveRatio * 100)}%</span>
+                  <div className="form-group" style={{ marginBottom: '24px', backgroundColor: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '12px', display: 'block' }}>調整保留公積金</label>
+                    
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {/* TWD Amount Input */}
+                      <div style={{ flex: '1', minWidth: '150px' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>自訂保留金額 (TWD)</label>
+                        <input 
+                          type="number" 
+                          className="form-control" 
+                          placeholder="例如：20000" 
+                          value={Math.round(dividends.reserveAmount)} 
+                          onChange={e => {
+                            const val = Math.max(0, Number(e.target.value || 0));
+                            const maxVal = dividends.netProfit;
+                            const finalVal = val > maxVal ? maxVal : val;
+                            setReserveRatio(dividends.netProfit > 0 ? finalVal / dividends.netProfit : 0);
+                          }} 
+                        />
+                      </div>
+
+                      {/* Percentage Input */}
+                      <div style={{ flex: '1', minWidth: '150px' }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>提撥比例 (%)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input 
+                            type="number" 
+                            className="form-control" 
+                            style={{ width: '80px' }}
+                            value={Math.round(reserveRatio * 100)} 
+                            onChange={e => {
+                              const val = Math.max(0, Math.min(100, Number(e.target.value || 0)));
+                              setReserveRatio(val / 100);
+                            }} 
+                          />
+                          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>%</span>
+                        </div>
+                      </div>
                     </div>
-                    <input type="range" min="0" max="0.5" step="0.05" className="form-control" style={{ padding: '0', cursor: 'pointer' }} value={reserveRatio} onChange={e => setReserveRatio(parseFloat(e.target.value))} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
-                      * 公積金將保留在公司銀行存款中做為營運週轉金，不予發放分紅給股東。
+
+                    {/* Slider covering 0% to 100% */}
+                    <div style={{ marginTop: '16px' }}>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.01" 
+                        className="form-control" 
+                        style={{ padding: '0', cursor: 'pointer', height: '6px' }} 
+                        value={reserveRatio} 
+                        onChange={e => setReserveRatio(parseFloat(e.target.value))} 
+                      />
+                    </div>
+                    
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', display: 'block', marginTop: '12px' }}>
+                      * 公積金將保留在公司銀行存款中做為營運週轉金，不予發放分紅給股東。您可直接輸入金額、比例，或拉動滑桿調整。
                     </span>
                   </div>
                 )}
@@ -2285,7 +2333,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                     <thead>
                       <tr>
                         <th>記帳日期</th>
-                        <th>流水號 ID</th>
+                        <th>項目</th>
                         <th>收付款方式 / 狀態</th>
                         <th>備註</th>
                         <th style={{ textAlign: 'right' }}>金額 (TWD)</th>
@@ -2295,7 +2343,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                       {drillDownTransactions.map(tx => (
                         <tr key={tx.id}>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{tx.date}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{tx.id}</td>
+                          <td style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                            {getChartOfAccounts().find(a => a.code === tx.accountCode)?.name || '一般收支'}
+                          </td>
                           <td>
                             {tx.paymentMethod === 'cash' ? '現金(零用金)' : tx.paymentMethod === 'bank_transfer' ? '銀行轉帳' : tx.paymentMethod === 'receivable' ? '月結應收' : tx.paymentMethod === 'payable' ? '月結應付' : '支票'}
                             {tx.paymentStatus === 'unpaid' ? (
