@@ -8,8 +8,8 @@ import { syncLocalToSupabase } from '../db/supabaseService';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
-export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole }) {
-  const [reportType, setReportType] = useState('pnl'); // pnl, balance, gas, investor, dividend
+export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole, restrictToShareholder = false }) {
+  const [reportType, setReportType] = useState(() => restrictToShareholder ? 'dividend' : 'pnl'); // pnl, balance, gas, investor, dividend
   const [reserveRatio, setReserveRatio] = useState(0.1); // 10% reserve by default
   const [periodMode, setPeriodMode] = useState('month');
   const [singleDate, setSingleDate] = useState(`${year}-${month}-01`);
@@ -719,54 +719,57 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
           {(allowExportReports || userRole === USER_ROLES.BOOKKEEPER || showShareholderReports) && (
           <div className="report-tabs">
-            <button className={`tab-btn ${reportType === 'pnl' ? 'active' : ''}`} onClick={() => setReportType('pnl')}>
-              📊 損益表
-            </button>
-            <button className={`tab-btn ${reportType === 'balance' ? 'active' : ''}`} onClick={() => setReportType('balance')}>
-              ⚖️ 資產負債表
-            </button>
-            <button className={`tab-btn ${reportType === 'gas' ? 'active' : ''}`} onClick={() => setReportType('gas')}>
-              🛢️ 毛利表
-            </button>
-            <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
-              🛍️ 營業狀況
-            </button>
-            <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
-              應收/應付
-            </button>
-            <button className={`tab-btn ${reportType === 'investor' ? 'active' : ''}`} onClick={() => setReportType('investor')}>
-              🧾 投資人摘要
-            </button>
-            <button className={`tab-btn ${reportType === 'journal' ? 'active' : ''}`} onClick={() => setReportType('journal')}>
-              傳票總覽
-            </button>
-            <button className={`tab-btn ${reportType === 'trialBalance' ? 'active' : ''}`} onClick={() => setReportType('trialBalance')}>
-              試算表
-            </button>
-            <button className={`tab-btn ${reportType === 'generalLedger' ? 'active' : ''}`} onClick={() => setReportType('generalLedger')}>
-              總分類帳
-            </button>
-            <button className={`tab-btn ${reportType === 'cashFlow' ? 'active' : ''}`} onClick={() => setReportType('cashFlow')}>
-              現金流量表
-            </button>
-            <button className={`tab-btn ${reportType === 'vat' ? 'active' : ''}`} onClick={() => setReportType('vat')}>
-              營業稅
-            </button>
-            <button className={`tab-btn ${reportType === 'payroll' ? 'active' : ''}`} onClick={() => setReportType('payroll')}>
-              薪資
-            </button>
-            <button className={`tab-btn ${reportType === 'auditReady' ? 'active' : ''}`} onClick={() => setReportType('auditReady')}>
-              查帳檢核
-            </button>
-            {showShareholderReports && (
-              <button className={`tab-btn ${reportType === 'dividend' ? 'active' : ''}`} onClick={() => setReportType('dividend')}>
-                👑 股東分紅與 LINE 報表
-              </button>
-            )}
-            {showShareholderReports && (
-              <button className={`tab-btn ${reportType === 'equity' ? 'active' : ''}`} onClick={() => setReportType('equity')}>
-                📈 股東權益變動表
-              </button>
+            {restrictToShareholder ? (
+              <>
+                <button className={`tab-btn ${reportType === 'dividend' ? 'active' : ''}`} onClick={() => setReportType('dividend')}>
+                  👑 股東分紅與 LINE 報表
+                </button>
+                <button className={`tab-btn ${reportType === 'equity' ? 'active' : ''}`} onClick={() => setReportType('equity')}>
+                  📈 股東權益變動表
+                </button>
+                <button className={`tab-btn ${reportType === 'investor' ? 'active' : ''}`} onClick={() => setReportType('investor')}>
+                  🧾 投資人摘要
+                </button>
+              </>
+            ) : (
+              <>
+                <button className={`tab-btn ${reportType === 'pnl' ? 'active' : ''}`} onClick={() => setReportType('pnl')}>
+                  📊 損益表
+                </button>
+                <button className={`tab-btn ${reportType === 'balance' ? 'active' : ''}`} onClick={() => setReportType('balance')}>
+                  ⚖️ 資產負債表
+                </button>
+                <button className={`tab-btn ${reportType === 'gas' ? 'active' : ''}`} onClick={() => setReportType('gas')}>
+                  🛢️ 毛利表
+                </button>
+                <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
+                  🛍️ 營業狀況
+                </button>
+                <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
+                  應收/應付
+                </button>
+                <button className={`tab-btn ${reportType === 'journal' ? 'active' : ''}`} onClick={() => setReportType('journal')}>
+                  傳票總覽
+                </button>
+                <button className={`tab-btn ${reportType === 'trialBalance' ? 'active' : ''}`} onClick={() => setReportType('trialBalance')}>
+                  試算表
+                </button>
+                <button className={`tab-btn ${reportType === 'generalLedger' ? 'active' : ''}`} onClick={() => setReportType('generalLedger')}>
+                  總分類帳
+                </button>
+                <button className={`tab-btn ${reportType === 'cashFlow' ? 'active' : ''}`} onClick={() => setReportType('cashFlow')}>
+                  現金流量表
+                </button>
+                <button className={`tab-btn ${reportType === 'vat' ? 'active' : ''}`} onClick={() => setReportType('vat')}>
+                  營業稅
+                </button>
+                <button className={`tab-btn ${reportType === 'payroll' ? 'active' : ''}`} onClick={() => setReportType('payroll')}>
+                  薪資
+                </button>
+                <button className={`tab-btn ${reportType === 'auditReady' ? 'active' : ''}`} onClick={() => setReportType('auditReady')}>
+                  查帳檢核
+                </button>
+              </>
             )}
           </div>
           )}

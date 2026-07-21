@@ -23,8 +23,8 @@ import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/fi
 import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
-export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole }) {
-  const [innerTab, setInnerTab] = useState('shareholder');
+export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole, restrictToShareholder = false }) {
+  const [innerTab, setInnerTab] = useState(() => restrictToShareholder ? 'shareholder' : 'bank');
   const activeSettingsTab = isAdmin ? innerTab : 'shareholder';
   const setActiveSettingsTab = setInnerTab;
   const canViewShareholders = canViewShareholderInfo(userRole);
@@ -812,36 +812,43 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       {/* 1. Horizontal Settings Tabs Bar (Above Content Card) */}
       {isAdmin && (
         <div className="horizontal-settings-tabs">
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('shareholder')}>
-            股東資料
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'security' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('security')}>
-            安全與裝置
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'bank' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('bank')}>
-            銀行帳戶
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('accounts')}>
-            會計科目
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'company' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('company')}>
-            公司設定
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('backup')}>
-            備份與還原
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'periodLocks' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('periodLocks')}>
-            關帳管理
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'budgets' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('budgets')}>
-            預算與提醒
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
-            上線檢查
-          </button>
-          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('log')}>
-            操作審查日誌
-          </button>
+          {restrictToShareholder ? (
+            <>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('shareholder')}>
+                股東資料
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'security' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('security')}>
+                安全與裝置
+              </button>
+            </>
+          ) : (
+            <>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'bank' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('bank')}>
+                銀行帳戶
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('accounts')}>
+                會計科目
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'company' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('company')}>
+                公司設定
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'backup' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('backup')}>
+                備份與還原
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'periodLocks' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('periodLocks')}>
+                關帳管理
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'budgets' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('budgets')}>
+                預算與提醒
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
+                上線檢查
+              </button>
+              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('log')}>
+                操作審查日誌
+              </button>
+            </>
+          )}
         </div>
       )}
 

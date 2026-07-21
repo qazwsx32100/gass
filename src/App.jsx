@@ -8,6 +8,7 @@ import ReportsView from './pages/ReportsView';
 import SettingsView from './pages/SettingsView';
 import FirebaseView from './pages/FirebaseView';
 import CylindersView from './pages/CylindersView';
+import ShareholderZoneView from './pages/ShareholderZoneView';
 import { getAllowedTabsForUser } from './utils/permissions';
 
 function App() {
@@ -535,6 +536,15 @@ function App() {
               </button>
             </>
           )}
+          {allowedTabs.includes('shareholderZone') && (
+            <>
+              <span className="sidebar-nav-heading">👑 股東權益</span>
+              <button className={`sidebar-link ${activeTab === 'shareholderZone' ? 'active' : ''}`} onClick={() => setActiveTab('shareholderZone')}>
+                <span className="sidebar-link-icon">👑</span>
+                股東專區
+              </button>
+            </>
+          )}
           
           {allowedTabs.includes('settings') && (
             <>
@@ -734,6 +744,20 @@ function App() {
               showToast={showToast}
               isAdmin={userRole === USER_ROLES.ADMIN}
               userRole={userRole}
+            />
+          )}
+
+          {activeTab === 'shareholderZone' && (
+            <ShareholderZoneView
+              companyId={currentCompanyId}
+              year={currentYear}
+              month={currentMonth}
+              triggerRefresh={dbVersion}
+              onDataChange={handleDataChange}
+              operatorName={currentUser?.name}
+              currentUser={currentUser}
+              userRole={userRole}
+              showToast={showToast}
             />
           )}
 

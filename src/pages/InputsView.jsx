@@ -131,8 +131,9 @@ const getStatusBadgeClass = (status) => {
   return 'pending';
 };
 
-export default function InputsView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', currentUser, userRole }) {
+export default function InputsView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', currentUser, userRole, restrictToShareholder = false }) {
   const [activeSubTab, setActiveSubTab] = useState(() => {
+    if (restrictToShareholder) return 'shareholder';
     const saved = sessionStorage.getItem('inputsActiveSubTab');
     if (saved) {
       sessionStorage.removeItem('inputsActiveSubTab');
@@ -1790,49 +1791,49 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   return (
     <div className="card">
       <div className="card-header" style={{ borderBottom: 'none' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className={`tab-btn ${activeSubTab === 'income' ? 'active' : ''}`} onClick={() => setActiveSubTab('income')}>
-            收入
-          </button>
-          <button className={`tab-btn ${activeSubTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveSubTab('expense')}>
-            支出
-          </button>
-          <button className={`tab-btn ${activeSubTab === 'dailySummary' ? 'active' : ''}`} onClick={() => setActiveSubTab('dailySummary')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
-            每日營業額
-          </button>
-          <button className={`tab-btn ${activeSubTab === 'arap' ? 'active' : ''}`} onClick={() => setActiveSubTab('arap')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
-            應收應付
-          </button>
-          <button className={`tab-btn ${activeSubTab === 'checks' ? 'active' : ''}`} onClick={() => setActiveSubTab('checks')} style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>
-            支票管理
-          </button>
-          {isAdmin && (
-            <button className={`tab-btn ${activeSubTab === 'bankRecon' ? 'active' : ''}`} onClick={() => setActiveSubTab('bankRecon')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
-              銀行對帳
+        {!restrictToShareholder ? (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button className={`tab-btn ${activeSubTab === 'income' ? 'active' : ''}`} onClick={() => setActiveSubTab('income')}>
+              收入
             </button>
-          )}
-          {isAdmin && (
-            <button className={`tab-btn ${activeSubTab === 'aging' ? 'active' : ''}`} onClick={() => setActiveSubTab('aging')} style={{ color: 'var(--accent-red)', fontWeight: '700' }}>
-              帳齡分析
+            <button className={`tab-btn ${activeSubTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveSubTab('expense')}>
+              支出
             </button>
-          )}
-          {isAdmin && (
-            <button className={`tab-btn ${activeSubTab === 'assets' ? 'active' : ''}`} onClick={() => setActiveSubTab('assets')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
-              固定資產
+            <button className={`tab-btn ${activeSubTab === 'dailySummary' ? 'active' : ''}`} onClick={() => setActiveSubTab('dailySummary')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
+              每日營業額
             </button>
-          )}
-
-          {showShareholderLedger && (
-            <button className={`tab-btn ${activeSubTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSubTab('shareholder')}>
-              股東往來
+            <button className={`tab-btn ${activeSubTab === 'arap' ? 'active' : ''}`} onClick={() => setActiveSubTab('arap')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
+              應收應付
             </button>
-          )}
-          {showLoans && (
-            <button className={`tab-btn ${activeSubTab === 'loan' ? 'active' : ''}`} onClick={() => setActiveSubTab('loan')}>
-              貸款
+            <button className={`tab-btn ${activeSubTab === 'checks' ? 'active' : ''}`} onClick={() => setActiveSubTab('checks')} style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>
+              支票管理
             </button>
-          )}
-        </div>
+            {isAdmin && (
+              <button className={`tab-btn ${activeSubTab === 'bankRecon' ? 'active' : ''}`} onClick={() => setActiveSubTab('bankRecon')} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
+                銀行對帳
+              </button>
+            )}
+            {isAdmin && (
+              <button className={`tab-btn ${activeSubTab === 'aging' ? 'active' : ''}`} onClick={() => setActiveSubTab('aging')} style={{ color: 'var(--accent-red)', fontWeight: '700' }}>
+                帳齡分析
+              </button>
+            )}
+            {isAdmin && (
+              <button className={`tab-btn ${activeSubTab === 'assets' ? 'active' : ''}`} onClick={() => setActiveSubTab('assets')} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
+                固定資產
+              </button>
+            )}
+            {showLoans && (
+              <button className={`tab-btn ${activeSubTab === 'loan' ? 'active' : ''}`} onClick={() => setActiveSubTab('loan')}>
+                貸款
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)' }}>📊 股東往來交易明細</span>
+          </div>
+        )}
         {activeSubTab !== 'log' && activeSubTab !== 'arap' && activeSubTab !== 'checks' && activeSubTab !== 'bankRecon' && activeSubTab !== 'aging' && activeSubTab !== 'gasMovements' && canWriteBasicLedger && (isAdmin || activeSubTab === 'gas' || GAS_OPERATION_TABS.includes(activeSubTab) || manageShareholderLedger || (activeSubTab !== 'shareholder' && activeSubTab !== 'loan')) && (
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             新增記錄
