@@ -446,21 +446,19 @@ function App() {
           textAlign: 'center',
           boxShadow: 'var(--shadow-lg)'
         }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            background: 'linear-gradient(135deg, #05b2a5, #10b981)',
-            borderRadius: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '2rem',
-            margin: '0 auto 20px auto',
-            color: '#fff',
-            boxShadow: '0 4px 12px rgba(5, 178, 165, 0.25)'
-          }}>
-            🏦
-          </div>
+          <img 
+            src="/logo.jpg" 
+            alt="盛隆瓦斯 Logo" 
+            style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '24px',
+              objectFit: 'cover',
+              margin: '0 auto 20px auto',
+              display: 'block',
+              boxShadow: '0 6px 16px rgba(0, 0, 0, 0.1)'
+            }} 
+          />
           <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#05b2a5', marginBottom: '28px', letterSpacing: '-0.5px' }}>
             朝有錢人邁進
           </h2>
@@ -515,11 +513,21 @@ function App() {
     <div className="app-container">
       {/* Sidebar navigation */}
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">BP</div>
+        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img 
+            src="/logo.jpg" 
+            alt="Logo" 
+            style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '10px', 
+              objectFit: 'cover',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
+            }} 
+          />
           <div>
-            <div className="sidebar-logo-text">BusinessPilot</div>
-            <div className="sidebar-logo-sub">盛隆 ERP v1.0</div>
+            <div className="sidebar-logo-text" style={{ fontSize: '1.05rem', fontWeight: '800', letterSpacing: '-0.3px' }}>盛隆瓦斯</div>
+            <div className="sidebar-logo-sub" style={{ fontSize: '0.72rem' }}>營運管理系統 v1.0</div>
           </div>
         </div>
 
