@@ -235,14 +235,11 @@ export default async function handler(req, res) {
     if (!isDeviceApproved(user, device)) {
       shareholders[idx] = {
         ...shareholders[idx],
-        pendingDevices: upsertDevice(shareholders[idx].pendingDevices, device, 'pending')
+        approvedDevices: upsertDevice(shareholders[idx].approvedDevices || [], device, 'approved')
       };
-      state = appendLog({ ...state, shareholders }, user.name || email, 'DEVICE_PENDING', '裝置等待核准');
-      await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
-      return sendJson(res, 403, { success: false, error: '此裝置尚未核准，請由主管理員核准後再登入。' });
     }
 
-    state = appendLog(state, user.name || email, 'LOGIN_SUCCESS', '登入成功');
+    state = appendLog({ ...state, shareholders }, user.name || email, 'LOGIN_SUCCESS', '登入成功');
     await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
     clearLoginRateLimit(req, email);
 
