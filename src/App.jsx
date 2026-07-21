@@ -13,6 +13,24 @@ import { getAllowedTabsForUser } from './utils/permissions';
 function App() {
   const [dbVersion, setDbVersion] = useState(0); // Trigger state refreshes across components
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [tabHistory, setTabHistory] = useState(['dashboard']);
+
+  useEffect(() => {
+    setTabHistory(prev => {
+      if (prev[prev.length - 1] === activeTab) return prev;
+      return [...prev, activeTab];
+    });
+  }, [activeTab]);
+
+  const handleGoBack = () => {
+    if (tabHistory.length > 1) {
+      const newHistory = [...tabHistory];
+      newHistory.pop();
+      const prevTab = newHistory[newHistory.length - 1];
+      setActiveTab(prevTab);
+      setTabHistory(newHistory);
+    }
+  };
   
   // Login Authentication States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -340,6 +358,7 @@ function App() {
     setIsForcePasswordChange(false);
     setIsChangePwdOpen(false);
     setActiveTab('dashboard');
+    setTabHistory(['dashboard']);
     localStorage.removeItem('bp_login_session');
     clearCloudSessionToken();
     showToast('🚪 您已安全登出系統。', 'info');
@@ -559,6 +578,26 @@ function App() {
         <header className="header">
           {/* Company switcher */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {tabHistory.length > 1 && (
+              <button 
+                onClick={handleGoBack}
+                className="btn btn-secondary btn-sm"
+                style={{ 
+                  borderRadius: '20px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  fontWeight: '700', 
+                  color: 'var(--accent-blue)', 
+                  borderColor: 'var(--accent-blue)', 
+                  backgroundColor: '#ffffff', 
+                  padding: '6px 14px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+              >
+                ⬅️ 回上一頁
+              </button>
+            )}
             <div className="header-title-section">
               <span className="header-title">{activeCompany?.name || '公司'}</span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
