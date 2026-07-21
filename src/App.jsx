@@ -1,16 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { initializeDB, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
 import { initFirebase } from './db/firebaseService';
 import { clearCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
-import DashboardView from './pages/DashboardView';
-import InputsView from './pages/InputsView';
-import ReportsView from './pages/ReportsView';
-import SettingsView from './pages/SettingsView';
-import FirebaseView from './pages/FirebaseView';
-import CylindersView from './pages/CylindersView';
-import ShareholderZoneView from './pages/ShareholderZoneView';
-import AuditZoneView from './pages/AuditZoneView';
 import { getAllowedTabsForUser } from './utils/permissions';
+
+const DashboardView = lazy(() => import('./pages/DashboardView'));
+const InputsView = lazy(() => import('./pages/InputsView'));
+const ReportsView = lazy(() => import('./pages/ReportsView'));
+const SettingsView = lazy(() => import('./pages/SettingsView'));
+const FirebaseView = lazy(() => import('./pages/FirebaseView'));
+const CylindersView = lazy(() => import('./pages/CylindersView'));
+const ShareholderZoneView = lazy(() => import('./pages/ShareholderZoneView'));
+const AuditZoneView = lazy(() => import('./pages/AuditZoneView'));
+
+const currentTaiwanPeriod = (() => {
+  const value = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit'
+  }).format(new Date());
+  const [year, month] = value.split('/');
+  return { year: Number.parseInt(year, 10) || 2026, month: month || '07' };
+})();
+
+const PageLoading = () => (
+  <div role="status" aria-live="polite" style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 700 }}>
+    正在載入功能...
+  </div>
+);
 
 function App() {
   const [dbVersion, setDbVersion] = useState(0); // Trigger state refreshes across components
@@ -52,21 +69,70 @@ function App() {
 
   // Period / Company Selector States
   const [currentCompanyId, setCurrentCompanyId] = useState('COMP001');
-  // Get current Taiwan timezone year/month
-  const twDateStr = new Intl.DateTimeFormat('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric',
-    month: '2-digit'
-  }).format(new Date()); // e.g. "2026/07"
-  const [twYear, twMonth] = twDateStr.split('/');
-  
-  const [currentYear, setCurrentYear] = useState(parseInt(twYear, 10) || 2026);
-  const [currentMonth, setCurrentMonth] = useState(twMonth || '07');
+  const [currentYear, setCurrentYear] = useState(currentTaiwanPeriod.year);
+  const [currentMonth, setCurrentMonth] = useState(currentTaiwanPeriod.month);
   const [toasts, setToasts] = useState([]);
   const [isDataReady, setIsDataReady] = useState(false);
 
   // Initialize DB on mount
   useEffect(() => {
+    let cancelled = false;
+
+    const migrateAccountCounterparts = () => {
+      const coaKey = 'bp_chart_of_accounts';
+      const coaStr = localStorage.getItem(coaKey);
+      if (!coaStr) return false;
+
+      try {
+        const coa = JSON.parse(coaStr);
+        let changed = false;
+        if (!coa.some(account => account.code === '4104')) {
+          coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+          changed = true;
+        }
+        const existingCodes = new Set(coa.map(account => account.code));
+        coa
+          .filter(account => account.code.startsWith('5102') && account.code !== '5102')
+          .forEach(account => {
+            const targetCode = `4104${account.code.slice(4)}`;
+            if (existingCodes.has(targetCode)) return;
+            coa.push({
+              code: targetCode,
+              name: account.name,
+              type: 'revenue',
+              desc: account.desc || '',
+              subGroup: account.subGroup || ''
+            });
+            existingCodes.add(targetCode);
+            changed = true;
+          });
+        if (changed) localStorage.setItem(coaKey, JSON.stringify(coa));
+        return changed;
+      } catch (error) {
+        console.error('Account migration failed', error);
+        return false;
+      }
+    };
+
+    const clearLegacyIncome = () => {
+      const migrationKey = 'bp_mock_cleared_v4_cloud';
+      if (localStorage.getItem(migrationKey)) return false;
+
+      let changed = false;
+      try {
+        const incomeKey = 'bp_incomes';
+        const incomes = JSON.parse(localStorage.getItem(incomeKey) || '[]');
+        const filtered = incomes.filter(item => item.id !== 'REV202607001');
+        changed = filtered.length !== incomes.length;
+        if (changed) localStorage.setItem(incomeKey, JSON.stringify(filtered));
+      } catch (error) {
+        console.error('Legacy income cleanup failed', error);
+      } finally {
+        localStorage.setItem(migrationKey, 'true');
+      }
+      return changed;
+    };
+
     const boot = async () => {
       initializeDB();
       const rememberedEmail = localStorage.getItem('bp_last_login_email') || '';
@@ -75,156 +141,24 @@ function App() {
         setLoginEmail(rememberedEmail);
       }
 
-      if (isSupabaseConnected()) {
-        const connected = await initSupabaseSync((updatedBy) => {
-          showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
-          setDbVersion(prev => prev + 1);
-        });
-        if (connected) {
-          // --- FRONTEND EMERGENCY CLEANUP FOR REV202607001 ---
-          const incomeKey = 'bp_incomes';
-          const incomesStr = localStorage.getItem(incomeKey);
-          if (incomesStr && !localStorage.getItem('bp_mock_cleared_v4_cloud')) {
-            try {
-              const incomes = JSON.parse(incomesStr);
-              if (incomes.some(item => item.id === 'REV202607001')) {
-                const filtered = incomes.filter(item => item.id !== 'REV202607001');
-                localStorage.setItem(incomeKey, JSON.stringify(filtered));
-                // Sync back to Supabase
-                await syncLocalToSupabase('系統醫生(清除廢單)');
-                localStorage.setItem('bp_mock_cleared_v4_cloud', 'true');
-                console.log("REV202607001 cleared from cloud successfully!");
-              }
-            } catch (err) {
-              console.error(err);
-            }
-          }
-
-          // Migrate 5102 accounts to 4104
-          const migrateAccountCounterparts = async () => {
-            const coaKey = 'bp_chart_of_accounts';
-            const coaStr = localStorage.getItem(coaKey);
-            if (coaStr) {
-              try {
-                const coa = JSON.parse(coaStr);
-                let changed = false;
-                if (!coa.some(a => a.code === '4104')) {
-                  coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
-                  changed = true;
-                }
-                const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
-                sub5102.forEach(a => {
-                  const suffix = a.code.replace('5102', '');
-                  const targetCode = '4104' + suffix;
-                  if (!coa.some(x => x.code === targetCode)) {
-                    coa.push({
-                      code: targetCode,
-                      name: a.name,
-                      type: 'revenue',
-                      desc: a.desc || '',
-                      subGroup: a.subGroup || ''
-                    });
-                    changed = true;
-                  }
-                });
-                if (changed) {
-                  localStorage.setItem(coaKey, JSON.stringify(coa));
-                  await syncLocalToSupabase('系統管理員(建立對照收入科目)');
-                  console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }
-          };
-          await migrateAccountCounterparts();
-
-          const backupCreated = createDailyBackupIfNeeded('系統每日備份');
-          if (backupCreated) {
-            await syncLocalToSupabase('系統每日備份');
-          }
-          setDbVersion(prev => prev + 1);
-        }
-      }
-
+      let restoredSession = null;
       if (savedSession) {
         try {
           const session = JSON.parse(savedSession);
           if (session?.user?.id && session?.role) {
-            // Render UI instantly using local cached state
+            restoredSession = session;
             setIsLoggedIn(true);
             setUserRole(session.role);
             setCurrentUser(session.user);
             setIsDataReady(true);
             setDbVersion(prev => prev + 1);
-
-            const runBackgroundSync = async () => {
-              if (isSupabaseConnected()) {
-                const sessionValid = await initSupabaseSync((updatedBy) => {
-                  showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
-                  setDbVersion(prev => prev + 1);
-                });
-
-                if (sessionValid) {
-                  await migrateAccountCounterpartsForSession();
-                } else {
-                  localStorage.removeItem('bp_login_session');
-                  clearCloudSessionToken();
-                  setIsLoggedIn(false);
-                  setUserRole('');
-                  setCurrentUser(null);
-                  const error = getLastCloudSyncError();
-                  showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
-                  setDbVersion(prev => prev + 1);
-                }
-              } else {
-                await migrateAccountCounterpartsForSession();
-              }
-            };
-
-            const migrateAccountCounterpartsForSession = async () => {
-              const coaKey = 'bp_chart_of_accounts';
-              const coaStr = localStorage.getItem(coaKey);
-              if (coaStr) {
-                try {
-                  const coa = JSON.parse(coaStr);
-                  let changed = false;
-                  if (!coa.some(a => a.code === '4104')) {
-                    coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
-                    changed = true;
-                  }
-                  const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
-                  sub5102.forEach(a => {
-                    const suffix = a.code.replace('5102', '');
-                    const targetCode = '4104' + suffix;
-                    if (!coa.some(x => x.code === targetCode)) {
-                      coa.push({
-                        code: targetCode,
-                        name: a.name,
-                        type: 'revenue',
-                        desc: a.desc || '',
-                        subGroup: a.subGroup || ''
-                      });
-                      changed = true;
-                    }
-                  });
-                  if (changed) {
-                    localStorage.setItem(coaKey, JSON.stringify(coa));
-                    await syncLocalToSupabase('系統管理員(建立對照收入科目)');
-                    console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
-                    setDbVersion(prev => prev + 1);
-                  }
-                } catch (err) {
-                  console.error(err);
-                }
-              }
-            };
-
-            // Execute in background
-            runBackgroundSync();
           }
-        } catch {}
+        } catch {
+          localStorage.removeItem('bp_login_session');
+        }
       }
+
+      if (!restoredSession) clearCloudSessionToken();
 
       // Clear one-time verification tokens from the address bar.
       const params = new URLSearchParams(window.location.search);
@@ -237,15 +171,57 @@ function App() {
 
       if (!isSupabaseConnected()) {
         initFirebase((updatedBy) => {
+          if (cancelled) return;
           showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已即時同步畫面。`, 'info');
           setDbVersion(prev => prev + 1);
         });
       }
 
       setIsDataReady(true);
+
+      if (!restoredSession) return;
+
+      const runBackgroundSync = async () => {
+        if (!isSupabaseConnected()) {
+          if (migrateAccountCounterparts() && !cancelled) setDbVersion(prev => prev + 1);
+          return;
+        }
+
+        const sessionValid = await initSupabaseSync((updatedBy) => {
+          if (cancelled) return;
+          showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
+          setDbVersion(prev => prev + 1);
+        });
+        if (cancelled) return;
+
+        if (!sessionValid) {
+          localStorage.removeItem('bp_login_session');
+          clearCloudSessionToken();
+          setIsLoggedIn(false);
+          setUserRole('');
+          setCurrentUser(null);
+          const error = getLastCloudSyncError();
+          showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
+          setDbVersion(prev => prev + 1);
+          return;
+        }
+
+        const needsMaintenanceSync = [
+          clearLegacyIncome(),
+          migrateAccountCounterparts(),
+          createDailyBackupIfNeeded('系統每日備份')
+        ].some(Boolean);
+        if (needsMaintenanceSync) await syncLocalToSupabase('系統啟動維護');
+        if (!cancelled) setDbVersion(prev => prev + 1);
+      };
+
+      void runBackgroundSync();
     };
 
-    boot();
+    void boot();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -674,7 +650,6 @@ function App() {
                 value={currentYear}
                 onChange={e => {
                   setCurrentYear(parseInt(e.target.value, 10));
-                  handleDataChange();
                 }}
               >
                 <option value="2025">2025 年</option>
@@ -688,7 +663,6 @@ function App() {
                 value={currentMonth}
                 onChange={e => {
                   setCurrentMonth(e.target.value);
-                  handleDataChange();
                 }}
               >
                 {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
@@ -725,6 +699,7 @@ function App() {
 
         {/* Page rendering */}
         <main className="page-container">
+          <Suspense fallback={<PageLoading />}>
           {activeTab === 'dashboard' && (
             <DashboardView
               companyId={currentCompanyId}
@@ -812,6 +787,7 @@ function App() {
               showToast={showToast}
             />
           )}
+          </Suspense>
         </main>
       </div>
 

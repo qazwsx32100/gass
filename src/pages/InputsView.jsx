@@ -161,6 +161,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const canReview = canReviewLedger(userRole);
   const canWriteBasicLedger = canInputBasicLedger(userRole);
   const showCreatorAudit = canViewCreatorAudit(userRole);
+  const showActionColumn = isAdmin || canWriteBasicLedger;
   const showShareholderLedger = canViewShareholderLedger(userRole);
   const manageShareholderLedger = canManageShareholderLedger(userRole);
   const showLoans = canViewLoans(userRole);
@@ -1072,8 +1073,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'income') {
       const db = getIncomes();
       if (editingItem) {
-        if (editingItem.status === 'approved' || editingItem.status === 'void') {
-          window.alert('已核准或已作廢的收入不能直接修改，請使用更正沖銷流程。');
+        if (editingItem.status === 'approved' && !isAdmin) {
+          window.alert('已核准的收入只有系統管理員可以直接修改。');
+          return;
+        }
+        if (editingItem.status === 'void') {
+          window.alert('已作廢的收入不能修改。');
           return;
         }
         const index = db.findIndex(i => i.id === editingItem.id);
@@ -1094,8 +1099,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
       if (editingItem) {
-        if (editingItem.status === 'approved' || editingItem.status === 'void') {
-          window.alert('已核准或已作廢的支出不能直接修改，請使用更正沖銷流程。');
+        if (editingItem.status === 'approved' && !isAdmin) {
+          window.alert('已核准的支出只有系統管理員可以直接修改。');
+          return;
+        }
+        if (editingItem.status === 'void') {
+          window.alert('已作廢的支出不能修改。');
           return;
         }
         const index = db.findIndex(e => e.id === editingItem.id);
@@ -1543,8 +1552,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const item = db.find(i => i.id === id);
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
-        if (item.status === 'approved') {
-          window.alert('已核准收入不能刪除，請使用更正沖銷。');
+        if (item.status === 'approved' && !isAdmin) {
+          window.alert('已核准收入不能刪除。');
           return;
         }
         archiveDeletion({ collection: 'incomes', record: item, actor: operatorName, reason });
@@ -1556,8 +1565,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const item = db.find(e => e.id === id);
       if (item) {
         if (blockIfPeriodLocked(item.date, '刪除資料')) return;
-        if (item.status === 'approved') {
-          window.alert('已核准支出不能刪除，請使用更正沖銷。');
+        if (item.status === 'approved' && !isAdmin) {
+          window.alert('已核准支出不能刪除。');
           return;
         }
         archiveDeletion({ collection: 'expenses', record: item, actor: operatorName, reason });
@@ -2225,7 +2234,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'expense' && (
@@ -2240,7 +2249,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'dailySummary' && (
@@ -2260,7 +2269,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>檢驗費收入</th>
                     <th>押瓶收入</th>
                     <th>營業額</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gas' && (
@@ -2273,7 +2282,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>銷貨成本</th>
                     <th>期末庫存</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gasCylinders' && (
@@ -2285,7 +2294,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>條碼 / QR Code</th>
                     <th>檢驗期限</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gasVehicles' && (
@@ -2298,7 +2307,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>車上公斤數</th>
                     <th>容量 / 狀態</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gasDeposits' && (
@@ -2311,7 +2320,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     <th>押瓶 / 退瓶日期</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'gasMovements' && (
@@ -2334,7 +2343,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>異動類型</th>
                     <th>異動金額</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'loan' && (
@@ -2347,7 +2356,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>期數</th>
                     <th>月付款</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'assets' && (
@@ -2361,7 +2370,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>帳面價值</th>
                     <th>狀態</th>
                     <th>備註</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
               </thead>
@@ -2667,7 +2676,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       );
                     })()}
 
-                    {isAdmin && activeSubTab !== 'gasMovements' && (
+                    {showActionColumn && activeSubTab !== 'gasMovements' && (
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           {activeSubTab === 'dailySummary' && (
@@ -2697,12 +2706,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                   更正
                                 </button>
                               )}
-                              {item.status !== 'approved' && item.status !== 'void' && (
+                              {(item.status !== 'approved' || isAdmin) && item.status !== 'void' && (
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
                                   編輯
                                 </button>
                               )}
-                              {item.status !== 'approved' && (
+                              {(item.status !== 'approved' || isAdmin) && item.status !== 'void' && (
                                 <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.id)}>
                                   刪除
                                 </button>
