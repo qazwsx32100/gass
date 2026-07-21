@@ -2492,42 +2492,49 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               <button type="button" className="modal-close" onClick={() => setSelectedTransaction(null)}>×</button>
             </div>
             
-            <div className="modal-body" style={{ padding: '20px' }}>
+            <div className="modal-body" style={{ padding: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* Section 1: Basic Information */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易編號 (ID)</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>交易編號 (ID)</label>
                   <div style={{ fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.id}</div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易類型</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>交易類型</label>
                   <div>
-                    <span className={`badge ${selectedTransaction.type === 'income' ? 'badge-success' : 'badge-danger'}`} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
+                    <span className={`badge ${selectedTransaction.type === 'income' ? 'badge-success' : 'badge-danger'}`} style={{ padding: '3px 6px', fontSize: '0.8rem' }}>
                       {selectedTransaction.type === 'income' ? '收入' : '支出'}
                     </span>
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>記帳日期</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>記帳日期</label>
                   <div style={{ fontWeight: '600' }}>{selectedTransaction.date}</div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>會計科目</label>
-                  <div style={{ fontWeight: '600' }}>{selectedTransaction.accountCode} {selectedTransaction.accountName || ''}</div>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>金額 (TWD)</label>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: selectedTransaction.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                    ${Number(selectedTransaction.amount || selectedTransaction.calculatedAmount || 0).toLocaleString()}
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>會計科目</label>
+                  <div style={{ fontWeight: '600' }}>
+                    {(() => {
+                      const coa = getChartOfAccounts();
+                      const match = coa.find(a => a.code === selectedTransaction.accountCode);
+                      return match ? `${match.code} - ${match.name}` : selectedTransaction.accountCode;
+                    })()}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>收付款方式</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>實收/實付金額</label>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.25rem', color: selectedTransaction.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    ${Number(selectedTransaction.amount || selectedTransaction.calculatedAmount || 0).toLocaleString()} TWD
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>收付款方式</label>
                   <div style={{ fontWeight: '600' }}>
                     {selectedTransaction.paymentMethod === 'cash' ? '現金(零用金)' : selectedTransaction.paymentMethod === 'bank_transfer' ? '銀行轉帳' : selectedTransaction.paymentMethod === 'receivable' ? '月結應收' : selectedTransaction.paymentMethod === 'payable' ? '月結應付' : '支票'}
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>結清狀態</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>付款狀態</label>
                   <div style={{ fontWeight: '600' }}>
                     {selectedTransaction.paymentStatus === 'unpaid' ? (
                       <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>🔴 未結清</span>
@@ -2537,7 +2544,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>審核狀態</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>審核狀態</label>
                   <div style={{ fontWeight: '600' }}>
                     {selectedTransaction.status === 'approved' ? (
                       <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>✓ 已核准</span>
@@ -2550,37 +2557,122 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                     )}
                   </div>
                 </div>
-                {selectedTransaction.invoiceNo && (
-                  <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>發票/收據號碼</label>
-                    <div style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.invoiceNo}</div>
-                  </div>
-                )}
-                {selectedTransaction.projectName && (
-                  <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>專案名稱</label>
-                    <div style={{ fontWeight: '600' }}>{selectedTransaction.projectName}</div>
-                  </div>
-                )}
               </div>
-              
+
+              {/* Section 2: Salary Detail (Only if it's 6101 Salary expense) */}
+              {selectedTransaction.accountCode && selectedTransaction.accountCode.startsWith('6101') && (
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    📝 薪資與保費代扣明細
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>員工姓名：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.employeeName || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>薪資月份：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.payrollMonth || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>勞保扣款：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>${Number(selectedTransaction.laborInsurance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>健保扣款：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>${Number(selectedTransaction.healthInsurance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>勞退提撥：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>${Number(selectedTransaction.pension || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>代扣所得稅：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>${Number(selectedTransaction.withholdingTax || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: Invoice & VAT details (Only if present and not a salary/rent/tax) */}
+              {selectedTransaction.invoiceNo || selectedTransaction.counterpartyTaxId || (selectedTransaction.taxType && selectedTransaction.taxType !== 'non_vat') ? (
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    🧾 發票與稅務明細
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>發票號碼：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.invoiceNo || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>發票日期：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.invoiceDate || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>對象統編：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.counterpartyTaxId || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>交易對象：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.counterpartyName || '未填寫'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>稅別：</span>
+                      <span style={{ fontWeight: '600' }}>
+                        {selectedTransaction.taxType === 'taxable' ? '應稅 5%' : selectedTransaction.taxType === 'zero' ? '零稅率' : selectedTransaction.taxType === 'exempt' ? '免稅' : '非營業稅'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>稅額：</span>
+                      <span style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>${Number(selectedTransaction.vatAmount || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>金額稅別：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.taxIncluded ? '含稅' : '未稅'}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Section 4: Project & Other Metadata */}
+              {(selectedTransaction.projectName || selectedTransaction.counterpartyName) && !selectedTransaction.invoiceNo && !selectedTransaction.accountCode?.startsWith('6101') && (
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                    👤 交易對象與專案
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>對象名稱：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.counterpartyName || '無'}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>專案名稱：</span>
+                      <span style={{ fontWeight: '600' }}>{selectedTransaction.projectName || '無'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 5: Remarks */}
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易備註</label>
-                <div style={{ whiteSpace: 'pre-wrap', backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px', fontSize: '0.9rem', border: '1px solid var(--border-color)' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>備註備忘</label>
+                <div style={{ whiteSpace: 'pre-wrap', backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px', fontSize: '0.9rem', border: '1px solid var(--border-color)', lineHeight: '1.4' }}>
                   {selectedTransaction.remarks || '（無備註說明）'}
                 </div>
               </div>
 
+              {/* Section 6: User Logs */}
               {selectedTransaction.creatorName && (
-                <div style={{ display: 'flex', gap: '20px', marginTop: '16px', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '16px', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                   <div>登錄人員：{selectedTransaction.creatorName}</div>
                   {selectedTransaction.createdAt && <div>登錄時間：{new Date(selectedTransaction.createdAt).toLocaleString()}</div>}
                 </div>
               )}
 
+              {/* Section 7: Attachment */}
               {selectedTransaction.receiptAttachment && (
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', textAlign: 'center' }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textAlign: 'left' }}>憑證附件</label>
                   <button
                     type="button"
                     className="btn btn-secondary"
