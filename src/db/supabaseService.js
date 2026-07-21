@@ -329,10 +329,30 @@ export const seedSupabaseIfEmpty = async (operatorName = '系統') => {
 export const initSupabaseSync = async (onSync) => {
   if (!getCloudSessionToken()) return false;
   clearLastCloudSyncError();
-  const seeded = await seedSupabaseIfEmpty('系統初始化');
-  if (!seeded) return false;
-  const pulled = await pullSupabaseToLocal();
-  if (!pulled) return false;
+
+  // Combined fetch to avoid double roundtrips (seed + pull)
+  const response = await apiFetch('/api/app-state', {
+    method: 'GET',
+    headers: { Accept: 'application/json', ...authHeaders() }
+  });
+
+  if (!response.ok) {
+    const error = normalizeCloudError(response.status, await getResponseError(response, '雲端資料讀取失敗。'));
+    setLastCloudSyncError({ status: response.status, error });
+    if (response.status === 401) clearCloudSessionToken();
+    console.error('Supabase init pull failed', error);
+    return false;
+  }
+
+  const data = await response.json();
+  if (data?.state) {
+    writeLocalState(data.state);
+    rememberCloudUpdatedAt(data.updated_at);
+  } else {
+    // If cloud is empty, seed it with the current local state
+    const seeded = await syncLocalToSupabase('系統初始化');
+    if (!seeded) return false;
+  }
 
   if (pollTimer) {
     clearInterval(pollTimer);

@@ -151,63 +151,77 @@ function App() {
         try {
           const session = JSON.parse(savedSession);
           if (session?.user?.id && session?.role) {
-            let sessionValid = true;
-            if (isSupabaseConnected()) {
-              sessionValid = await initSupabaseSync((updatedBy) => {
-                showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
-                setDbVersion(prev => prev + 1);
-              });
-            }
+            // Render UI instantly using local cached state
+            setIsLoggedIn(true);
+            setUserRole(session.role);
+            setCurrentUser(session.user);
+            setIsDataReady(true);
+            setDbVersion(prev => prev + 1);
 
-            if (sessionValid) {
-              setIsLoggedIn(true);
-              setUserRole(session.role);
-              setCurrentUser(session.user);
-              
-              // Run migration for logged in users too
-              const migrateAccountCounterparts = async () => {
-                const coaKey = 'bp_chart_of_accounts';
-                const coaStr = localStorage.getItem(coaKey);
-                if (coaStr) {
-                  try {
-                    const coa = JSON.parse(coaStr);
-                    let changed = false;
-                    if (!coa.some(a => a.code === '4104')) {
-                      coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+            const runBackgroundSync = async () => {
+              if (isSupabaseConnected()) {
+                const sessionValid = await initSupabaseSync((updatedBy) => {
+                  showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
+                  setDbVersion(prev => prev + 1);
+                });
+
+                if (sessionValid) {
+                  await migrateAccountCounterpartsForSession();
+                } else {
+                  localStorage.removeItem('bp_login_session');
+                  clearCloudSessionToken();
+                  setIsLoggedIn(false);
+                  setUserRole('');
+                  setCurrentUser(null);
+                  const error = getLastCloudSyncError();
+                  showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
+                  setDbVersion(prev => prev + 1);
+                }
+              } else {
+                await migrateAccountCounterpartsForSession();
+              }
+            };
+
+            const migrateAccountCounterpartsForSession = async () => {
+              const coaKey = 'bp_chart_of_accounts';
+              const coaStr = localStorage.getItem(coaKey);
+              if (coaStr) {
+                try {
+                  const coa = JSON.parse(coaStr);
+                  let changed = false;
+                  if (!coa.some(a => a.code === '4104')) {
+                    coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+                    changed = true;
+                  }
+                  const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
+                  sub5102.forEach(a => {
+                    const suffix = a.code.replace('5102', '');
+                    const targetCode = '4104' + suffix;
+                    if (!coa.some(x => x.code === targetCode)) {
+                      coa.push({
+                        code: targetCode,
+                        name: a.name,
+                        type: 'revenue',
+                        desc: a.desc || '',
+                        subGroup: a.subGroup || ''
+                      });
                       changed = true;
                     }
-                    const sub5102 = coa.filter(a => a.code.startsWith('5102') && a.code !== '5102');
-                    sub5102.forEach(a => {
-                      const suffix = a.code.replace('5102', '');
-                      const targetCode = '4104' + suffix;
-                      if (!coa.some(x => x.code === targetCode)) {
-                        coa.push({
-                          code: targetCode,
-                          name: a.name,
-                          type: 'revenue',
-                          desc: a.desc || '',
-                          subGroup: a.subGroup || ''
-                        });
-                        changed = true;
-                      }
-                    });
-                    if (changed) {
-                      localStorage.setItem(coaKey, JSON.stringify(coa));
-                      await syncLocalToSupabase('系統管理員(建立對照收入科目)');
-                      console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
-                    }
-                  } catch (err) {
-                    console.error(err);
+                  });
+                  if (changed) {
+                    localStorage.setItem(coaKey, JSON.stringify(coa));
+                    await syncLocalToSupabase('系統管理員(建立對照收入科目)');
+                    console.log("Existing 5102 accounts synced to 4104 on cloud successfully!");
+                    setDbVersion(prev => prev + 1);
                   }
+                } catch (err) {
+                  console.error(err);
                 }
-              };
-              await migrateAccountCounterparts();
-            } else {
-              localStorage.removeItem('bp_login_session');
-              clearCloudSessionToken();
-              const error = getLastCloudSyncError();
-              showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
-            }
+              }
+            };
+
+            // Execute in background
+            runBackgroundSync();
           }
         } catch {}
       }
