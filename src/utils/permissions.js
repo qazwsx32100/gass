@@ -58,9 +58,7 @@ export const canViewShareholderLedger = (userRole) => (
   userRole === USER_ROLES.READONLY_SHAREHOLDER
 );
 
-export const canManageShareholderLedger = (userRole) => (
-  userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER
-);
+export const canManageShareholderLedger = (userRole) => userRole === USER_ROLES.ADMIN;
 
 export const canViewLoans = (userRole) => (
   userRole === USER_ROLES.ADMIN || userRole === USER_ROLES.BUSINESS_REVIEWER

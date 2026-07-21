@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   getIncomes, saveIncomes,
   getExpenses, saveExpenses,
@@ -12,7 +12,7 @@ import {
   getBankTransactions, saveBankTransactions,
   getBankReconciliations, saveBankReconciliations,
   getFixedAssets, saveFixedAssets,
-  getLogs, addLog,
+  addLog,
   getShareholders, getBanks, getChartOfAccounts, getCustomers, getSuppliers,
   USER_ROLES,
   archiveChange, archiveDeletion,
@@ -25,8 +25,7 @@ import {
   canViewAuditLogs,
   canViewCreatorAudit,
   canViewLoans,
-  canViewShareholderLedger,
-  canVoidLedger
+  canViewShareholderLedger
 } from '../utils/permissions';
 import {
   buildBankReconciliation,
@@ -170,7 +169,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const manageShareholderLedger = canManageShareholderLedger(userRole);
   const showLoans = canViewLoans(userRole);
   const showAuditLogs = canViewAuditLogs(userRole);
-  const allowVoid = canVoidLedger(userRole);
   const getRecordPeriod = (item = formData, tab = activeSubTab) => {
     if (tab === 'gas') return item.yearMonth;
     if (GAS_OPERATION_TABS.includes(tab)) return item.movementDate || item.startedAt || item.date || new Date().toISOString().split('T')[0];
@@ -183,7 +181,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     window.alert(`此月份已鎖帳，不能${actionLabel}。請改用更正沖銷或請系統管理員重新開放月份。`);
     return true;
   };
-  const getDailySalesSummaries = () => {
+  const getDailySalesSummaries = useCallback(() => {
     const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
     const allBankTransactions = getBankTransactions().filter(item => item.companyId === companyId && item.status === 'approved');
 
@@ -266,7 +264,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       s.salesAmount = s.paidAmount + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0);
       return s;
     }).sort((a, b) => b.date.localeCompare(a.date));
-  };
+  }, [companyId]);
   useEffect(() => {
     if (activeSubTab === 'shareholder' && !showShareholderLedger) setActiveSubTab('income');
     if (activeSubTab === 'loan' && !showLoans) setActiveSubTab('income');
@@ -311,7 +309,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const [statementText, setStatementText] = useState('');
   const [reconciliationBankId, setReconciliationBankId] = useState('');
   const [reconciliationDate, setReconciliationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [assetAsOfDate, setAssetAsOfDate] = useState(new Date().toISOString().split('T')[0]);
+  const [assetAsOfDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => () => revokeCloudAttachmentUrl(viewingReceiptUrl), [viewingReceiptUrl]);
 
@@ -330,6 +328,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
 
   const checkItems = useMemo(() => {
+    void triggerRefresh;
     const incs = getIncomes().filter(i => 
       i.companyId === companyId && 
       i.paymentMethod === 'check' && 
@@ -448,19 +447,54 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     onDataChange();
   };
   // Common lookups
-  const shareholders = useMemo(() => getShareholders(), [triggerRefresh]);
-  const banks = useMemo(() => getBanks().filter(b => b.companyId === companyId), [companyId, triggerRefresh]);
-  const accounts = useMemo(() => getChartOfAccounts(), [triggerRefresh]);
-  const customers = useMemo(() => getCustomers().filter(c => c.companyId === companyId && c.status !== 'inactive'), [companyId, triggerRefresh]);
-  const suppliers = useMemo(() => getSuppliers().filter(s => s.companyId === companyId && s.status !== 'inactive'), [companyId, triggerRefresh]);
-  const auditLogs = useMemo(() => getLogs(), [triggerRefresh]);
-  const bankReconciliations = useMemo(() => getBankReconciliations().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasCylinders = useMemo(() => getGasCylinders().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasCylinderMovements = useMemo(() => getGasCylinderMovements().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasDeliveryVehicles = useMemo(() => getGasDeliveryVehicles().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const customerCylinderDeposits = useMemo(() => getCustomerCylinderDeposits().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const agingReport = useMemo(() => getAgingReport(companyId, agingAsOfDate), [companyId, agingAsOfDate, triggerRefresh]);
-  const fixedAssetSummary = useMemo(() => getFixedAssetSummary(companyId, assetAsOfDate), [companyId, assetAsOfDate, triggerRefresh]);
+  const shareholders = useMemo(() => {
+    void triggerRefresh;
+    return getShareholders();
+  }, [triggerRefresh]);
+  const banks = useMemo(() => {
+    void triggerRefresh;
+    return getBanks().filter(bank => bank.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const accounts = useMemo(() => {
+    void triggerRefresh;
+    return getChartOfAccounts();
+  }, [triggerRefresh]);
+  const customers = useMemo(() => {
+    void triggerRefresh;
+    return getCustomers().filter(customer => customer.companyId === companyId && customer.status !== 'inactive');
+  }, [companyId, triggerRefresh]);
+  const suppliers = useMemo(() => {
+    void triggerRefresh;
+    return getSuppliers().filter(supplier => supplier.companyId === companyId && supplier.status !== 'inactive');
+  }, [companyId, triggerRefresh]);
+  const bankReconciliations = useMemo(() => {
+    void triggerRefresh;
+    return getBankReconciliations().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasCylinders = useMemo(() => {
+    void triggerRefresh;
+    return getGasCylinders().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasCylinderMovements = useMemo(() => {
+    void triggerRefresh;
+    return getGasCylinderMovements().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasDeliveryVehicles = useMemo(() => {
+    void triggerRefresh;
+    return getGasDeliveryVehicles().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const customerCylinderDeposits = useMemo(() => {
+    void triggerRefresh;
+    return getCustomerCylinderDeposits().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const agingReport = useMemo(() => {
+    void triggerRefresh;
+    return getAgingReport(companyId, agingAsOfDate);
+  }, [companyId, agingAsOfDate, triggerRefresh]);
+  const fixedAssetSummary = useMemo(() => {
+    void triggerRefresh;
+    return getFixedAssetSummary(companyId, assetAsOfDate);
+  }, [companyId, assetAsOfDate, triggerRefresh]);
   const parsedStatementRows = useMemo(() => parseBankStatementText(statementText), [statementText]);
   const reconciliationPreview = useMemo(() => buildBankReconciliation({
     companyId,
@@ -571,6 +605,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
   // Combined unpaid AR/AP items
   const unpaidArapItems = useMemo(() => {
+    void triggerRefresh;
     const incomes = getIncomes().filter(i => 
       i.companyId === companyId && 
       i.paymentStatus === 'unpaid' && 
@@ -596,6 +631,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
   // Load items based on active sub tab
   const items = useMemo(() => {
+    void triggerRefresh;
     if (activeSubTab === 'income') {
       const rows = getIncomes().filter(i => 
         i.companyId === companyId &&
@@ -632,7 +668,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'loan') return getLoans().filter(l => l.companyId === companyId);
     if (activeSubTab === 'dailySummary') return getDailySalesSummaries();
     return [];
-  }, [activeSubTab, companyId, triggerRefresh, userRole, currentUser, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements]);
+  }, [activeSubTab, companyId, triggerRefresh, userRole, currentUser, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements, getDailySalesSummaries]);
 
   // Generate Unique ID
   const generateId = (type, date) => {
@@ -1161,9 +1197,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         success = true;
       }
     } else if (activeSubTab === 'shareholder') {
+      if (!isAdmin) {
+        window.alert('只有系統管理員可以新增或修改股東與股東往來資料。');
+        return;
+      }
       const db = getShareholderLedger();
-      const typeLabel = formData.type === 'join' ? '入股' : formData.type === 'increase' ? '增資' : '減資/提領';
-      const shName = shareholders.find(s => s.id === formData.shareholderId)?.name || '未知股東';
       
       if (editingItem) {
         const index = db.findIndex(s => s.id === editingItem.id);
@@ -1656,6 +1694,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         addLog(operatorName, '刪除支出', `刪除支出 ${id}，金額 $${item.amount.toLocaleString()}。`);
       }
     } else if (activeSubTab === 'shareholder') {
+      if (!isAdmin) {
+        window.alert('只有系統管理員可以刪除股東與股東往來資料。');
+        return;
+      }
       const db = getShareholderLedger();
       const item = db.find(s => s.id === id);
       if (item) {
@@ -4050,7 +4092,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           🔄 沖銷與更正歷史紀錄
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '20px', borderLeft: '2px solid var(--border-color)', margin: '10px 0' }}>
-                          {chain.map((step, sIdx) => {
+                          {chain.map((step) => {
                             const stepItem = step.item;
                             const isCurrent = stepItem.id === item.id;
                             const isReversal = step.role === 'reversal' || stepItem.amount < 0;
