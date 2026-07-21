@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses } from '../db/storage';
+import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
@@ -75,6 +75,21 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return monthPeriodVal;
   }, [periodMode, singleDate, rangeStart, rangeEnd, monthPeriodVal]);
   const activePeriodLabel = getPeriodLabel(activePeriodType, activePeriodVal);
+
+  useEffect(() => {
+    if (activePeriodType === 'month') {
+      const locks = getPeriodLocks();
+      const match = locks.find(item => item.companyId === companyId && item.yearMonth === activePeriodVal);
+      if (match && match.reserveRatio !== null && match.reserveRatio !== undefined) {
+        setReserveRatio(match.reserveRatio);
+      } else {
+        setReserveRatio(0.1);
+      }
+    } else {
+      setReserveRatio(0.1);
+    }
+  }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
+
   const companies = useMemo(() => getCompanies(), [triggerRefresh]);
   const companyName = useMemo(() => {
     return companies.find(c => c.id === companyId)?.name || '未名公司';
@@ -2149,9 +2164,40 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                       />
                     </div>
                     
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', display: 'block', marginTop: '12px' }}>
-                      * 公積金將保留在公司銀行存款中做為營運週轉金，不予發放分紅給股東。您可直接輸入金額、比例，或拉動滑桿調整。
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                        * 公積金將保留在公司銀行存款中做為營運週轉金，不予發放分紅。
+                      </span>
+                      <button 
+                        type="button" 
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
+                        onClick={async () => {
+                          const locks = getPeriodLocks();
+                          const idx = locks.findIndex(item => item.companyId === companyId && item.yearMonth === activePeriodVal);
+                          if (idx !== -1) {
+                            locks[idx] = {
+                              ...locks[idx],
+                              reserveRatio: reserveRatio
+                            };
+                          } else {
+                            locks.push({
+                              companyId,
+                              yearMonth: activePeriodVal,
+                              locked: false,
+                              reserveRatio: reserveRatio
+                            });
+                          }
+                          savePeriodLocks(locks);
+                          
+                          // Dispatch global refresh event & sync to Supabase
+                          window.dispatchEvent(new Event('bp_data_changed'));
+                          showToast('💾 公積金設定已成功儲存並同步！', 'success');
+                        }}
+                      >
+                        💾 儲存設定
+                      </button>
+                    </div>
                   </div>
                 )}
 

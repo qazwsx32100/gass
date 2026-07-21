@@ -440,7 +440,8 @@ export const normalizePeriodLock = (item) => ({
   lockedBy: item.lockedBy || '',
   unlockedAt: item.unlockedAt || null,
   unlockedBy: item.unlockedBy || '',
-  remarks: item.remarks || ''
+  remarks: item.remarks || '',
+  reserveRatio: item.reserveRatio !== undefined && item.reserveRatio !== null ? Number(item.reserveRatio) : null
 });
 
 export const normalizeCustomer = (item = {}) => ({

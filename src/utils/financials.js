@@ -1,6 +1,6 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
-import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions } from '../db/storage';
+import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions, getPeriodLocks } from '../db/storage';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -1416,6 +1416,14 @@ export const getBalanceSheet = (companyId, dateStr) => {
  * 5. Dividend Distribution Generator
  */
 export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1) => {
+  // Try to resolve saved reserveRatio from periodLocks
+  let activeRatio = reserveRatio;
+  const locks = getPeriodLocks();
+  const match = locks.find(item => item.companyId === companyId && item.yearMonth === yearMonthStr);
+  if (match && match.reserveRatio !== null && match.reserveRatio !== undefined) {
+    activeRatio = match.reserveRatio;
+  }
+
   // 1. Calculate P&L for this month
   const pnl = getIncomeStatement(companyId, 'month', yearMonthStr);
   const netProfit = pnl.netProfit;
@@ -1430,7 +1438,7 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
   let isLoss = netProfit <= 0;
 
   if (!isLoss) {
-    reserveAmount = Math.round(netProfit * reserveRatio);
+    reserveAmount = Math.round(netProfit * activeRatio);
     totalDividends = netProfit - reserveAmount;
   }
 
@@ -1446,7 +1454,7 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
     yearMonth: yearMonthStr,
     netProfit,
     isLoss,
-    reserveRatio,
+    reserveRatio: activeRatio,
     reserveAmount,
     totalDividends,
     shareholderDividends
@@ -1454,6 +1462,16 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
 };
 
 export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveRatio = 0.1) => {
+  // Try to resolve saved reserveRatio from periodLocks
+  let activeRatio = reserveRatio;
+  if (periodType === 'month') {
+    const locks = getPeriodLocks();
+    const match = locks.find(item => item.companyId === companyId && item.yearMonth === periodVal);
+    if (match && match.reserveRatio !== null && match.reserveRatio !== undefined) {
+      activeRatio = match.reserveRatio;
+    }
+  }
+
   const pnl = getIncomeStatement(companyId, periodType, periodVal);
   const netProfit = pnl.netProfit;
   const endDate = getPeriodEndDate(periodType, periodVal);
@@ -1464,7 +1482,7 @@ export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveR
   const isLoss = netProfit <= 0;
 
   if (!isLoss) {
-    reserveAmount = Math.round(netProfit * reserveRatio);
+    reserveAmount = Math.round(netProfit * activeRatio);
     totalDividends = netProfit - reserveAmount;
   }
 
@@ -1477,7 +1495,7 @@ export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveR
     yearMonth: getPeriodLabel(periodType, periodVal),
     netProfit,
     isLoss,
-    reserveRatio,
+    reserveRatio: activeRatio,
     reserveAmount,
     totalDividends,
     shareholderDividends
