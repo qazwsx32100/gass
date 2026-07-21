@@ -214,6 +214,18 @@ export const fetchAppState = async () => {
   return row || { state: null, updated_at: null, updated_by: null };
 };
 
+export const fetchAppStateMeta = async ({ userId, deviceId }) => {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc('erp_get_app_state_meta', {
+    p_secret: getSyncSecret(),
+    p_user_id: userId,
+    p_device_id: deviceId
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row || { updated_at: null, updated_by: null, has_state: false, session_allowed: false };
+};
+
 export const saveAppState = async ({ state, updatedBy, requestIp = null, previousState = null, expectedUpdatedAt = null }) => {
   const supabase = getSupabase();
   const previous = previousState || (await fetchAppState()).state || {};

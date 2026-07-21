@@ -362,6 +362,22 @@ export const initSupabaseSync = async (onSync) => {
   pollTimer = window.setInterval(async () => {
     if (isSyncing) return;
     try {
+      const metaResponse = await apiFetch('/api/app-state?meta=1', {
+        method: 'GET',
+        headers: { Accept: 'application/json', ...authHeaders() }
+      });
+      if (!metaResponse.ok) {
+        if (metaResponse.status === 401) clearCloudSessionToken();
+        return;
+      }
+      const metadata = await metaResponse.json();
+      if (!metadata?.has_state || !metadata?.updated_at) return;
+      const syncError = getLastCloudSyncError();
+      if (syncError?.status === 409) return;
+      const remoteUpdatedAt = new Date(metadata.updated_at).getTime();
+      const localUpdatedAt = Number(localStorage.getItem(LOCAL_UPDATED_AT_KEY) || 0);
+      if (remoteUpdatedAt <= localUpdatedAt) return;
+
       const response = await apiFetch('/api/app-state', {
         method: 'GET',
         headers: { Accept: 'application/json', ...authHeaders() }
@@ -369,15 +385,9 @@ export const initSupabaseSync = async (onSync) => {
       if (!response.ok) return;
       const data = await response.json();
       if (!data?.state) return;
-      const syncError = getLastCloudSyncError();
-      if (syncError?.status === 409) return;
-      const remoteUpdatedAt = new Date(data.updated_at).getTime();
-      const localUpdatedAt = Number(localStorage.getItem(LOCAL_UPDATED_AT_KEY) || 0);
-      if (remoteUpdatedAt <= localUpdatedAt) return;
-
       writeLocalState(data.state);
       rememberCloudUpdatedAt(data.updated_at);
-      if (onSync) onSync(data.updated_by || '其他使用者');
+      if (onSync) onSync(data.updated_by || metadata.updated_by || '其他使用者');
     } catch (error) {
       console.error('Supabase polling failed', error);
     }

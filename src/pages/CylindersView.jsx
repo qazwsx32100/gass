@@ -80,6 +80,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const [locationFilter, setLocationFilter] = useState('');
   const [purchaseStartDate, setPurchaseStartDate] = useState('');
   const [purchaseEndDate, setPurchaseEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 100;
 
   // Form State
   const [formData, setFormData] = useState({
@@ -396,6 +398,20 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     return [];
   }, [activeSubTab, gasPurchases, gasInventoryPeriods, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements, purchaseStartDate, purchaseEndDate, searchText, locationFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const visibleItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeSubTab, companyId, purchaseStartDate, purchaseEndDate, searchText, locationFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   // Open modals
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -532,7 +548,6 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         gas16kg: 0,
         gas10kg: 0,
         gas4kg: 0,
-        totalGasKg: parseFloat(formData.totalGasKg) || 0,
         grossKg: purchaseGrossKg,
         totalGasKg: purchaseResidualGasKg,
         totalKg: purchaseTotalKg,
@@ -1144,8 +1159,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                 </td>
               </tr>
             ) : (
-              filteredItems.map((item, idx) => (
-                <tr key={idx}>
+              visibleItems.map((item, idx) => (
+                <tr key={item.id || `${activeSubTab}-${idx}`}>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{item.id}</td>
 
                   {activeSubTab === 'gasPurchases' && (() => {
@@ -1363,6 +1378,33 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           </tbody>
         </table>
       </div>
+      {filteredItems.length > pageSize && (
+        <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+            第 {currentPage} / {totalPages} 頁，共 {filteredItems.length.toLocaleString()} 筆
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            aria-label="上一頁"
+            title="上一頁"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            aria-label="下一頁"
+            title="下一頁"
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+          >
+            ›
+          </button>
+        </div>
+      )}
 
       {/* CRUD Add/Edit Modal */}
       {isModalOpen && (

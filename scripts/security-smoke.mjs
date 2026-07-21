@@ -4,6 +4,7 @@ const checks = [
   { name: 'home', method: 'GET', path: '/', expectedStatus: 200 },
   { name: 'api-health', method: 'GET', path: '/api/health', expectedStatus: 200 },
   { name: 'app-state-get-unauth', method: 'GET', path: '/api/app-state', expectedStatus: 401 },
+  { name: 'app-state-meta-get-unauth', method: 'GET', path: '/api/app-state?meta=1', expectedStatus: 401 },
   {
     name: 'app-state-post-unauth',
     method: 'POST',

@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { initializeDB, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
-import { initFirebase } from './db/firebaseService';
 import { clearCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
 import { getAllowedTabsForUser } from './utils/permissions';
 
@@ -170,6 +169,8 @@ function App() {
       setDbVersion(prev => prev + 1);
 
       if (!isSupabaseConnected()) {
+        const { initFirebase } = await import('./db/firebaseService');
+        if (cancelled) return;
         initFirebase((updatedBy) => {
           if (cancelled) return;
           showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已即時同步畫面。`, 'info');

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
 import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -699,7 +699,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const csvString = '\ufeff' + csvRows.map(row => 
       row.map(cell => {
         let valStr = cell === null || cell === undefined ? '' : String(cell);
-        if (/^[=\+\-\@\t\r]/.test(valStr)) {
+        if (/^[=+\-@\t\r]/.test(valStr)) {
           valStr = "'" + valStr;
         }
         return `"${valStr.replace(/"/g, '""')}"`;

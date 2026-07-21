@@ -1,4 +1,4 @@
-import { fetchAppState, getBearerToken, getClientIp, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
+import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
 import { validateGasInventoryState } from '../src/utils/stateIntegrity.js';
 
 const isApprovedDevice = (security, deviceId) => (
@@ -311,6 +311,14 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      if (String(req.query?.meta || '') === '1') {
+        const meta = await fetchAppStateMeta({ userId: session.id, deviceId: session.deviceId });
+        if (!meta.session_allowed) {
+          return sendJson(res, 401, { error: 'Session is no longer allowed.' });
+        }
+        return sendJson(res, 200, meta);
+      }
+
       const row = await fetchAppState();
       if (!isSessionAllowed(row.state, session)) {
         return sendJson(res, 401, { error: 'Session is no longer allowed.' });
@@ -346,18 +354,17 @@ export default async function handler(req, res) {
     }
 
     const updatedBy = String(body.updatedBy || session.name || '系統').slice(0, 80);
-    await saveAppState({
+    const saved = await saveAppState({
       state: body.state,
       updatedBy,
       requestIp: getClientIp(req),
       previousState: current.state,
       expectedUpdatedAt: body.expectedUpdatedAt || null
     });
-    const updated = await fetchAppState();
     return sendJson(res, 200, {
-      ...(updated || { state: null, updated_at: null, updated_by: updatedBy }),
       ok: true,
-      state: sanitizeStateForClient(updated.state || {}, session)
+      updated_at: saved?.updated_at || new Date().toISOString(),
+      updated_by: saved?.updated_by || updatedBy
     });
   } catch (error) {
     console.error('app-state API failed', error);
