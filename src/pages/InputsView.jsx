@@ -1901,6 +1901,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     });
     addLog(actor, '建立更正沖銷', `原資料 ${item.id} 保留不動，建立沖銷 ${reversalId} 與待審更正 ${correctedId}。原因：${reason}`);
     onDataChange();
+    handleOpenEdit(corrected);
   };
   const handleSaveReconciliation = () => {
     if (!isAdmin) return;
@@ -2830,7 +2831,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                   更正
                                 </button>
                               )}
-                              {!['income', 'expense'].includes(activeSubTab) && item.status !== 'void' && (
+                              {item.status !== 'void' && (
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
                                   編輯
                                 </button>
