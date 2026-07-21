@@ -131,6 +131,22 @@ const getStatusBadgeClass = (status) => {
   return 'pending';
 };
 
+const isExcludedFromInvoice = (accountCode) => {
+  if (!accountCode) return false;
+  if (accountCode.startsWith('6101') || accountCode.startsWith('6102') || accountCode.startsWith('6109')) {
+    return true;
+  }
+  const coa = getChartOfAccounts();
+  const match = coa.find(a => a.code === accountCode);
+  if (match) {
+    const name = match.name || '';
+    if (name.includes('薪資') || name.includes('租') || name.includes('稅') || name.includes('稅金')) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export default function InputsView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', currentUser, userRole, restrictToShareholder = false }) {
   const [activeSubTab, setActiveSubTab] = useState(() => {
     if (restrictToShareholder) return 'shareholder';
@@ -1000,12 +1016,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       paymentStatus,
       dueDate: ['receivable', 'payable'].includes(paymentMethod) ? formData.dueDate || '' : '',
       receiptAttachment: formData.receiptAttachment || '',
-      invoiceNo: formData.invoiceNo || '',
+      invoiceNo: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? '' : (formData.invoiceNo || ''),
       invoiceDate: formData.invoiceDate || formData.date,
-      counterpartyTaxId: formData.counterpartyTaxId || '',
-      taxType: formData.taxType || 'taxable',
-      taxIncluded: formData.taxIncluded ?? true,
-      vatAmount: vatAmountVal,
+      counterpartyTaxId: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? '' : (formData.counterpartyTaxId || ''),
+      taxType: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? 'non_vat' : (formData.taxType || 'taxable'),
+      taxIncluded: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? true : (formData.taxIncluded ?? true),
+      vatAmount: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? 0 : vatAmountVal,
       employeeName: formData.employeeName || '',
       payrollMonth: formData.payrollMonth || String(formData.date || '').slice(0, 7),
       laborInsurance: parseFloat(formData.laborInsurance) || 0,
@@ -3388,7 +3404,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   </div>
                 )}
 
-                {(activeSubTab === 'income' || activeSubTab === 'expense') && (
+                {(activeSubTab === 'income' || (activeSubTab === 'expense' && !isExcludedFromInvoice(formData.accountCode))) && (
                   <>
                     <div className="form-row">
                       <div className="form-group">
