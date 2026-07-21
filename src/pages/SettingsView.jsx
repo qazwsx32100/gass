@@ -23,8 +23,12 @@ import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/fi
 import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
-export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole, restrictToShareholder = false }) {
-  const [innerTab, setInnerTab] = useState(() => restrictToShareholder ? 'shareholder' : 'bank');
+export default function SettingsView({ triggerRefresh, onDataChange, showToast, isAdmin, userRole, restrictToShareholder = false, restrictToAudit = false }) {
+  const [innerTab, setInnerTab] = useState(() => {
+    if (restrictToShareholder) return 'shareholder';
+    if (restrictToAudit) return 'log';
+    return 'bank';
+  });
   const activeSettingsTab = isAdmin ? innerTab : 'shareholder';
   const setActiveSettingsTab = setInnerTab;
   const canViewShareholders = canViewShareholderInfo(userRole);
@@ -810,7 +814,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* 1. Horizontal Settings Tabs Bar (Above Content Card) */}
-      {isAdmin && (
+      {isAdmin && !restrictToAudit && (
         <div className="horizontal-settings-tabs">
           {restrictToShareholder ? (
             <>
@@ -843,9 +847,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
               </button>
               <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'goLive' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('goLive')}>
                 上線檢查
-              </button>
-              <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'log' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('log')}>
-                操作審查日誌
               </button>
             </>
           )}

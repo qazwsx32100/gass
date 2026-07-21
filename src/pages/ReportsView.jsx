@@ -8,8 +8,13 @@ import { syncLocalToSupabase } from '../db/supabaseService';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
-export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole, restrictToShareholder = false }) {
-  const [reportType, setReportType] = useState(() => restrictToShareholder ? 'dividend' : 'pnl'); // pnl, balance, gas, investor, dividend
+export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole, restrictToShareholder = false, restrictToAudit = false }) {
+  const [reportType, setReportType] = useState(() => {
+    if (restrictToShareholder) return 'dividend';
+    if (restrictToAudit) return 'auditReady';
+    return 'pnl';
+  }); // pnl, balance, gas, investor, dividend
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [reserveRatio, setReserveRatio] = useState(0.1); // 10% reserve by default
   const [periodMode, setPeriodMode] = useState('month');
   const [singleDate, setSingleDate] = useState(`${year}-${month}-01`);
@@ -717,7 +722,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
-          {(allowExportReports || userRole === USER_ROLES.BOOKKEEPER || showShareholderReports) && (
+          {(allowExportReports || userRole === USER_ROLES.BOOKKEEPER || showShareholderReports) && !restrictToAudit && (
           <div className="report-tabs">
             {restrictToShareholder ? (
               <>
@@ -765,9 +770,6 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 </button>
                 <button className={`tab-btn ${reportType === 'payroll' ? 'active' : ''}`} onClick={() => setReportType('payroll')}>
                   薪資
-                </button>
-                <button className={`tab-btn ${reportType === 'auditReady' ? 'active' : ''}`} onClick={() => setReportType('auditReady')}>
-                  查帳檢核
                 </button>
               </>
             )}
@@ -2012,7 +2014,25 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           return list.map(item => {
                             const isRealIncome = getIncomes().some(x => x.id === item.id);
                             return (
-                              <tr key={item.id}>
+                              <tr 
+                                key={item.id}
+                                onClick={() => {
+                                  const tx = getIncomes().find(x => x.id === item.id) || getExpenses().find(x => x.id === item.id);
+                                  if (tx) {
+                                    setSelectedTransaction({
+                                      ...tx,
+                                      type: isRealIncome ? 'income' : 'expense'
+                                    });
+                                  } else {
+                                    setSelectedTransaction({
+                                      ...item,
+                                      type: isRealIncome ? 'income' : 'expense'
+                                    });
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                                title="點擊點入看交易明細"
+                              >
                                 <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
                                 <td>
                                   <span className={`badge ${isRealIncome ? 'badge-success' : 'badge-danger'}`} style={{ padding: '2px 6px', fontSize: '0.8rem' }}>
@@ -2022,7 +2042,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                                 <td>{item.accountCode} - {item.accountName || ''}</td>
                                 <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{formatCurrency(item.amount || item.calculatedAmount)}</td>
                                 <td style={{ fontSize: '0.85rem' }}>{item.remarks || item.desc || '-'}</td>
-                                <td style={{ textAlign: 'center' }}>
+                                <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                                   <QuickAuditAction 
                                     item={item} 
                                     isIncome={isRealIncome} 
@@ -2456,6 +2476,126 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
             <div className="modal-footer">
               <button type="button" className="btn btn-secondary" onClick={closeReceiptPreview}>
                 關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Transaction Detail Modal */}
+      {selectedTransaction && (
+        <div className="modal-overlay no-print" style={{ zIndex: 1250 }} onClick={() => setSelectedTransaction(null)}>
+          <div className="modal-content" style={{ maxWidth: '600px', width: '95%' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">
+                🔍 交易傳票詳細資料
+              </span>
+              <button type="button" className="modal-close" onClick={() => setSelectedTransaction(null)}>×</button>
+            </div>
+            
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易編號 (ID)</label>
+                  <div style={{ fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.id}</div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易類型</label>
+                  <div>
+                    <span className={`badge ${selectedTransaction.type === 'income' ? 'badge-success' : 'badge-danger'}`} style={{ padding: '4px 8px', fontSize: '0.85rem' }}>
+                      {selectedTransaction.type === 'income' ? '收入' : '支出'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>記帳日期</label>
+                  <div style={{ fontWeight: '600' }}>{selectedTransaction.date}</div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>會計科目</label>
+                  <div style={{ fontWeight: '600' }}>{selectedTransaction.accountCode} {selectedTransaction.accountName || ''}</div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>金額 (TWD)</label>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: selectedTransaction.type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    ${Number(selectedTransaction.amount || selectedTransaction.calculatedAmount || 0).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>收付款方式</label>
+                  <div style={{ fontWeight: '600' }}>
+                    {selectedTransaction.paymentMethod === 'cash' ? '現金(零用金)' : selectedTransaction.paymentMethod === 'bank_transfer' ? '銀行轉帳' : selectedTransaction.paymentMethod === 'receivable' ? '月結應收' : selectedTransaction.paymentMethod === 'payable' ? '月結應付' : '支票'}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>結清狀態</label>
+                  <div style={{ fontWeight: '600' }}>
+                    {selectedTransaction.paymentStatus === 'unpaid' ? (
+                      <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>🔴 未結清</span>
+                    ) : (
+                      <span style={{ color: 'var(--accent-green)' }}>✓ 已結清</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>審核狀態</label>
+                  <div style={{ fontWeight: '600' }}>
+                    {selectedTransaction.status === 'approved' ? (
+                      <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>✓ 已核准</span>
+                    ) : selectedTransaction.status === 'draft' ? (
+                      <span style={{ color: 'var(--text-tertiary)' }}>草稿</span>
+                    ) : selectedTransaction.status === 'rejected' ? (
+                      <span style={{ color: 'var(--accent-red)', fontWeight: 'bold' }}>已駁回</span>
+                    ) : (
+                      <span style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>⏳ 待審核</span>
+                    )}
+                  </div>
+                </div>
+                {selectedTransaction.invoiceNo && (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>發票/收據號碼</label>
+                    <div style={{ fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{selectedTransaction.invoiceNo}</div>
+                  </div>
+                )}
+                {selectedTransaction.projectName && (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>專案名稱</label>
+                    <div style={{ fontWeight: '600' }}>{selectedTransaction.projectName}</div>
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>交易備註</label>
+                <div style={{ whiteSpace: 'pre-wrap', backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px', fontSize: '0.9rem', border: '1px solid var(--border-color)' }}>
+                  {selectedTransaction.remarks || '（無備註說明）'}
+                </div>
+              </div>
+
+              {selectedTransaction.creatorName && (
+                <div style={{ display: 'flex', gap: '20px', marginTop: '16px', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                  <div>登錄人員：{selectedTransaction.creatorName}</div>
+                  {selectedTransaction.createdAt && <div>登錄時間：{new Date(selectedTransaction.createdAt).toLocaleString()}</div>}
+                </div>
+              )}
+
+              {selectedTransaction.receiptAttachment && (
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '16px', textAlign: 'center' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px', textAlign: 'left' }}>憑證附件</label>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    onClick={() => openReceiptPreview(selectedTransaction.receiptAttachment)}
+                  >
+                    📷 檢視大圖憑證照片
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedTransaction(null)}>
+                關閉視窗
               </button>
             </div>
           </div>

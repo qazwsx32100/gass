@@ -9,6 +9,7 @@ import SettingsView from './pages/SettingsView';
 import FirebaseView from './pages/FirebaseView';
 import CylindersView from './pages/CylindersView';
 import ShareholderZoneView from './pages/ShareholderZoneView';
+import AuditZoneView from './pages/AuditZoneView';
 import { getAllowedTabsForUser } from './utils/permissions';
 
 function App() {
@@ -545,6 +546,15 @@ function App() {
               </button>
             </>
           )}
+          {allowedTabs.includes('auditZone') && (
+            <>
+              <span className="sidebar-nav-heading">🔍 系統稽核</span>
+              <button className={`sidebar-link ${activeTab === 'auditZone' ? 'active' : ''}`} onClick={() => setActiveTab('auditZone')}>
+                <span className="sidebar-link-icon">🔍</span>
+                查核專區
+              </button>
+            </>
+          )}
           
           {allowedTabs.includes('settings') && (
             <>
@@ -749,6 +759,20 @@ function App() {
 
           {activeTab === 'shareholderZone' && (
             <ShareholderZoneView
+              companyId={currentCompanyId}
+              year={currentYear}
+              month={currentMonth}
+              triggerRefresh={dbVersion}
+              onDataChange={handleDataChange}
+              operatorName={currentUser?.name}
+              currentUser={currentUser}
+              userRole={userRole}
+              showToast={showToast}
+            />
+          )}
+
+          {activeTab === 'auditZone' && (
+            <AuditZoneView
               companyId={currentCompanyId}
               year={currentYear}
               month={currentMonth}
