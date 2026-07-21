@@ -815,6 +815,9 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'shareholder' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('shareholder')}>
             股東資料
           </button>
+          <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'security' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('security')}>
+            安全與裝置
+          </button>
           <button className={`horizontal-settings-tab-btn ${activeSettingsTab === 'bank' ? 'active' : ''}`} onClick={() => setActiveSettingsTab('bank')}>
             銀行帳戶
           </button>
