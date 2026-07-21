@@ -878,7 +878,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                         {canEditShareholders && <th>身分證字號</th>}
                         {canEditShareholders && <th>聯絡手機</th>}
                         {canEditShareholders && <th>權限角色</th>}
-                        {canEditShareholders && <th>可看公司</th>}
                         {canEditShareholders && <th>可用功能</th>}
                         {canEditShareholders && <th style={{ textAlign: 'right' }}>操作</th>}
                       </tr>
@@ -936,11 +935,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                               <span className={`badge ${sh.role === USER_ROLES.ADMIN ? 'approved' : sh.role === USER_ROLES.BOOKKEEPER ? 'pending' : sh.role === USER_ROLES.BUSINESS_REVIEWER ? 'approved' : 'draft'}`}>
                                 {getRoleLabel(sh.role)}
                               </span>
-                            </td>
-                          )}
-                          {canEditShareholders && (
-                            <td style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: '600' }}>
-                              {(sh.allowedCompanies || []).join(', ')}
                             </td>
                           )}
                           {canEditShareholders && (
@@ -1618,22 +1612,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                       💡 若填寫「手動持股佔比」，將直接以此比例作為分紅基礎；若留空，則自動依據出資額占比進行計算。
                     </span>
 
-                    {/* Company authorization checks */}
-                    <div className="form-group" style={{ marginTop: '8px' }}>
-                      <label className="form-label">可使用公司</label>
-                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', padding: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                        {companies.map(c => (
-                          <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={formData.allowedCompanies.includes(c.id)} 
-                              onChange={() => handleCompanyToggle(c.id)} 
-                            />
-                            {c.name}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+
 
                     {/* Tab authorization checks */}
                     <div className="form-group">
