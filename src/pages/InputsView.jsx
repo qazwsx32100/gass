@@ -1769,7 +1769,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
 
   const handleCreateCorrection = (item) => {
-    if (!isAdmin || !['income', 'expense'].includes(activeSubTab)) return;
+    if (!['income', 'expense'].includes(activeSubTab)) return;
     if (item.status !== 'approved') {
       window.alert('只有已核准的收入或支出可以建立更正沖銷。');
       return;
@@ -2783,17 +2783,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                                   </button>
                                 </>
                               )}
-                              {(activeSubTab === 'income' || activeSubTab === 'expense') && allowVoid && item.status === 'approved' && (
+                              {(activeSubTab === 'income' || activeSubTab === 'expense') && item.status !== 'void' && (
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleCreateCorrection(item)}>
                                   更正
                                 </button>
                               )}
-                              {(item.status !== 'approved' || isAdmin) && item.status !== 'void' && (
+                              {!['income', 'expense'].includes(activeSubTab) && item.status !== 'void' && (
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(item)}>
                                   編輯
                                 </button>
                               )}
-                              {(item.status !== 'approved' || isAdmin) && item.status !== 'void' && (
+                              {item.status !== 'void' && (
                                 <button className="btn btn-danger btn-sm" onClick={() => handleDelete(item.id)}>
                                   刪除
                                 </button>
