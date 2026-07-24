@@ -1,3 +1,5 @@
+import { captureServerException } from './_monitoring.js';
+import { fetchWithTimeout } from './_fetch.js';
 import {
   fetchAppState,
   getBearerToken,
@@ -5,10 +7,14 @@ import {
   sendJson,
   verifyToken
 } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
 
 const EMAIL_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const EMAIL_RATE_LIMIT_MAX = 20;
-const emailAttempts = new Map();
+const emailRateLimiter = createBoundedRateLimiter({
+  windowMs: EMAIL_RATE_LIMIT_WINDOW_MS,
+  maxEntries: 5000
+});
 
 const isApprovedDevice = (security, deviceId) => (
   Boolean(deviceId) &&
@@ -31,15 +37,7 @@ const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientI
 
 const isRateLimited = (req, session) => {
   const key = rateLimitKey(req, session);
-  const now = Date.now();
-  const current = emailAttempts.get(key) || { count: 0, resetAt: now + EMAIL_RATE_LIMIT_WINDOW_MS };
-  if (current.resetAt <= now) {
-    emailAttempts.set(key, { count: 1, resetAt: now + EMAIL_RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  current.count += 1;
-  emailAttempts.set(key, current);
-  return current.count > EMAIL_RATE_LIMIT_MAX;
+  return emailRateLimiter.check([{ key, max: EMAIL_RATE_LIMIT_MAX }]);
 };
 
 export default async function handler(req, res) {
@@ -60,6 +58,7 @@ export default async function handler(req, res) {
     }
 
     if (isRateLimited(req, session)) {
+      res.setHeader('Retry-After', '600');
       return sendJson(res, 429, { success: false, error: 'Too many email requests. Please try again later.' });
     }
 
@@ -94,14 +93,14 @@ export default async function handler(req, res) {
     `;
 
     const from = process.env.RESEND_FROM_EMAIL || 'BusinessPilot ERP <onboarding@resend.dev>';
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ from, to, subject, text, html })
-    });
+    }, 10000);
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -114,6 +113,9 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { success: true, id: data?.id || '' });
   } catch (error) {
     console.error('send-email-verification failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/send-email-verification', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { success: false, error: 'Email sending failed.' });
   }
 }

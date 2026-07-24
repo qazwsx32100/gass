@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import {
   createCloudBackup,
   fetchAppState,
@@ -9,6 +10,7 @@ import {
   sendJson,
   verifyToken
 } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
 
 const isApprovedDevice = (security, deviceId) => (
   Boolean(deviceId) &&
@@ -30,21 +32,16 @@ const parseBody = (req) => (
 
 const BACKUP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const BACKUP_RATE_LIMIT_MAX = 8;
-const backupAttempts = new Map();
+const backupRateLimiter = createBoundedRateLimiter({
+  windowMs: BACKUP_RATE_LIMIT_WINDOW_MS,
+  maxEntries: 5000
+});
 
 const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientIp(req) || 'unknown'}`;
 
 const isBackupRateLimited = (req, session) => {
   const key = rateLimitKey(req, session);
-  const now = Date.now();
-  const current = backupAttempts.get(key) || { count: 0, resetAt: now + BACKUP_RATE_LIMIT_WINDOW_MS };
-  if (current.resetAt <= now) {
-    backupAttempts.set(key, { count: 1, resetAt: now + BACKUP_RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  current.count += 1;
-  backupAttempts.set(key, current);
-  return current.count > BACKUP_RATE_LIMIT_MAX;
+  return backupRateLimiter.check([{ key, max: BACKUP_RATE_LIMIT_MAX }]);
 };
 
 export default async function handler(req, res) {
@@ -70,6 +67,7 @@ export default async function handler(req, res) {
     }
 
     if (isBackupRateLimited(req, session)) {
+      res.setHeader('Retry-After', '600');
       return sendJson(res, 429, { ok: false, error: 'Too many backup requests. Please try again later.' });
     }
 
@@ -111,6 +109,9 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { ok: false, error: 'Unsupported backup action.' });
   } catch (error) {
     console.error('backups API failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/backups', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { ok: false, error: 'Backup API failed.' });
   }
 }

@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { fetchWithTimeout } from './_fetch.js';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink';
@@ -46,14 +47,14 @@ const createServiceAccountJwt = () => {
 };
 
 const getServiceAccountAccessToken = async () => {
-  const response = await fetch(GOOGLE_TOKEN_URL, {
+  const response = await fetchWithTimeout(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion: createServiceAccountJwt()
     })
-  });
+  }, 10000);
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.access_token) {
@@ -63,7 +64,7 @@ const getServiceAccountAccessToken = async () => {
 };
 
 const getOAuthAccessToken = async () => {
-  const response = await fetch(GOOGLE_TOKEN_URL, {
+  const response = await fetchWithTimeout(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -72,7 +73,7 @@ const getOAuthAccessToken = async () => {
       refresh_token: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
       grant_type: 'refresh_token'
     })
-  });
+  }, 10000);
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.access_token) {
@@ -123,7 +124,7 @@ export const uploadPrivateFileToGoogleDrive = async ({ filename, mimeType, buffe
   const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
   const body = Buffer.concat([head, Buffer.from(buffer), tail]);
 
-  const response = await fetch(DRIVE_UPLOAD_URL, {
+  const response = await fetchWithTimeout(DRIVE_UPLOAD_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -131,7 +132,7 @@ export const uploadPrivateFileToGoogleDrive = async ({ filename, mimeType, buffe
       'Content-Length': String(body.length)
     },
     body
-  });
+  }, 25000);
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.id) {
     throw new Error(data.error?.message || 'Google Drive attachment upload failed.');
@@ -151,18 +152,20 @@ export const downloadPrivateFileFromGoogleDrive = async (fileId) => {
     throw new Error('Google Drive private storage is not configured.');
   }
   const accessToken = await getAccessToken();
-  const metadataResponse = await fetch(
+  const metadataResponse = await fetchWithTimeout(
     `${DRIVE_FILES_URL}/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size,trashed`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+    15000
   );
   const metadata = await metadataResponse.json().catch(() => ({}));
   if (!metadataResponse.ok || metadata.trashed) {
     throw new Error(metadata.error?.message || 'Attachment was not found.');
   }
 
-  const contentResponse = await fetch(
+  const contentResponse = await fetchWithTimeout(
     `${DRIVE_FILES_URL}/${encodeURIComponent(fileId)}?alt=media`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+    25000
   );
   if (!contentResponse.ok) {
     const data = await contentResponse.json().catch(() => ({}));
@@ -201,14 +204,14 @@ export const uploadBackupToGoogleDrive = async ({ filename, jsonText }) => {
     ''
   ].join('\r\n');
 
-  const response = await fetch(DRIVE_UPLOAD_URL, {
+  const response = await fetchWithTimeout(DRIVE_UPLOAD_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': `multipart/related; boundary=${boundary}`
     },
     body
-  });
+  }, 25000);
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

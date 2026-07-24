@@ -1,3 +1,5 @@
+import { waitUntil } from '@vercel/functions';
+import { captureServerException } from './_monitoring.js';
 import {
   fetchAppState,
   getClientIp,
@@ -7,32 +9,39 @@ import {
   signToken,
   verifyPassword
 } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
 
 const ADMIN_EMAIL = 'qazwsx32100@gmail.com';
 const getAdminDefaultPassword = () => process.env.ADMIN_DEFAULT_PASSWORD || '';
 const LOGIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
-const LOGIN_RATE_LIMIT_MAX = 12;
-const loginAttempts = new Map();
+const LOGIN_RATE_LIMIT_MAX_PER_IDENTITY = 12;
+const LOGIN_RATE_LIMIT_MAX_PER_IP = 60;
+const MAX_LOGIN_BODY_BYTES = 32 * 1024;
+const loginRateLimiter = createBoundedRateLimiter({
+  windowMs: LOGIN_RATE_LIMIT_WINDOW_MS,
+  maxEntries: 5000
+});
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
-const rateLimitKey = (req, email) => `${getClientIp(req)}:${email || 'unknown'}`;
+const rateLimitKeys = (req, email) => {
+  const ip = getClientIp(req) || 'unknown';
+  return {
+    identity: `identity:${ip}:${email || 'unknown'}`,
+    ip: `ip:${ip}`
+  };
+};
 
 const isLoginRateLimited = (req, email) => {
-  const key = rateLimitKey(req, email);
-  const now = Date.now();
-  const current = loginAttempts.get(key) || { count: 0, resetAt: now + LOGIN_RATE_LIMIT_WINDOW_MS };
-  if (current.resetAt <= now) {
-    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  current.count += 1;
-  loginAttempts.set(key, current);
-  return current.count > LOGIN_RATE_LIMIT_MAX;
+  const keys = rateLimitKeys(req, email);
+  return loginRateLimiter.check([
+    { key: keys.identity, max: LOGIN_RATE_LIMIT_MAX_PER_IDENTITY },
+    { key: keys.ip, max: LOGIN_RATE_LIMIT_MAX_PER_IP }
+  ]);
 };
 
 const clearLoginRateLimit = (req, email) => {
-  loginAttempts.delete(rateLimitKey(req, email));
+  loginRateLimiter.clear([rateLimitKeys(req, email).identity]);
 };
 
 const upsertDevice = (devices = [], device = {}, status = 'pending') => {
@@ -85,6 +94,21 @@ const appendLog = (state, operator, action, details) => ({
   logs: [createLog(operator, action, details), ...(state.logs || [])].slice(0, 1000)
 });
 
+const persistSuccessfulLogin = ({ state, updatedBy, requestIp, previousState }) => {
+  const task = saveAppState({ state, updatedBy, requestIp, previousState }).catch(async (error) => {
+    console.error('login audit persistence failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/auth-login', operation: 'login-audit', status: 500 }
+    });
+  });
+
+  try {
+    waitUntil(task);
+  } catch {
+    void task;
+  }
+};
+
 const getAdminDisplayName = (state) => {
   const shareholders = state.shareholders || [];
   const owner = shareholders.find(s => s.id === 'SH001' || normalizeEmail(s.email) === ADMIN_EMAIL);
@@ -128,11 +152,22 @@ export default async function handler(req, res) {
     const body = req.body && typeof req.body === 'object'
       ? req.body
       : JSON.parse(req.body || '{}');
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > MAX_LOGIN_BODY_BYTES) {
+      return sendJson(res, 413, { success: false, error: '登入資料過大。' });
+    }
     const email = normalizeEmail(body.email);
     const password = String(body.password || '').trim();
     const device = body.device || {};
 
+    if (!email || email.length > 254 || !password || password.length > 256) {
+      return sendJson(res, 400, { success: false, error: '登入資料格式不正確。' });
+    }
+    if (!String(device.id || '').trim() || String(device.id).length > 200) {
+      return sendJson(res, 400, { success: false, error: '登入裝置識別資料不正確。' });
+    }
+
     if (isLoginRateLimited(req, email)) {
+      res.setHeader('Retry-After', '300');
       return sendJson(res, 429, { success: false, error: '登入嘗試過多，請稍後再試。' });
     }
 
@@ -185,11 +220,29 @@ export default async function handler(req, res) {
       }
 
       if (!isDeviceApproved(security, device)) {
-        security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
+        security.pendingDevices = upsertDevice(security.pendingDevices, device, 'pending');
+        state = appendLog(
+          { ...state, adminSecurity: security },
+          displayName,
+          'DEVICE_PENDING',
+          '主管理員新裝置登入待核准'
+        );
+        await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
+        return sendJson(res, 403, {
+          success: false,
+          code: 'DEVICE_APPROVAL_REQUIRED',
+          error: '這是新裝置，請先由已核准裝置中的主管理員核准。'
+        });
       }
 
+      security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
       state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '主管理員登入成功');
-      await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
+      persistSuccessfulLogin({
+        state,
+        updatedBy: displayName,
+        requestIp: getClientIp(req),
+        previousState
+      });
       clearLoginRateLimit(req, email);
 
       const user = {
@@ -235,12 +288,33 @@ export default async function handler(req, res) {
     if (!isDeviceApproved(user, device)) {
       shareholders[idx] = {
         ...shareholders[idx],
-        approvedDevices: upsertDevice(shareholders[idx].approvedDevices || [], device, 'approved')
+        pendingDevices: upsertDevice(shareholders[idx].pendingDevices || [], device, 'pending')
       };
+      state = appendLog(
+        { ...state, shareholders },
+        user.name || email,
+        'DEVICE_PENDING',
+        '新裝置登入待核准'
+      );
+      await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
+      return sendJson(res, 403, {
+        success: false,
+        code: 'DEVICE_APPROVAL_REQUIRED',
+        error: '這是新裝置，請聯絡主管理員核准後再登入。'
+      });
     }
 
+    shareholders[idx] = {
+      ...shareholders[idx],
+      approvedDevices: upsertDevice(shareholders[idx].approvedDevices || [], device, 'approved')
+    };
     state = appendLog({ ...state, shareholders }, user.name || email, 'LOGIN_SUCCESS', '登入成功');
-    await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
+    persistSuccessfulLogin({
+      state,
+      updatedBy: user.name || email,
+      requestIp: getClientIp(req),
+      previousState
+    });
     clearLoginRateLimit(req, email);
 
     const publicState = sanitizeStateForClient(state, user);
@@ -263,6 +337,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('auth-login failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/auth-login', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { success: false, error: '登入服務暫時無法使用，請稍後再試。' });
   }
 }

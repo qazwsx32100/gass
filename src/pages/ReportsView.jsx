@@ -52,7 +52,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     try {
       await syncLocalToSupabase('系統查帳快速核對更新');
       showToast('☁️ 變更已成功同步至雲端。', 'success');
-    } catch (err) {
+    } catch {
       showToast('❌ 同步失敗，已先儲存於本機。', 'error');
     }
   };
@@ -82,6 +82,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const activePeriodLabel = getPeriodLabel(activePeriodType, activePeriodVal);
 
   useEffect(() => {
+    void triggerRefresh;
     if (activePeriodType === 'month') {
       const locks = getPeriodLocks();
       const match = locks.find(item => item.companyId === companyId && item.yearMonth === activePeriodVal);
@@ -95,24 +96,30 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     }
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
-  const companies = useMemo(() => getCompanies(), [triggerRefresh]);
+  const companies = useMemo(() => {
+    void triggerRefresh;
+    return getCompanies();
+  }, [triggerRefresh]);
   const companyName = useMemo(() => {
     return companies.find(c => c.id === companyId)?.name || '未名公司';
   }, [companyId, companies]);
 
   // 1. Compute P&L Data
   const pnl = useMemo(() => {
+    void triggerRefresh;
     return getIncomeStatement(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   // 2. Compute Balance Sheet Data
   const balanceSheet = useMemo(() => {
+    void triggerRefresh;
     const endDate = getPeriodEndDate(activePeriodType, activePeriodVal);
     return getBalanceSheet(companyId, endDate);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   // 3. Compute Dividend Data
   const dividends = useMemo(() => {
+    void triggerRefresh;
     return getDividendsForPeriod(companyId, activePeriodType, activePeriodVal, reserveRatio);
   }, [companyId, activePeriodType, activePeriodVal, reserveRatio, triggerRefresh]);
 
@@ -125,7 +132,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     if (!isAmountFocused && dividends) {
       setCustomAmountText(String(Math.round(dividends.reserveAmount || 0)));
     }
-  }, [dividends?.reserveAmount, isAmountFocused]);
+  }, [dividends, isAmountFocused]);
 
   useEffect(() => {
     if (!isPercentFocused) {
@@ -135,6 +142,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   // 4. Drill Down Transactions Query
   const drillDownTransactions = useMemo(() => {
+    void triggerRefresh;
     if (!drillDownCode) return [];
     const incs = getIncomes().filter(i => i.companyId === companyId && i.accountCode === drillDownCode && i.status === 'approved');
     const exps = getExpenses().filter(e => e.companyId === companyId && e.accountCode === drillDownCode && e.status === 'approved');
@@ -163,6 +171,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   // 5. Compute Shareholder Equity Changes
   const shareholderChanges = useMemo(() => {
+    void triggerRefresh;
     const ledger = getShareholderLedger().filter(s => s.companyId === companyId);
     const list = getShareholders();
     
@@ -241,57 +250,84 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh, pnl.netProfit, dividends]);
 
   const gasProfit = useMemo(() => {
+    void triggerRefresh;
     return getGasGrossProfitForPeriod(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const companyProfit = useMemo(() => {
+    void triggerRefresh;
     return getCompanyProfitReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const partsProfitReport = useMemo(() => {
+    void triggerRefresh;
     return getPartsGrossProfitReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const gasInventory = useMemo(() => {
+    void triggerRefresh;
     return getGasInventoryValuationAtDate(companyId, getPeriodEndDate(activePeriodType, activePeriodVal));
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const journalEntries = useMemo(() => {
+    void triggerRefresh;
     return getJournalEntries(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const trialBalance = useMemo(() => {
+    void triggerRefresh;
     return getTrialBalance(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const generalLedger = useMemo(() => {
+    void triggerRefresh;
     return getGeneralLedger(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const cashFlow = useMemo(() => {
+    void triggerRefresh;
     return getCashFlowStatement(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const vatReport = useMemo(() => {
+    void triggerRefresh;
     return getVatReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const payrollReport = useMemo(() => {
+    void triggerRefresh;
     return getPayrollReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const auditReadiness = useMemo(() => {
+    void triggerRefresh;
     return getAuditReadinessReport(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
   const arapAsOfDate = useMemo(() => getPeriodEndDate(activePeriodType, activePeriodVal), [activePeriodType, activePeriodVal]);
-  const agingReport = useMemo(() => getAgingReport(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
-  const customerReceivables = useMemo(() => getCustomerReceivableSummary(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
-  const supplierPayables = useMemo(() => getSupplierPayableSummary(companyId, arapAsOfDate), [companyId, arapAsOfDate, triggerRefresh]);
-  const customers = useMemo(() => getCustomers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const suppliers = useMemo(() => getSuppliers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const agingReport = useMemo(() => {
+    void triggerRefresh;
+    return getAgingReport(companyId, arapAsOfDate);
+  }, [companyId, arapAsOfDate, triggerRefresh]);
+  const customerReceivables = useMemo(() => {
+    void triggerRefresh;
+    return getCustomerReceivableSummary(companyId, arapAsOfDate);
+  }, [companyId, arapAsOfDate, triggerRefresh]);
+  const supplierPayables = useMemo(() => {
+    void triggerRefresh;
+    return getSupplierPayableSummary(companyId, arapAsOfDate);
+  }, [companyId, arapAsOfDate, triggerRefresh]);
+  const customers = useMemo(() => {
+    void triggerRefresh;
+    return getCustomers().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const suppliers = useMemo(() => {
+    void triggerRefresh;
+    return getSuppliers().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
 
   const dailySales = useMemo(() => {
+    void triggerRefresh;
     // Get all Incomes and Expenses in active period
     const allIncomes = getIncomes().filter(item =>
       item.companyId === companyId &&
@@ -699,7 +735,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const csvString = '\ufeff' + csvRows.map(row => 
       row.map(cell => {
         let valStr = cell === null || cell === undefined ? '' : String(cell);
-        if (/^[=+\-@\t\r]/.test(valStr)) {
+        if (/^[-=+@\t\r]/.test(valStr)) {
           valStr = "'" + valStr;
         }
         return `"${valStr.replace(/"/g, '""')}"`;

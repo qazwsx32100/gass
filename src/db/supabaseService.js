@@ -1,4 +1,5 @@
 import { apiFetch } from './apiClient';
+import { sanitizeInactiveCompanies } from '../utils/companyState';
 
 const LOCAL_UPDATED_AT_KEY = 'bp_supabase_updated_at';
 const CLOUD_UPDATED_AT_KEY = 'bp_cloud_updated_at';
@@ -52,11 +53,34 @@ let pendingSyncPromiseResolvers = [];
 export const getSupabaseConfig = () => ({ viaApi: true });
 export const isSupabaseConnected = () => true;
 
-export const getCloudSessionToken = () => localStorage.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
+const getSessionTokenStorage = () => (
+  typeof sessionStorage === 'undefined' ? null : sessionStorage
+);
+
+export const getCloudSessionToken = () => {
+  const sessionStore = getSessionTokenStorage();
+  const activeToken = sessionStore?.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
+  if (activeToken) return activeToken;
+
+  const legacyToken = localStorage.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
+  if (legacyToken && sessionStore) {
+    sessionStore.setItem(CLOUD_SESSION_TOKEN_KEY, legacyToken);
+    localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
+  }
+  return legacyToken;
+};
 export const setCloudSessionToken = (token) => {
-  if (token) localStorage.setItem(CLOUD_SESSION_TOKEN_KEY, token);
+  if (!token) return;
+  const sessionStore = getSessionTokenStorage();
+  if (sessionStore) {
+    sessionStore.setItem(CLOUD_SESSION_TOKEN_KEY, token);
+    localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
+    return;
+  }
+  localStorage.setItem(CLOUD_SESSION_TOKEN_KEY, token);
 };
 export const clearCloudSessionToken = () => {
+  getSessionTokenStorage()?.removeItem(CLOUD_SESSION_TOKEN_KEY);
   localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
 };
 
@@ -111,6 +135,9 @@ const normalizeCloudError = (status, error = '', fallback = '雲端同步失敗�
   if (status === 413 || /Cloud state is too large/i.test(message)) {
     return '雲端資料量過大，憑證附件必須改存私密檔案空間。';
   }
+  if (status === 504 || status === 502 || status === 503 || /timed out|network|fetch|abort/i.test(message)) {
+    return '網路或伺服器連線較慢，資料已安全保存在您的本機，系統會在背景自動連線同步。';
+  }
   if (/Cloud sync failed/i.test(message)) {
     return '雲端資料庫寫入失敗，請稍後再試或檢查雲端設定。';
   }
@@ -136,14 +163,15 @@ const readLocalState = () => {
   Object.entries(DATA_KEYS).forEach(([stateKey, storageKey]) => {
     state[stateKey] = readLocalJson(storageKey);
   });
-  return state;
+  return sanitizeInactiveCompanies(state);
 };
 
 const writeLocalState = (state) => {
   if (!state) return;
+  const sanitizedState = sanitizeInactiveCompanies(state);
   Object.entries(DATA_KEYS).forEach(([stateKey, storageKey]) => {
-    if (Array.isArray(state[stateKey]) || (state[stateKey] && typeof state[stateKey] === 'object')) {
-      localStorage.setItem(storageKey, JSON.stringify(state[stateKey]));
+    if (Array.isArray(sanitizedState[stateKey]) || (sanitizedState[stateKey] && typeof sanitizedState[stateKey] === 'object')) {
+      localStorage.setItem(storageKey, JSON.stringify(sanitizedState[stateKey]));
     }
   });
 };
@@ -393,7 +421,7 @@ export const initSupabaseSync = async (onSync) => {
     }
   }, 30000);
 
-  return true;
+  return data.session || true;
 };
 
 export const loginViaCloud = async ({ email, password, device }) => {

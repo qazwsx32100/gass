@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../src/db/apiClient.js', import.meta.url), 'utf8');
 const moduleSource = source
+  .replace(/^import[^\n]*\n/gm, '')
   .replace(/export const /g, 'const ')
   .replace(/\nconst getApiBaseUrl[\s\S]*$/, '\nreturn { resolveApiBaseUrl };');
 

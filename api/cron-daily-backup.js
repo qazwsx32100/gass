@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import {
   createCloudBackup,
   fetchAppState,
@@ -58,6 +59,9 @@ export default async function handler(req, res) {
         fileId: drive.fileId || null
       });
     } catch (driveError) {
+      await captureServerException(driveError, {
+        tags: { endpoint: '/api/cron-daily-backup', operation: 'google-drive-upload' }
+      });
       await markBackupDriveResult({
         backupId: backup.backup_id,
         status: 'failed',
@@ -76,6 +80,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('daily backup failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/cron-daily-backup', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { ok: false, error: 'Backup failed.' });
   }
 }

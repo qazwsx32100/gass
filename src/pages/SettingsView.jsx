@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   getCompanies, saveCompanies,
+  cleanupInactiveCompanies,
   getShareholders, saveShareholders,
   getAdminDisplayName,
   getBanks, saveBanks,
@@ -20,6 +21,7 @@ import {
 } from '../db/storage';
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
+import { getNextCompanyId } from '../utils/companyState';
 import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
@@ -35,20 +37,40 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   const canEditShareholders = canEditShareholderSettings(userRole);
   
   // Data Lists
-  const shareholders = useMemo(() => getShareholders(), [triggerRefresh]);
-  const banks = useMemo(() => getBanks(), [triggerRefresh]);
-  const accounts = useMemo(() => getChartOfAccounts(), [triggerRefresh]);
-  const companies = useMemo(() => getCompanies(), [triggerRefresh]);
-  const adminSecurity = useMemo(() => getAdminSecurity(), [triggerRefresh]);
-  const periodLocks = useMemo(() => getPeriodLocks(), [triggerRefresh]);
-  const auditLogs = useMemo(() => getLogs(), [triggerRefresh]);
+  const shareholders = useMemo(() => {
+    void triggerRefresh;
+    return getShareholders();
+  }, [triggerRefresh]);
+  const banks = useMemo(() => {
+    void triggerRefresh;
+    return getBanks();
+  }, [triggerRefresh]);
+  const accounts = useMemo(() => {
+    void triggerRefresh;
+    return getChartOfAccounts();
+  }, [triggerRefresh]);
+  const companies = useMemo(() => {
+    void triggerRefresh;
+    return getCompanies();
+  }, [triggerRefresh]);
+  const adminSecurity = useMemo(() => {
+    void triggerRefresh;
+    return getAdminSecurity();
+  }, [triggerRefresh]);
+  const periodLocks = useMemo(() => {
+    void triggerRefresh;
+    return getPeriodLocks();
+  }, [triggerRefresh]);
+  const auditLogs = useMemo(() => {
+    void triggerRefresh;
+    return getLogs();
+  }, [triggerRefresh]);
   
   // Budget & System Config States
   const [systemConfig, setSystemConfig] = useState(() => getSystemConfig());
   const [budgetCompanyId, setBudgetCompanyId] = useState(companies[0]?.id || 'COMP001');
   const [budgetYear, setBudgetYear] = useState(2026);
   const [budgetMonth, setBudgetMonth] = useState('06');
-  const [budgets, setBudgets] = useState(() => getBudgets());
   const [cloudBackups, setCloudBackups] = useState([]);
   const [backupBusy, setBackupBusy] = useState(false);
   const [budgetDrafts, setBudgetDrafts] = useState(() => {
@@ -63,11 +85,22 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     return accounts.filter(a => a.type === 'expense' || a.type === 'cogs').sort((a, b) => a.code.localeCompare(b.code));
   }, [accounts]);
 
+  const refreshCloudBackups = useCallback(async () => {
+    if (!isAdmin) return;
+    const result = await listCloudBackups();
+    if (!result.ok) {
+      showToast(result.error || '讀取雲端備份失敗。', 'error');
+      return;
+    }
+    setCloudBackups(result.backups || []);
+  }, [isAdmin, showToast]);
+
   useEffect(() => {
+    void triggerRefresh;
     if (activeSettingsTab === 'backup') {
       refreshCloudBackups();
     }
-  }, [activeSettingsTab, triggerRefresh]);
+  }, [activeSettingsTab, triggerRefresh, refreshCloudBackups]);
 
   const handleBudgetDraftChange = (code, val) => {
     const budgetKey = `${budgetCompanyId}_${budgetYear}_${budgetMonth}_${code}`;
@@ -93,7 +126,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     });
 
     saveBudgets(newBudgets);
-    setBudgets(newBudgets);
     showToast('預算設定已儲存。', 'success');
     onDataChange();
   };
@@ -109,6 +141,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     ...shareholders
   ], [adminSecurity, shareholders]);
   const shareholderSummary = useMemo(() => {
+    void triggerRefresh;
     const companyId = companies[0]?.id;
     if (!companyId) return {};
     const summary = getShareholderSharesAtDate(companyId, '2099-12-31');
@@ -164,6 +197,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     remarks: ''
   });
   const closeReadiness = useMemo(() => {
+    void triggerRefresh;
     const companyId = periodLockForm.companyId || companies[0]?.id || '';
     const yearMonth = periodLockForm.yearMonth || new Date().toISOString().slice(0, 7);
     if (!companyId || !yearMonth) {
@@ -292,16 +326,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       });
     }
     setIsModalOpen(true);
-  };
-
-  // Toggle company checkbox
-  const handleCompanyToggle = (cId) => {
-    setFormData(prev => {
-      const allowed = prev.allowedCompanies.includes(cId)
-        ? prev.allowedCompanies.filter(id => id !== cId)
-        : [...prev.allowedCompanies, cId];
-      return { ...prev, allowedCompanies: allowed };
-    });
   };
 
   // Toggle tab checkbox
@@ -529,7 +553,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         const targetOldCode = isCogs ? ('4104' + suffix) : ('5102' + suffix);
 
         const newIsCogs = newC.startsWith('5102') && newC !== '5102';
-        const newIsRev = newC.startsWith('4104') && newC !== '4104';
         const newSuffix = newIsCogs ? newC.replace('5102', '') : newC.replace('4104', '');
         const targetNewCode = isCogs ? ('4104' + newSuffix) : ('5102' + newSuffix);
 
@@ -641,7 +664,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           success = true;
         }
       } else {
-        const nextId = `COMP${String(db.length + 1).padStart(3, '0')}`;
+        const nextId = getNextCompanyId(db, getAuditArchive());
         db.push({ id: nextId, name: formData.compName, desc: formData.compDesc });
         saveCompanies(db);
         success = true;
@@ -719,6 +742,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       const item = getCompanies().find(c => c.id === id);
       if (item) archiveDeletion({ collection: 'companies', record: item, actor: '系統管理員', reason });
       saveCompanies(getCompanies().filter(c => c.id !== id));
+      cleanupInactiveCompanies();
     }
     const cloudSaved = await onDataChange();
     showToast(
@@ -771,16 +795,6 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     };
     reader.readAsText(file);
   };
-
-  async function refreshCloudBackups() {
-    if (!isAdmin) return;
-    const result = await listCloudBackups();
-    if (!result.ok) {
-      showToast(result.error || '讀取雲端備份失敗。', 'error');
-      return;
-    }
-    setCloudBackups(result.backups || []);
-  }
 
   const handleManualCloudBackup = async () => {
     setBackupBusy(true);

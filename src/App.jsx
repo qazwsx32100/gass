@@ -1,16 +1,29 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
-import { initializeDB, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
-import { clearCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
+import { ArrowLeft, LogOut, Menu, X } from 'lucide-react';
+import { initializeDB, cleanupInactiveCompanies, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
+import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
 import { getAllowedTabsForUser } from './utils/permissions';
+import { setMonitoringContext, setMonitoringUser } from './monitoring';
 
-const DashboardView = lazy(() => import('./pages/DashboardView'));
-const InputsView = lazy(() => import('./pages/InputsView'));
-const ReportsView = lazy(() => import('./pages/ReportsView'));
-const SettingsView = lazy(() => import('./pages/SettingsView'));
-const FirebaseView = lazy(() => import('./pages/FirebaseView'));
-const CylindersView = lazy(() => import('./pages/CylindersView'));
-const ShareholderZoneView = lazy(() => import('./pages/ShareholderZoneView'));
-const AuditZoneView = lazy(() => import('./pages/AuditZoneView'));
+const pageLoaders = {
+  dashboard: () => import('./pages/DashboardView'),
+  inputs: () => import('./pages/InputsView'),
+  reports: () => import('./pages/ReportsView'),
+  settings: () => import('./pages/SettingsView'),
+  firebase: () => import('./pages/FirebaseView'),
+  cylinders: () => import('./pages/CylindersView'),
+  shareholderZone: () => import('./pages/ShareholderZoneView'),
+  auditZone: () => import('./pages/AuditZoneView')
+};
+
+const DashboardView = lazy(pageLoaders.dashboard);
+const InputsView = lazy(pageLoaders.inputs);
+const ReportsView = lazy(pageLoaders.reports);
+const SettingsView = lazy(pageLoaders.settings);
+const FirebaseView = lazy(pageLoaders.firebase);
+const CylindersView = lazy(pageLoaders.cylinders);
+const ShareholderZoneView = lazy(pageLoaders.shareholderZone);
+const AuditZoneView = lazy(pageLoaders.auditZone);
 
 const currentTaiwanPeriod = (() => {
   const value = new Intl.DateTimeFormat('zh-TW', {
@@ -32,11 +45,12 @@ function App() {
   const [dbVersion, setDbVersion] = useState(0); // Trigger state refreshes across components
   const [activeTab, setActiveTab] = useState('dashboard');
   const [tabHistory, setTabHistory] = useState(['dashboard']);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     setTabHistory(prev => {
       if (prev[prev.length - 1] === activeTab) return prev;
-      return [...prev, activeTab];
+      return [...prev, activeTab].slice(-50);
     });
   }, [activeTab]);
 
@@ -47,8 +61,30 @@ function App() {
       const prevTab = newHistory[newHistory.length - 1];
       setActiveTab(prevTab);
       setTabHistory(newHistory);
+      setIsMobileNavOpen(false);
     }
   };
+
+  const handleSelectTab = (tab) => {
+    setActiveTab(tab);
+    setIsMobileNavOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isMobileNavOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsMobileNavOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMobileNavOpen]);
   
   // Login Authentication States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -134,6 +170,7 @@ function App() {
 
     const boot = async () => {
       initializeDB();
+      cleanupInactiveCompanies();
       const rememberedEmail = localStorage.getItem('bp_last_login_email') || '';
       const savedSession = localStorage.getItem('bp_login_session');
       if (rememberedEmail) {
@@ -146,17 +183,17 @@ function App() {
           const session = JSON.parse(savedSession);
           if (session?.user?.id && session?.role) {
             restoredSession = session;
-            setIsLoggedIn(true);
-            setUserRole(session.role);
-            setCurrentUser(session.user);
-            setIsDataReady(true);
-            setDbVersion(prev => prev + 1);
           }
         } catch {
           localStorage.removeItem('bp_login_session');
         }
       }
 
+      const cloudConnected = isSupabaseConnected();
+      if (restoredSession && cloudConnected && !getCloudSessionToken()) {
+        localStorage.removeItem('bp_login_session');
+        restoredSession = null;
+      }
       if (!restoredSession) clearCloudSessionToken();
 
       // Clear one-time verification tokens from the address bar.
@@ -168,7 +205,16 @@ function App() {
 
       setDbVersion(prev => prev + 1);
 
-      if (!isSupabaseConnected()) {
+      if (!cloudConnected) {
+        if (restoredSession) {
+          setIsLoggedIn(true);
+          setUserRole(restoredSession.role);
+          setCurrentUser(restoredSession.user);
+          if (restoredSession.user.requiresPasswordChange) {
+            setIsForcePasswordChange(true);
+            setIsChangePwdOpen(true);
+          }
+        }
         const { initFirebase } = await import('./db/firebaseService');
         if (cancelled) return;
         initFirebase((updatedBy) => {
@@ -176,47 +222,59 @@ function App() {
           showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已即時同步畫面。`, 'info');
           setDbVersion(prev => prev + 1);
         });
+        setIsDataReady(true);
+        if (restoredSession && migrateAccountCounterparts()) setDbVersion(prev => prev + 1);
+        return;
       }
 
-      setIsDataReady(true);
+      if (!restoredSession) {
+        setIsDataReady(true);
+        return;
+      }
 
-      if (!restoredSession) return;
-
-      const runBackgroundSync = async () => {
-        if (!isSupabaseConnected()) {
-          if (migrateAccountCounterparts() && !cancelled) setDbVersion(prev => prev + 1);
-          return;
-        }
-
-        const sessionValid = await initSupabaseSync((updatedBy) => {
-          if (cancelled) return;
-          showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
-          setDbVersion(prev => prev + 1);
-        });
+      const validatedSession = await initSupabaseSync((updatedBy) => {
         if (cancelled) return;
+        showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
+        setDbVersion(prev => prev + 1);
+      });
+      if (cancelled) return;
 
-        if (!sessionValid) {
-          localStorage.removeItem('bp_login_session');
-          clearCloudSessionToken();
-          setIsLoggedIn(false);
-          setUserRole('');
-          setCurrentUser(null);
-          const error = getLastCloudSyncError();
-          showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
-          setDbVersion(prev => prev + 1);
-          return;
-        }
+      if (!validatedSession) {
+        localStorage.removeItem('bp_login_session');
+        clearCloudSessionToken();
+        setIsLoggedIn(false);
+        setUserRole('');
+        setCurrentUser(null);
+        setIsDataReady(true);
+        const error = getLastCloudSyncError();
+        showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
+        setDbVersion(prev => prev + 1);
+        return;
+      }
 
-        const needsMaintenanceSync = [
-          clearLegacyIncome(),
-          migrateAccountCounterparts(),
-          createDailyBackupIfNeeded('系統每日備份')
-        ].some(Boolean);
-        if (needsMaintenanceSync) await syncLocalToSupabase('系統啟動維護');
-        if (!cancelled) setDbVersion(prev => prev + 1);
+      const verifiedRole = validatedSession.role || restoredSession.role;
+      const verifiedUser = {
+        ...restoredSession.user,
+        ...(validatedSession === true ? {} : validatedSession),
+        role: verifiedRole
       };
+      setIsLoggedIn(true);
+      setUserRole(verifiedRole);
+      setCurrentUser(verifiedUser);
+      setIsDataReady(true);
+      localStorage.setItem('bp_login_session', JSON.stringify({ role: verifiedRole, user: verifiedUser }));
+      if (verifiedUser.requiresPasswordChange) {
+        setIsForcePasswordChange(true);
+        setIsChangePwdOpen(true);
+      }
 
-      void runBackgroundSync();
+      const needsMaintenanceSync = [
+        clearLegacyIncome(),
+        migrateAccountCounterparts(),
+        createDailyBackupIfNeeded('系統每日備份')
+      ].some(Boolean);
+      if (needsMaintenanceSync) await syncLocalToSupabase('系統啟動維護');
+      if (!cancelled) setDbVersion(prev => prev + 1);
     };
 
     void boot();
@@ -256,8 +314,13 @@ function App() {
   };
 
   // Shareholders & Companies Lookups
-  const shareholders = useMemo(() => getShareholders(), [dbVersion]);
-  const allCompanies = useMemo(() => getCompanies(), [dbVersion]);
+  const lookupSnapshot = useMemo(() => ({
+    version: dbVersion,
+    shareholders: getShareholders(),
+    companies: getCompanies()
+  }), [dbVersion]);
+  const shareholders = lookupSnapshot.shareholders;
+  const allCompanies = lookupSnapshot.companies;
 
   // Determine allowed companies based on logged-in user permissions
   const allowedCompanies = useMemo(() => {
@@ -281,6 +344,21 @@ function App() {
       : shareholders.find(s => s.id === currentUser.id) || currentUser;
     return getAllowedTabsForUser(userRole, latestUser);
   }, [isLoggedIn, userRole, currentUser, shareholders]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return undefined;
+    const commonTabs = ['reports', 'inputs', 'cylinders']
+      .filter(tab => allowedTabs.includes(tab));
+    const preload = () => commonTabs.forEach(tab => pageLoaders[tab]());
+
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(preload, { timeout: 2000 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = window.setTimeout(preload, 500);
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoggedIn, allowedTabs]);
 
   useEffect(() => {
     if (!isLoggedIn || !currentUser || userRole !== USER_ROLES.ADMIN) return;
@@ -311,6 +389,19 @@ function App() {
   const activeCompany = useMemo(() => {
     return allCompanies.find(c => c.id === currentCompanyId) || allowedCompanies[0] || allCompanies[0];
   }, [currentCompanyId, allCompanies, allowedCompanies]);
+
+  useEffect(() => {
+    setMonitoringUser(isLoggedIn && currentUser?.id
+      ? { id: currentUser.id, role: userRole }
+      : null);
+  }, [isLoggedIn, currentUser?.id, userRole]);
+
+  useEffect(() => {
+    setMonitoringContext({
+      companyId: currentCompanyId || 'unknown',
+      activeTab: activeTab || 'unknown'
+    });
+  }, [currentCompanyId, activeTab]);
 
   // Handle Login Submission
   const handleLogin = async (e) => {
@@ -404,7 +495,7 @@ function App() {
   // If not logged in, show Login Screen (TaskAmigo Theme)
   if (!isLoggedIn) {
     return (
-      <div style={{
+      <div className="login-page" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -413,7 +504,7 @@ function App() {
         fontFamily: 'var(--font-sans)',
         color: 'var(--text-primary)'
       }}>
-        <div style={{
+        <div className="login-card" style={{
           width: '90%',
           maxWidth: '440px',
           backgroundColor: '#ffffff',
@@ -488,9 +579,18 @@ function App() {
 
   return (
     <div className="app-container">
+      <button
+        type="button"
+        className={`sidebar-backdrop ${isMobileNavOpen ? 'visible' : ''}`}
+        aria-label="關閉功能選單"
+        aria-hidden={!isMobileNavOpen}
+        tabIndex={isMobileNavOpen ? 0 : -1}
+        onClick={() => setIsMobileNavOpen(false)}
+      />
+
       {/* Sidebar navigation */}
-      <aside className="sidebar">
-        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <aside className={`sidebar ${isMobileNavOpen ? 'mobile-open' : ''}`} aria-label="主要功能選單">
+        <div className="sidebar-logo">
           <img 
             src="/logo.jpg" 
             alt="Logo" 
@@ -506,18 +606,27 @@ function App() {
             <div className="sidebar-logo-text" style={{ fontSize: '1.05rem', fontWeight: '800', letterSpacing: '-0.3px' }}>盛隆瓦斯</div>
             <div className="sidebar-logo-sub" style={{ fontSize: '0.72rem' }}>營運管理系統 v1.0</div>
           </div>
+          <button
+            type="button"
+            className="mobile-nav-close"
+            aria-label="關閉功能選單"
+            title="關閉功能選單"
+            onClick={() => setIsMobileNavOpen(false)}
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
         </div>
 
         <div className="sidebar-nav">
           <span className="sidebar-nav-heading">📊 營業分析</span>
           {allowedTabs.includes('dashboard') && (
-            <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <button className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => handleSelectTab('dashboard')}>
               <span className="sidebar-link-icon">📈</span>
               營運總覽
             </button>
           )}
           {allowedTabs.includes('reports') && (
-            <button className={`sidebar-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
+            <button className={`sidebar-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => handleSelectTab('reports')}>
               <span className="sidebar-link-icon">📊</span>
               財務報表
             </button>
@@ -526,11 +635,11 @@ function App() {
           {allowedTabs.includes('inputs') && (
             <>
               <span className="sidebar-nav-heading">📥 帳務管理</span>
-              <button className={`sidebar-link ${activeTab === 'inputs' ? 'active' : ''}`} onClick={() => setActiveTab('inputs')}>
+              <button className={`sidebar-link ${activeTab === 'inputs' ? 'active' : ''}`} onClick={() => handleSelectTab('inputs')}>
                 <span className="sidebar-link-icon">📝</span>
                 日常金流
               </button>
-              <button className={`sidebar-link ${activeTab === 'cylinders' ? 'active' : ''}`} onClick={() => setActiveTab('cylinders')}>
+              <button className={`sidebar-link ${activeTab === 'cylinders' ? 'active' : ''}`} onClick={() => handleSelectTab('cylinders')}>
                 <span className="sidebar-link-icon">🍼</span>
                 鋼瓶狀態
               </button>
@@ -539,7 +648,7 @@ function App() {
           {allowedTabs.includes('shareholderZone') && (
             <>
               <span className="sidebar-nav-heading">👑 股東權益</span>
-              <button className={`sidebar-link ${activeTab === 'shareholderZone' ? 'active' : ''}`} onClick={() => setActiveTab('shareholderZone')}>
+              <button className={`sidebar-link ${activeTab === 'shareholderZone' ? 'active' : ''}`} onClick={() => handleSelectTab('shareholderZone')}>
                 <span className="sidebar-link-icon">👑</span>
                 股東專區
               </button>
@@ -548,7 +657,7 @@ function App() {
           {allowedTabs.includes('auditZone') && (
             <>
               <span className="sidebar-nav-heading">🔍 系統稽核</span>
-              <button className={`sidebar-link ${activeTab === 'auditZone' ? 'active' : ''}`} onClick={() => setActiveTab('auditZone')}>
+              <button className={`sidebar-link ${activeTab === 'auditZone' ? 'active' : ''}`} onClick={() => handleSelectTab('auditZone')}>
                 <span className="sidebar-link-icon">🔍</span>
                 查核專區
               </button>
@@ -558,7 +667,7 @@ function App() {
           {allowedTabs.includes('settings') && (
             <>
               <span className="sidebar-nav-heading">⚙️ 設定與名冊</span>
-              <button className={`sidebar-link ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+              <button className={`sidebar-link ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleSelectTab('settings')}>
                 <span className="sidebar-link-icon">👤</span>
                 {userRole === USER_ROLES.ADMIN ? '基本資料設定' : '股東基本資料'}
               </button>
@@ -568,7 +677,7 @@ function App() {
           {userRole === USER_ROLES.ADMIN && allowedTabs.includes('firebase') && (
             <>
               <span className="sidebar-nav-heading">🌐 雲端同步</span>
-              <button className={`sidebar-link ${activeTab === 'firebase' ? 'active' : ''}`} onClick={() => setActiveTab('firebase')}>
+              <button className={`sidebar-link ${activeTab === 'firebase' ? 'active' : ''}`} onClick={() => handleSelectTab('firebase')}>
                 <span className="sidebar-link-icon">🌐</span>
                 雲端同步分享
               </button>
@@ -596,25 +705,24 @@ function App() {
       <div className="main-wrapper">
         <header className="header">
           {/* Company switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div className="header-primary">
+            <button
+              type="button"
+              className="mobile-nav-trigger"
+              aria-label="開啟功能選單"
+              aria-expanded={isMobileNavOpen}
+              title="功能選單"
+              onClick={() => setIsMobileNavOpen(true)}
+            >
+              <Menu size={23} aria-hidden="true" />
+            </button>
             {tabHistory.length > 1 && (
               <button 
                 onClick={handleGoBack}
-                className="btn btn-secondary btn-sm"
-                style={{ 
-                  borderRadius: '20px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  fontWeight: '700', 
-                  color: 'var(--accent-blue)', 
-                  borderColor: 'var(--accent-blue)', 
-                  backgroundColor: '#ffffff', 
-                  padding: '6px 14px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                }}
+                className="btn btn-secondary btn-sm header-back-button"
               >
-                ⬅️ 回上一頁
+                <ArrowLeft size={17} aria-hidden="true" />
+                <span>回上一頁</span>
               </button>
             )}
             <div className="header-title-section">
@@ -626,7 +734,8 @@ function App() {
 
             {allowedCompanies.length > 1 && (
               <select
-                className="select-dropdown"
+                className="select-dropdown header-company-select"
+                aria-label="切換公司"
                 value={currentCompanyId}
                 onChange={e => {
                   setCurrentCompanyId(e.target.value);
@@ -643,10 +752,11 @@ function App() {
           {/* Period selector & Login badge at right end (matching TaskAmigo mockup) */}
           <div className="header-controls">
             {/* 1. Period selects */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: '600' }}>會計期間：</span>
+            <div className="header-period-control">
+              <span className="header-period-label">會計期間：</span>
               <select
                 className="select-dropdown"
+                aria-label="會計年度"
                 style={{ padding: '6px 10px' }}
                 value={currentYear}
                 onChange={e => {
@@ -660,6 +770,7 @@ function App() {
 
               <select
                 className="select-dropdown"
+                aria-label="會計月份"
                 style={{ padding: '6px 10px' }}
                 value={currentMonth}
                 onChange={e => {
@@ -672,27 +783,21 @@ function App() {
               </select>
             </div>
 
-            <div style={{ height: '24px', width: '2px', backgroundColor: 'var(--border-color)', margin: '0 8px' }}></div>
+            <div className="header-divider" />
 
             {/* 2. User info & Logout button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+            <div className="header-user-actions">
+              <span className="header-user-name">
                 {currentUser.name}
               </span>
               
               <button 
                 onClick={handleLogout} 
-                className="btn btn-secondary btn-sm"
-                style={{ 
-                  borderRadius: '20px', 
-                  borderColor: 'var(--accent-blue)', 
-                  color: 'var(--accent-blue)',
-                  backgroundColor: '#ffffff',
-                  padding: '6px 14px',
-                  fontWeight: '700'
-                }}
+                className="btn btn-secondary btn-sm header-logout-button"
+                title="登出"
               >
-                登出 ➔
+                <LogOut size={17} aria-hidden="true" />
+                <span>登出</span>
               </button>
             </div>
           </div>

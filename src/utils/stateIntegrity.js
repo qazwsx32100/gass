@@ -39,6 +39,15 @@ const asNumber = (value) => Number(value) || 0;
 const canonical = (value) => String(value || '').trim().toLowerCase();
 const stableStringify = (value) => JSON.stringify(value ?? null);
 
+export const compactEmbeddedBackups = (backups = []) => asArray(backups).map((backup) => {
+  if (!backup || typeof backup !== 'object') return backup;
+  const { snapshot: _snapshot, ...metadata } = backup;
+  return {
+    ...metadata,
+    storage: metadata.storage || 'cloud_backup_table'
+  };
+});
+
 const duplicateValue = (records, field) => {
   const seen = new Set();
   for (const record of records) {
@@ -399,6 +408,7 @@ export const buildJournalSnapshot = (state = {}, today = new Date().toISOString(
 
 export const prepareStateForPersistence = (state = {}) => {
   const prepared = { ...state };
+  prepared.dailyBackups = compactEmbeddedBackups(prepared.dailyBackups);
   prepared.gasVehicleInventory = deriveGasVehicleInventory(prepared);
   const journals = buildJournalSnapshot(prepared);
   prepared.journalEntries = journals.journalEntries;

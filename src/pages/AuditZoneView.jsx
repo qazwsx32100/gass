@@ -9,8 +9,6 @@ export default function AuditZoneView({
   month,
   triggerRefresh,
   onDataChange,
-  operatorName,
-  currentUser,
   userRole,
   showToast
 }) {

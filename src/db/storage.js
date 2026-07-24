@@ -12,6 +12,7 @@ import {
   INITIAL_GAS_INVENTORY_PERIODS,
   INITIAL_LOGS
 } from './mockData';
+import { sanitizeInactiveCompanies } from '../utils/companyState';
 
 const KEYS = {
   COMPANIES: 'bp_companies',
@@ -1072,6 +1073,21 @@ export const saveCompanies = (data) => write(KEYS.COMPANIES, data);
 export const getShareholders = () => read(KEYS.SHAREHOLDERS).map(normalizeShareholder);
 export const saveShareholders = (data) => write(KEYS.SHAREHOLDERS, data);
 
+export const cleanupInactiveCompanies = () => {
+  const currentState = {
+    companies: read(KEYS.COMPANIES),
+    shareholders: read(KEYS.SHAREHOLDERS),
+    auditArchive: read(KEYS.AUDIT_ARCHIVE)
+  };
+  const sanitizedState = sanitizeInactiveCompanies(currentState);
+  const companiesChanged = JSON.stringify(currentState.companies) !== JSON.stringify(sanitizedState.companies);
+  const shareholdersChanged = JSON.stringify(currentState.shareholders) !== JSON.stringify(sanitizedState.shareholders);
+
+  if (companiesChanged) write(KEYS.COMPANIES, sanitizedState.companies);
+  if (shareholdersChanged) write(KEYS.SHAREHOLDERS, sanitizedState.shareholders);
+  return companiesChanged || shareholdersChanged;
+};
+
 export const getAdminDisplayName = () => {
   const shareholder = getShareholders().find(s => s.id === 'SH001' || String(s.email || '').trim().toLowerCase() === 'qazwsx32100@gmail.com');
   return shareholder?.name || '主管理員';
@@ -1497,7 +1513,10 @@ export const archiveResetSnapshot = (actor = '系統管理員', reason = '系統
 
 export const createDailyBackupIfNeeded = (actor = '系統管理員') => {
   const today = new Date().toISOString().split('T')[0];
-  const backups = getDailyBackups();
+  const backups = getDailyBackups().map(({ snapshot: _snapshot, ...backup }) => ({
+    ...backup,
+    storage: backup.storage || 'cloud_backup_table'
+  }));
   if (backups.some(item => item.backupDate === today)) return false;
 
   const now = new Date();
@@ -1505,7 +1524,7 @@ export const createDailyBackupIfNeeded = (actor = '系統管理員') => {
     id: createArchiveId('BAK'),
     backupDate: today,
     actor,
-    snapshot: getDatabaseState(),
+    storage: 'cloud_backup_table',
     archivedAt: now.toISOString(),
     purgeAfter: getRetentionExpiry(now)
   });

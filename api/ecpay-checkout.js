@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import { fetchAppState, getBearerToken, sendJson, verifyToken } from './_auth.js';
 import { encodeTradeNo, generateCheckMacValue, getEcpayConfig } from './_ecpay.js';
 
@@ -104,6 +105,9 @@ export default async function handler(req, res) {
 </html>`);
   } catch (error) {
     console.error('ECPay checkout error:', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/ecpay-checkout', method: req.method, status: 500 }
+    });
     return sendHtmlError(res, 500, 'Payment checkout failed.');
   }
 }

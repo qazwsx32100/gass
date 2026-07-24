@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary } from '../utils/financials';
-import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts } from '../db/storage';
+import { getIncomes, getExpenses, getBudgets, getSystemConfig, getChartOfAccounts } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
@@ -18,14 +18,17 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   
   // Calculate P&L for current month
   const pnl = useMemo(() => {
+    void triggerRefresh;
     return getIncomeStatement(companyId, 'month', periodVal);
   }, [companyId, periodVal, triggerRefresh]);
 
   const gasProfit = useMemo(() => {
+    void triggerRefresh;
     return getGasGrossProfitForPeriod(companyId, 'month', periodVal);
   }, [companyId, periodVal, triggerRefresh]);
 
   const gasInventory = useMemo(() => {
+    void triggerRefresh;
     return getGasInventoryForMonth(companyId, periodVal);
   }, [companyId, periodVal, triggerRefresh]);
 
@@ -39,11 +42,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [year, month]);
 
   const prevPnl = useMemo(() => {
+    void triggerRefresh;
     return getIncomeStatement(companyId, 'month', prevPeriodVal);
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
+    void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
     const balances = getBankBalancesAtDate(companyId, lastDayStr);
     return balances.reduce((sum, b) => sum + b.currentBalance, 0);
@@ -51,11 +56,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   // Dividends for the month
   const dividendData = useMemo(() => {
+    void triggerRefresh;
     return getDividendsForMonth(companyId, periodVal, 0.1); // 10% reserve ratio
   }, [companyId, periodVal, triggerRefresh]);
 
   // Cash / Bank balance of Petty Cash at the end of the month
   const pettyCashBalance = useMemo(() => {
+    void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
     const balances = getBankBalancesAtDate(companyId, lastDayStr);
     const petty = balances.find(b => b.bankId === 'BANK_PETTY');
@@ -64,6 +71,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   // Accounts Receivable at the end of the month
   const receivablesTotal = useMemo(() => {
+    void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
     const summary = getCustomerReceivableSummary(companyId, lastDayStr);
     return summary.reduce((sum, item) => sum + (item.receivableTotal || 0), 0);
@@ -71,6 +79,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   // Budgets & Actual Expenditures
   const budgetProgressItems = useMemo(() => {
+    void triggerRefresh;
     const allBudgets = getBudgets().filter(b => b.companyId === companyId && b.year === year && b.month === month);
     const accounts = getChartOfAccounts();
     const expensesList = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date && typeof e.date === 'string' && e.date.startsWith(periodVal));
@@ -92,6 +101,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   // Pending Checks Alerts
   const checkAlerts = useMemo(() => {
+    void triggerRefresh;
     const config = getSystemConfig();
     if (!config.enableCheckMaturityAlert) return [];
     
@@ -118,6 +128,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   // Get recent 5 transactions
   const recentTransactions = useMemo(() => {
+    void triggerRefresh;
     const incs = getIncomes()
       .filter(i => i.companyId === companyId)
       .map(i => ({ ...i, type: 'income', label: '收入' }));

@@ -1,4 +1,7 @@
+import { captureServerException } from './_monitoring.js';
 import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
+import { sanitizeInactiveCompanies } from '../src/utils/companyState.js';
 import { validateGasInventoryState } from '../src/utils/stateIntegrity.js';
 
 const isApprovedDevice = (security, deviceId) => (
@@ -22,8 +25,28 @@ const isSessionAllowed = (state, session) => {
 
 const getSessionUser = (state, session) => {
   if (!state || !session?.id) return null;
-  if (session.id === 'ADMIN') return { id: 'ADMIN', role: 'admin', name: session.name || 'admin' };
+  if (session.id === 'ADMIN') {
+    return {
+      id: 'ADMIN',
+      role: 'admin',
+      name: session.name || 'admin',
+      email: session.email || '',
+      requiresPasswordChange: Boolean(state.adminSecurity?.requiresPasswordChange)
+    };
+  }
   return (state.shareholders || []).find(item => item.id === session.id) || null;
+};
+
+export const getPublicSessionForClient = (state, session) => {
+  const user = getSessionUser(state, session);
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.name || session.name || '',
+    email: user.email || session.email || '',
+    role: session.id === 'ADMIN' ? 'admin' : (user.role || 'readonly_shareholder'),
+    requiresPasswordChange: Boolean(user.requiresPasswordChange)
+  };
 };
 
 const stableStringify = (value) => JSON.stringify(value ?? null);
@@ -136,7 +159,8 @@ const validateSettlementIntegrity = (previousState = {}, nextState = {}) => {
   return { ok: true };
 };
 
-const MAX_STATE_BYTES = 8 * 1024 * 1024;
+// Leave headroom below Vercel's 4.5 MB request/response payload ceiling.
+const MAX_STATE_BYTES = 4 * 1024 * 1024;
 
 const allowedWriteKeysByRole = {
   bookkeeper: new Set([
@@ -177,21 +201,16 @@ const allowedWriteKeysByRole = {
 
 const WRITE_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const WRITE_RATE_LIMIT_MAX = 30;
-const writeAttempts = new Map();
+const writeRateLimiter = createBoundedRateLimiter({
+  windowMs: WRITE_RATE_LIMIT_WINDOW_MS,
+  maxEntries: 5000
+});
 
 const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientIp(req) || 'unknown'}`;
 
 const isWriteRateLimited = (req, session) => {
   const key = rateLimitKey(req, session);
-  const now = Date.now();
-  const current = writeAttempts.get(key) || { count: 0, resetAt: now + WRITE_RATE_LIMIT_WINDOW_MS };
-  if (current.resetAt <= now) {
-    writeAttempts.set(key, { count: 1, resetAt: now + WRITE_RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  current.count += 1;
-  writeAttempts.set(key, current);
-  return current.count > WRITE_RATE_LIMIT_MAX;
+  return writeRateLimiter.check([{ key, max: WRITE_RATE_LIMIT_MAX }]);
 };
 
 export const validateStateWriteScope = (previousState, nextState, sessionUser) => {
@@ -305,6 +324,7 @@ export default async function handler(req, res) {
       return sendJson(res, 403, { error: 'Forbidden: Insufficient role permissions to modify database.' });
     }
     if (isWriteRateLimited(req, session)) {
+      res.setHeader('Retry-After', '60');
       return sendJson(res, 429, { error: 'Too many write requests. Please try again later.' });
     }
   }
@@ -320,12 +340,15 @@ export default async function handler(req, res) {
       }
 
       const row = await fetchAppState();
-      if (!isSessionAllowed(row.state, session)) {
+      const activeState = sanitizeInactiveCompanies(row.state || {});
+      if (!isSessionAllowed(activeState, session)) {
         return sendJson(res, 401, { error: 'Session is no longer allowed.' });
       }
+      const publicSession = getPublicSessionForClient(activeState, session);
       return sendJson(res, 200, {
         ...(row || { state: null, updated_at: null, updated_by: null }),
-        state: sanitizeStateForClient(row.state || {}, session)
+        state: sanitizeStateForClient(activeState, publicSession),
+        session: publicSession
       });
     }
 
@@ -346,16 +369,17 @@ export default async function handler(req, res) {
       return sendJson(res, 413, { error: 'Cloud state is too large. Upload attachments to private storage instead.' });
     }
 
+    const nextState = sanitizeInactiveCompanies(body.state, current.state);
     const sessionUser = getSessionUser(current.state, session);
     const comparablePreviousState = sanitizeStateForClient(current.state || {}, sessionUser);
-    const writeScope = validateStateWriteScope(comparablePreviousState, body.state, sessionUser);
+    const writeScope = validateStateWriteScope(comparablePreviousState, nextState, sessionUser);
     if (!writeScope.ok) {
       return sendJson(res, 403, { error: writeScope.error });
     }
 
     const updatedBy = String(body.updatedBy || session.name || '系統').slice(0, 80);
     const saved = await saveAppState({
-      state: body.state,
+      state: nextState,
       updatedBy,
       requestIp: getClientIp(req),
       previousState: current.state,
@@ -371,6 +395,9 @@ export default async function handler(req, res) {
     if (error?.code === '40001' || /state conflict/i.test(error?.message || '')) {
       return sendJson(res, 409, { error: 'Cloud data changed before this save. Refresh before trying again.' });
     }
+    await captureServerException(error, {
+      tags: { endpoint: '/api/app-state', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { error: 'Cloud sync failed.' });
   }
 }

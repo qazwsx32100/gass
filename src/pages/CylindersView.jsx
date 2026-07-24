@@ -6,24 +6,13 @@ import {
   getGasCylinderMovements, saveGasCylinderMovements,
   getGasDeliveryVehicles, saveGasDeliveryVehicles,
   getCustomerCylinderDeposits, saveCustomerCylinderDeposits,
-  getCustomers, getLogs, addLog,
+  getCustomers, addLog,
   USER_ROLES, archiveChange, archiveDeletion,
   isPeriodLocked
 } from '../db/storage';
 import { canInputBasicLedger } from '../utils/permissions';
 import { getGasInventoryForMonth } from '../utils/financials';
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
-
-const formatDateTime = (value) => {
-  if (!value) return '-';
-  return new Date(value).toLocaleString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 
 const GAS_CYLINDER_STATUS_OPTIONS = [
   { value: 'empty', label: '空瓶' },
@@ -68,7 +57,7 @@ const GAS_MOVEMENT_TYPE_OPTIONS = [
 
 const optionLabel = (options, value) => options.find(option => option.value === value)?.label || value || '-';
 
-export default function CylindersView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', currentUser, userRole }) {
+export default function CylindersView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', userRole }) {
   const [activeSubTab, setActiveSubTab] = useState('gasPurchases');
   const [editingItem, setEditingItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,13 +121,34 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   };
 
   // Load datasets
-  const gasPurchases = useMemo(() => getGasPurchases().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasInventoryPeriods = useMemo(() => getGasInventoryPeriods().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasCylinders = useMemo(() => getGasCylinders().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasDeliveryVehicles = useMemo(() => getGasDeliveryVehicles().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const customerCylinderDeposits = useMemo(() => getCustomerCylinderDeposits().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const gasCylinderMovements = useMemo(() => getGasCylinderMovements().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
-  const customers = useMemo(() => getCustomers().filter(item => item.companyId === companyId), [companyId, triggerRefresh]);
+  const gasPurchases = useMemo(() => {
+    void triggerRefresh;
+    return getGasPurchases().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasInventoryPeriods = useMemo(() => {
+    void triggerRefresh;
+    return getGasInventoryPeriods().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasCylinders = useMemo(() => {
+    void triggerRefresh;
+    return getGasCylinders().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasDeliveryVehicles = useMemo(() => {
+    void triggerRefresh;
+    return getGasDeliveryVehicles().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const customerCylinderDeposits = useMemo(() => {
+    void triggerRefresh;
+    return getCustomerCylinderDeposits().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const gasCylinderMovements = useMemo(() => {
+    void triggerRefresh;
+    return getGasCylinderMovements().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
+  const customers = useMemo(() => {
+    void triggerRefresh;
+    return getCustomers().filter(item => item.companyId === companyId);
+  }, [companyId, triggerRefresh]);
 
   const cylinderStockSummary = useMemo(() => {
     const summary = {
@@ -210,12 +220,6 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       .filter(cylinder => ['full', 'residual'].includes(cylinder.status))
       .reduce((sum, cylinder) => sum + Number(cylinder.specKg || 0), 0);
     return { fullCount, emptyCount, totalKg, totalCount: vehicleCylinders.length };
-  };
-
-  const getMonthlyGasPriceForDate = (dateStr) => {
-    const yyyymm = dateStr.substring(0, 7);
-    const period = gasInventoryPeriods.find(p => p.yearMonth === yyyymm);
-    return period?.monthlyGasPrice || 0;
   };
 
   const generateId = (type, date) => {
@@ -297,7 +301,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     [purchaseGrossKg, purchaseResidualGasKg]);
 
   const purchasePrice = useMemo(() => {
-    return getMonthlyGasPriceForDate(formData.date);
+    const yearMonth = formData.date.substring(0, 7);
+    return gasInventoryPeriods.find(period => period.yearMonth === yearMonth)?.monthlyGasPrice || 0;
   }, [formData.date, gasInventoryPeriods]);
 
   const purchaseTotalAmount = useMemo(() => {

@@ -1,6 +1,9 @@
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { waitUntil } from '@vercel/functions';
 import { prepareStateForPersistence } from '../src/utils/stateIntegrity.js';
+import { fetchWithTimeout } from './_fetch.js';
+import { captureServerException } from './_monitoring.js';
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const PASSWORD_ALGO = 'pbkdf2_sha256_120000';
@@ -18,9 +21,11 @@ export const getSyncSecret = () => {
   return process.env.ERP_SYNC_SECRET;
 };
 
-export const getSupabase = () => {
+export const getSupabase = (timeoutMs = 12000) => {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY ||
+  const key = process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY;
 
@@ -29,7 +34,10 @@ export const getSupabase = () => {
   }
 
   return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, options) => fetchWithTimeout(input, options, timeoutMs)
+    }
   });
 };
 
@@ -239,7 +247,35 @@ export const saveAppState = async ({ state, updatedBy, requestIp = null, previou
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return row || { ok: true };
+  const saved = row || { ok: true };
+
+  if (saved.updated_at) {
+    const mirrorTask = refreshRelationalMirror(saved.updated_at).catch(async error => {
+      console.error('Deferred relational mirror refresh failed', error);
+      await captureServerException(error, {
+        tags: { operation: 'relational-mirror-refresh', status: 500 }
+      });
+    });
+    try {
+      waitUntil(mirrorTask);
+    } catch (error) {
+      console.error('Failed to register relational mirror background task', error);
+      void mirrorTask;
+    }
+  }
+
+  return saved;
+};
+
+export const refreshRelationalMirror = async (expectedUpdatedAt) => {
+  const supabase = getSupabase(40000);
+  const { data, error } = await supabase.rpc('erp_refresh_relational_mirror_deferred', {
+    p_secret: getSyncSecret(),
+    p_expected_updated_at: expectedUpdatedAt
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row || { refreshed: false, skipped: true };
 };
 
 export const createCloudBackup = async ({ reason = 'scheduled', actor = 'system', requestIp = null }) => {

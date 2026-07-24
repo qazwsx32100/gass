@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import { fetchAppState, sendJson } from './_auth.js';
 
 export default async function handler(req, res) {
@@ -19,6 +20,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('health check failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/health', method: req.method, status: 503 }
+    });
     return sendJson(res, 503, {
       ok: false,
       service: 'gass-erp-api',

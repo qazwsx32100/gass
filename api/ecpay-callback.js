@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import { fetchAppState, saveAppState, getClientIp } from './_auth.js';
 import { getEcpayConfig, verifyCheckMacValue, decodeTradeNo } from './_ecpay.js';
 
@@ -111,6 +112,9 @@ export default async function handler(req, res) {
     sendEcpayResponse(res, 200, '1|OK');
   } catch (error) {
     console.error('Error handling ECPay callback:', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/ecpay-callback', method: req.method, status: 500 }
+    });
     sendEcpayResponse(res, 200, '0|ExceptionError');
   }
 }

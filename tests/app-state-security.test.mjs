@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { secureStateForSave } from '../api/_auth.js';
-import { validateStateWriteScope } from '../api/app-state.js';
+import { getPublicSessionForClient, validateStateWriteScope } from '../api/app-state.js';
 
 const approvedIncome = {
   id: 'REV-APPROVED-001',
@@ -214,4 +214,38 @@ test('prevents bookkeeper from changing domain and email readiness settings', ()
 
   assert.equal(result.ok, false);
   assert.match(result.error, /protected data/i);
+});
+
+test('uses the current database role instead of a stale client role', () => {
+  const session = getPublicSessionForClient({
+    shareholders: [{
+      id: 'SH002',
+      name: 'Current User',
+      email: 'current@example.com',
+      role: 'bookkeeper'
+    }]
+  }, {
+    id: 'SH002',
+    name: 'Stale User',
+    email: 'stale@example.com',
+    role: 'admin'
+  });
+
+  assert.equal(session.role, 'bookkeeper');
+  assert.equal(session.name, 'Current User');
+  assert.equal(session.email, 'current@example.com');
+});
+
+test('returns the administrator password-change requirement from cloud state', () => {
+  const session = getPublicSessionForClient({
+    adminSecurity: { requiresPasswordChange: true }
+  }, {
+    id: 'ADMIN',
+    name: 'Owner',
+    email: 'owner@example.com',
+    role: 'admin'
+  });
+
+  assert.equal(session.role, 'admin');
+  assert.equal(session.requiresPasswordChange, true);
 });

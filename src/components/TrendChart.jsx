@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { getIncomeStatement, getPeriodLabel } from '../utils/financials';
+import { getIncomeStatement } from '../utils/financials';
 
 export default function TrendChart({ companyId, year, month, triggerRefresh }) {
   // 1. Generate list of the last 6 months ending at current year-month
@@ -25,6 +25,7 @@ export default function TrendChart({ companyId, year, month, triggerRefresh }) {
 
   // 2. Fetch P&L data for these 6 periods
   const chartData = useMemo(() => {
+    void triggerRefresh;
     return periods.map(p => {
       const pnl = getIncomeStatement(companyId, 'month', p.val);
       const label = p.month === '01' ? `${p.year}年1月` : `${parseInt(p.month, 10)}月`;

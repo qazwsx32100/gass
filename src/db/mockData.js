@@ -1,8 +1,7 @@
 // Initial Mock Data for BusinessPilot ERP v1.0 (Sheng-Long TaskAmigo Edition)
 
 export const INITIAL_COMPANIES = [
-  { id: 'COMP001', name: '盛隆瓦斯行', desc: '專業瓦斯配送及爐具修繕' },
-  { id: 'COMP002', name: '星光藝人經紀公司', desc: '藝人培訓、網紅媒合與經紀合約' }
+  { id: 'COMP001', name: '盛隆瓦斯行', desc: '專業瓦斯配送及爐具修繕' }
 ];
 
 export const INITIAL_SHAREHOLDERS = [
@@ -14,7 +13,7 @@ export const INITIAL_SHAREHOLDERS = [
     phone: '0912-345-678',
     password: '6789', // Last 4 digits of ID card A123456789
     role: 'business_reviewer',
-    allowedCompanies: ['COMP001', 'COMP002'],
+    allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs']
   },
   {
@@ -36,7 +35,7 @@ export const INITIAL_SHAREHOLDERS = [
     phone: '0934-567-890',
     password: '8901', // Last 4 digits of ID card C345678901
     role: 'bookkeeper',
-    allowedCompanies: ['COMP001', 'COMP002'],
+    allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs']
   }
 ];
@@ -44,8 +43,7 @@ export const INITIAL_SHAREHOLDERS = [
 export const INITIAL_BANKS = [
   { id: 'BANK001', companyId: 'COMP001', name: '第一銀行 - 盛隆活存', accountNo: '123-45-67890-1', initialBalance: 250000 },
   { id: 'BANK002', companyId: 'COMP001', name: '玉山銀行 - 盛隆週轉金', accountNo: '808-12-34567-8', initialBalance: 150000 },
-  { id: 'BANK_PETTY', companyId: 'COMP001', name: '店內零用金 (現金)', accountNo: 'CASH-BOX-01', initialBalance: 10000 },
-  { id: 'BANK003', companyId: 'COMP002', name: '國泰世華 - 經紀公司活存', accountNo: '013-98-76543-2', initialBalance: 500000 }
+  { id: 'BANK_PETTY', companyId: 'COMP001', name: '店內零用金 (現金)', accountNo: 'CASH-BOX-01', initialBalance: 10000 }
 ];
 
 export const INITIAL_CHART_OF_ACCOUNTS = [
@@ -126,26 +124,6 @@ export const INITIAL_SHAREHOLDER_LEDGER = [
     type: 'decrease',
     amount: 100000,
     remarks: '資金變現需求，部分退股 10 萬元'
-  },
-
-  // Company 2 mock shareholder ledger
-  {
-    id: 'SHL202603001',
-    date: '2026-03-01',
-    companyId: 'COMP002',
-    shareholderId: 'SH001',
-    type: 'join',
-    amount: 500000,
-    remarks: '創始人入股 50%'
-  },
-  {
-    id: 'SHL202603002',
-    date: '2026-03-01',
-    companyId: 'COMP002',
-    shareholderId: 'SH003',
-    type: 'join',
-    amount: 500000,
-    remarks: '共同創辦人入股 50%'
   }
 ];
 
@@ -174,6 +152,6 @@ export const INITIAL_BANK_TRANSACTIONS = [];
 export const INITIAL_GAS_INVENTORY_PERIODS = [];
 
 export const INITIAL_LOGS = [
-  { id: 'LOG202606001', timestamp: '2026-06-01 09:12:00', operator: '系統管理員', action: '初始化', details: '系統資料庫初始化，載入盛隆瓦斯行與星光經紀公司開戶餘額。' },
+  { id: 'LOG202606001', timestamp: '2026-06-01 09:12:00', operator: '系統管理員', action: '初始化', details: '系統資料庫初始化，載入盛隆瓦斯行開戶餘額。' },
   { id: 'LOG202606201', timestamp: '2026-06-20 14:35:12', operator: '張順安', action: '登記股東往來', details: '登記股東張順安增資 $100,000 元，調整持股佔比。' }
 ];

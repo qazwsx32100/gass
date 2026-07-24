@@ -1,3 +1,4 @@
+import { captureServerException } from './_monitoring.js';
 import {
   fetchAppState,
   getBearerToken,
@@ -10,7 +11,8 @@ import {
   uploadPrivateFileToGoogleDrive
 } from './_google-drive.js';
 
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+// Base64 adds roughly 33%, so 3 MB stays below Vercel's 4.5 MB body limit.
+const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 const WRITE_ROLES = new Set(['admin', 'business_reviewer', 'bookkeeper']);
 
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
     }
     const buffer = Buffer.from(match[2], 'base64');
     if (!buffer.length || buffer.length > MAX_ATTACHMENT_BYTES) {
-      return sendJson(res, 413, { ok: false, error: 'Attachment must be 5MB or smaller.' });
+      return sendJson(res, 413, { ok: false, error: 'Attachment must be 3MB or smaller.' });
     }
 
     const extension = match[1] === 'application/pdf'
@@ -107,6 +109,9 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('attachments API failed', error);
+    await captureServerException(error, {
+      tags: { endpoint: '/api/attachments', method: req.method, status: 500 }
+    });
     return sendJson(res, 500, { ok: false, error: 'Attachment storage failed.' });
   }
 }
