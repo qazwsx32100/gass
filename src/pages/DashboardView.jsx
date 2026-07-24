@@ -519,7 +519,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可分配股東紅利總額</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      ${(dividendData.distributableAmount || 0).toLocaleString()}
+                      ${(dividendData.distributableAmount ?? dividendData.totalDividends ?? 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -535,16 +535,20 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {(dividendData.shareholders || []).map(s => (
-                        <tr key={s.shareholderId}>
-                          <td style={{ fontWeight: '600' }}>{s.name}</td>
-                          <td>{((s.shareRatio || 0) * 100).toFixed(1)}%</td>
-                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
-                            ${(s.dividendAmount || 0).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                      {(dividendData.shareholders || []).length === 0 && (
+                      {(dividendData.shareholders || dividendData.shareholderDividends || []).map(s => {
+                        const ratioVal = s.ratio !== undefined ? s.ratio : ((s.shareRatio || 0) * 100);
+                        const divVal = s.dividend !== undefined ? s.dividend : (s.dividendAmount || 0);
+                        return (
+                          <tr key={s.id || s.shareholderId}>
+                            <td style={{ fontWeight: '600' }}>{s.name}</td>
+                            <td>{Number(ratioVal || 0).toFixed(1)}%</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
+                              ${Number(divVal || 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {(dividendData.shareholders || dividendData.shareholderDividends || []).length === 0 && (
                         <tr>
                           <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>尚未設定股東資料</td>
                         </tr>

@@ -1442,11 +1442,17 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
     totalDividends = netProfit - reserveAmount;
   }
 
-  const shareholderDividends = equity.shareholders.map(sh => {
+  const shareholderDividends = (equity.shareholders || []).map(sh => {
     const dividend = isLoss ? 0 : Math.round(totalDividends * (sh.ratio / 100));
     return {
       ...sh,
-      dividend
+      id: sh.shareholderId || sh.id,
+      shareholderId: sh.shareholderId || sh.id,
+      name: sh.name,
+      ratio: sh.ratio,
+      shareRatio: (sh.ratio || 0) / 100,
+      dividend,
+      dividendAmount: dividend
     };
   });
 
@@ -1457,7 +1463,9 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
     reserveRatio: activeRatio,
     reserveAmount,
     totalDividends,
-    shareholderDividends
+    distributableAmount: totalDividends,
+    shareholderDividends,
+    shareholders: shareholderDividends
   };
 };
 
