@@ -1688,7 +1688,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     </div>
                     <div className="form-group">
                       <label className="form-label">期初餘額 (TWD)</label>
-                      <input type="number" required placeholder="請輸入金額" className="form-control" disabled={!!editingItem} value={formData.initialBalance} onChange={e => setFormData({ ...formData, initialBalance: e.target.value })} />
+                      <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.initialBalance} onChange={e => setFormData({ ...formData, initialBalance: e.target.value })} />
                     </div>
                   </>
                 )}
