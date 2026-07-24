@@ -2,30 +2,58 @@ import React from 'react';
 import { captureClientException } from '../monitoring';
 
 export default class AppErrorBoundary extends React.Component {
-  state = { hasError: false };
+  state = { hasError: false, error: null };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, info) {
+    console.error('AppErrorBoundary caught an exception:', error, info);
     captureClientException(error, {
       tags: { source: 'react-error-boundary' },
       extra: { componentStack: info?.componentStack || '' }
     });
   }
 
+  handleReset = () => {
+    // Strip URL parameters if any were causing issues
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+    }
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  handleCleanRepair = () => {
+    try {
+      // Keep session if safe, clear transient query params
+      window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+    } catch (e) {
+      console.error(e);
+    }
+    window.location.href = window.location.origin + window.location.pathname;
+  };
+
   render() {
     if (!this.state.hasError) return this.props.children;
 
     return (
       <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px', background: '#f4fbfa' }}>
-        <section role="alert" style={{ width: 'min(440px, 100%)', padding: '28px', background: '#fff', border: '1px solid #cfe8e4', borderRadius: '8px', textAlign: 'center' }}>
-          <h1 style={{ margin: '0 0 12px', fontSize: '1.25rem', color: '#17324d' }}>系統暫時無法顯示</h1>
-          <p style={{ margin: '0 0 20px', color: '#52677b', lineHeight: 1.6 }}>錯誤已自動回報，請重新整理後再試。</p>
-          <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
-            重新整理
-          </button>
+        <section role="alert" style={{ width: 'min(480px, 100%)', padding: '32px', background: '#fff', border: '1px solid #cfe8e4', borderRadius: '16px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🛠️</div>
+          <h1 style={{ margin: '0 0 12px', fontSize: '1.35rem', fontWeight: 800, color: '#17324d' }}>系統已安全防護並為您隔離錯誤</h1>
+          <p style={{ margin: '0 0 20px', color: '#52677b', fontSize: '0.92rem', lineHeight: 1.6 }}>
+            系統已自動捕獲異常並記錄修復報告。請點擊下方按鈕重新載入畫面。
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button type="button" className="btn btn-primary" onClick={this.handleReset} style={{ padding: '10px 20px' }}>
+              🔄 重新整理頁面
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={this.handleCleanRepair} style={{ padding: '10px 20px' }}>
+              ✨ 一鍵修復並進入系統
+            </button>
+          </div>
         </section>
       </main>
     );

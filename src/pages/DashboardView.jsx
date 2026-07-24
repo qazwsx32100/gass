@@ -20,17 +20,20 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // Calculate P&L for current month
   const pnl = useMemo(() => {
     void triggerRefresh;
-    return getIncomeStatement(companyId, 'month', periodVal);
+    const res = getIncomeStatement(companyId, 'month', periodVal);
+    return res || { totalRevenue: 0, totalCogs: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 };
   }, [companyId, periodVal, triggerRefresh]);
 
   const gasProfit = useMemo(() => {
     void triggerRefresh;
-    return getGasGrossProfitForPeriod(companyId, 'month', periodVal);
+    const res = getGasGrossProfitForPeriod(companyId, 'month', periodVal);
+    return res || { totalKg: 0, totalRevenue: 0, totalCogs: 0, grossProfit: 0, grossMargin: 0 };
   }, [companyId, periodVal, triggerRefresh]);
 
   const gasInventory = useMemo(() => {
     void triggerRefresh;
-    return getGasInventoryForMonth(companyId, periodVal);
+    const res = getGasInventoryForMonth(companyId, periodVal);
+    return res || { beginningKg: 0, purchasedKg: 0, endingKg: 0, endingCost: 0, averageCostPerKg: 0 };
   }, [companyId, periodVal, triggerRefresh]);
 
   // Calculate P&L for previous month for comparison
@@ -44,48 +47,50 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   const prevPnl = useMemo(() => {
     void triggerRefresh;
-    return getIncomeStatement(companyId, 'month', prevPeriodVal);
+    const res = getIncomeStatement(companyId, 'month', prevPeriodVal);
+    return res || { totalRevenue: 0, totalCogs: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 };
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
     void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
-    const balances = getBankBalancesAtDate(companyId, lastDayStr);
-    return balances.reduce((sum, b) => sum + b.currentBalance, 0);
+    const balances = getBankBalancesAtDate(companyId, lastDayStr) || [];
+    return balances.reduce((sum, b) => sum + (b?.currentBalance || 0), 0);
   }, [companyId, periodVal, triggerRefresh]);
 
   // Dividends for the month
   const dividendData = useMemo(() => {
     void triggerRefresh;
-    return getDividendsForMonth(companyId, periodVal, 0.1); // 10% reserve ratio
+    return getDividendsForMonth(companyId, periodVal, 0.1) || { reserveAmount: 0, distributableAmount: 0, shareholders: [] };
   }, [companyId, periodVal, triggerRefresh]);
 
   // Cash / Bank balance of Petty Cash at the end of the month
   const pettyCashBalance = useMemo(() => {
     void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
-    const balances = getBankBalancesAtDate(companyId, lastDayStr);
-    const petty = balances.find(b => b.bankId === 'BANK_PETTY');
-    return petty ? petty.currentBalance : 0;
+    const balances = getBankBalancesAtDate(companyId, lastDayStr) || [];
+    const petty = balances.find(b => b && (b.id === 'BANK_PETTY' || b.bankId === 'BANK_PETTY'));
+    return petty ? (petty.currentBalance || 0) : 0;
   }, [companyId, periodVal, triggerRefresh]);
 
   // Accounts Receivable at the end of the month
   const receivablesSummary = useMemo(() => {
     void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
-    return getCustomerReceivableSummary(companyId, lastDayStr);
+    return getCustomerReceivableSummary(companyId, lastDayStr) || [];
   }, [companyId, periodVal, triggerRefresh]);
 
   const receivablesTotal = useMemo(() => {
-    return receivablesSummary.reduce((sum, item) => sum + (item.receivableTotal || 0), 0);
+    return (receivablesSummary || []).reduce((sum, item) => sum + (item?.receivableTotal || 0), 0);
   }, [receivablesSummary]);
 
   // Approved Incomes for current month
   const currentMonthIncomes = useMemo(() => {
     void triggerRefresh;
-    return getIncomes().filter(i => 
-      i.companyId === companyId && 
+    const list = getIncomes() || [];
+    return list.filter(i => 
+      i && i.companyId === companyId && 
       i.status === 'approved' && 
       i.date && typeof i.date === 'string' && i.date.startsWith(periodVal)
     );
@@ -94,8 +99,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // Approved Expenses for current month
   const currentMonthExpenses = useMemo(() => {
     void triggerRefresh;
-    return getExpenses().filter(e => 
-      e.companyId === companyId && 
+    const list = getExpenses() || [];
+    return list.filter(e => 
+      e && e.companyId === companyId && 
       e.status === 'approved' && 
       e.date && typeof e.date === 'string' && e.date.startsWith(periodVal)
     );
@@ -105,24 +111,24 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const bankBalancesList = useMemo(() => {
     void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
-    return getBankBalancesAtDate(companyId, lastDayStr);
+    return getBankBalancesAtDate(companyId, lastDayStr) || [];
   }, [companyId, periodVal, triggerRefresh]);
 
   // Budgets & Actual Expenditures
   const budgetProgressItems = useMemo(() => {
     void triggerRefresh;
-    const allBudgets = getBudgets().filter(b => b.companyId === companyId && b.year === year && b.month === month);
-    const accounts = getChartOfAccounts();
+    const allBudgets = (getBudgets() || []).filter(b => b && b.companyId === companyId && String(b.year) === String(year) && String(b.month) === String(month));
+    const accounts = getChartOfAccounts() || [];
     
     return allBudgets.map(b => {
-      const account = accounts.find(a => a.code === b.accountCode);
+      const account = accounts.find(a => a && a.code === b.accountCode);
       const accName = account ? account.name : b.accountCode;
-      const actualSum = currentMonthExpenses.filter(e => e.accountCode === b.accountCode).reduce((sum, e) => sum + e.amount, 0);
-      const pct = b.budgetAmount > 0 ? (actualSum / b.budgetAmount) * 100 : 0;
+      const actualSum = (currentMonthExpenses || []).filter(e => e && e.accountCode === b.accountCode).reduce((sum, e) => sum + (e.amount || 0), 0);
+      const pct = (b.budgetAmount || 0) > 0 ? (actualSum / b.budgetAmount) * 100 : 0;
       return {
         code: b.accountCode,
         name: accName,
-        budget: b.budgetAmount,
+        budget: b.budgetAmount || 0,
         actual: actualSum,
         percentage: pct
       };
@@ -132,11 +138,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // Pending Checks Alerts
   const checkAlerts = useMemo(() => {
     void triggerRefresh;
-    const config = getSystemConfig();
+    const config = getSystemConfig() || {};
     if (!config.enableCheckMaturityAlert) return [];
     
-    const incomes = getIncomes().filter(i => i.companyId === companyId && i.paymentMethod === 'check' && i.paymentStatus === 'unpaid' && i.status === 'approved');
-    const expenses = getExpenses().filter(e => e.companyId === companyId && e.paymentMethod === 'check' && e.paymentStatus === 'unpaid' && e.status === 'approved');
+    const incomes = (getIncomes() || []).filter(i => i && i.companyId === companyId && i.paymentMethod === 'check' && i.paymentStatus === 'unpaid' && i.status === 'approved');
+    const expenses = (getExpenses() || []).filter(e => e && e.companyId === companyId && e.paymentMethod === 'check' && e.paymentStatus === 'unpaid' && e.status === 'approved');
     
     const today = new Date();
     const parseDate = (dStr) => dStr ? new Date(dStr) : null;
@@ -159,44 +165,44 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // Get recent 5 transactions
   const recentTransactions = useMemo(() => {
     void triggerRefresh;
-    const incs = getIncomes()
-      .filter(i => i.companyId === companyId)
+    const incs = (getIncomes() || [])
+      .filter(i => i && i.companyId === companyId)
       .map(i => ({ ...i, type: 'income', label: '收入' }));
-    const exps = getExpenses()
-      .filter(e => e.companyId === companyId)
+    const exps = (getExpenses() || [])
+      .filter(e => e && e.companyId === companyId)
       .map(e => ({ ...e, type: 'expense', label: '支出' }));
     
     return [...incs, ...exps]
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 5);
   }, [companyId, triggerRefresh]);
 
   // Percent changes for metrics
-  const revChange = prevPnl.totalRevenue > 0 
-    ? ((pnl.totalRevenue - prevPnl.totalRevenue) / prevPnl.totalRevenue) * 100 
+  const revChange = (prevPnl?.totalRevenue || 0) > 0 
+    ? (((pnl?.totalRevenue || 0) - (prevPnl?.totalRevenue || 0)) / (prevPnl?.totalRevenue || 1)) * 100 
     : 0;
-  const expChange = prevPnl.totalExpenses + prevPnl.totalCogs > 0
-    ? (((pnl.totalExpenses + pnl.totalCogs) - (prevPnl.totalExpenses + prevPnl.totalCogs)) / (prevPnl.totalExpenses + prevPnl.totalCogs)) * 100
+  const expChange = ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0)) > 0
+    ? (((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0) - ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) / ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) * 100
     : 0;
-  const profitChange = prevPnl.netProfit !== 0
-    ? ((pnl.netProfit - prevPnl.netProfit) / Math.abs(prevPnl.netProfit)) * 100
+  const profitChange = (prevPnl?.netProfit || 0) !== 0
+    ? (((pnl?.netProfit || 0) - (prevPnl?.netProfit || 0)) / Math.abs(prevPnl?.netProfit || 1)) * 100
     : 0;
 
   // AI Insights generator
   const insights = useMemo(() => {
     const list = [];
-    const margin = pnl.totalRevenue > 0 ? (pnl.netProfit / pnl.totalRevenue) * 100 : 0;
+    const margin = (pnl?.totalRevenue || 0) > 0 ? ((pnl?.netProfit || 0) / (pnl?.totalRevenue || 1)) * 100 : 0;
     
     if (margin > 25) {
       list.push({ type: 'success', text: `✨ 營運績效亮眼：本月淨利率達 ${margin.toFixed(1)}%，整體獲利能力良好。` });
-    } else if (margin < 5 && pnl.totalRevenue > 0) {
+    } else if (margin < 5 && (pnl?.totalRevenue || 0) > 0) {
       list.push({ type: 'warning', text: `⚠️ 獲利警訊：本月淨利率僅 ${margin.toFixed(1)}%，請檢視固定成本與管銷費用。` });
     }
 
-    const fuelExp = currentMonthExpenses.filter(e => e.accountCode === '6104').reduce((sum, e) => sum + e.amount, 0);
-    const prevFuelExp = getExpenses()
-      .filter(e => e.companyId === companyId && e.status === 'approved' && e.accountCode === '6104' && e.date && e.date.startsWith(prevPeriodVal))
-      .reduce((sum, e) => sum + e.amount, 0);
+    const fuelExp = (currentMonthExpenses || []).filter(e => e && e.accountCode === '6104').reduce((sum, e) => sum + (e.amount || 0), 0);
+    const prevFuelExp = (getExpenses() || [])
+      .filter(e => e && e.companyId === companyId && e.status === 'approved' && e.accountCode === '6104' && e.date && typeof e.date === 'string' && e.date.startsWith(prevPeriodVal))
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     if (fuelExp > prevFuelExp * 1.15 && prevFuelExp > 0) {
       const fuelIncrease = ((fuelExp - prevFuelExp) / prevFuelExp) * 100;
@@ -211,17 +217,17 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
   const accountsMap = useMemo(() => {
     const map = {};
-    getChartOfAccounts().forEach(a => { map[a.code] = a.name; });
+    (getChartOfAccounts() || []).forEach(a => { if (a && a.code) map[a.code] = a.name; });
     return map;
   }, []);
 
   const getAccountName = (code) => accountsMap[code] || code || '其他';
-  const getBankName = (id) => getBanks().find(b => b.id === id)?.name || id || '現金/未指定';
+  const getBankName = (id) => (getBanks() || []).find(b => b && b.id === id)?.name || id || '現金/未指定';
 
   const operatingPieItems = [
-    { label: '營業收入', amount: pnl.totalRevenue, color: '#05b2a5' },
-    { label: '營業成本', amount: pnl.totalCogs, color: '#ef4444' },
-    { label: '營業費用', amount: pnl.totalExpenses, color: '#f59e0b' }
+    { label: '營業收入', amount: pnl?.totalRevenue || 0, color: '#05b2a5' },
+    { label: '營業成本', amount: pnl?.totalCogs || 0, color: '#ef4444' },
+    { label: '營業費用', amount: pnl?.totalExpenses || 0, color: '#f59e0b' }
   ];
 
   return (
@@ -270,7 +276,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     <span style={{ color: 'var(--accent-gold)', fontWeight: 'bold', marginLeft: '6px' }}>[剩餘 {c.daysLeft} 天兌現]</span>
                   )}
                 </span>
-                <span style={{ fontWeight: '700' }}>${c.amount.toLocaleString()} 元</span>
+                <span style={{ fontWeight: '700' }}>${(c.amount || 0).toLocaleString()} 元</span>
               </div>
             ))}
           </div>
@@ -290,7 +296,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">當月營業總額</span>
             <div className="metric-icon-wrapper green">📈</div>
           </div>
-          <span className="metric-value">${pnl.totalRevenue.toLocaleString()}</span>
+          <span className="metric-value">${(pnl?.totalRevenue || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${revChange >= 0 ? 'up' : 'down'}`}>
               {revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
@@ -310,7 +316,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">應收帳款 (客戶欠款)</span>
             <div className="metric-icon-wrapper red">💵</div>
           </div>
-          <span className="metric-value">${receivablesTotal.toLocaleString()}</span>
+          <span className="metric-value">${(receivablesTotal || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="metric-change neutral">截至月底未收餘額</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看名冊 ➔</span>
@@ -328,7 +334,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">當月支出總額</span>
             <div className="metric-icon-wrapper red">📉</div>
           </div>
-          <span className="metric-value">${(pnl.totalExpenses + pnl.totalCogs).toLocaleString()}</span>
+          <span className="metric-value">${((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0)).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${expChange <= 0 ? 'up' : 'down'}`}>
               {expChange >= 0 ? '↑' : '↓'} {Math.abs(expChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
@@ -348,8 +354,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">本月淨利潤</span>
             <div className="metric-icon-wrapper gold">💰</div>
           </div>
-          <span className={`metric-value ${pnl.netProfit < 0 ? 'text-danger' : ''}`}>
-            ${pnl.netProfit.toLocaleString()}
+          <span className={`metric-value ${(pnl?.netProfit || 0) < 0 ? 'text-danger' : ''}`}>
+            ${(pnl?.netProfit || 0).toLocaleString()}
           </span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${profitChange >= 0 ? 'up' : 'down'}`}>
@@ -370,7 +376,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">可用現金餘額</span>
             <div className="metric-icon-wrapper blue">🏦</div>
           </div>
-          <span className="metric-value">${cashBalance.toLocaleString()}</span>
+          <span className="metric-value">${(cashBalance || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="metric-change neutral">截至本月底</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看帳戶 ➔</span>
@@ -388,9 +394,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">本月瓦斯銷售公斤</span>
             <div className="metric-icon-wrapper green">🛢️</div>
           </div>
-          <span className="metric-value">{gasProfit.totalKg.toLocaleString()} kg</span>
+          <span className="metric-value">{(gasProfit?.totalKg || 0).toLocaleString()} kg</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">平均成本 ${gasInventory.averageCostPerKg.toFixed(2)} / kg</span>
+            <span className="metric-change neutral">平均成本 ${(gasInventory?.averageCostPerKg || 0).toFixed(2)} / kg</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分析 ➔</span>
           </div>
         </div>
@@ -406,9 +412,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">本月瓦斯毛利</span>
             <div className="metric-icon-wrapper gold">📊</div>
           </div>
-          <span className={`metric-value ${gasProfit.grossProfit < 0 ? 'text-danger' : ''}`}>${gasProfit.grossProfit.toLocaleString()}</span>
+          <span className={`metric-value ${(gasProfit?.grossProfit || 0) < 0 ? 'text-danger' : ''}`}>${(gasProfit?.grossProfit || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">毛利率 {gasProfit.grossMargin.toFixed(1)}%</span>
+            <span className="metric-change neutral">毛利率 {(gasProfit?.grossMargin || 0).toFixed(1)}%</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>🔍 點擊查看細節 ➔</span>
           </div>
         </div>
@@ -424,9 +430,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">期末瓦斯庫存</span>
             <div className="metric-icon-wrapper blue">📦</div>
           </div>
-          <span className="metric-value">{gasInventory.endingKg.toLocaleString()} kg</span>
+          <span className="metric-value">{(gasInventory?.endingKg || 0).toLocaleString()} kg</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">${gasInventory.endingCost.toLocaleString()} 存貨金額</span>
+            <span className="metric-change neutral">${(gasInventory?.endingCost || 0).toLocaleString()} 存貨金額</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分佈 ➔</span>
           </div>
         </div>
@@ -439,13 +445,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           <TrendChart companyId={companyId} year={year} month={month} triggerRefresh={triggerRefresh} />
 
           {/* Budget Execution Card */}
-          {budgetProgressItems.length > 0 && (
+          {(budgetProgressItems || []).length > 0 && (
             <div className="card">
               <div className="card-header">
                 <span className="card-title">📊 當月主要支出科目預算執行率</span>
               </div>
               <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {budgetProgressItems.map(item => {
+                {(budgetProgressItems || []).map(item => {
                   const isOver = item.percentage > 100;
                   const barColor = item.percentage <= 80 
                     ? 'var(--accent-blue)' 
@@ -458,14 +464,14 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
                         <span style={{ fontWeight: '600' }}>{item.name} ({item.code})</span>
                         <span style={{ fontFamily: 'var(--font-mono)' }}>
-                          ${item.actual.toLocaleString()} / ${item.budget.toLocaleString()} 
+                          ${(item.actual || 0).toLocaleString()} / ${(item.budget || 0).toLocaleString()} 
                           <strong style={{ marginLeft: '8px', color: isOver ? 'var(--accent-red)' : 'var(--text-primary)' }}>
-                            ({item.percentage.toFixed(1)}%)
+                            ({(item.percentage || 0).toFixed(1)}%)
                           </strong>
                         </span>
                       </div>
                       <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(item.percentage, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '4px', transition: 'width 0.3s' }} />
+                        <div style={{ width: `${Math.min(item.percentage || 0, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '4px', transition: 'width 0.3s' }} />
                       </div>
                     </div>
                   );
@@ -480,7 +486,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <span className="card-title">🤖 營運智慧診斷與警訊提醒</span>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {insights.map((item, idx) => (
+              {(insights || []).map((item, idx) => (
                 <div key={idx} className={`alert-box ${item.type}`} style={{ fontSize: '0.9rem', padding: '12px 16px', borderRadius: '10px' }}>
                   {item.text}
                 </div>
@@ -507,13 +513,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>法定/特別公積金 (10%)</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${dividendData.reserveAmount.toLocaleString()}
+                      ${(dividendData.reserveAmount || 0).toLocaleString()}
                     </div>
                   </div>
                   <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可分配股東紅利總額</div>
                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      ${dividendData.distributableAmount.toLocaleString()}
+                      ${(dividendData.distributableAmount || 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -529,16 +535,16 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {dividendData.shareholders.map(s => (
+                      {(dividendData.shareholders || []).map(s => (
                         <tr key={s.shareholderId}>
                           <td style={{ fontWeight: '600' }}>{s.name}</td>
-                          <td>{(s.shareRatio * 100).toFixed(1)}%</td>
+                          <td>{((s.shareRatio || 0) * 100).toFixed(1)}%</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
-                            ${s.dividendAmount.toLocaleString()}
+                            ${(s.dividendAmount || 0).toLocaleString()}
                           </td>
                         </tr>
                       ))}
-                      {dividendData.shareholders.length === 0 && (
+                      {(dividendData.shareholders || []).length === 0 && (
                         <tr>
                           <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>尚未設定股東資料</td>
                         </tr>
@@ -568,7 +574,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     </tr>
                   </thead>
                   <tbody>
-                    {recentTransactions.map((tx, idx) => (
+                    {(recentTransactions || []).map((tx, idx) => (
                       <tr key={idx}>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{tx.date}</td>
                         <td>
@@ -577,7 +583,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                           </span>
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '600' }}>
-                          ${tx.amount.toLocaleString()}
+                          ${(tx.amount || 0).toLocaleString()}
                         </td>
                         <td>
                           <span className={`badge ${tx.status}`}>
@@ -589,7 +595,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         </td>
                       </tr>
                     ))}
-                    {recentTransactions.length === 0 && (
+                    {(recentTransactions || []).length === 0 && (
                       <tr>
                         <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>本月暫無收支紀錄</td>
                       </tr>
@@ -660,19 +666,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總營業收入</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      ${pnl.totalRevenue.toLocaleString()} 元
+                      ${(pnl?.totalRevenue || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-green)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>已核准收入筆數</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      {currentMonthIncomes.length} 筆
+                      {(currentMonthIncomes || []).length} 筆
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均單筆收入金額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${currentMonthIncomes.length > 0 ? Math.round(pnl.totalRevenue / currentMonthIncomes.length).toLocaleString() : 0} 元
+                      ${(currentMonthIncomes || []).length > 0 ? Math.round((pnl?.totalRevenue || 0) / currentMonthIncomes.length).toLocaleString() : 0} 元
                     </div>
                   </div>
                 </div>
@@ -692,20 +698,20 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {currentMonthIncomes.map(item => (
+                      {(currentMonthIncomes || []).map(item => (
                         <tr key={item.id}>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{item.id}</td>
                           <td style={{ fontWeight: '600' }}>{item.customerName || item.remarks?.split(' ')[0] || '一般營業'}</td>
                           <td>{getAccountName(item.accountCode)}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
-                            ${item.amount.toLocaleString()}
+                            ${(item.amount || 0).toLocaleString()}
                           </td>
                           <td>{item.paymentMethod === 'cash' ? '現金 (零用金)' : item.bankId ? getBankName(item.bankId) : '銀行轉帳'}</td>
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{item.remarks || '-'}</td>
                         </tr>
                       ))}
-                      {currentMonthIncomes.length === 0 && (
+                      {(currentMonthIncomes || []).length === 0 && (
                         <tr>
                           <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
                             本月尚無已核准收入紀錄
@@ -724,13 +730,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底應收總額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
-                      ${receivablesTotal.toLocaleString()} 元
+                      ${(receivablesTotal || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>欠款客戶數</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      {receivablesSummary.filter(r => r.receivableTotal > 0).length} 位
+                      {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).length} 位
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
@@ -758,12 +764,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {receivablesSummary.filter(r => r.receivableTotal > 0).map(item => (
+                      {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).map(item => (
                         <tr key={item.customerId}>
                           <td style={{ fontWeight: '600' }}>{item.customerName}</td>
                           <td>{item.phone || '-'}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-red)' }}>
-                            ${item.receivableTotal.toLocaleString()} 元
+                            ${(item.receivableTotal || 0).toLocaleString()} 元
                           </td>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{item.oldestUnpaidDate || '-'}</td>
                           <td>
@@ -771,7 +777,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                           </td>
                         </tr>
                       ))}
-                      {receivablesSummary.filter(r => r.receivableTotal > 0).length === 0 && (
+                      {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).length === 0 && (
                         <tr>
                           <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
                             🎉 太棒了！截至月底完全無客戶欠款或未收帳款。
@@ -790,19 +796,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總支出 (銷貨成本+費用)</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
-                      ${(pnl.totalExpenses + pnl.totalCogs).toLocaleString()} 元
+                      ${((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0)).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>瓦斯銷貨成本 (COGS)</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      ${pnl.totalCogs.toLocaleString()} 元
+                      ${(pnl?.totalCogs || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>管銷與營業費用 (Expenses)</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      ${pnl.totalExpenses.toLocaleString()} 元
+                      ${(pnl?.totalExpenses || 0).toLocaleString()} 元
                     </div>
                   </div>
                 </div>
@@ -822,20 +828,20 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {currentMonthExpenses.map(item => (
+                      {(currentMonthExpenses || []).map(item => (
                         <tr key={item.id}>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{item.id}</td>
                           <td style={{ fontWeight: '600' }}>{item.supplierName || item.remarks?.split(' ')[0] || '營業支出'}</td>
                           <td>{getAccountName(item.accountCode)}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-red)' }}>
-                            ${item.amount.toLocaleString()}
+                            ${(item.amount || 0).toLocaleString()}
                           </td>
                           <td>{item.paymentMethod === 'cash' ? '現金 (零用金)' : item.bankId ? getBankName(item.bankId) : '銀行轉帳'}</td>
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{item.remarks || '-'}</td>
                         </tr>
                       ))}
-                      {currentMonthExpenses.length === 0 && (
+                      {(currentMonthExpenses || []).length === 0 && (
                         <tr>
                           <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
                             本月尚無已核准支出紀錄
@@ -857,24 +863,24 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>➕ 營業收入總額 (Total Revenue)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${pnl.totalRevenue.toLocaleString()} 元</strong>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(pnl?.totalRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>➖ 瓦斯銷貨成本 (Cost of Goods Sold)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${pnl.totalCogs.toLocaleString()} 元</strong>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalCogs || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #ccc', paddingTop: '8px', fontWeight: 'bold' }}>
-                      <span>🟢 營業毛利 (Gross Profit) [毛利率 {(pnl.totalRevenue > 0 ? (pnl.grossProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>${pnl.grossProfit.toLocaleString()} 元</strong>
+                      <span>🟢 營業毛利 (Gross Profit) [毛利率 {((pnl?.totalRevenue || 0) > 0 ? ((pnl?.grossProfit || 0) / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>${(pnl?.grossProfit || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>➖ 營業與管銷費用 (Operating Expenses)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${pnl.totalExpenses.toLocaleString()} 元</strong>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalExpenses || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
-                      <span>💰 本月稅前淨利潤 (Net Profit) [淨利率 {(pnl.totalRevenue > 0 ? (pnl.netProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: pnl.netProfit >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
-                        ${pnl.netProfit.toLocaleString()} 元
+                      <span>💰 本月稅前淨利潤 (Net Profit) [淨利率 {((pnl?.totalRevenue || 0) > 0 ? ((pnl?.netProfit || 0) / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: (pnl?.netProfit || 0) >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+                        ${(pnl?.netProfit || 0).toLocaleString()} 元
                       </strong>
                     </div>
                   </div>
@@ -883,11 +889,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.15)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>前三大收入來源：</div>
-                    {currentMonthIncomes.length > 0 ? (
-                      currentMonthIncomes.slice(0, 3).map((item, i) => (
+                    {(currentMonthIncomes || []).length > 0 ? (
+                      (currentMonthIncomes || []).slice(0, 3).map((item, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
                           <span>{i + 1}. {getAccountName(item.accountCode)} ({item.customerName || '客戶'})</span>
-                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${item.amount.toLocaleString()}</strong>
+                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${(item.amount || 0).toLocaleString()}</strong>
                         </div>
                       ))
                     ) : <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>尚無收入資料</div>}
@@ -895,11 +901,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
                   <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
                     <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-red)' }}>前三大費用支出：</div>
-                    {currentMonthExpenses.length > 0 ? (
-                      currentMonthExpenses.slice(0, 3).map((item, i) => (
+                    {(currentMonthExpenses || []).length > 0 ? (
+                      (currentMonthExpenses || []).slice(0, 3).map((item, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
                           <span>{i + 1}. {getAccountName(item.accountCode)}</span>
-                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${item.amount.toLocaleString()}</strong>
+                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${(item.amount || 0).toLocaleString()}</strong>
                         </div>
                       ))
                     ) : <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>尚無支出資料</div>}
@@ -913,7 +919,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', marginBottom: '20px', borderLeft: '4px solid var(--accent-blue)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底全公司總資金水位 (現金 + 銀行存款)</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                    ${cashBalance.toLocaleString()} 元
+                    ${(cashBalance || 0).toLocaleString()} 元
                   </div>
                 </div>
 
@@ -930,9 +936,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {bankBalancesList.map(b => {
-                        const isPetty = b.id === 'BANK_PETTY';
-                        const isLowPetty = isPetty && b.currentBalance < 2000;
+                      {(bankBalancesList || []).map(b => {
+                        const isPetty = b.id === 'BANK_PETTY' || b.bankId === 'BANK_PETTY';
+                        const isLowPetty = isPetty && (b.currentBalance || 0) < 2000;
                         return (
                           <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
                             <td style={{ fontWeight: '700' }}>
@@ -941,7 +947,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                             <td style={{ fontFamily: 'var(--font-mono)' }}>{b.accountNo || '-'}</td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>${(b.initialBalance || 0).toLocaleString()}</td>
                             <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', fontSize: '1.05rem', color: isLowPetty ? 'var(--accent-red)' : 'var(--accent-blue)' }}>
-                              ${b.currentBalance.toLocaleString()} 元
+                              ${(b.currentBalance || 0).toLocaleString()} 元
                             </td>
                             <td>
                               {isLowPetty ? (
@@ -965,19 +971,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>本月總銷售公斤數</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      {gasProfit.totalKg.toLocaleString()} kg
+                      {(gasProfit?.totalKg || 0).toLocaleString()} kg
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均售價 $/kg</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${gasProfit.totalKg > 0 ? (gasProfit.totalRevenue / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
+                      ${(gasProfit?.totalKg || 0) > 0 ? ((gasProfit?.totalRevenue || 0) / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均進貨成本 $/kg</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
-                      ${gasInventory.averageCostPerKg.toFixed(2)} / kg
+                      ${(gasInventory?.averageCostPerKg || 0).toFixed(2)} / kg
                     </div>
                   </div>
                 </div>
@@ -987,10 +993,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     🛢️ 瓦斯進銷存數量評估公式：
                   </div>
                   <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div>• <strong>期初庫存公斤數</strong>：{gasInventory.beginningKg.toLocaleString()} kg</div>
-                    <div>• <strong>本月進貨總公斤數</strong>：{gasInventory.purchasedKg.toLocaleString()} kg</div>
-                    <div>• <strong>本月銷售公斤數</strong>：{gasProfit.totalKg.toLocaleString()} kg</div>
-                    <div>• <strong>期末庫存公斤數</strong>：{gasInventory.endingKg.toLocaleString()} kg</div>
+                    <div>• <strong>期初庫存公斤數</strong>：{(gasInventory?.beginningKg || 0).toLocaleString()} kg</div>
+                    <div>• <strong>本月進貨總公斤數</strong>：{(gasInventory?.purchasedKg || 0).toLocaleString()} kg</div>
+                    <div>• <strong>本月銷售公斤數</strong>：{(gasProfit?.totalKg || 0).toLocaleString()} kg</div>
+                    <div>• <strong>期末庫存公斤數</strong>：{(gasInventory?.endingKg || 0).toLocaleString()} kg</div>
                   </div>
                 </div>
               </div>
@@ -1005,15 +1011,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>➕ 瓦斯銷貨總收入</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${gasProfit.totalRevenue.toLocaleString()} 元</strong>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(gasProfit?.totalRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➖ 瓦斯銷貨總成本 ({gasProfit.totalKg.toLocaleString()} kg × ${gasInventory.averageCostPerKg.toFixed(2)})</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${gasProfit.totalCogs.toLocaleString()} 元</strong>
+                      <span>➖ 瓦斯銷貨總成本 ({(gasProfit?.totalKg || 0).toLocaleString()} kg × ${(gasInventory?.averageCostPerKg || 0).toFixed(2)})</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(gasProfit?.totalCogs || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-gold)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
                       <span>💰 瓦斯銷貨毛利金額 (Gross Profit)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>${gasProfit.grossProfit.toLocaleString()} 元</strong>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>${(gasProfit?.grossProfit || 0).toLocaleString()} 元</strong>
                     </div>
                   </div>
                 </div>
@@ -1022,13 +1028,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>瓦斯銷貨毛利率</div>
                     <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      {gasProfit.grossMargin.toFixed(1)}%
+                      {(gasProfit?.grossMargin || 0).toFixed(1)}%
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均每 kg 毛利獲利</div>
                     <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${gasProfit.totalKg > 0 ? (gasProfit.grossProfit / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
+                      ${(gasProfit?.totalKg || 0) > 0 ? ((gasProfit?.grossProfit || 0) / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
                     </div>
                   </div>
                 </div>
@@ -1041,19 +1047,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>期末瓦斯總存貨</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      {gasInventory.endingKg.toLocaleString()} kg
+                      {(gasInventory?.endingKg || 0).toLocaleString()} kg
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>存貨評估總金額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${gasInventory.endingCost.toLocaleString()} 元
+                      ${(gasInventory?.endingCost || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-green)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均庫存成本 $/kg</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-green)', fontFamily: 'var(--font-mono)' }}>
-                      ${gasInventory.averageCostPerKg.toFixed(2)} / kg
+                      ${(gasInventory?.averageCostPerKg || 0).toFixed(2)} / kg
                     </div>
                   </div>
                 </div>
