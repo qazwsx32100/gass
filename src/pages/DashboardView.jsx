@@ -365,23 +365,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 5: 可用現金餘額 */}
-        <div 
-          className="metric-card accent-blue" 
-          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-          onClick={() => setActiveDetailModal('cash')}
-          title="點擊查看各銀行帳戶與店內零用金水位"
-        >
-          <div className="metric-card-header">
-            <span className="metric-label">可用現金餘額</span>
-            <div className="metric-icon-wrapper blue">🏦</div>
-          </div>
-          <span className="metric-value">${(cashBalance || 0).toLocaleString()}</span>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">截至本月底</span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看帳戶 ➔</span>
-          </div>
-        </div>
+        {/* Card 5: 可用現金餘額 (暫不顯示) */}
 
         {/* Card 6: 本月瓦斯銷售公斤 */}
         <div 
