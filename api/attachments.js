@@ -1,11 +1,12 @@
-import { captureServerException } from './_monitoring.js';
 import {
   fetchAppState,
   getBearerToken,
+  getClientIp,
   sanitizeStateForClient,
   sendJson,
   verifyToken
 } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
 import {
   downloadPrivateFileFromGoogleDrive,
   uploadPrivateFileToGoogleDrive
@@ -15,6 +16,20 @@ import {
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
 const WRITE_ROLES = new Set(['admin', 'business_reviewer', 'bookkeeper']);
+
+const ATTACHMENT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const ATTACHMENT_RATE_LIMIT_MAX = 20;
+const attachmentRateLimiter = createBoundedRateLimiter({
+  windowMs: ATTACHMENT_RATE_LIMIT_WINDOW_MS,
+  maxEntries: 5000
+});
+
+const rateLimitKey = (req, session) => `${session?.id || 'unknown'}:${getClientIp(req) || 'unknown'}`;
+
+const isAttachmentRateLimited = (req, session) => {
+  const key = rateLimitKey(req, session);
+  return attachmentRateLimiter.check([{ key, max: ATTACHMENT_RATE_LIMIT_MAX }]);
+};
 
 const isApprovedDevice = (security, deviceId) => (
   Boolean(deviceId) &&
@@ -73,6 +88,10 @@ export default async function handler(req, res) {
 
     if (!WRITE_ROLES.has(sessionUser.role)) {
       return sendJson(res, 403, { ok: false, error: 'This account cannot upload attachments.' });
+    }
+    if (isAttachmentRateLimited(req, session)) {
+      res.setHeader('Retry-After', '600');
+      return sendJson(res, 429, { ok: false, error: 'Too many attachment upload requests. Please try again later.' });
     }
     const body = parseBody(req);
     const match = String(body.dataUrl || '').match(/^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/);
