@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary } from '../utils/financials';
-import { getIncomes, getExpenses, getBudgets, getSystemConfig, getChartOfAccounts } from '../db/storage';
+import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getGasPurchases, getGasCylinders, getCustomers } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
@@ -8,7 +8,8 @@ import TrendChart from '../components/TrendChart';
 export default function DashboardView({ companyId, year, month, triggerRefresh, userRole, onNavigate }) {
   const periodVal = `${year}-${month}`;
   const showShareholderReports = canViewShareholderReports(userRole);
-  
+  const [activeDetailModal, setActiveDetailModal] = useState(null);
+
   const handleNavigateToChecks = () => {
     sessionStorage.setItem('inputsActiveSubTab', 'checks');
     if (onNavigate) {
@@ -70,11 +71,41 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [companyId, periodVal, triggerRefresh]);
 
   // Accounts Receivable at the end of the month
-  const receivablesTotal = useMemo(() => {
+  const receivablesSummary = useMemo(() => {
     void triggerRefresh;
     const lastDayStr = getPeriodEndDate('month', periodVal);
-    const summary = getCustomerReceivableSummary(companyId, lastDayStr);
-    return summary.reduce((sum, item) => sum + (item.receivableTotal || 0), 0);
+    return getCustomerReceivableSummary(companyId, lastDayStr);
+  }, [companyId, periodVal, triggerRefresh]);
+
+  const receivablesTotal = useMemo(() => {
+    return receivablesSummary.reduce((sum, item) => sum + (item.receivableTotal || 0), 0);
+  }, [receivablesSummary]);
+
+  // Approved Incomes for current month
+  const currentMonthIncomes = useMemo(() => {
+    void triggerRefresh;
+    return getIncomes().filter(i => 
+      i.companyId === companyId && 
+      i.status === 'approved' && 
+      i.date && typeof i.date === 'string' && i.date.startsWith(periodVal)
+    );
+  }, [companyId, periodVal, triggerRefresh]);
+
+  // Approved Expenses for current month
+  const currentMonthExpenses = useMemo(() => {
+    void triggerRefresh;
+    return getExpenses().filter(e => 
+      e.companyId === companyId && 
+      e.status === 'approved' && 
+      e.date && typeof e.date === 'string' && e.date.startsWith(periodVal)
+    );
+  }, [companyId, periodVal, triggerRefresh]);
+
+  // All Bank Balances
+  const bankBalancesList = useMemo(() => {
+    void triggerRefresh;
+    const lastDayStr = getPeriodEndDate('month', periodVal);
+    return getBankBalancesAtDate(companyId, lastDayStr);
   }, [companyId, periodVal, triggerRefresh]);
 
   // Budgets & Actual Expenditures
@@ -82,12 +113,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     void triggerRefresh;
     const allBudgets = getBudgets().filter(b => b.companyId === companyId && b.year === year && b.month === month);
     const accounts = getChartOfAccounts();
-    const expensesList = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date && typeof e.date === 'string' && e.date.startsWith(periodVal));
     
     return allBudgets.map(b => {
       const account = accounts.find(a => a.code === b.accountCode);
       const accName = account ? account.name : b.accountCode;
-      const actualSum = expensesList.filter(e => e.accountCode === b.accountCode).reduce((sum, e) => sum + e.amount, 0);
+      const actualSum = currentMonthExpenses.filter(e => e.accountCode === b.accountCode).reduce((sum, e) => sum + e.amount, 0);
       const pct = b.budgetAmount > 0 ? (actualSum / b.budgetAmount) * 100 : 0;
       return {
         code: b.accountCode,
@@ -97,7 +127,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
         percentage: pct
       };
     });
-  }, [companyId, year, month, periodVal, triggerRefresh]);
+  }, [companyId, year, month, currentMonthExpenses, triggerRefresh]);
 
   // Pending Checks Alerts
   const checkAlerts = useMemo(() => {
@@ -155,28 +185,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // AI Insights generator
   const insights = useMemo(() => {
     const list = [];
-    
-    // Profit margin check
     const margin = pnl.totalRevenue > 0 ? (pnl.netProfit / pnl.totalRevenue) * 100 : 0;
-    if (margin > 30) {
-      list.push({ type: 'success', text: `✨ 營收表現極佳！本月淨利率達 ${margin.toFixed(1)}%，高於行業平均水準。` });
-    } else if (margin > 10) {
-      list.push({ type: 'info', text: `💡 營運狀況平穩。本月淨利率為 ${margin.toFixed(1)}%，獲利正常。` });
-    } else if (margin > 0) {
-      list.push({ type: 'warning', text: `⚠️ 警訊：利潤率偏低（${margin.toFixed(1)}%），請檢視各項營業成本是否能進一步優化。` });
-    } else if (pnl.totalRevenue > 0) {
-      list.push({ type: 'error', text: `🚨 虧損警告：本月處於淨虧損狀態，淨利潤為 $${pnl.netProfit.toLocaleString()}。依股東協議，本月將不分配任何紅利。` });
+    
+    if (margin > 25) {
+      list.push({ type: 'success', text: `✨ 營運績效亮眼：本月淨利率達 ${margin.toFixed(1)}%，整體獲利能力良好。` });
+    } else if (margin < 5 && pnl.totalRevenue > 0) {
+      list.push({ type: 'warning', text: `⚠️ 獲利警訊：本月淨利率僅 ${margin.toFixed(1)}%，請檢視固定成本與管銷費用。` });
     }
 
-    // Expense check
-    const totalOut = pnl.totalExpenses + pnl.totalCogs;
-    if (totalOut > pnl.totalRevenue && pnl.totalRevenue > 0) {
-      list.push({ type: 'error', text: `🚨 支出大於收入！本月總流出為 $${totalOut.toLocaleString()}，大於總流入。請注意資金流動性。` });
-    }
+    const fuelExp = currentMonthExpenses.filter(e => e.accountCode === '6104').reduce((sum, e) => sum + e.amount, 0);
+    const prevFuelExp = getExpenses()
+      .filter(e => e.companyId === companyId && e.status === 'approved' && e.accountCode === '6104' && e.date && e.date.startsWith(prevPeriodVal))
+      .reduce((sum, e) => sum + e.amount, 0);
 
-    // Individual category checks (e.g. check salary or vehicle expenses)
-    const fuelExp = pnl.expenseItems.find(i => i.code === '6103')?.amount || 0;
-    const prevFuelExp = prevPnl.expenseItems.find(i => i.code === '6103')?.amount || 0;
     if (fuelExp > prevFuelExp * 1.15 && prevFuelExp > 0) {
       const fuelIncrease = ((fuelExp - prevFuelExp) / prevFuelExp) * 100;
       list.push({ type: 'warning', text: `🚗 費用警告：本月「車輛油資」達 $${fuelExp.toLocaleString()}，較上月增加 ${fuelIncrease.toFixed(1)}%。建議確認送貨路線是否重疊或車輛耗油異常。` });
@@ -186,10 +207,17 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       list.push({ type: 'info', text: '💡 本月目前無特殊異常金流。資產負債表處於平衡狀態。' });
     }
     return list;
-  }, [pnl, prevPnl]);
+  }, [pnl, prevPnl, currentMonthExpenses, companyId, prevPeriodVal]);
 
-  // Max value for chart scaling
-  const maxChartVal = Math.max(pnl.totalRevenue, pnl.totalCogs + pnl.totalExpenses, prevPnl.totalRevenue, prevPnl.totalExpenses + prevPnl.totalCogs, 10000);
+  const accountsMap = useMemo(() => {
+    const map = {};
+    getChartOfAccounts().forEach(a => { map[a.code] = a.name; });
+    return map;
+  }, []);
+
+  const getAccountName = (code) => accountsMap[code] || code || '其他';
+  const getBankName = (id) => getBanks().find(b => b.id === id)?.name || id || '現金/未指定';
+
   const operatingPieItems = [
     { label: '營業收入', amount: pnl.totalRevenue, color: '#05b2a5' },
     { label: '營業成本', amount: pnl.totalCogs, color: '#ef4444' },
@@ -249,40 +277,73 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
         </div>
       )}
 
-      {/* Metrics Row */}
+      {/* Metrics Row - Interactive Metric Cards */}
       <div className="metrics-grid">
-        <div className="metric-card accent-green">
+        {/* Card 1: 當月營業總額 */}
+        <div 
+          className="metric-card accent-green" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('revenue')}
+          title="點擊查看當月營業收入明細拆解"
+        >
           <div className="metric-card-header">
             <span className="metric-label">當月營業總額</span>
             <div className="metric-icon-wrapper green">📈</div>
           </div>
           <span className="metric-value">${pnl.totalRevenue.toLocaleString()}</span>
-          <span className={`metric-change ${revChange >= 0 ? 'up' : 'down'}`}>
-            {revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={`metric-change ${revChange >= 0 ? 'up' : 'down'}`}>
+              {revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-red" style={{ cursor: 'pointer' }} onClick={() => onNavigate && onNavigate('inputs')}>
+        {/* Card 2: 應收帳款 */}
+        <div 
+          className="metric-card accent-red" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('receivables')}
+          title="點擊查看客戶未收帳款與欠款名冊"
+        >
           <div className="metric-card-header">
             <span className="metric-label">應收帳款 (客戶欠款)</span>
             <div className="metric-icon-wrapper red">💵</div>
           </div>
           <span className="metric-value">${receivablesTotal.toLocaleString()}</span>
-          <span className="metric-change neutral">截至月底未收餘額 ➔</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">截至月底未收餘額</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看名冊 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-red">
+        {/* Card 3: 當月支出總額 */}
+        <div 
+          className="metric-card accent-red" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('expenses')}
+          title="點擊查看當月支出與進貨成本明細"
+        >
           <div className="metric-card-header">
             <span className="metric-label">當月支出總額</span>
             <div className="metric-icon-wrapper red">📉</div>
           </div>
           <span className="metric-value">${(pnl.totalExpenses + pnl.totalCogs).toLocaleString()}</span>
-          <span className={`metric-change ${expChange <= 0 ? 'up' : 'down'}`}>
-            {expChange >= 0 ? '↑' : '↓'} {Math.abs(expChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={`metric-change ${expChange <= 0 ? 'up' : 'down'}`}>
+              {expChange >= 0 ? '↑' : '↓'} {Math.abs(expChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-gold">
+        {/* Card 4: 本月淨利潤 */}
+        <div 
+          className="metric-card accent-gold" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('profit')}
+          title="點擊查看本月損益結構拆解"
+        >
           <div className="metric-card-header">
             <span className="metric-label">本月淨利潤</span>
             <div className="metric-icon-wrapper gold">💰</div>
@@ -290,45 +351,84 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           <span className={`metric-value ${pnl.netProfit < 0 ? 'text-danger' : ''}`}>
             ${pnl.netProfit.toLocaleString()}
           </span>
-          <span className={`metric-change ${profitChange >= 0 ? 'up' : 'down'}`}>
-            {profitChange >= 0 ? '↑' : '↓'} {Math.abs(profitChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={`metric-change ${profitChange >= 0 ? 'up' : 'down'}`}>
+              {profitChange >= 0 ? '↑' : '↓'} {Math.abs(profitChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
+            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>🔍 點擊查看結構 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-blue">
+        {/* Card 5: 可用現金餘額 */}
+        <div 
+          className="metric-card accent-blue" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('cash')}
+          title="點擊查看各銀行帳戶與店內零用金水位"
+        >
           <div className="metric-card-header">
             <span className="metric-label">可用現金餘額</span>
             <div className="metric-icon-wrapper blue">🏦</div>
           </div>
           <span className="metric-value">${cashBalance.toLocaleString()}</span>
-          <span className="metric-change neutral">截至本月底</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">截至本月底</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看帳戶 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-green">
+        {/* Card 6: 本月瓦斯銷售公斤 */}
+        <div 
+          className="metric-card accent-green" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('gasKg')}
+          title="點擊查看瓦斯銷貨公斤數與成本分析"
+        >
           <div className="metric-card-header">
             <span className="metric-label">本月瓦斯銷售公斤</span>
             <div className="metric-icon-wrapper green">🛢️</div>
           </div>
           <span className="metric-value">{gasProfit.totalKg.toLocaleString()} kg</span>
-          <span className="metric-change neutral">平均成本 ${gasInventory.averageCostPerKg.toFixed(2)} / kg</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">平均成本 ${gasInventory.averageCostPerKg.toFixed(2)} / kg</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分析 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-gold">
+        {/* Card 7: 本月瓦斯毛利 */}
+        <div 
+          className="metric-card accent-gold" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('gasProfit')}
+          title="點擊查看瓦斯銷貨毛利詳細計算"
+        >
           <div className="metric-card-header">
             <span className="metric-label">本月瓦斯毛利</span>
             <div className="metric-icon-wrapper gold">📊</div>
           </div>
           <span className={`metric-value ${gasProfit.grossProfit < 0 ? 'text-danger' : ''}`}>${gasProfit.grossProfit.toLocaleString()}</span>
-          <span className="metric-change neutral">毛利率 {gasProfit.grossMargin.toFixed(1)}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">毛利率 {gasProfit.grossMargin.toFixed(1)}%</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>🔍 點擊查看細節 ➔</span>
+          </div>
         </div>
 
-        <div className="metric-card accent-blue">
+        {/* Card 8: 期末瓦斯庫存 */}
+        <div 
+          className="metric-card accent-blue" 
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('gasStock')}
+          title="點擊查看期末鋼瓶與瓦斯庫存分佈"
+        >
           <div className="metric-card-header">
             <span className="metric-label">期末瓦斯庫存</span>
             <div className="metric-icon-wrapper blue">📦</div>
           </div>
           <span className="metric-value">{gasInventory.endingKg.toLocaleString()} kg</span>
-          <span className="metric-change neutral">${gasInventory.endingCost.toLocaleString()} 存貨金額</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">${gasInventory.endingCost.toLocaleString()} 存貨金額</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分佈 ➔</span>
+          </div>
         </div>
       </div>
 
@@ -348,30 +448,24 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {budgetProgressItems.map(item => {
                   const isOver = item.percentage > 100;
                   const barColor = item.percentage <= 80 
-                    ? 'var(--accent-green)' 
+                    ? 'var(--accent-blue)' 
                     : item.percentage <= 100 
-                      ? 'var(--accent-gold)' 
-                      : 'var(--accent-red)';
-                  
+                    ? 'var(--accent-gold)' 
+                    : 'var(--accent-red)';
+                    
                   return (
-                    <div key={item.code} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                        <span>📁 {item.code} {item.name}</span>
-                        <span style={{ color: isOver ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
-                          實際: ${item.actual.toLocaleString()} / 預算: ${item.budget.toLocaleString()} ({item.percentage.toFixed(1)}%)
-                          {isOver && <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.1)', fontSize: '0.75rem' }}>⚠️ 預算超支</span>}
+                    <div key={item.code} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                        <span style={{ fontWeight: '600' }}>{item.name} ({item.code})</span>
+                        <span style={{ fontFamily: 'var(--font-mono)' }}>
+                          ${item.actual.toLocaleString()} / ${item.budget.toLocaleString()} 
+                          <strong style={{ marginLeft: '8px', color: isOver ? 'var(--accent-red)' : 'var(--text-primary)' }}>
+                            ({item.percentage.toFixed(1)}%)
+                          </strong>
                         </span>
                       </div>
-                      <div style={{ height: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div 
-                          style={{ 
-                            height: '100%', 
-                            width: `${Math.min(item.percentage, 100)}%`, 
-                            backgroundColor: barColor, 
-                            borderRadius: '4px',
-                            transition: 'width 0.5s ease-in-out'
-                          }} 
-                        />
+                      <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(item.percentage, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '4px', transition: 'width 0.3s' }} />
                       </div>
                     </div>
                   );
@@ -380,123 +474,83 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             </div>
           )}
 
-          {/* Trend Chart Card */}
+          {/* Intelligent Insights Card */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">📊 營收與支出對比趨勢</span>
-            </div>
-            <div className="card-body">
-              <div className="bar-chart-container">
-                <div className="bar-chart-row">
-                  <span className="bar-chart-label">上月總營收</span>
-                  <div className="bar-chart-wrapper">
-                    <div className="bar-chart-fill green" style={{ width: `${(prevPnl.totalRevenue / maxChartVal) * 100}%` }}></div>
-                  </div>
-                  <span className="bar-chart-value">${prevPnl.totalRevenue.toLocaleString()}</span>
-                </div>
-
-                <div className="bar-chart-row">
-                  <span className="bar-chart-label">上月總支出</span>
-                  <div className="bar-chart-wrapper">
-                    <div className="bar-chart-fill red" style={{ width: `${((prevPnl.totalCogs + prevPnl.totalExpenses) / maxChartVal) * 100}%` }}></div>
-                  </div>
-                  <span className="bar-chart-value">${(prevPnl.totalCogs + prevPnl.totalExpenses).toLocaleString()}</span>
-                </div>
-
-                <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '8px 0' }} />
-
-                <div className="bar-chart-row">
-                  <span className="bar-chart-label">本月總營收</span>
-                  <div className="bar-chart-wrapper">
-                    <div className="bar-chart-fill green" style={{ width: `${(pnl.totalRevenue / maxChartVal) * 100}%` }}></div>
-                  </div>
-                  <span className="bar-chart-value">${pnl.totalRevenue.toLocaleString()}</span>
-                </div>
-
-                <div className="bar-chart-row">
-                  <span className="bar-chart-label">本月總支出</span>
-                  <div className="bar-chart-wrapper">
-                    <div className="bar-chart-fill red" style={{ width: `${((pnl.totalCogs + pnl.totalExpenses) / maxChartVal) * 100}%` }}></div>
-                  </div>
-                  <span className="bar-chart-value">${(pnl.totalCogs + pnl.totalExpenses).toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">🥧 本月營運結構圓餅圖</span>
-            </div>
-            <div className="card-body">
-              <PieChart
-                title="收入、成本、費用比例"
-                items={operatingPieItems}
-                emptyText="本月尚無收入或支出資料"
-              />
-            </div>
-          </div>
-
-          {/* AI Insights Card */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">🤖 AI 財務分析與預警</span>
+              <span className="card-title">🤖 營運智慧診斷與警訊提醒</span>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {insights.map((ins, idx) => (
-                <div key={idx} className={`alert-box ${ins.type}`}>
-                  <div>{ins.text}</div>
+              {insights.map((item, idx) => (
+                <div key={idx} className={`alert-box ${item.type}`} style={{ fontSize: '0.9rem', padding: '12px 16px', borderRadius: '10px' }}>
+                  {item.text}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Shareholder Dividend & Recent Activities */}
+        {/* Right Column: Operating Structure Pie Chart & Dividends */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {showShareholderReports && (
+          <PieChart items={operatingPieItems} title={`月度經營收支結構 (${periodVal})`} />
+
+          {/* Shareholder Dividend Split (Admin / Shareholder only) */}
+          {showShareholderReports && dividendData && (
             <div className="card">
-              <div className="card-header">
-                <span className="card-title">👑 本月股東預估分紅 ({year}年{parseInt(month, 10)}月)</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', fontWeight: '600' }}>
-                  公積金提撥率: {dividendData.reserveRatio * 100}%
-                </span>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title">👑 當月預估股東分紅與留存公積金</span>
+                <button className="btn btn-secondary btn-sm" onClick={() => onNavigate && onNavigate('shareholderZone')}>
+                  查看股東專區 ➔
+                </button>
               </div>
               <div className="card-body">
-                {dividendData.isLoss ? (
-                  <div className="alert-box error" style={{ margin: 0 }}>
-                    本月處於虧損狀態，依股東會決議不發放分紅，虧損將留存於保留盈餘。
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                      <span>淨利潤：${dividendData.netProfit.toLocaleString()}</span>
-                      <span>提撥公積金：-${dividendData.reserveAmount.toLocaleString()}</span>
-                      <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>可分紅總額：${dividendData.totalDividends.toLocaleString()}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>法定/特別公積金 (10%)</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                      ${dividendData.reserveAmount.toLocaleString()}
                     </div>
+                  </div>
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可分配股東紅利總額</div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                      ${dividendData.distributableAmount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
 
-                    <div className="bar-chart-container" style={{ marginTop: 0 }}>
-                      {dividendData.shareholderDividends.map((sh, idx) => (
-                        <div key={idx} className="bar-chart-row">
-                          <span className="bar-chart-label" style={{ fontWeight: '600' }}>
-                            {sh.name} ({sh.ratio}%)
-                          </span>
-                          <div className="bar-chart-wrapper">
-                            <div className="bar-chart-fill gold" style={{ width: `${sh.ratio}%` }}></div>
-                          </div>
-                          <span className="bar-chart-value" style={{ color: 'var(--accent-gold)' }}>
-                            ${sh.dividend.toLocaleString()}
-                          </span>
-                        </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '8px' }}>各股東分紅試算表：</div>
+                <div className="table-responsive">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>股東姓名</th>
+                        <th>持股比例</th>
+                        <th>本月可分得紅利</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dividendData.shareholders.map(s => (
+                        <tr key={s.shareholderId}>
+                          <td style={{ fontWeight: '600' }}>{s.name}</td>
+                          <td>{(s.shareRatio * 100).toFixed(1)}%</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
+                            ${s.dividendAmount.toLocaleString()}
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  </div>
-                )}
+                      {dividendData.shareholders.length === 0 && (
+                        <tr>
+                          <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>尚未設定股東資料</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Recent Ledger Entries */}
+          {/* Recent Activity Stream */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">📝 歷史最近流水帳</span>
@@ -547,6 +601,483 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* DETAILED INTERACTIVE BREAKDOWN MODALS FOR ALL 8 METRIC CARDS */}
+      {/* ========================================================================= */}
+      {activeDetailModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }} onClick={() => setActiveDetailModal(null)}>
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '920px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '2px solid rgba(5, 178, 165, 0.25)',
+              padding: '28px',
+              position: 'relative'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid rgba(5, 178, 165, 0.15)', paddingBottom: '16px' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {activeDetailModal === 'revenue' && '📈 當月營業總額詳細明細拆解'}
+                {activeDetailModal === 'receivables' && '💵 客戶應收帳款與欠款名冊'}
+                {activeDetailModal === 'expenses' && '📉 當月營業支出與進貨明細'}
+                {activeDetailModal === 'profit' && '💰 當月淨利潤與損益結構分析'}
+                {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
+                {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
+                {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
+                {activeDetailModal === 'gasStock' && '📦 期末瓦斯庫存與全區鋼瓶分佈'}
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-blue)', backgroundColor: 'rgba(5, 178, 165, 0.1)', padding: '4px 10px', borderRadius: '12px' }}>
+                  {periodVal}
+                </span>
+              </div>
+              <button 
+                onClick={() => setActiveDetailModal(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content Switcher */}
+            {activeDetailModal === 'revenue' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總營業收入</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                      ${pnl.totalRevenue.toLocaleString()} 元
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-green)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>已核准收入筆數</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      {currentMonthIncomes.length} 筆
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均單筆收入金額</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                      ${currentMonthIncomes.length > 0 ? Math.round(pnl.totalRevenue / currentMonthIncomes.length).toLocaleString() : 0} 元
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontWeight: '700', marginBottom: '10px' }}>當月收入傳票列表：</div>
+                <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>日期</th>
+                        <th>傳票編號</th>
+                        <th>客戶/項目</th>
+                        <th>會計科目</th>
+                        <th>金額</th>
+                        <th>付款方式</th>
+                        <th>備註</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentMonthIncomes.map(item => (
+                        <tr key={item.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{item.id}</td>
+                          <td style={{ fontWeight: '600' }}>{item.customerName || item.remarks?.split(' ')[0] || '一般營業'}</td>
+                          <td>{getAccountName(item.accountCode)}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-blue)' }}>
+                            ${item.amount.toLocaleString()}
+                          </td>
+                          <td>{item.paymentMethod === 'cash' ? '現金 (零用金)' : item.bankId ? getBankName(item.bankId) : '銀行轉帳'}</td>
+                          <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{item.remarks || '-'}</td>
+                        </tr>
+                      ))}
+                      {currentMonthIncomes.length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
+                            本月尚無已核准收入紀錄
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'receivables' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底應收總額</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
+                      ${receivablesTotal.toLocaleString()} 元
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>欠款客戶數</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      {receivablesSummary.filter(r => r.receivableTotal > 0).length} 位
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>管理快速動作</div>
+                    <button 
+                      className="btn btn-primary btn-sm" 
+                      style={{ marginTop: '4px' }}
+                      onClick={() => { setActiveDetailModal(null); onNavigate && onNavigate('inputs'); }}
+                    >
+                      前往日常金流銷帳 ➔
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ fontWeight: '700', marginBottom: '10px' }}>客戶未收欠款名冊：</div>
+                <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>客戶姓名</th>
+                        <th>聯絡電話</th>
+                        <th>未收欠款金額</th>
+                        <th>最舊欠款日期</th>
+                        <th>狀態</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {receivablesSummary.filter(r => r.receivableTotal > 0).map(item => (
+                        <tr key={item.customerId}>
+                          <td style={{ fontWeight: '600' }}>{item.customerName}</td>
+                          <td>{item.phone || '-'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-red)' }}>
+                            ${item.receivableTotal.toLocaleString()} 元
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.oldestUnpaidDate || '-'}</td>
+                          <td>
+                            <span className="badge void">未清償</span>
+                          </td>
+                        </tr>
+                      ))}
+                      {receivablesSummary.filter(r => r.receivableTotal > 0).length === 0 && (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
+                            🎉 太棒了！截至月底完全無客戶欠款或未收帳款。
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'expenses' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總支出 (銷貨成本+費用)</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
+                      ${(pnl.totalExpenses + pnl.totalCogs).toLocaleString()} 元
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>瓦斯銷貨成本 (COGS)</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      ${pnl.totalCogs.toLocaleString()} 元
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>管銷與營業費用 (Expenses)</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                      ${pnl.totalExpenses.toLocaleString()} 元
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontWeight: '700', marginBottom: '10px' }}>當月支出傳票列表：</div>
+                <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>日期</th>
+                        <th>傳票編號</th>
+                        <th>廠商/受款人</th>
+                        <th>會計科目</th>
+                        <th>金額</th>
+                        <th>付款方式</th>
+                        <th>備註</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentMonthExpenses.map(item => (
+                        <tr key={item.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{item.id}</td>
+                          <td style={{ fontWeight: '600' }}>{item.supplierName || item.remarks?.split(' ')[0] || '營業支出'}</td>
+                          <td>{getAccountName(item.accountCode)}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-red)' }}>
+                            ${item.amount.toLocaleString()}
+                          </td>
+                          <td>{item.paymentMethod === 'cash' ? '現金 (零用金)' : item.bankId ? getBankName(item.bankId) : '銀行轉帳'}</td>
+                          <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{item.remarks || '-'}</td>
+                        </tr>
+                      ))}
+                      {currentMonthExpenses.length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
+                            本月尚無已核准支出紀錄
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'profit' && (
+              <div>
+                <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
+                    📊 {periodVal} 損益計算公式結構：
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➕ 營業收入總額 (Total Revenue)</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${pnl.totalRevenue.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 瓦斯銷貨成本 (Cost of Goods Sold)</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${pnl.totalCogs.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #ccc', paddingTop: '8px', fontWeight: 'bold' }}>
+                      <span>🟢 營業毛利 (Gross Profit) [毛利率 {(pnl.totalRevenue > 0 ? (pnl.grossProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>${pnl.grossProfit.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 營業與管銷費用 (Operating Expenses)</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${pnl.totalExpenses.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
+                      <span>💰 本月稅前淨利潤 (Net Profit) [淨利率 {(pnl.totalRevenue > 0 ? (pnl.netProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: pnl.netProfit >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+                        ${pnl.netProfit.toLocaleString()} 元
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.15)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>前三大收入來源：</div>
+                    {currentMonthIncomes.length > 0 ? (
+                      currentMonthIncomes.slice(0, 3).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
+                          <span>{i + 1}. {getAccountName(item.accountCode)} ({item.customerName || '客戶'})</span>
+                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${item.amount.toLocaleString()}</strong>
+                        </div>
+                      ))
+                    ) : <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>尚無收入資料</div>}
+                  </div>
+
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-red)' }}>前三大費用支出：</div>
+                    {currentMonthExpenses.length > 0 ? (
+                      currentMonthExpenses.slice(0, 3).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
+                          <span>{i + 1}. {getAccountName(item.accountCode)}</span>
+                          <strong style={{ fontFamily: 'var(--font-mono)' }}>${item.amount.toLocaleString()}</strong>
+                        </div>
+                      ))
+                    ) : <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>尚無支出資料</div>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'cash' && (
+              <div>
+                <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', marginBottom: '20px', borderLeft: '4px solid var(--accent-blue)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底全公司總資金水位 (現金 + 銀行存款)</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                    ${cashBalance.toLocaleString()} 元
+                  </div>
+                </div>
+
+                <div style={{ fontWeight: '700', marginBottom: '10px' }}>各資金與銀行帳戶水位列表：</div>
+                <div className="table-responsive">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>帳戶種類 / 名稱</th>
+                        <th>帳號/編號</th>
+                        <th>初始餘額</th>
+                        <th>當前可用餘額</th>
+                        <th>狀態提醒</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bankBalancesList.map(b => {
+                        const isPetty = b.id === 'BANK_PETTY';
+                        const isLowPetty = isPetty && b.currentBalance < 2000;
+                        return (
+                          <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
+                            <td style={{ fontWeight: '700' }}>
+                              {isPetty ? '💵 店內零用金 (現金)' : `🏦 ${b.name}`}
+                            </td>
+                            <td style={{ fontFamily: 'var(--font-mono)' }}>{b.accountNo || '-'}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)' }}>${(b.initialBalance || 0).toLocaleString()}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', fontSize: '1.05rem', color: isLowPetty ? 'var(--accent-red)' : 'var(--accent-blue)' }}>
+                              ${b.currentBalance.toLocaleString()} 元
+                            </td>
+                            <td>
+                              {isLowPetty ? (
+                                <span className="badge void">⚠️ 餘額低於安全限額 ($2,000)！請撥補</span>
+                              ) : (
+                                <span className="badge approved">水位正常</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'gasKg' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>本月總銷售公斤數</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                      {gasProfit.totalKg.toLocaleString()} kg
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均售價 $/kg</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                      ${gasProfit.totalKg > 0 ? (gasProfit.totalRevenue / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均進貨成本 $/kg</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
+                      ${gasInventory.averageCostPerKg.toFixed(2)} / kg
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--accent-blue)', marginBottom: '8px' }}>
+                    🛢️ 瓦斯進銷存數量評估公式：
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div>• <strong>期初庫存公斤數</strong>：{gasInventory.beginningKg.toLocaleString()} kg</div>
+                    <div>• <strong>本月進貨總公斤數</strong>：{gasInventory.purchasedKg.toLocaleString()} kg</div>
+                    <div>• <strong>本月銷售公斤數</strong>：{gasProfit.totalKg.toLocaleString()} kg</div>
+                    <div>• <strong>期末庫存公斤數</strong>：{gasInventory.endingKg.toLocaleString()} kg</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'gasProfit' && (
+              <div>
+                <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '20px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-gold)' }}>
+                    📊 本月瓦斯銷貨毛利詳細計算：
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➕ 瓦斯銷貨總收入</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${gasProfit.totalRevenue.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 瓦斯銷貨總成本 ({gasProfit.totalKg.toLocaleString()} kg × ${gasInventory.averageCostPerKg.toFixed(2)})</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${gasProfit.totalCogs.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-gold)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
+                      <span>💰 瓦斯銷貨毛利金額 (Gross Profit)</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)' }}>${gasProfit.grossProfit.toLocaleString()} 元</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>瓦斯銷貨毛利率</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                      {gasProfit.grossMargin.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(245, 158, 11, 0.05)', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均每 kg 毛利獲利</div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                      ${gasProfit.totalKg > 0 ? (gasProfit.grossProfit / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'gasStock' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>期末瓦斯總存貨</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
+                      {gasInventory.endingKg.toLocaleString()} kg
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>存貨評估總金額</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                      ${gasInventory.endingCost.toLocaleString()} 元
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-green)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均庫存成本 $/kg</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-green)', fontFamily: 'var(--font-mono)' }}>
+                      ${gasInventory.averageCostPerKg.toFixed(2)} / kg
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--accent-blue)', marginBottom: '8px' }}>
+                    📦 庫存管理提示：
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                    如需查看鋼瓶在門市、車輛、客戶端與氣廠的詳細流向動態，請點擊左側選單 **【🍼 鋼瓶狀態】** 模組，進行即時鋼瓶定位與盤點。
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div style={{ marginTop: '24px', textAlign: 'right', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+              <button className="btn btn-secondary" onClick={() => setActiveDetailModal(null)}>
+                關閉視窗
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
