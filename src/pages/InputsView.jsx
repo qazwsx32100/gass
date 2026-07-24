@@ -183,6 +183,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
   const getDailySalesSummaries = useCallback(() => {
     const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
+    const allExpenses = getExpenses().filter(item => item.companyId === companyId && item.status === 'approved');
     const allBankTransactions = getBankTransactions().filter(item => item.companyId === companyId && item.status === 'approved');
 
     const summaryByDate = {};
@@ -204,6 +205,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             cylinderIncome: 0,
             inspectionIncome: 0,
             depositIncome: 0,
+            depositRefund: 0,
             repaymentAmount: 0
           };
         }
@@ -226,6 +228,35 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           summaryByDate[date].inspectionIncome = Number(inc.amount || 0);
         } else if (inc.remarks === '當日營業彙總 - 押瓶收入') {
           summaryByDate[date].depositIncome = Number(inc.amount || 0);
+        } else if (inc.remarks === '當日營業彙總 - 退押桶押金') {
+          summaryByDate[date].depositRefund = (summaryByDate[date].depositRefund || 0) + Math.abs(Number(inc.amount || 0));
+        }
+      }
+    });
+
+    allExpenses.forEach(exp => {
+      if (exp.remarks && exp.remarks.startsWith('當日營業彙總 - ')) {
+        const date = exp.date;
+        if (!summaryByDate[date]) {
+          summaryByDate[date] = {
+            date,
+            salesAmount: 0,
+            paidAmount: 0,
+            arAmount: 0,
+            unpaidAmount: 0,
+            totalCylinders: 0,
+            totalWeight: 0,
+            stoveIncome: 0,
+            repairIncome: 0,
+            cylinderIncome: 0,
+            inspectionIncome: 0,
+            depositIncome: 0,
+            depositRefund: 0,
+            repaymentAmount: 0
+          };
+        }
+        if (exp.remarks === '當日營業彙總 - 退押桶押金') {
+          summaryByDate[date].depositRefund = (summaryByDate[date].depositRefund || 0) + Number(exp.amount || 0);
         }
       }
     });
@@ -251,6 +282,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             cylinderIncome: 0,
             inspectionIncome: 0,
             depositIncome: 0,
+            depositRefund: 0,
             repaymentAmount: 0
           };
         }
@@ -261,7 +293,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     return Object.values(summaryByDate).map(s => {
       s.gasTotalIncome = s.paidAmount + s.arAmount + s.unpaidAmount;
       s.avgPrice = s.totalWeight > 0 ? s.gasTotalIncome / s.totalWeight : 0;
-      s.salesAmount = s.paidAmount + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0);
+      s.salesAmount = s.paidAmount + s.repaymentAmount + s.stoveIncome + s.repairIncome + s.cylinderIncome + s.inspectionIncome + (s.depositIncome || 0) - (s.depositRefund || 0);
       return s;
     }).sort((a, b) => b.date.localeCompare(a.date));
   }, [companyId]);
@@ -812,7 +844,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       repairIncome: '',
       cylinderIncome: '',
       inspectionIncome: '',
-      depositIncome: ''
+      depositIncome: '',
+      depositRefund: ''
     });
     setIsModalOpen(true);
   };
@@ -899,7 +932,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       disposalAmount: item.disposalAmount || '',
       cylinderIncome: item.cylinderIncome ?? '',
       inspectionIncome: item.inspectionIncome ?? '',
-      depositIncome: item.depositIncome ?? ''
+      depositIncome: item.depositIncome ?? '',
+      depositRefund: item.depositRefund ?? ''
     });
     setIsModalOpen(true);
   };
@@ -954,11 +988,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       if (blockIfPeriodLocked(targetDate, editingItem ? '修改資料' : '新增資料')) return;
 
       const currentIncomes = getIncomes();
+      const currentExpenses = getExpenses();
       const currentBankTx = getBankTransactions();
 
       const originalDate = editingItem ? editingItem.date : targetDate;
 
       const filteredIncomes = currentIncomes.filter(item => 
+        !(item.companyId === companyId && item.date === originalDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
+      const filteredExpenses = currentExpenses.filter(item => 
         !(item.companyId === companyId && item.date === originalDate && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
       const filteredBankTx = currentBankTx.filter(item =>
@@ -1000,6 +1038,26 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
       filteredIncomes.push(...newIncomes);
 
+      const refundVal = Math.abs(Number(formData.depositRefund) || 0);
+      if (refundVal > 0) {
+        const newExpense = {
+          id: `EXP-GEN-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          companyId,
+          date: targetDate,
+          accountCode: '5103',
+          paymentMethod: 'cash',
+          paymentStatus: 'paid',
+          price: 0,
+          qty: 0,
+          amount: refundVal,
+          status: 'approved',
+          operator: currentUser?.name || '系統自動生成',
+          remarks: '當日營業彙總 - 退押桶押金',
+          createdAt: new Date().toISOString()
+        };
+        filteredExpenses.push(newExpense);
+      }
+
       const repaymentVal = Number(formData.repaymentAmount) || 0;
       if (repaymentVal > 0) {
         const defaultBank = getBanks().find(b => b.companyId === companyId) || { id: 'BANK001' };
@@ -1020,6 +1078,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       }
 
       saveIncomes(filteredIncomes);
+      saveExpenses(filteredExpenses);
       saveBankTransactions(filteredBankTx);
       onDataChange();
       setIsModalOpen(false);
@@ -1615,9 +1674,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const date = id;
       if (blockIfPeriodLocked(date, '刪除資料')) return;
       const currentIncomes = getIncomes();
+      const currentExpenses = getExpenses();
       const currentBankTx = getBankTransactions();
 
       const incs = currentIncomes.filter(item => 
+        item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
+      );
+      const exps = currentExpenses.filter(item =>
         item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - ')
       );
       const btxs = currentBankTx.filter(item =>
@@ -1627,6 +1690,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       incs.forEach(inc => {
         archiveDeletion({ collection: 'incomes', record: inc, actor: operatorName, reason });
       });
+      exps.forEach(exp => {
+        archiveDeletion({ collection: 'expenses', record: exp, actor: operatorName, reason });
+      });
       btxs.forEach(bt => {
         archiveDeletion({ collection: 'bankTransactions', record: bt, actor: operatorName, reason });
       });
@@ -1634,11 +1700,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       const filteredIncomes = currentIncomes.filter(item => 
         !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
+      const filteredExpenses = currentExpenses.filter(item => 
+        !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
+      );
       const filteredBankTx = currentBankTx.filter(item =>
         !(item.companyId === companyId && item.date === date && item.remarks && item.remarks.startsWith('當日營業彙總 - '))
       );
 
       saveIncomes(filteredIncomes);
+      saveExpenses(filteredExpenses);
       saveBankTransactions(filteredBankTx);
       addLog(operatorName, '刪除每日營業彙總', `刪除 ${date} 的每日營業彙總資料。`);
       onDataChange();
@@ -2393,6 +2463,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>買桶收入</th>
                     <th>檢驗費收入</th>
                     <th>押瓶收入</th>
+                    <th>退押桶押金 (扣項)</th>
                     <th>營業額</th>
                     {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
@@ -2569,6 +2640,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.cylinderIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.inspectionIncome)}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(item.depositIncome)}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', color: item.depositRefund > 0 ? 'var(--accent-red)' : 'inherit' }}>
+                          {item.depositRefund > 0 ? `-${formatCurrency(item.depositRefund)}` : '$0'}
+                        </td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 'bold' }}>{formatCurrency(item.salesAmount)}</td>
                       </>
                     )}
@@ -2898,7 +2972,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   const cylinder = Number(formData.cylinderIncome) || 0;
                   const inspection = Number(formData.inspectionIncome) || 0;
                   const deposit = Number(formData.depositIncome) || 0;
-                  const totalRevenue = paid + repayment + stove + repair + cylinder + inspection + deposit;
+                  const depositRefund = Number(formData.depositRefund) || 0;
+                  const totalRevenue = paid + repayment + stove + repair + cylinder + inspection + deposit - depositRefund;
 
                   return (
                     <>
@@ -2965,8 +3040,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                           <input type="number" min="0" placeholder="請輸入檢驗費收入" className="form-control" value={formData.inspectionIncome} onChange={e => setFormData({ ...formData, inspectionIncome: e.target.value })} />
                         </div>
                         <div className="form-group" style={{ marginTop: '12px' }}>
-                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>押瓶收入</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>押瓶收入 (+)</label>
                           <input type="number" min="0" placeholder="請輸入押瓶收入" className="form-control" value={formData.depositIncome} onChange={e => setFormData({ ...formData, depositIncome: e.target.value })} />
+                        </div>
+                        <div className="form-group" style={{ marginTop: '12px' }}>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block', color: 'var(--accent-red)', fontWeight: 'bold' }}>
+                            退押桶押金 (扣項 / -)
+                          </label>
+                          <input 
+                            type="number" 
+                            min="0" 
+                            placeholder="請輸入退押金金額 (自動扣減)" 
+                            className="form-control" 
+                            style={{ border: '1.5px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.03)' }} 
+                            value={formData.depositRefund} 
+                            onChange={e => setFormData({ ...formData, depositRefund: e.target.value })} 
+                          />
                         </div>
                       </div>
                     </>
@@ -4192,12 +4281,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       <DetailRow label="合計銷售數量" value={`${Number(item.totalCylinders).toLocaleString()} 桶`} />
                       <DetailRow label="平均公斤單價" value={`$${Number(item.avgPrice).toFixed(2)} / kg`} />
 
-                      <SectionHeader title="🍳 其它營業收入" />
+                      <SectionHeader title="🍳 其它營業與押金流" />
                       <DetailRow label="爐具收入" value={fmtVal(item.stoveIncome)} />
                       <DetailRow label="維修/安裝 收入" value={fmtVal(item.repairIncome)} />
                       <DetailRow label="買桶收入" value={fmtVal(item.cylinderIncome)} />
                       <DetailRow label="檢驗費收入" value={fmtVal(item.inspectionIncome)} />
-                      <DetailRow label="押瓶收入" value={fmtVal(item.depositIncome)} />
+                      <DetailRow label="押瓶收入 (+)" value={fmtVal(item.depositIncome)} />
+                      <DetailRow label="退押桶押金 (扣項 / -)" value={item.depositRefund > 0 ? `-${fmtVal(item.depositRefund)}` : '$0'} color="var(--accent-red)" />
 
                       <SectionHeader title={`📋 系統關聯拆帳傳票 (${relatedEntries.length} 筆)`} />
                       <div className="table-responsive" style={{ maxHeight: '200px', border: '1px solid var(--border-color)', borderRadius: '6px', marginTop: '8px' }}>

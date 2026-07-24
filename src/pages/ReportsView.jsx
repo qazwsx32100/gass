@@ -454,6 +454,13 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     );
     const depositIncomeAmount = depositIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
+    // Deposit Refund Expenses (退押桶押金)
+    const depositRefundExpenses = allExpenses.filter(item =>
+      item.remarks?.includes('退押桶') ||
+      item.remarks?.includes('退押金')
+    );
+    const depositRefundAmount = depositRefundExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
     // Other Incomes (其他營業收入)
     const otherIncomes = allIncomes.filter(item =>
       !gasSales.some(g => g.id === item.id) &&
@@ -485,6 +492,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       cylinderIncomeAmount: cylinderIncomeAmount || 0,
       inspectionIncomeAmount: inspectionIncomeAmount || 0,
       depositIncomeAmount: depositIncomeAmount || 0,
+      depositRefundAmount: depositRefundAmount || 0,
       otherIncomeAmount: otherIncomeAmount || 0
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
