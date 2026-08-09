@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport, isReportableRepayment } from '../utils/financials';
 import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -27,6 +27,29 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const [drillDownName, setDrillDownName] = useState('');
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
   const [selectedAuditCategory, setSelectedAuditCategory] = useState(null);
+  const [genericDetail, setGenericDetail] = useState(null);
+
+  const openRenderedDetail = (event) => {
+    if (event.target.closest('button, a, input, select, textarea, label')) return;
+    const element = event.target.closest('.metric-card, .summary-card, tbody tr');
+    if (!element || window.getComputedStyle(element).cursor === 'pointer') return;
+
+    const row = element.matches('tr') ? element : null;
+    const table = row?.closest('table');
+    const headers = table ? Array.from(table.querySelectorAll('thead th')).map(item => item.innerText.trim()) : [];
+    const values = row
+      ? Array.from(row.cells).map((cell, index) => ({ label: headers[index] || `欄位 ${index + 1}`, value: cell.innerText.trim() || '—' }))
+      : Array.from(element.querySelectorAll('.metric-label, .summary-label, .metric-value, .summary-value, .metric-change'))
+        .map((item, index) => ({ label: item.className.includes('label') ? '項目' : index === 1 ? '數值' : '補充', value: item.innerText.trim() }))
+        .filter(item => item.value);
+
+    if (values.length) {
+      setGenericDetail({
+        title: row ? '明細列完整資料' : '小卡完整資料',
+        values
+      });
+    }
+  };
 
   const handleQuickUpdate = async (id, isIncome, updates) => {
     if (isIncome) {
@@ -349,10 +372,12 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const gasSalesPaidAmount = gasSalesPaid.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Repayments (還款金額)
+    const repaymentSourceIncomes = getIncomes().filter(item => item.companyId === companyId);
     const repayments = getBankTransactions().filter(bt =>
       bt.companyId === companyId &&
       bt.direction === 'in' &&
       bt.sourceType === 'settlement' &&
+      isReportableRepayment(bt, repaymentSourceIncomes) &&
       isDateInPeriod(bt.date, activePeriodType, activePeriodVal)
     );
     const repaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -461,6 +486,16 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     );
     const depositRefundAmount = depositRefundExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
+    const cashIncomeAmount = allIncomes
+      .filter(item =>
+        item.paymentStatus === 'paid' &&
+        item.paymentMethod !== 'receivable' &&
+        item.summaryOnly !== true &&
+        item.syncType !== 'receivable_opening'
+      )
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const cashReceivedAmount = cashIncomeAmount + repaymentAmount - depositRefundAmount;
+
     // Other Incomes (其他營業收入)
     const otherIncomes = allIncomes.filter(item =>
       !gasSales.some(g => g.id === item.id) &&
@@ -475,6 +510,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return {
       gasSalesAmount: gasSalesAmount || 0,
       gasSalesPaidAmount: gasSalesPaidAmount || 0,
+      cashReceivedAmount: cashReceivedAmount || 0,
       repaymentAmount: repaymentAmount || 0,
       monthlyArAmount: monthlyArAmount || 0,
       unpaidArAmount: unpaidArAmount || 0,
@@ -622,6 +658,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         [],
         ['資料項目', '數值 / 金額'],
         ['瓦斯銷售總金額', dailySales.gasSalesAmount],
+        ['實收營業額', dailySales.cashReceivedAmount],
         ['瓦斯銷售已收款', dailySales.gasSalesPaidAmount],
         ['還款金額', dailySales.repaymentAmount],
         ['月結應收帳款', dailySales.monthlyArAmount],
@@ -779,7 +816,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} onClick={openRenderedDetail}>
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
@@ -1252,6 +1289,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               {/* Financial Metrics */}
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💰 銷貨金流指標</h3>
               <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+                <div className="metric-card accent-green">
+                  <span className="metric-label">實收營業額</span>
+                  <span className="metric-value">{formatCurrency(dailySales.cashReceivedAmount)}</span>
+                </div>
                 <div className="metric-card accent-blue">
                   <span className="metric-label">瓦斯銷售總金額</span>
                   <span className="metric-value">{formatCurrency(dailySales.gasSalesAmount)}</span>
@@ -2456,6 +2497,28 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
         )}
       </div>
+
+      {/* Drill Down Modal */}
+      {genericDetail && (
+        <div className="modal-overlay no-print" style={{ zIndex: 1240 }} onClick={() => setGenericDetail(null)}>
+          <div className="modal-content" style={{ maxWidth: '640px', width: '95%', maxHeight: '85vh' }} onClick={event => event.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">🔍 {genericDetail.title}</span>
+              <button type="button" className="modal-close" onClick={() => setGenericDetail(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px', overflowY: 'auto' }}>
+              {genericDetail.values.map((field, index) => (
+                <div key={`${field.label}-${index}`} className="financial-row">
+                  <span>{field.label}</span><span style={{ textAlign: 'right', whiteSpace: 'pre-wrap' }}>{field.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setGenericDetail(null)}>關閉</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Drill Down Modal */}
       {drillDownCode && (

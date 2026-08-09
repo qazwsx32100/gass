@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary } from '../utils/financials';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary, getCashReceivedForPeriod } from '../utils/financials';
 import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getGasPurchases, getGasCylinders, getCustomers } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -51,6 +51,16 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return res || { totalRevenue: 0, totalCogs: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 };
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
+  const cashReceived = useMemo(() => {
+    void triggerRefresh;
+    return getCashReceivedForPeriod(companyId, 'month', periodVal);
+  }, [companyId, periodVal, triggerRefresh]);
+
+  const prevCashReceived = useMemo(() => {
+    void triggerRefresh;
+    return getCashReceivedForPeriod(companyId, 'month', prevPeriodVal);
+  }, [companyId, prevPeriodVal, triggerRefresh]);
+
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
     void triggerRefresh;
@@ -82,7 +92,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [companyId, periodVal, triggerRefresh]);
 
   const receivablesTotal = useMemo(() => {
-    return (receivablesSummary || []).reduce((sum, item) => sum + (item?.receivableTotal || 0), 0);
+    return (receivablesSummary || []).reduce((sum, item) => sum + (item?.monthlyReceivableTotal || 0), 0);
+  }, [receivablesSummary]);
+
+  const debtTotal = useMemo(() => {
+    return (receivablesSummary || []).reduce((sum, item) => sum + (item?.debtTotal || 0), 0);
   }, [receivablesSummary]);
 
   // Approved Incomes for current month
@@ -178,8 +192,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [companyId, triggerRefresh]);
 
   // Percent changes for metrics
-  const revChange = (prevPnl?.totalRevenue || 0) > 0 
-    ? (((pnl?.totalRevenue || 0) - (prevPnl?.totalRevenue || 0)) / (prevPnl?.totalRevenue || 1)) * 100 
+  const revChange = (prevCashReceived?.total || 0) > 0
+    ? (((cashReceived?.total || 0) - (prevCashReceived?.total || 0)) / (prevCashReceived?.total || 1)) * 100
     : 0;
   const expChange = ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0)) > 0
     ? (((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0) - ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) / ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) * 100
@@ -293,10 +307,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           title="點擊查看當月營業收入明細拆解"
         >
           <div className="metric-card-header">
-            <span className="metric-label">當月營業總額</span>
+            <span className="metric-label">實收營業額</span>
             <div className="metric-icon-wrapper green">📈</div>
           </div>
-          <span className="metric-value">${(pnl?.totalRevenue || 0).toLocaleString()}</span>
+          <span className="metric-value">${(cashReceived?.total || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${revChange >= 0 ? 'up' : 'down'}`}>
               {revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
@@ -313,7 +327,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           title="點擊查看客戶未收帳款與欠款名冊"
         >
           <div className="metric-card-header">
-            <span className="metric-label">應收帳款 (客戶欠款)</span>
+            <span className="metric-label">應收帳款（月結）</span>
             <div className="metric-icon-wrapper red">💵</div>
           </div>
           <span className="metric-value">${(receivablesTotal || 0).toLocaleString()}</span>
@@ -323,7 +337,25 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 3: 當月支出總額 */}
+        {/* Card 3: 現結欠款 */}
+        <div
+          className="metric-card accent-red"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('receivables')}
+          title="點擊查看客戶現結未付欠款名冊"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">欠款（現結未付）</span>
+            <div className="metric-icon-wrapper red">欠</div>
+          </div>
+          <span className="metric-value">${(debtTotal || 0).toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">與月結應收分開計算</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看名冊 ➔</span>
+          </div>
+        </div>
+
+        {/* Card 4: 當月支出總額 */}
         <div 
           className="metric-card accent-red" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
@@ -722,9 +754,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>欠款客戶數</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>現結欠款總額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).length} 位
+                      ${(debtTotal || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
@@ -746,7 +778,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       <tr>
                         <th>客戶姓名</th>
                         <th>聯絡電話</th>
-                        <th>未收欠款金額</th>
+                        <th>應收帳款（月結）</th>
+                        <th>欠款（現結未付）</th>
+                        <th>未收合計</th>
                         <th>最舊欠款日期</th>
                         <th>狀態</th>
                       </tr>
@@ -756,6 +790,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         <tr key={item.customerId}>
                           <td style={{ fontWeight: '600' }}>{item.customerName}</td>
                           <td>{item.phone || '-'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-purple)' }}>
+                            ${(item.monthlyReceivableTotal || 0).toLocaleString()} 元
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-gold)' }}>
+                            ${(item.debtTotal || 0).toLocaleString()} 元
+                          </td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: 'var(--accent-red)' }}>
                             ${(item.receivableTotal || 0).toLocaleString()} 元
                           </td>
@@ -767,7 +807,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       ))}
                       {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).length === 0 && (
                         <tr>
-                          <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
+                          <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
                             🎉 太棒了！截至月底完全無客戶欠款或未收帳款。
                           </td>
                         </tr>

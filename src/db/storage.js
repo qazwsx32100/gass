@@ -1315,13 +1315,33 @@ export const translateDetails = (details = '') => {
   return zh;
 };
 
+const getLogTimestampMs = (log) => {
+  if (!log) return 0;
+  const val = log.timestamp || log.createdAt || log.created_at || log.date || log.time;
+  if (val) {
+    if (val instanceof Date) return val.getTime();
+    if (typeof val === 'number') return val;
+    const str = String(val).trim().replace(/-/g, '/').replace('T', ' ');
+    const ms = new Date(str).getTime();
+    if (!isNaN(ms)) return ms;
+    const parts = str.match(/\d+/g);
+    if (parts && parts.length >= 3) {
+      return new Date(parts[0], parts[1] - 1, parts[2], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+    }
+  }
+  return 0;
+};
+
 export const getLogs = () => {
   const data = read(KEYS.LOGS) || [];
-  return data.map(log => ({
-    ...log,
-    action: translateAction(log.action),
-    details: translateDetails(log.details)
-  }));
+  return data
+    .map(log => ({
+      ...log,
+      timestamp: log.timestamp || log.createdAt || log.created_at || log.date || log.time || '',
+      action: translateAction(log.action),
+      details: translateDetails(log.details)
+    }))
+    .sort((a, b) => getLogTimestampMs(b) - getLogTimestampMs(a));
 };
 
 export const saveLogs = (data) => write(KEYS.LOGS, data);

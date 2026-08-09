@@ -63,7 +63,23 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   }, [triggerRefresh]);
   const auditLogs = useMemo(() => {
     void triggerRefresh;
-    return getLogs();
+    const getMs = (log) => {
+      if (!log) return 0;
+      const val = log.timestamp || log.createdAt || log.created_at || log.date || log.time;
+      if (val) {
+        if (val instanceof Date) return val.getTime();
+        if (typeof val === 'number') return val;
+        const str = String(val).trim().replace(/-/g, '/').replace('T', ' ');
+        const ms = new Date(str).getTime();
+        if (!isNaN(ms)) return ms;
+        const parts = str.match(/\d+/g);
+        if (parts && parts.length >= 3) {
+          return new Date(parts[0], parts[1] - 1, parts[2], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+        }
+      }
+      return 0;
+    };
+    return getLogs().sort((a, b) => getMs(b) - getMs(a));
   }, [triggerRefresh]);
   
   // Budget & System Config States
@@ -1403,10 +1419,28 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     </tr>
                   </thead>
                   <tbody>
-                    {auditLogs.map((log, idx) => (
+                    {auditLogs.slice().sort((a, b) => {
+                      const getMs = (log) => {
+                        if (!log) return 0;
+                        const val = log.timestamp || log.createdAt || log.created_at || log.date || log.time;
+                        if (val) {
+                          if (val instanceof Date) return val.getTime();
+                          if (typeof val === 'number') return val;
+                          const str = String(val).trim().replace(/-/g, '/').replace('T', ' ');
+                          const ms = new Date(str).getTime();
+                          if (!isNaN(ms)) return ms;
+                          const parts = str.match(/\d+/g);
+                          if (parts && parts.length >= 3) {
+                            return new Date(parts[0], parts[1] - 1, parts[2], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+                          }
+                        }
+                        return 0;
+                      };
+                      return getMs(b) - getMs(a);
+                    }).map((log, idx) => (
                       <tr key={idx}>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.id}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.timestamp}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{log.timestamp || log.createdAt || log.created_at || '—'}</td>
                         <td style={{ fontWeight: '600', color: log.operator === '主管理員' ? 'var(--accent-blue)' : 'var(--accent-gold)' }}>
                           {log.operator}
                         </td>

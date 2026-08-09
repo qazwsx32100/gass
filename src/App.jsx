@@ -604,7 +604,7 @@ function App() {
           />
           <div>
             <div className="sidebar-logo-text" style={{ fontSize: '1.05rem', fontWeight: '800', letterSpacing: '-0.3px' }}>盛隆瓦斯</div>
-            <div className="sidebar-logo-sub" style={{ fontSize: '0.72rem' }}>營運管理系統 v1.0</div>
+            <div className="sidebar-logo-sub" style={{ fontSize: '0.72rem' }}>營運管理系統 v1.1.0</div>
           </div>
           <button
             type="button"

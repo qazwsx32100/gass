@@ -451,6 +451,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       transactionType: isIncome ? 'income' : 'expense',
       sourceType: 'settlement',
       sourceId: clearingItem.id,
+      debtOriginDate: clearingItem.date,
       paymentMethod: settlementMethod,
       amount: Number(clearingItem.amount || 0),
       counterpartyName: clearingItem.counterpartyName || '',
@@ -838,6 +839,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       arAmount: '',
       unpaidAmount: '',
       repaymentAmount: '',
+      repaymentOriginDate: '',
       totalCylinders: '',
       totalWeight: '',
       stoveIncome: '',
@@ -1068,6 +1070,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           date: targetDate,
           direction: 'in',
           sourceType: 'settlement',
+          debtOriginDate: formData.repaymentOriginDate || '',
           amount: repaymentVal,
           status: 'approved',
           operator: currentUser?.name || '系統自動生成',
@@ -2452,8 +2455,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>記帳日期</th>
                     <th>瓦斯總收入</th>
                     <th>已收金額</th>
-                    <th>欠款金額</th>
-                    <th>應收帳款</th>
+                    <th>欠款（現結未付）</th>
+                    <th>應收帳款（月結）</th>
                     <th>還款金額</th>
                     <th>合計重量</th>
                     <th>合計桶數</th>
@@ -3012,6 +3015,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>還款金額 (收回舊欠)</label>
                           <input type="number" min="0" placeholder="請輸入收回舊欠金額" className="form-control" value={formData.repaymentAmount} onChange={e => setFormData({ ...formData, repaymentAmount: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>原欠款日期</label>
+                          <input type="date" max={formData.date} required={Number(formData.repaymentAmount) > 0} className="form-control" value={formData.repaymentOriginDate || ''} onChange={e => setFormData({ ...formData, repaymentOriginDate: e.target.value })} />
+                          <small style={{ color: 'var(--text-secondary)' }}>2026-07-01 以前的欠款還款不列入新財報</small>
                         </div>
                         <div className="form-group">
                           <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>合計重量 (kg)</label>

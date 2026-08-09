@@ -1,6 +1,10 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
 import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions, getPeriodLocks } from '../db/storage';
+import { getWeightedGasPurchaseCost } from './gasCost';
+import { FINANCIAL_REPORT_START_DATE, isReportableRepayment } from './reportPolicy';
+
+export { FINANCIAL_REPORT_START_DATE, getRepaymentOriginDate, isReportableRepayment } from './reportPolicy';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -8,6 +12,7 @@ const isBankTransfer = (item) => !!item.bankId;
 // periodType: 'month' (e.g. '2026-06'), 'quarter' (e.g. '2026-Q2'), 'year' (e.g. '2026'), 'all'
 export const isDateInPeriod = (dateStr, periodType, periodVal) => {
   if (!dateStr || typeof dateStr !== 'string') return false;
+  if (dateStr < FINANCIAL_REPORT_START_DATE) return false;
   if (periodType === 'all') return true;
   if (periodType === 'date') return dateStr === periodVal;
   if (periodType === 'range') {
@@ -152,19 +157,71 @@ export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().to
 
   return customers.map(customer => {
     const rows = unpaidIncomes.filter(income => matchCustomerIncome(income, customer));
-    const total = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const monthlyRows = rows.filter(item => item.receivableType !== 'current_debt');
+    const debtRows = rows.filter(item => item.receivableType === 'current_debt');
+    const monthlyTotal = monthlyRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const debtTotal = debtRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const total = monthlyTotal + debtTotal;
     const oldestDays = rows.reduce((max, item) => {
       const dueDate = item.dueDate || item.checkDueDate || item.date;
       return Math.max(max, daysBetween(dueDate, asOfDate));
     }, 0);
+    const oldestUnpaidDate = rows
+      .map(item => item.dueDate || item.checkDueDate || item.date)
+      .filter(Boolean)
+      .sort()[0] || '';
     return {
       ...customer,
       receivableTotal: total,
+      monthlyReceivableTotal: monthlyTotal,
+      debtTotal,
+      monthlyReceivableCount: monthlyRows.length,
+      debtCount: debtRows.length,
       unpaidCount: rows.length,
+      oldestUnpaidDate,
       oldestDays,
       agingBucket: getAgingBucket(oldestDays)
     };
   }).sort((a, b) => b.receivableTotal - a.receivableTotal);
+};
+
+export const getCashReceivedForPeriod = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+  const incomes = getIncomes();
+  const cashIncomes = incomes.filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.paymentStatus === 'paid' &&
+    item.paymentMethod !== 'receivable' &&
+    item.summaryOnly !== true &&
+    item.syncType !== 'receivable_opening' &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+  const settlements = getBankTransactions().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    item.direction === 'in' &&
+    item.sourceType === 'settlement' &&
+    isReportableRepayment(item, incomes) &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+  const depositRefunds = getExpenses().filter(item =>
+    item.companyId === companyId &&
+    item.status === 'approved' &&
+    String(item.remarks || '').includes('退瓶押金') &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  );
+  const incomeAmount = cashIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const settlementAmount = settlements.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const refundAmount = depositRefunds.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  return {
+    total: incomeAmount + settlementAmount - refundAmount,
+    incomeAmount,
+    settlementAmount,
+    refundAmount,
+    cashIncomes,
+    settlements,
+    depositRefunds
+  };
 };
 
 export const getSupplierPayableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
@@ -809,9 +866,13 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.amount || 0), 0)
     : Number(config?.purchaseAmount || 0);
 
+  const purchaseCostBasis = monthDailyPurchases.length > 0
+    ? getWeightedGasPurchaseCost(monthDailyPurchases)
+    : purchaseAmount;
+
   const shrinkageKg = Number(config?.shrinkageKg || 0);
   const availableKg = openingKg + purchaseKg;
-  const availableCost = openingCost + purchaseAmount;
+  const availableCost = openingCost + purchaseCostBasis;
   const averageCostPerKg = availableKg > 0 ? availableCost / availableKg : 0;
   const monthSales = getApprovedGasSales(companyId, 'month', yearMonth);
   const soldKg = monthSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
@@ -833,11 +894,13 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     }
   });
 
+  const repaymentIncomes = getIncomes();
   const repayments = getBankTransactions().filter(bt =>
     bt.companyId === companyId &&
     bt.status === 'approved' &&
     bt.direction === 'in' &&
     (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isReportableRepayment(bt, repaymentIncomes) &&
     isDateInPeriod(bt.date, 'month', yearMonth)
   );
   const repaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -856,6 +919,7 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     openingCost,
     purchaseKg,
     purchaseAmount,
+    purchaseCostBasis,
     shrinkageKg,
     availableKg,
     availableCost,
@@ -882,11 +946,13 @@ export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
   const sales = getApprovedGasSales(companyId, periodType, periodVal);
+  const repaymentIncomes = getIncomes();
   const allRepayments = getBankTransactions().filter(bt =>
     bt.companyId === companyId &&
     bt.status === 'approved' &&
     bt.direction === 'in' &&
     (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isReportableRepayment(bt, repaymentIncomes) &&
     isDateInPeriod(bt.date, periodType, periodVal)
   );
 
@@ -962,11 +1028,13 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
+  const repaymentIncomes = getIncomes();
   const allRepayments = getBankTransactions().filter(bt =>
     bt.companyId === companyId &&
     bt.status === 'approved' &&
     bt.direction === 'in' &&
     (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
+    isReportableRepayment(bt, repaymentIncomes) &&
     isDateInPeriod(bt.date, periodType, periodVal)
   );
 
