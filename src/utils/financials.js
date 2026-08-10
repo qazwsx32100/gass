@@ -3,8 +3,10 @@
 import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions, getPeriodLocks } from '../db/storage';
 import { getWeightedGasPurchaseCost } from './gasCost';
 import { FINANCIAL_REPORT_START_DATE, isReportableRepayment } from './reportPolicy';
+import { isSystemEstimatedExpenseEntry } from './expensePolicy';
 
 export { FINANCIAL_REPORT_START_DATE, getRepaymentOriginDate, isReportableRepayment } from './reportPolicy';
+export { isSystemEstimatedExpenseEntry } from './expensePolicy';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -172,6 +174,14 @@ export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().to
       .map(item => item.dueDate || item.checkDueDate || item.date)
       .filter(Boolean)
       .sort()[0] || '';
+    const monthlyOldestUnpaidDate = monthlyRows
+      .map(item => item.dueDate || item.checkDueDate || item.date)
+      .filter(Boolean)
+      .sort()[0] || '';
+    const debtOldestUnpaidDate = debtRows
+      .map(item => item.dueDate || item.checkDueDate || item.date)
+      .filter(Boolean)
+      .sort()[0] || '';
     return {
       ...customer,
       receivableTotal: total,
@@ -181,6 +191,8 @@ export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().to
       debtCount: debtRows.length,
       unpaidCount: rows.length,
       oldestUnpaidDate,
+      monthlyOldestUnpaidDate,
+      debtOldestUnpaidDate,
       oldestDays,
       agingBucket: getAgingBucket(oldestDays)
     };
@@ -253,9 +265,10 @@ export const getMonthlyDashboardSummary = (companyId, yearMonth) => {
     item.correctionStatus !== 'corrected' && item.correctionType !== 'reversal' &&
     String(item.date || '').startsWith(yearMonth)
   );
-  // 進氣成本（5101）由瓦斯庫存／毛利模組另外分析，不列入總覽的日常支出。
-  const gasPurchaseExpenseEntries = approvedExpenseEntries.filter(item => String(item.accountCode || '') === '5101');
-  const operatingExpenseEntries = approvedExpenseEntries.filter(item => String(item.accountCode || '') !== '5101');
+  const systemEstimatedExpenseEntries = approvedExpenseEntries.filter(isSystemEstimatedExpenseEntry);
+  // 帳號 5101 的一般支出傳票是人工輸入的真實進氣付款，必須列入當月支出。
+  const operatingExpenseEntries = approvedExpenseEntries.filter(item => !isSystemEstimatedExpenseEntry(item));
+  const manualGasPurchaseExpenseEntries = operatingExpenseEntries.filter(item => String(item.accountCode || '') === '5101');
   const receivableCustomers = getCustomerReceivableSummary(companyId, getPeriodEndDate('month', yearMonth), yearMonth);
   const receiptMonthCash = getCashReceivedForPeriod(companyId, 'month', yearMonth);
   const attributedSettlements = getBankTransactions().filter(item =>
@@ -295,7 +308,9 @@ export const getMonthlyDashboardSummary = (companyId, yearMonth) => {
     revenueEntries,
     directCashEntries,
     operatingExpenseEntries,
-    gasPurchaseExpenseEntries,
+    gasPurchaseExpenseEntries: manualGasPurchaseExpenseEntries,
+    manualGasPurchaseExpenseEntries,
+    systemEstimatedExpenseEntries,
     receivableCustomers,
     attributedSettlements: creditedSettlements,
     totalRevenue: revenueEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
@@ -307,7 +322,10 @@ export const getMonthlyDashboardSummary = (companyId, yearMonth) => {
     monthlyReceivables,
     currentDebt,
     totalExpenses,
-    excludedGasPurchaseCost: gasPurchaseExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    manualGasPurchaseCost: manualGasPurchaseExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    estimatedGasCostExcluded: systemEstimatedExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    // Backward-compatible name: now represents only excluded system estimates.
+    excludedGasPurchaseCost: systemEstimatedExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     cashSurplus: actualRevenue - totalExpenses
   };
 };

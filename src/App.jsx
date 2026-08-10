@@ -4,6 +4,7 @@ import { initializeDB, cleanupInactiveCompanies, getCompanies, getShareholders, 
 import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
 import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
+import UniversalTableDetails from './components/UniversalTableDetails';
 
 const pageLoaders = {
   dashboard: () => import('./pages/DashboardView'),
@@ -896,6 +897,8 @@ function App() {
           </Suspense>
         </main>
       </div>
+
+      <UniversalTableDetails />
 
       {/* Change Password Modal */}
       {isChangePwdOpen && (
