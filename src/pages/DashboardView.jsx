@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCustomerReceivableSummary, getCashReceivedForPeriod } from '../utils/financials';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getMonthlyDashboardSummary } from '../utils/financials';
 import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getGasPurchases, getGasCylinders, getCustomers } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
@@ -51,14 +51,14 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return res || { totalRevenue: 0, totalCogs: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0 };
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
-  const cashReceived = useMemo(() => {
+  const monthlySummary = useMemo(() => {
     void triggerRefresh;
-    return getCashReceivedForPeriod(companyId, 'month', periodVal);
+    return getMonthlyDashboardSummary(companyId, periodVal);
   }, [companyId, periodVal, triggerRefresh]);
 
-  const prevCashReceived = useMemo(() => {
+  const prevMonthlySummary = useMemo(() => {
     void triggerRefresh;
-    return getCashReceivedForPeriod(companyId, 'month', prevPeriodVal);
+    return getMonthlyDashboardSummary(companyId, prevPeriodVal);
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
   // Cash / Bank balance at the end of the month
@@ -85,11 +85,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [companyId, periodVal, triggerRefresh]);
 
   // Accounts Receivable at the end of the month
-  const receivablesSummary = useMemo(() => {
-    void triggerRefresh;
-    const lastDayStr = getPeriodEndDate('month', periodVal);
-    return getCustomerReceivableSummary(companyId, lastDayStr) || [];
-  }, [companyId, periodVal, triggerRefresh]);
+  const receivablesSummary = monthlySummary.receivableCustomers || [];
 
   const receivablesTotal = useMemo(() => {
     return (receivablesSummary || []).reduce((sum, item) => sum + (item?.monthlyReceivableTotal || 0), 0);
@@ -99,27 +95,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return (receivablesSummary || []).reduce((sum, item) => sum + (item?.debtTotal || 0), 0);
   }, [receivablesSummary]);
 
-  // Approved Incomes for current month
-  const currentMonthIncomes = useMemo(() => {
-    void triggerRefresh;
-    const list = getIncomes() || [];
-    return list.filter(i => 
-      i && i.companyId === companyId && 
-      i.status === 'approved' && 
-      i.date && typeof i.date === 'string' && i.date.startsWith(periodVal)
-    );
-  }, [companyId, periodVal, triggerRefresh]);
-
-  // Approved Expenses for current month
-  const currentMonthExpenses = useMemo(() => {
-    void triggerRefresh;
-    const list = getExpenses() || [];
-    return list.filter(e => 
-      e && e.companyId === companyId && 
-      e.status === 'approved' && 
-      e.date && typeof e.date === 'string' && e.date.startsWith(periodVal)
-    );
-  }, [companyId, periodVal, triggerRefresh]);
+  // Dashboard details use the same filtered rows as the cards, so totals and lists cannot drift apart.
+  const currentMonthIncomes = monthlySummary.revenueEntries || [];
+  const currentMonthExpenses = monthlySummary.operatingExpenseEntries || [];
 
   // All Bank Balances
   const bankBalancesList = useMemo(() => {
@@ -192,14 +170,14 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   }, [companyId, triggerRefresh]);
 
   // Percent changes for metrics
-  const revChange = (prevCashReceived?.total || 0) > 0
-    ? (((cashReceived?.total || 0) - (prevCashReceived?.total || 0)) / (prevCashReceived?.total || 1)) * 100
+  const revChange = (prevMonthlySummary?.actualRevenue || 0) > 0
+    ? (((monthlySummary?.actualRevenue || 0) - (prevMonthlySummary?.actualRevenue || 0)) / (prevMonthlySummary?.actualRevenue || 1)) * 100
     : 0;
-  const expChange = ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0)) > 0
-    ? (((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0) - ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) / ((prevPnl?.totalExpenses || 0) + (prevPnl?.totalCogs || 0))) * 100
+  const expChange = (prevMonthlySummary?.totalExpenses || 0) > 0
+    ? (((monthlySummary?.totalExpenses || 0) - (prevMonthlySummary?.totalExpenses || 0)) / (prevMonthlySummary?.totalExpenses || 1)) * 100
     : 0;
-  const profitChange = (prevPnl?.netProfit || 0) !== 0
-    ? (((pnl?.netProfit || 0) - (prevPnl?.netProfit || 0)) / Math.abs(prevPnl?.netProfit || 1)) * 100
+  const profitChange = (prevMonthlySummary?.cashSurplus || 0) !== 0
+    ? (((monthlySummary?.cashSurplus || 0) - (prevMonthlySummary?.cashSurplus || 0)) / Math.abs(prevMonthlySummary?.cashSurplus || 1)) * 100
     : 0;
 
   // AI Insights generator
@@ -299,6 +277,23 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
       {/* Metrics Row - Interactive Metric Cards */}
       <div className="metrics-grid">
+        <div
+          className="metric-card accent-blue"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => setActiveDetailModal('revenue')}
+          title="當月發生的全部營業額，包含現收、月結與現結欠款"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">總營業額（含月結、欠款）</span>
+            <div className="metric-icon-wrapper blue">📊</div>
+          </div>
+          <span className="metric-value">${(monthlySummary?.totalRevenue || 0).toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">{periodVal} 單月發生額</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>不重複計入還款</span>
+          </div>
+        </div>
+
         {/* Card 1: 當月營業總額 */}
         <div 
           className="metric-card accent-green" 
@@ -310,12 +305,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className="metric-label">實收營業額</span>
             <div className="metric-icon-wrapper green">📈</div>
           </div>
-          <span className="metric-value">${(cashReceived?.total || 0).toLocaleString()}</span>
+          <span className="metric-value">${(monthlySummary?.actualRevenue || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className={`metric-change ${revChange >= 0 ? 'up' : 'down'}`}>
-              {revChange >= 0 ? '↑' : '↓'} {Math.abs(revChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
-            </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
+            <span className="metric-change neutral">月結已收 ${(monthlySummary?.monthlyReceipts || 0).toLocaleString()} · 欠款已收 ${(monthlySummary?.debtReceipts || 0).toLocaleString()}</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>歸回 {periodVal} 訂單</span>
           </div>
         </div>
 
@@ -332,7 +325,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
           <span className="metric-value">${(receivablesTotal || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">截至月底未收餘額</span>
+            <span className="metric-change neutral">{periodVal} 訂單目前未收</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看名冊 ➔</span>
           </div>
         </div>
@@ -350,7 +343,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
           <span className="metric-value">${(debtTotal || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">與月結應收分開計算</span>
+            <span className="metric-change neutral">{periodVal} 現結欠款目前未收</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看名冊 ➔</span>
           </div>
         </div>
@@ -360,34 +353,34 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           className="metric-card accent-red" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => setActiveDetailModal('expenses')}
-          title="點擊查看當月支出與進貨成本明細"
+          title="點擊查看當月日常支出；瓦斯進氣成本另外顯示"
         >
           <div className="metric-card-header">
             <span className="metric-label">當月支出總額</span>
             <div className="metric-icon-wrapper red">📉</div>
           </div>
-          <span className="metric-value">${((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0)).toLocaleString()}</span>
+          <span className="metric-value">${(monthlySummary?.totalExpenses || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${expChange <= 0 ? 'up' : 'down'}`}>
               {expChange >= 0 ? '↑' : '↓'} {Math.abs(expChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
             </span>
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>不含進氣成本 ${(monthlySummary?.excludedGasPurchaseCost || 0).toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Card 4: 本月淨利潤 */}
+        {/* Card 5: 本月現金結餘（依目前約定暫不扣進氣） */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => setActiveDetailModal('profit')}
-          title="點擊查看本月損益結構拆解"
+          title="點擊查看本月實收減日常支出的現金結餘"
         >
           <div className="metric-card-header">
-            <span className="metric-label">本月淨利潤</span>
+            <span className="metric-label">本月現金結餘（暫不含進氣）</span>
             <div className="metric-icon-wrapper gold">💰</div>
           </div>
-          <span className={`metric-value ${(pnl?.netProfit || 0) < 0 ? 'text-danger' : ''}`}>
-            ${(pnl?.netProfit || 0).toLocaleString()}
+          <span className={`metric-value ${(monthlySummary?.cashSurplus || 0) < 0 ? 'text-danger' : ''}`}>
+            ${(monthlySummary?.cashSurplus || 0).toLocaleString()}
           </span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${profitChange >= 0 ? 'up' : 'down'}`}>
@@ -661,8 +654,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {activeDetailModal === 'revenue' && '📈 當月營業總額詳細明細拆解'}
                 {activeDetailModal === 'receivables' && '💵 客戶應收帳款與欠款名冊'}
-                {activeDetailModal === 'expenses' && '📉 當月營業支出與進貨明細'}
-                {activeDetailModal === 'profit' && '💰 當月淨利潤與損益結構分析'}
+                {activeDetailModal === 'expenses' && '📉 當月日常支出明細（不含進氣）'}
+                {activeDetailModal === 'profit' && '💰 當月現金結餘分析（暫不含進氣）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
                 {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
@@ -686,7 +679,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總營業收入</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      ${(pnl?.totalRevenue || 0).toLocaleString()} 元
+                      ${(monthlySummary?.totalRevenue || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-green)' }}>
@@ -698,7 +691,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>平均單筆收入金額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
-                      ${(currentMonthIncomes || []).length > 0 ? Math.round((pnl?.totalRevenue || 0) / currentMonthIncomes.length).toLocaleString() : 0} 元
+                      ${(currentMonthIncomes || []).length > 0 ? Math.round((monthlySummary?.totalRevenue || 0) / currentMonthIncomes.length).toLocaleString() : 0} 元
                     </div>
                   </div>
                 </div>
@@ -748,13 +741,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底應收總額</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{periodVal} 月結目前未收</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
                       ${(receivablesTotal || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>現結欠款總額</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{periodVal} 現結欠款目前未收</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                       ${(debtTotal || 0).toLocaleString()} 元
                     </div>
@@ -769,6 +762,35 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       前往日常金流銷帳 ➔
                     </button>
                   </div>
+                </div>
+
+                <div style={{ fontWeight: '700', margin: '20px 0 10px' }}>本月訂單後續收款紀錄：</div>
+                <div className="table-responsive" style={{ maxHeight: '260px', overflowY: 'auto', marginBottom: '20px' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>訂單歸屬日</th>
+                        <th>實際還款日</th>
+                        <th>客戶</th>
+                        <th>類型</th>
+                        <th>入帳金額</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(monthlySummary?.attributedSettlements || []).map(item => (
+                        <tr key={item.id}>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.attributionDate || '-'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.actualPaymentDate || item.date || '-'}</td>
+                          <td>{item.counterpartyName || '-'}</td>
+                          <td>{item.settlementCategory === 'monthly' ? '還月結應收' : '還現結欠款'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-green)' }}>${(item.creditedAmount || 0).toLocaleString()} 元</td>
+                        </tr>
+                      ))}
+                      {(monthlySummary?.attributedSettlements || []).length === 0 && (
+                        <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '16px' }}>本月訂單目前沒有後續還款紀錄</td></tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
 
                 <div style={{ fontWeight: '700', marginBottom: '10px' }}>客戶未收欠款名冊：</div>
@@ -808,7 +830,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       {(receivablesSummary || []).filter(r => (r?.receivableTotal || 0) > 0).length === 0 && (
                         <tr>
                           <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
-                            🎉 太棒了！截至月底完全無客戶欠款或未收帳款。
+                            🎉 本月訂單目前沒有未收月結或現結欠款。
                           </td>
                         </tr>
                       )}
@@ -822,26 +844,26 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月總支出 (銷貨成本+費用)</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>當月日常支出（不含進氣）</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
-                      ${((pnl?.totalExpenses || 0) + (pnl?.totalCogs || 0)).toLocaleString()} 元
+                      ${(monthlySummary?.totalExpenses || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>瓦斯銷貨成本 (COGS)</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>已排除的瓦斯進氣成本</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      ${(pnl?.totalCogs || 0).toLocaleString()} 元
+                      ${(monthlySummary?.excludedGasPurchaseCost || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>管銷與營業費用 (Expenses)</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>日常支出筆數</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      ${(pnl?.totalExpenses || 0).toLocaleString()} 元
+                      {(currentMonthExpenses || []).length} 筆
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontWeight: '700', marginBottom: '10px' }}>當月支出傳票列表：</div>
+                <div style={{ fontWeight: '700', marginBottom: '10px' }}>當月日常支出傳票列表（帳號 5101 進氣成本不列入）：</div>
                 <div className="table-responsive" style={{ maxHeight: '350px', overflowY: 'auto' }}>
                   <table className="data-table">
                     <thead>
@@ -886,30 +908,25 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div>
                 <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
                   <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
-                    📊 {periodVal} 損益計算公式結構：
+                    📊 {periodVal} 現金結餘計算：
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➕ 營業收入總額 (Total Revenue)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(pnl?.totalRevenue || 0).toLocaleString()} 元</strong>
+                      <span>➕ 該月訂單累計實收</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlySummary?.actualRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➖ 瓦斯銷貨成本 (Cost of Goods Sold)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalCogs || 0).toLocaleString()} 元</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #ccc', paddingTop: '8px', fontWeight: 'bold' }}>
-                      <span>🟢 營業毛利 (Gross Profit) [毛利率 {((pnl?.totalRevenue || 0) > 0 ? ((pnl?.grossProfit || 0) / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>${(pnl?.grossProfit || 0).toLocaleString()} 元</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➖ 營業與管銷費用 (Operating Expenses)</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalExpenses || 0).toLocaleString()} 元</strong>
+                      <span>➖ 日常支出（不含瓦斯進氣）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(monthlySummary?.totalExpenses || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
-                      <span>💰 本月稅前淨利潤 (Net Profit) [淨利率 {((pnl?.totalRevenue || 0) > 0 ? ((pnl?.netProfit || 0) / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: (pnl?.netProfit || 0) >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
-                        ${(pnl?.netProfit || 0).toLocaleString()} 元
+                      <span>💰 本月現金結餘（暫不含進氣）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: (monthlySummary?.cashSurplus || 0) >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+                        ${(monthlySummary?.cashSurplus || 0).toLocaleString()} 元
                       </strong>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      瓦斯進氣成本 ${(monthlySummary?.excludedGasPurchaseCost || 0).toLocaleString()} 元目前只在瓦斯庫存／毛利分析中顯示，不從本卡扣除。
                     </div>
                   </div>
                 </div>
