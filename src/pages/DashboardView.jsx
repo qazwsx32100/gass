@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getMonthlyDashboardSummary } from '../utils/financials';
 import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
+import { getTopAmountEntries } from '../utils/rankings';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
 
@@ -107,6 +108,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // Dashboard details use the same filtered rows as the cards, so totals and lists cannot drift apart.
   const currentMonthIncomes = useMemo(() => monthlySummary.revenueEntries || [], [monthlySummary]);
   const currentMonthExpenses = useMemo(() => monthlySummary.operatingExpenseEntries || [], [monthlySummary]);
+  const topIncomeEntries = useMemo(() => getTopAmountEntries(currentMonthIncomes), [currentMonthIncomes]);
+  const topExpenseEntries = useMemo(() => getTopAmountEntries(currentMonthExpenses), [currentMonthExpenses]);
 
   // All Bank Balances
   const bankBalancesList = useMemo(() => {
@@ -945,9 +948,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.15)' }}>
-                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>前三大收入來源：</div>
-                    {(currentMonthIncomes || []).length > 0 ? (
-                      (currentMonthIncomes || []).slice(0, 3).map((item, i) => (
+                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>前三大收入（依單筆金額）：</div>
+                    {topIncomeEntries.length > 0 ? (
+                      topIncomeEntries.map((item, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
                           <span>{i + 1}. {getAccountName(item.accountCode)} ({item.customerName || '客戶'})</span>
                           <strong style={{ fontFamily: 'var(--font-mono)' }}>${(item.amount || 0).toLocaleString()}</strong>
@@ -957,9 +960,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   </div>
 
                   <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
-                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-red)' }}>前三大費用支出：</div>
-                    {(currentMonthExpenses || []).length > 0 ? (
-                      (currentMonthExpenses || []).slice(0, 3).map((item, i) => (
+                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-red)' }}>前三大支出（依單筆金額）：</div>
+                    {topExpenseEntries.length > 0 ? (
+                      topExpenseEntries.map((item, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
                           <span>{i + 1}. {getAccountName(item.accountCode)}</span>
                           <strong style={{ fontFamily: 'var(--font-mono)' }}>${(item.amount || 0).toLocaleString()}</strong>
