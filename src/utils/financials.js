@@ -1,12 +1,9 @@
 // Financial and Equity Math Engine for BusinessPilot ERP v1.0
 
 import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBanks, getLoans, getChartOfAccounts, getGasInventoryPeriods, getGasPurchases, getFixedAssets, getCustomers, getSuppliers, getJournalEntries as getStoredJournalEntries, getJournalLines as getStoredJournalLines, getBankTransactions, getPeriodLocks } from '../db/storage';
-import { getWeightedGasPurchaseCost } from './gasCost';
-import { FINANCIAL_REPORT_START_DATE, isReportableRepayment } from './reportPolicy';
-import { isSystemEstimatedExpenseEntry } from './expensePolicy';
-
-export { FINANCIAL_REPORT_START_DATE, getRepaymentOriginDate, isReportableRepayment } from './reportPolicy';
-export { isSystemEstimatedExpenseEntry } from './expensePolicy';
+import { calculateAggregateReceivables, calculateReceivablesByOriginMonth, isActiveSettlementReceipt } from './receivables';
+import { calculateCashRevenue } from './cashRevenue';
+import { calculateCashExpenses } from './cashExpenses';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -14,7 +11,6 @@ const isBankTransfer = (item) => !!item.bankId;
 // periodType: 'month' (e.g. '2026-06'), 'quarter' (e.g. '2026-Q2'), 'year' (e.g. '2026'), 'all'
 export const isDateInPeriod = (dateStr, periodType, periodVal) => {
   if (!dateStr || typeof dateStr !== 'string') return false;
-  if (dateStr < FINANCIAL_REPORT_START_DATE) return false;
   if (periodType === 'all') return true;
   if (periodType === 'date') return dateStr === periodVal;
   if (periodType === 'range') {
@@ -55,6 +51,80 @@ export const isDateInPeriod = (dateStr, periodType, periodVal) => {
   return false;
 };
 
+export const getCashRevenueSummary = (companyId, periodType, periodVal) => calculateCashRevenue({
+  incomes: getIncomes().filter(item => item.companyId === companyId),
+  bankTransactions: getBankTransactions().filter(item => item.companyId === companyId),
+  isDateIncluded: date => isDateInPeriod(date, periodType, periodVal)
+});
+
+export const getCashExpenseSummary = (companyId, periodType, periodVal) => calculateCashExpenses({
+  expenses: getExpenses().filter(item => item.companyId === companyId),
+  bankTransactions: getBankTransactions().filter(item => item.companyId === companyId),
+  isDateIncluded: date => isDateInPeriod(date, periodType, periodVal)
+});
+
+export const getCashNetProfitSummary = (companyId, periodType, periodVal) => {
+  const revenue = getCashRevenueSummary(companyId, periodType, periodVal);
+  const expenses = getCashExpenseSummary(companyId, periodType, periodVal);
+  return {
+    revenue,
+    expenses,
+    totalRevenue: revenue.totalRevenue,
+    totalExpenses: expenses.totalExpenses,
+    netProfit: revenue.totalRevenue - expenses.totalExpenses
+  };
+};
+
+const isDepositIncome = item => (
+  item?.syncType === 'revenue_deposit' ||
+  String(item?.remarks || '').includes('押瓶') ||
+  String(item?.remarks || '').includes('押金')
+);
+
+/**
+ * Monthly operating view used by the dashboard and management reports.
+ * Revenue is recognized in its origin month. Later collections reduce that
+ * same month's receivable balance instead of inflating the collection month.
+ * Customer deposits are balance-sheet money and are deliberately excluded.
+ */
+export const getMonthlyOperatingSummary = (companyId, yearMonth) => {
+  const incomes = getIncomes();
+  const bankTransactions = getBankTransactions();
+  const receivables = calculateReceivablesByOriginMonth({
+    companyId,
+    asOfDate: new Date().toISOString().split('T')[0],
+    originMonth: yearMonth,
+    incomes,
+    bankTransactions
+  });
+  const entries = incomes.filter(item =>
+    item?.companyId === companyId &&
+    isActivePostedRecord(item) &&
+    String(item.date || '').startsWith(yearMonth) &&
+    item.syncType !== 'receivable_opening' &&
+    !String(item.remarks || '').includes('尚未核銷') &&
+    !String(item.remarks || '').includes('欠款餘額') &&
+    !isDepositIncome(item)
+  );
+  const totalRevenue = entries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const outstandingReceivables = receivables.total.outstandingAmount;
+
+  return {
+    yearMonth,
+    entries,
+    receivables,
+    totalRevenue,
+    actualRevenue: Math.max(0, totalRevenue - outstandingReceivables),
+    outstandingReceivables
+  };
+};
+
+const isActivePostedRecord = item => (
+  item?.status === 'approved' &&
+  item.correctionStatus !== 'corrected' &&
+  item.correctionType !== 'reversal'
+);
+
 const daysBetween = (fromDate, toDate) => {
   if (!fromDate || !toDate) return 0;
   const from = new Date(`${fromDate}T00:00:00`);
@@ -82,9 +152,14 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
     };
   };
 
-  const receivables = getIncomes()
-    .filter(item => item.companyId === companyId && item.status === 'approved' && item.paymentStatus === 'unpaid')
-    .map(item => makeRow(item, 'receivable'));
+  const aggregateReceivables = calculateAggregateReceivables({
+    companyId,
+    asOfDate,
+    incomes: getIncomes(),
+    bankTransactions: getBankTransactions()
+  });
+  const receivables = aggregateReceivables.rows
+    .map(item => makeRow({ ...item, amount: item.outstandingAmount }, 'receivable'));
 
   const payables = getExpenses()
     .filter(item => item.companyId === companyId && item.status === 'approved' && item.paymentStatus === 'unpaid')
@@ -131,6 +206,15 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
   };
 };
 
+export const getAggregateReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => (
+  calculateAggregateReceivables({
+    companyId,
+    asOfDate,
+    incomes: getIncomes(),
+    bankTransactions: getBankTransactions()
+  })
+);
+
 const matchCustomerIncome = (income, customer) => {
   if (!income || !customer) return false;
   if (income.customerId && income.customerId === customer.id) return true;
@@ -149,185 +233,29 @@ const matchSupplierExpense = (expense, supplier) => {
     .some(value => String(value || '').includes(target));
 };
 
-export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0], originMonth = '') => {
+export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
   const customers = getCustomers().filter(item => item.companyId === companyId && item.status !== 'inactive');
   const unpaidIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
-    item.paymentStatus === 'unpaid' &&
-    (!asOfDate || String(item.date || '') <= asOfDate) &&
-    (!originMonth || String(item.date || '').startsWith(originMonth))
+    item.paymentStatus === 'unpaid'
   );
 
   return customers.map(customer => {
     const rows = unpaidIncomes.filter(income => matchCustomerIncome(income, customer));
-    const monthlyRows = rows.filter(item => item.receivableType !== 'current_debt');
-    const debtRows = rows.filter(item => item.receivableType === 'current_debt');
-    const monthlyTotal = monthlyRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const debtTotal = debtRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const total = monthlyTotal + debtTotal;
+    const total = rows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const oldestDays = rows.reduce((max, item) => {
       const dueDate = item.dueDate || item.checkDueDate || item.date;
       return Math.max(max, daysBetween(dueDate, asOfDate));
     }, 0);
-    const oldestUnpaidDate = rows
-      .map(item => item.dueDate || item.checkDueDate || item.date)
-      .filter(Boolean)
-      .sort()[0] || '';
-    const monthlyOldestUnpaidDate = monthlyRows
-      .map(item => item.dueDate || item.checkDueDate || item.date)
-      .filter(Boolean)
-      .sort()[0] || '';
-    const debtOldestUnpaidDate = debtRows
-      .map(item => item.dueDate || item.checkDueDate || item.date)
-      .filter(Boolean)
-      .sort()[0] || '';
     return {
       ...customer,
       receivableTotal: total,
-      monthlyReceivableTotal: monthlyTotal,
-      debtTotal,
-      monthlyReceivableCount: monthlyRows.length,
-      debtCount: debtRows.length,
       unpaidCount: rows.length,
-      oldestUnpaidDate,
-      monthlyOldestUnpaidDate,
-      debtOldestUnpaidDate,
       oldestDays,
       agingBucket: getAgingBucket(oldestDays)
     };
   }).sort((a, b) => b.receivableTotal - a.receivableTotal);
-};
-
-export const getCashReceivedForPeriod = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
-  const incomes = getIncomes();
-  const cashIncomes = incomes.filter(item =>
-    item.companyId === companyId &&
-    item.status === 'approved' &&
-    item.paymentStatus === 'paid' &&
-    item.paymentMethod !== 'receivable' &&
-    item.summaryOnly !== true &&
-    item.syncType !== 'receivable_opening' &&
-    !String(item.remarks || '').includes('押瓶') &&
-    !String(item.remarks || '').includes('押金') &&
-    isDateInPeriod(item.actualPaymentDate || item.date, periodType, periodVal)
-  );
-  const settlements = getBankTransactions().filter(item =>
-    item.companyId === companyId &&
-    item.status === 'approved' &&
-    item.direction === 'in' &&
-    item.sourceType === 'settlement' &&
-    isReportableRepayment(item, incomes) &&
-    isDateInPeriod(item.actualPaymentDate || item.date, periodType, periodVal)
-  );
-  const depositRefunds = getExpenses().filter(item =>
-    item.companyId === companyId &&
-    item.status === 'approved' &&
-    String(item.remarks || '').includes('退瓶押金') &&
-    isDateInPeriod(item.date, periodType, periodVal)
-  );
-  const incomeAmount = cashIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const settlementAmount = settlements.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const monthlySettlementAmount = settlements.filter(item => item.settlementCategory === 'monthly' || String(item.remarks || '').includes('月結')).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const debtSettlementAmount = settlements.filter(item => item.settlementCategory === 'current_debt' || String(item.remarks || '').includes('欠款')).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const refundAmount = depositRefunds.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  return {
-    total: incomeAmount + settlementAmount,
-    incomeAmount,
-    settlementAmount,
-    monthlySettlementAmount,
-    debtSettlementAmount,
-    refundAmount,
-    cashIncomes,
-    settlements,
-    depositRefunds
-  };
-};
-
-export const getMonthlyDashboardSummary = (companyId, yearMonth) => {
-  const allIncomes = getIncomes();
-  const coreRevenueEntries = allIncomes.filter(item =>
-    item.companyId === companyId && item.status === 'approved' &&
-    item.correctionStatus !== 'corrected' && item.correctionType !== 'reversal' &&
-    String(item.date || '').startsWith(yearMonth) && item.syncType !== 'receivable_opening' &&
-    !String(item.remarks || '').includes('尚未核銷') && !String(item.remarks || '').includes('欠款餘額') &&
-    !String(item.remarks || '').includes('押瓶') && !String(item.remarks || '').includes('押金')
-  );
-  // 月結爐具是逐筆應收，舊系統沒有日結彙總列；只補這類明細，避免與瓦斯月結彙總重複。
-  const supplementalMonthlyRevenueEntries = allIncomes.filter(item =>
-    item.companyId === companyId && item.status === 'approved' && item.syncType === 'receivable_opening' &&
-    item.receivableType !== 'current_debt' && String(item.accountCode || '') !== '4101' &&
-    String(item.date || '').startsWith(yearMonth)
-  );
-  const revenueEntries = [...coreRevenueEntries, ...supplementalMonthlyRevenueEntries];
-  const approvedExpenseEntries = getExpenses().filter(item =>
-    item.companyId === companyId && item.status === 'approved' &&
-    item.correctionStatus !== 'corrected' && item.correctionType !== 'reversal' &&
-    String(item.date || '').startsWith(yearMonth)
-  );
-  const systemEstimatedExpenseEntries = approvedExpenseEntries.filter(isSystemEstimatedExpenseEntry);
-  // 帳號 5101 的一般支出傳票是人工輸入的真實進氣付款，必須列入當月支出。
-  const operatingExpenseEntries = approvedExpenseEntries.filter(item => !isSystemEstimatedExpenseEntry(item));
-  const manualGasPurchaseExpenseEntries = operatingExpenseEntries.filter(item => String(item.accountCode || '') === '5101');
-  const receivableCustomers = getCustomerReceivableSummary(companyId, getPeriodEndDate('month', yearMonth), yearMonth);
-  const receiptMonthCash = getCashReceivedForPeriod(companyId, 'month', yearMonth);
-  const attributedSettlements = getBankTransactions().filter(item =>
-    item.companyId === companyId && item.status === 'approved' && item.direction === 'in' &&
-    item.sourceType === 'settlement' && isReportableRepayment(item, allIncomes) &&
-    String(item.attributionDate || '').startsWith(yearMonth)
-  );
-  const directCashEntries = revenueEntries.filter(item =>
-    item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable' && item.summaryOnly !== true
-  );
-  const directCashRevenue = directCashEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const monthlyReceivables = receivableCustomers.reduce((sum, item) => sum + Number(item.monthlyReceivableTotal || 0), 0);
-  const currentDebt = receivableCustomers.reduce((sum, item) => sum + Number(item.debtTotal || 0), 0);
-  const monthlySales = revenueEntries.filter(item =>
-    item.syncType === 'daily_summary_monthly' ||
-    (item.syncType === 'receivable_opening' && item.receivableType !== 'current_debt')
-  ).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const debtSales = revenueEntries.filter(item => item.syncType === 'daily_summary_debt')
-    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  // 後續還款歸回訂單發生月；以「該月發生額－目前未收」核算，避免舊欠款還款混入。
-  const monthlyReceipts = Math.max(0, monthlySales - monthlyReceivables);
-  const debtReceipts = Math.max(0, debtSales - currentDebt);
-  const remainingCredit = { monthly: monthlyReceipts, current_debt: debtReceipts };
-  const creditedSettlements = [...attributedSettlements]
-    .sort((a, b) => String(a.actualPaymentDate || a.date || '').localeCompare(String(b.actualPaymentDate || b.date || '')))
-    .map(item => {
-      const category = item.settlementCategory === 'monthly' ? 'monthly' : 'current_debt';
-      const creditedAmount = Math.min(Number(item.amount || 0), Math.max(0, remainingCredit[category] || 0));
-      remainingCredit[category] = Math.max(0, (remainingCredit[category] || 0) - creditedAmount);
-      return { ...item, originalAmount: Number(item.amount || 0), creditedAmount };
-    })
-    .filter(item => item.creditedAmount > 0);
-  const totalExpenses = operatingExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const actualRevenue = directCashRevenue + monthlyReceipts + debtReceipts;
-  return {
-    yearMonth,
-    revenueEntries,
-    directCashEntries,
-    operatingExpenseEntries,
-    gasPurchaseExpenseEntries: manualGasPurchaseExpenseEntries,
-    manualGasPurchaseExpenseEntries,
-    systemEstimatedExpenseEntries,
-    receivableCustomers,
-    attributedSettlements: creditedSettlements,
-    totalRevenue: revenueEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    actualRevenue,
-    directCashRevenue,
-    monthlyReceipts,
-    debtReceipts,
-    receiptMonthCashInflow: receiptMonthCash.total,
-    monthlyReceivables,
-    currentDebt,
-    totalExpenses,
-    manualGasPurchaseCost: manualGasPurchaseExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    estimatedGasCostExcluded: systemEstimatedExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    // Backward-compatible name: now represents only excluded system estimates.
-    excludedGasPurchaseCost: systemEstimatedExpenseEntries.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    cashSurplus: actualRevenue - totalExpenses
-  };
 };
 
 export const getSupplierPayableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
@@ -502,6 +430,7 @@ const accountName = (code, fallback = '') => {
 };
 
 const cashAccountName = (item) => {
+  if (item.paymentStatus === 'unpaid' && item.paymentMethod !== 'check') return item.amount >= 0 ? '應收帳款' : '應付帳款';
   if (item.paymentMethod === 'cash') return '現金';
   if (item.paymentMethod === 'receivable') return '應收帳款';
   if (item.paymentMethod === 'payable') return '應付帳款';
@@ -553,7 +482,7 @@ export const getJournalEntries = (companyId, periodType = 'month', periodVal = n
         date: item.date,
         description: item.remarks || '收入傳票',
         lines: [
-          { side: 'debit', accountCode: item.paymentMethod === 'receivable' ? '1102' : '1101', accountName: cashAccountName(item), amount: Number(item.amount || 0) },
+          { side: 'debit', accountCode: item.paymentStatus === 'unpaid' && item.paymentMethod !== 'check' ? '1102' : item.paymentMethod === 'cash' ? '1100' : '1101', accountName: cashAccountName(item), amount: Number(item.amount || 0) },
           { side: 'credit', accountCode: item.accountCode, accountName: accountName(item.accountCode, '營業收入'), amount: Number(item.amount || 0) }
         ]
       });
@@ -859,8 +788,10 @@ export const getPayrollReport = (companyId, periodType = 'month', periodVal = ne
   const salaryRows = getExpenses().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
+    item.correctionStatus !== 'corrected' &&
+    item.correctionType !== 'reversal' &&
     item.accountCode && item.accountCode.startsWith('6101') &&
-    isDateInPeriod(item.date, periodType, periodVal)
+    isDateInPeriod(item.payrollMonth ? `${item.payrollMonth}-01` : item.date, periodType, periodVal)
   );
   const grossSalary = salaryRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const manualLaborInsurance = salaryRows.reduce((sum, item) => sum + Number(item.laborInsurance || 0), 0);
@@ -950,7 +881,7 @@ const toYearMonth = (dateStr) => String(dateStr || '').slice(0, 7);
 const getApprovedGasSales = (companyId, periodType = 'all', periodVal = null) => (
   getIncomes().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isActivePostedRecord(item) &&
     Number(item.gasKg || 0) > 0 &&
     isDateInPeriod(item.date, periodType, periodVal)
   )
@@ -972,22 +903,15 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.amount || 0), 0)
     : Number(config?.purchaseAmount || 0);
 
-  const purchaseCostBasis = monthDailyPurchases.length > 0
-    ? getWeightedGasPurchaseCost(monthDailyPurchases)
-    : purchaseAmount;
-
   const shrinkageKg = Number(config?.shrinkageKg || 0);
   const availableKg = openingKg + purchaseKg;
-  const availableCost = openingCost + purchaseCostBasis;
+  const availableCost = openingCost + purchaseAmount;
   const averageCostPerKg = availableKg > 0 ? availableCost / availableKg : 0;
   const monthSales = getApprovedGasSales(companyId, 'month', yearMonth);
   const soldKg = monthSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
   
-  const gasRevenue = getIncomes().filter(item =>
-    item.companyId === companyId && item.status === 'approved' && item.accountCode === '4101' &&
-    String(item.date || '').startsWith(yearMonth) && item.syncType !== 'receivable_opening' &&
-    !String(item.remarks || '').includes('欠款餘額') && !String(item.remarks || '').includes('尚未核銷')
-  ).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  // 應計基礎：當月發生的瓦斯銷售全數列入；後續還款不重複增加營業額。
+  const gasRevenue = monthSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const gasCogs = Math.round(soldKg * averageCostPerKg);
   const bookEndingKg = Math.max(0, availableKg - soldKg - shrinkageKg);
@@ -1002,7 +926,6 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     openingCost,
     purchaseKg,
     purchaseAmount,
-    purchaseCostBasis,
     shrinkageKg,
     availableKg,
     availableCost,
@@ -1029,11 +952,6 @@ export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
   const sales = getApprovedGasSales(companyId, periodType, periodVal);
-  const revenueRows = getIncomes().filter(item =>
-    item.companyId === companyId && item.status === 'approved' && item.accountCode === '4101' &&
-    isDateInPeriod(item.date, periodType, periodVal) && item.syncType !== 'receivable_opening' &&
-    !String(item.remarks || '').includes('欠款餘額') && !String(item.remarks || '').includes('尚未核銷')
-  );
 
   const dailyMap = {};
   let totalKg = 0;
@@ -1044,22 +962,18 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
     const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
     const kg = Number(item.gasKg || 0);
     
+    const revenue = Number(item.amount || 0);
+
     const cogs = Math.round(kg * monthCost.averageCostPerKg);
     if (!dailyMap[item.date]) {
       dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
     }
     dailyMap[item.date].gasKg += kg;
+    dailyMap[item.date].revenue += revenue;
     dailyMap[item.date].cogs += cogs;
     totalKg += kg;
+    totalRevenue += revenue;
     totalCogs += cogs;
-  });
-
-  revenueRows.forEach(item => {
-    if (!dailyMap[item.date]) {
-      dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
-    }
-    dailyMap[item.date].revenue += Number(item.amount || 0);
-    totalRevenue += Number(item.amount || 0);
   });
 
   const dailyRows = Object.values(dailyMap)
@@ -1093,13 +1007,9 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
-  const repaymentIncomes = getIncomes();
   const allRepayments = getBankTransactions().filter(bt =>
     bt.companyId === companyId &&
-    bt.status === 'approved' &&
-    bt.direction === 'in' &&
-    (bt.sourceType === 'settlement' || bt.remarks === '當日營業彙總 - 還款') &&
-    isReportableRepayment(bt, repaymentIncomes) &&
+    isActiveSettlementReceipt(bt) &&
     isDateInPeriod(bt.date, periodType, periodVal)
   );
 
@@ -1335,18 +1245,17 @@ export const getShareholderSharesAtDate = (companyId, endDateStr) => {
  */
 export const getIncomeStatement = (companyId, periodType, periodVal) => {
   const incomes = getIncomes().filter(
-    item => item.companyId === companyId && item.status === 'approved' &&
-      item.correctionStatus !== 'corrected' && item.correctionType !== 'reversal' &&
+    item => item.companyId === companyId &&
+      isActivePostedRecord(item) &&
+      !item.summaryOnly &&
       item.syncType !== 'receivable_opening' &&
       !String(item.remarks || '').includes('尚未核銷') &&
       !String(item.remarks || '').includes('欠款餘額') &&
-      !String(item.remarks || '').includes('押瓶') &&
-      !String(item.remarks || '').includes('押金') &&
       isDateInPeriod(item.date, periodType, periodVal)
   );
   
   const expenses = getExpenses().filter(
-    item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal)
+    item => item.companyId === companyId && isActivePostedRecord(item) && isDateInPeriod(item.date, periodType, periodVal)
   );
 
   const accounts = getChartOfAccounts();
@@ -1425,6 +1334,11 @@ export const getBankBalancesAtDate = (companyId, dateStr) => {
   const incomes = getIncomes().filter(i => i.companyId === companyId && i.date <= dateStr && i.status === 'approved' && isBankTransfer(i));
   const expenses = getExpenses().filter(e => e.companyId === companyId && e.date <= dateStr && e.status === 'approved' && isBankTransfer(e));
   const shLedger = getShareholderLedger().filter(s => s.companyId === companyId && s.date <= dateStr);
+  const receivableSettlements = getBankTransactions().filter(item =>
+    item.companyId === companyId &&
+    isActiveSettlementReceipt(item) &&
+    item.date <= dateStr
+  );
   // Note: For simplicity, assume all shareholder investments/reductions went through BANK001/002/003 based on first bank found
   
   const balanceMap = {};
@@ -1443,6 +1357,12 @@ export const getBankBalancesAtDate = (companyId, dateStr) => {
   expenses.forEach(e => {
     if (balanceMap[e.bankId] !== undefined) {
       balanceMap[e.bankId] -= e.amount;
+    }
+  });
+
+  receivableSettlements.forEach(item => {
+    if (balanceMap[item.bankId] !== undefined) {
+      balanceMap[item.bankId] += Number(item.amount || 0);
     }
   });
 
@@ -1750,4 +1670,3 @@ export const getPartsGrossProfitReport = (companyId, periodType, periodVal) => {
 
   return rows;
 };
-

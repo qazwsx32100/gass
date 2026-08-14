@@ -113,3 +113,57 @@ test('builds balanced VAT and settlement journal entries', () => {
   assert.equal(snapshot.journalLines.find(line => line.accountCode === '2201').amount, 50);
 });
 
+test('builds a balanced journal entry for aggregate receivable collection', () => {
+  const snapshot = buildJournalSnapshot({
+    incomes: [],
+    expenses: [],
+    shareholderLedger: [],
+    fixedAssets: [],
+    bankTransactions: [{
+      id: 'SET-AR-001',
+      companyId: 'COMP001',
+      date: '2026-08-01',
+      sourceType: 'settlement',
+      transactionType: 'income',
+      settlementCategory: 'current_debt',
+      paymentMethod: 'cash',
+      amount: 800
+    }]
+  }, '2026-08-01');
+
+  assert.equal(snapshot.journalEntries.length, 1);
+  assert.equal(snapshot.journalEntries[0].balanced, true);
+  assert.equal(snapshot.journalLines.find(line => line.accountCode === '1100').amount, 800);
+  assert.equal(snapshot.journalLines.find(line => line.accountCode === '1102').amount, 800);
+});
+
+test('excludes void source records and linked settlements from journals', () => {
+  const snapshot = buildJournalSnapshot({
+    incomes: [{
+      id: 'INC-VOID',
+      companyId: 'COMP001',
+      date: '2026-08-01',
+      status: 'void',
+      paymentMethod: 'receivable',
+      accountCode: '4101',
+      amount: 2000
+    }],
+    expenses: [],
+    shareholderLedger: [],
+    fixedAssets: [],
+    bankTransactions: [{
+      id: 'SET-VOID',
+      companyId: 'COMP001',
+      date: '2026-08-05',
+      status: 'void',
+      sourceType: 'settlement',
+      sourceId: 'INC-VOID',
+      transactionType: 'income',
+      paymentMethod: 'cash',
+      amount: 2000
+    }]
+  }, '2026-08-05');
+
+  assert.equal(snapshot.journalEntries.length, 0);
+  assert.equal(snapshot.journalLines.length, 0);
+});

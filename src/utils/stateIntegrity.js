@@ -216,6 +216,11 @@ const netAmount = (item) => {
 };
 
 const liquidAccount = (item, kind) => {
+  if (item.paymentStatus === 'unpaid' && item.paymentMethod !== 'check') {
+    return kind === 'income'
+      ? { code: '1102', name: '應收帳款' }
+      : { code: '2102', name: '應付帳款' };
+  }
   if (item.paymentMethod === 'receivable') return { code: '1102', name: '應收帳款' };
   if (item.paymentMethod === 'payable') return { code: '2102', name: '應付帳款' };
   if (item.paymentMethod === 'check') {
@@ -314,12 +319,15 @@ export const buildJournalSnapshot = (state = {}, today = new Date().toISOString(
 
   const incomeById = new Map(asArray(state.incomes).map(item => [item.id, item]));
   const expenseById = new Map(asArray(state.expenses).map(item => [item.id, item]));
-  for (const settlement of asArray(state.bankTransactions).filter(item => item.sourceType === 'settlement')) {
+  for (const settlement of asArray(state.bankTransactions).filter(item => item.sourceType === 'settlement' && item.status !== 'void')) {
     const source = settlement.transactionType === 'expense'
       ? expenseById.get(settlement.sourceId)
       : incomeById.get(settlement.sourceId);
-    if (!source) continue;
-    const sourceAccount = liquidAccount(source, settlement.transactionType);
+    if (source?.status === 'void') continue;
+    if (!source && !settlement.settlementCategory) continue;
+    const sourceAccount = source
+      ? liquidAccount(source, settlement.transactionType)
+      : { code: '1102', name: '應收帳款' };
     const cashAccount = settlement.paymentMethod === 'cash'
       ? { code: '1100', name: '現金' }
       : { code: '1101', name: '銀行存款' };
@@ -339,7 +347,7 @@ export const buildJournalSnapshot = (state = {}, today = new Date().toISOString(
       date: settlement.date,
       sourceType: 'settlement',
       sourceId: settlement.id,
-      memo: settlement.remarks || `結清 ${source.id}`
+      memo: settlement.remarks || (source ? `結清 ${source.id}` : '彙總應收帳款收款')
     });
   }
 

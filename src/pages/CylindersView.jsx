@@ -12,6 +12,8 @@ import {
 } from '../db/storage';
 import { canInputBasicLedger } from '../utils/permissions';
 import { getGasInventoryForMonth } from '../utils/financials';
+import GasMonthlyIntakePanel from '../components/GasMonthlyIntakePanel';
+import { applyMonthlyGasPrice } from '../utils/gasPricing';
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
 const GAS_CYLINDER_STATUS_OPTIONS = [
@@ -419,6 +421,17 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
 
   // Open modals
   const handleOpenAdd = () => {
+    const currentYearMonth = new Date().toISOString().substring(0, 7);
+    const latestConfiguredMonth = gasInventoryPeriods
+      .map(item => item.yearMonth)
+      .filter(Boolean)
+      .sort((a, b) => b.localeCompare(a))[0];
+    let defaultPricingMonth = currentYearMonth;
+    if (gasInventoryPeriods.some(item => item.yearMonth === currentYearMonth) && latestConfiguredMonth) {
+      const [year, month] = latestConfiguredMonth.split('-').map(Number);
+      const nextMonth = new Date(Date.UTC(year, month, 1));
+      defaultPricingMonth = `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, '0')}`;
+    }
     setEditingItem(null);
     setFormData({
       date: new Date().toISOString().split('T')[0],
@@ -429,7 +442,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       gas50kg: '', gas20kg: '', gas16kg: '', gas10kg: '', gas4kg: '',
       totalGasKg: '',
       remarks: '',
-      yearMonth: new Date().toISOString().substring(0, 7),
+      yearMonth: activeSubTab === 'gas' ? defaultPricingMonth : currentYearMonth,
       openingKg: '',
       openingCost: '',
       purchaseKg: '',
@@ -586,16 +599,37 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
 
     else if (activeSubTab === 'gas') {
       const db = getGasInventoryPeriods();
+      const monthlyGasPrice = parseFloat(formData.monthlyGasPrice) || 0;
+      if (monthlyGasPrice <= 0) {
+        window.alert('請輸入大於 0 的當月瓦斯進價。');
+        return;
+      }
+      const duplicated = db.some(item =>
+        item.id !== editingItem?.id &&
+        item.companyId === companyId &&
+        item.yearMonth === formData.yearMonth
+      );
+      if (duplicated) {
+        window.alert('該月份已經有進價設定，每個月只能建立一筆，請改用修改。');
+        return;
+      }
+      const pricingResult = applyMonthlyGasPrice({
+        purchases: getGasPurchases(),
+        companyId,
+        yearMonth: formData.yearMonth,
+        monthlyGasPrice,
+        updatedAt: now
+      });
       const payload = {
         companyId,
         yearMonth: formData.yearMonth,
         openingKg: parseFloat(formData.openingKg) || 0,
         openingCost: parseFloat(formData.openingCost) || 0,
-        purchaseKg: parseFloat(formData.purchaseKg) || 0,
-        purchaseAmount: parseFloat(formData.purchaseAmount) || 0,
+        purchaseKg: pricingResult.purchaseKg,
+        purchaseAmount: pricingResult.purchaseAmount,
         shrinkageKg: parseFloat(formData.shrinkageKg) || 0,
         physicalEndingKg: formData.physicalEndingKg === '' ? null : parseFloat(formData.physicalEndingKg),
-        monthlyGasPrice: parseFloat(formData.monthlyGasPrice) || 0,
+        monthlyGasPrice,
         remarks: formData.remarks || '',
         updatedAt: now
       };
@@ -610,16 +644,31 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           success = true;
         }
       } else {
-        const duplicated = db.some(item => item.companyId === companyId && item.yearMonth === payload.yearMonth);
-        if (duplicated) {
-          window.alert('該月份的設定已存在，請確認是否重複建立。');
-          return;
-        }
         const newId = generateId('gas', `${payload.yearMonth}-01`);
         db.push({ id: newId, ...payload, createdAt: now });
         saveGasInventoryPeriods(db);
         addLog(operatorName, 'CREATE_GAS_INVENTORY', `Create monthly gas settings ${payload.yearMonth}: Price $${payload.monthlyGasPrice}/kg.`);
         success = true;
+      }
+
+      if (success && pricingResult.changed.length > 0) {
+        saveGasPurchases(pricingResult.purchases);
+        pricingResult.changed.forEach(({ before, after }) => {
+          archiveChange({
+            collection: 'gasPurchases',
+            recordId: after.id,
+            action: 'update',
+            before,
+            after,
+            actor: operatorName,
+            reason: `${payload.yearMonth} 月進價調整為 $${payload.monthlyGasPrice}/kg`
+          });
+        });
+        addLog(
+          operatorName,
+          'APPLY_MONTHLY_GAS_PRICE',
+          `Apply monthly gas price ${payload.yearMonth}: $${payload.monthlyGasPrice}/kg to ${pricingResult.changed.length} purchase records.`
+        );
       }
     }
 
@@ -916,9 +965,9 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>🏷️ 鋼瓶與瓦斯進貨管理</h2>
           <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>追蹤瓦斯的進貨流水帳、當月單價，以及鋼瓶與配送車庫存狀態</p>
         </div>
-        {canWrite && (isAdmin || activeSubTab !== 'gasMovements') && (
+        {canWrite && activeSubTab !== 'gasIntakeReport' && (isAdmin || activeSubTab !== 'gasMovements') && (
           <button className="btn btn-primary btn-lg" onClick={handleOpenAdd} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <span>➕</span> 建立新項目
+            <span>➕</span> {activeSubTab === 'gas' ? '新增每月進價' : '建立新項目'}
           </button>
         )}
       </div>
@@ -928,8 +977,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         <button className={`tab-btn ${activeSubTab === 'gasPurchases' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gasPurchases'); setSearchText(''); }} style={{ color: 'var(--accent-blue)', fontWeight: '700' }}>
           📦 瓦斯進貨
         </button>
+        <button className={`tab-btn ${activeSubTab === 'gasIntakeReport' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gasIntakeReport'); setSearchText(''); }} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
+          每月進氣量
+        </button>
         <button className={`tab-btn ${activeSubTab === 'gas' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gas'); setSearchText(''); }} style={{ color: 'var(--accent-green)', fontWeight: '700' }}>
-          📅 瓦斯月度庫存價格
+          瓦斯每月進價
         </button>
         <button className={`tab-btn ${activeSubTab === 'gasCylinders' ? 'active' : ''}`} onClick={() => { setActiveSubTab('gasCylinders'); setSearchText(''); }} style={{ color: 'var(--text-primary)' }}>
           🍼 鋼瓶清冊
@@ -944,6 +996,10 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           🔄 鋼瓶異動紀錄
         </button>
       </div>
+
+      {activeSubTab === 'gasIntakeReport' && (
+        <GasMonthlyIntakePanel purchases={gasPurchases} />
+      )}
 
       {/* Filter / Search Bar */}
       <div className="filters-row" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1069,7 +1125,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       )}
 
       {/* Data Table */}
-      <div className="table-responsive">
+      {activeSubTab !== 'gasIntakeReport' && <div className="table-responsive">
         <table className="data-table">
           <thead>
             {activeSubTab === 'gasPurchases' && (
@@ -1382,8 +1438,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
             )}
           </tbody>
         </table>
-      </div>
-      {filteredItems.length > pageSize && (
+      </div>}
+      {activeSubTab !== 'gasIntakeReport' && filteredItems.length > pageSize && (
         <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
             第 {currentPage} / {totalPages} 頁，共 {filteredItems.length.toLocaleString()} 筆
@@ -1419,7 +1475,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
               <h3 style={{ margin: 0, fontSize: '1.25rem' }}>
                 {editingItem ? '✏️ 修改' : '➕ 建立'}{
                   activeSubTab === 'gasPurchases' ? '瓦斯進貨' :
-                  activeSubTab === 'gas' ? '瓦斯月度設定' :
+                  activeSubTab === 'gas' ? '每月瓦斯進價' :
                   activeSubTab === 'gasCylinders' ? '鋼瓶資料' :
                   activeSubTab === 'gasVehicles' ? '配送車輛' :
                   activeSubTab === 'gasDeposits' ? '客戶押瓶' : ''
@@ -1441,7 +1497,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                         <input type="text" disabled className="form-control" style={{ background: 'var(--bg-card)' }} value={purchasePrice ? `$${purchasePrice} / kg` : '未設定價格'} />
                         {purchasePrice === 0 && (
                           <div style={{ fontSize: '0.78rem', color: 'var(--accent-red)', marginTop: '4px' }}>
-                            ⚠️ 該月份的當月進貨單價尚未在「瓦斯月度設定」中進行設定！
+                            該月份尚未設定瓦斯進價，請先到「瓦斯每月進價」新增該月份價格。
                           </div>
                         )}
                       </div>
@@ -1589,7 +1645,8 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label">成本期間</label>
-                        <input type="month" required className="form-control" value={formData.yearMonth} onChange={e => setFormData({ ...formData, yearMonth: e.target.value })} />
+                        <input type="month" required disabled={Boolean(editingItem)} className="form-control" value={formData.yearMonth} onChange={e => setFormData({ ...formData, yearMonth: e.target.value })} />
+                        {editingItem && <small style={{ color: 'var(--text-secondary)' }}>月份建立後不可變更；如需不同月份，請新增一筆。</small>}
                       </div>
                       <div className="form-group">
                         <label className="form-label">當月瓦斯進貨單價 (元 / kg)</label>

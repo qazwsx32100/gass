@@ -693,6 +693,14 @@ body {
   background-color: var(--bg-tertiary);
 }
 
+.data-table tbody tr:not([data-detail-ignore="true"]) {
+  cursor: pointer;
+}
+
+.data-table tbody tr:not([data-detail-ignore="true"]):hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent-blue);
+}
+
 /* Status Badges */
 .badge {
   display: inline-flex;
@@ -1257,6 +1265,429 @@ body {
 
 .summary-value.expense {
   color: var(--accent-red);
+}
+
+.gas-intake-report {
+  display: grid;
+  gap: 20px;
+}
+
+.gas-intake-report__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.gas-intake-report__header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.gas-intake-report__header p {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.gas-intake-month-picker {
+  display: grid;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.gas-intake-month-picker select {
+  min-width: 165px;
+  min-height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0 36px 0 12px;
+  font: inherit;
+}
+
+.gas-intake-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gas-intake-metric {
+  position: relative;
+  min-height: 142px;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-gold);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  padding: 17px;
+}
+
+.gas-intake-metric--primary {
+  border-left-color: var(--accent-green);
+}
+
+.gas-intake-metric__icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius-sm);
+  background: rgba(5, 178, 165, 0.08);
+  color: var(--accent-green);
+}
+
+.gas-intake-metric > span {
+  display: block;
+  max-width: calc(100% - 42px);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.gas-intake-metric > strong {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+}
+
+.gas-intake-metric > small {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.gas-intake-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 16px;
+}
+
+.gas-intake-chart-card,
+.gas-intake-spec-card {
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  padding: 18px;
+}
+
+.gas-intake-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.gas-intake-section-title span {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.gas-intake-chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(42px, 1fr));
+  gap: 8px;
+  min-height: 238px;
+  overflow-x: auto;
+  padding: 6px 0 2px;
+}
+
+.gas-intake-bar {
+  display: grid;
+  grid-template-rows: 28px 160px 24px;
+  gap: 5px;
+  min-width: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.gas-intake-bar__value {
+  align-self: end;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+}
+
+.gas-intake-bar__track {
+  display: flex;
+  align-items: flex-end;
+  width: 18px;
+  height: 160px;
+  margin: 0 auto;
+  border-radius: 3px 3px 0 0;
+  background: rgba(5, 178, 165, 0.07);
+  overflow: hidden;
+}
+
+.gas-intake-bar__track > span {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent-green);
+  transition: height 180ms ease;
+}
+
+.gas-intake-bar:hover .gas-intake-bar__track > span,
+.gas-intake-bar.is-selected .gas-intake-bar__track > span {
+  background: var(--accent-gold);
+}
+
+.gas-intake-bar:disabled {
+  cursor: default;
+}
+
+.gas-intake-bar:disabled:hover .gas-intake-bar__track > span {
+  background: var(--accent-green);
+}
+
+.gas-intake-bar.is-selected .gas-intake-bar__label {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.gas-intake-bar__label {
+  white-space: nowrap;
+  font-size: 0.7rem;
+}
+
+.gas-intake-spec-list {
+  display: grid;
+  gap: 8px;
+}
+
+.gas-intake-spec-list > div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 43px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.gas-intake-spec-list > div:last-child {
+  border-bottom: 0;
+}
+
+.gas-intake-spec-list strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.gas-intake-spec-list small {
+  min-width: 68px;
+  text-align: right;
+}
+
+.gas-intake-history tbody tr {
+  cursor: pointer;
+}
+
+.gas-intake-history__selected td {
+  background: rgba(5, 178, 165, 0.06);
+}
+
+.gas-intake-month-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-blue);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0;
+}
+
+.gas-intake-empty {
+  padding: 36px 12px !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.ledger-category-breakdown {
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-blue);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-tertiary);
+}
+
+.ledger-category-breakdown--expense {
+  border-left-color: var(--accent-red);
+}
+
+.ledger-category-breakdown__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ledger-category-breakdown__header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.ledger-category-breakdown__header strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.ledger-category-breakdown__header span,
+.ledger-category-breakdown__total {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.ledger-category-breakdown__header .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ledger-category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ledger-category-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  min-width: 0;
+  min-height: 92px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 12px;
+  text-align: left;
+}
+
+.ledger-category-item:hover,
+.ledger-category-item.is-selected {
+  border-color: var(--accent-blue);
+  box-shadow: var(--shadow-sm);
+}
+
+.ledger-category-breakdown--expense .ledger-category-item:hover,
+.ledger-category-breakdown--expense .ledger-category-item.is-selected {
+  border-color: var(--accent-red);
+}
+
+.ledger-category-item__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--border-radius-sm);
+  background: rgba(5, 178, 165, 0.08);
+  color: var(--accent-blue);
+}
+
+.ledger-category-breakdown--expense .ledger-category-item__icon {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--accent-red);
+}
+
+.ledger-category-item__body {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.ledger-category-item__name {
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ledger-category-item__body strong {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.ledger-category-item__body small {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+}
+
+.ledger-category-empty {
+  grid-column: 1 / -1;
+  padding: 22px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.ledger-category-breakdown__total {
+  margin-top: 10px;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .ledger-category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ledger-category-breakdown__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ledger-category-item {
+    min-height: 78px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .gas-intake-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gas-intake-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .gas-intake-report__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gas-intake-month-picker select {
+    width: 100%;
+  }
+
+  .gas-intake-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .gas-intake-metric {
+    min-height: 128px;
+  }
 }
 
 @media (max-width: 860px) {

@@ -129,6 +129,12 @@ const normalizeCloudError = (status, error = '', fallback = '雲端同步失敗�
   if (/locked period/i.test(message)) {
     return '這筆資料屬於已鎖定月份，不能直接新增、修改或刪除。';
   }
+  if (/cannot be materially changed|Use correction workflow/i.test(message)) {
+    return '已核准的帳務不能直接修改，請使用「更正」流程。';
+  }
+  if (/cannot be deleted|Use correction or void workflow/i.test(message)) {
+    return '已核准的帳務不能刪除，請使用「更正」或「作廢」流程。';
+  }
   if (status === 409 || /Cloud data changed before this save/i.test(message)) {
     return '其他使用者已先更新雲端資料，系統已停止覆蓋。請重新整理頁面後再輸入這筆資料。';
   }

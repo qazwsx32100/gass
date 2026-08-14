@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getCustomerReceivableSummary, getSupplierPayableSummary, isDateInPeriod, getPartsGrossProfitReport, isReportableRepayment } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getCustomers, getSuppliers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
+import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getSupplierPayableSummary, getAggregateReceivableSummary, getMonthlyOperatingSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
+import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getSuppliers, getCustomers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
 import { syncLocalToSupabase } from '../db/supabaseService';
+import { isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -27,29 +28,6 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const [drillDownName, setDrillDownName] = useState('');
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
   const [selectedAuditCategory, setSelectedAuditCategory] = useState(null);
-  const [genericDetail, setGenericDetail] = useState(null);
-
-  const openRenderedDetail = (event) => {
-    if (event.target.closest('button, a, input, select, textarea, label')) return;
-    const element = event.target.closest('.metric-card, .summary-card, tbody tr');
-    if (!element || window.getComputedStyle(element).cursor === 'pointer') return;
-
-    const row = element.matches('tr') ? element : null;
-    const table = row?.closest('table');
-    const headers = table ? Array.from(table.querySelectorAll('thead th')).map(item => item.innerText.trim()) : [];
-    const values = row
-      ? Array.from(row.cells).map((cell, index) => ({ label: headers[index] || `欄位 ${index + 1}`, value: cell.innerText.trim() || '—' }))
-      : Array.from(element.querySelectorAll('.metric-label, .summary-label, .metric-value, .summary-value, .metric-change'))
-        .map((item, index) => ({ label: item.className.includes('label') ? '項目' : index === 1 ? '數值' : '補充', value: item.innerText.trim() }))
-        .filter(item => item.value);
-
-    if (values.length) {
-      setGenericDetail({
-        title: row ? '明細列完整資料' : '小卡完整資料',
-        values
-      });
-    }
-  };
 
   const handleQuickUpdate = async (id, isIncome, updates) => {
     if (isIncome) {
@@ -332,18 +310,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     void triggerRefresh;
     return getAgingReport(companyId, arapAsOfDate);
   }, [companyId, arapAsOfDate, triggerRefresh]);
-  const customerReceivables = useMemo(() => {
-    void triggerRefresh;
-    return getCustomerReceivableSummary(companyId, arapAsOfDate);
-  }, [companyId, arapAsOfDate, triggerRefresh]);
   const supplierPayables = useMemo(() => {
     void triggerRefresh;
     return getSupplierPayableSummary(companyId, arapAsOfDate);
   }, [companyId, arapAsOfDate, triggerRefresh]);
-  const customers = useMemo(() => {
-    void triggerRefresh;
-    return getCustomers().filter(item => item.companyId === companyId);
-  }, [companyId, triggerRefresh]);
   const suppliers = useMemo(() => {
     void triggerRefresh;
     return getSuppliers().filter(item => item.companyId === companyId);
@@ -351,43 +321,50 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   const dailySales = useMemo(() => {
     void triggerRefresh;
+    const isActiveRecord = item => (
+      (!item.status || item.status === 'approved') &&
+      item.correctionStatus !== 'corrected' &&
+      item.correctionType !== 'reversal'
+    );
     // Get all Incomes and Expenses in active period
     const allIncomes = getIncomes().filter(item =>
       item.companyId === companyId &&
-      item.status === 'approved' &&
+      isActiveRecord(item) &&
       isDateInPeriod(item.date, activePeriodType, activePeriodVal)
     );
     const allExpenses = getExpenses().filter(item =>
       item.companyId === companyId &&
-      item.status === 'approved' &&
+      isActiveRecord(item) &&
       isDateInPeriod(item.date, activePeriodType, activePeriodVal)
     );
 
     // Gas Sales (4101)
-    const gasSales = allIncomes.filter(item => item.accountCode === '4101');
+    const gasSales = allIncomes.filter(item => item.accountCode === '4101' && String(item.remarks || '').startsWith('當日營業彙總 -'));
     const gasSalesAmount = gasSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Gas Sales Already Collected (現收)
-    const gasSalesPaid = gasSales.filter(item => item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable');
+    const gasSalesPaid = gasSales.filter(item => item.remarks === '當日營業彙總 - 現收');
     const gasSalesPaidAmount = gasSalesPaid.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Repayments (還款金額)
-    const repaymentSourceIncomes = getIncomes().filter(item => item.companyId === companyId);
-    const repayments = getBankTransactions().filter(bt =>
+    const gasSalesById = new Map(gasSales.map(item => [item.id, item]));
+    const receivableSettlements = getBankTransactions().filter(bt =>
       bt.companyId === companyId &&
-      bt.direction === 'in' &&
-      bt.sourceType === 'settlement' &&
-      isReportableRepayment(bt, repaymentSourceIncomes) &&
+      isActiveSettlementReceipt(bt) &&
       isDateInPeriod(bt.date, activePeriodType, activePeriodVal)
     );
-    const repaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const settlementType = item => resolveSettlementType(item, gasSalesById.get(item.sourceId));
+    const repayments = receivableSettlements.filter(item => settlementType(item) === RECEIVABLE_TYPES.CURRENT_DEBT);
+    const monthlyReceipts = receivableSettlements.filter(item => settlementType(item) === RECEIVABLE_TYPES.MONTHLY);
+    const rawRepaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const rawMonthlyReceiptAmount = monthlyReceipts.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Monthly Accounts Receivable (月結應收帳款)
-    const monthlyAr = gasSales.filter(item => item.paymentMethod === 'receivable');
+    const monthlyAr = gasSales.filter(item => item.remarks === '當日營業彙總 - 月結');
     const monthlyArAmount = monthlyAr.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Unpaid/Debt Amount (欠款金額)
-    const unpaidAr = gasSales.filter(item => item.paymentStatus === 'unpaid' && item.paymentMethod !== 'receivable');
+    const unpaidAr = gasSales.filter(item => item.remarks === '當日營業彙總 - 賒欠');
     const unpaidArAmount = unpaidAr.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Quantity & Weight
@@ -486,18 +463,12 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     );
     const depositRefundAmount = depositRefundExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    const cashIncomeAmount = allIncomes
-      .filter(item =>
-        item.paymentStatus === 'paid' &&
-        item.paymentMethod !== 'receivable' &&
-        item.summaryOnly !== true &&
-        item.syncType !== 'receivable_opening'
-      )
-      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const cashReceivedAmount = cashIncomeAmount + repaymentAmount - depositRefundAmount;
-
     // Other Incomes (其他營業收入)
     const otherIncomes = allIncomes.filter(item =>
+      !item.summaryOnly &&
+      item.syncType !== 'receivable_opening' &&
+      !String(item.remarks || '').includes('尚未核銷') &&
+      !String(item.remarks || '').includes('欠款餘額') &&
       !gasSales.some(g => g.id === item.id) &&
       !stoveIncomes.some(s => s.id === item.id) &&
       !repairIncomes.some(r => r.id === item.id) &&
@@ -506,12 +477,45 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       !depositIncomes.some(d => d.id === item.id)
     );
     const otherIncomeAmount = otherIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const monthlyOperating = activePeriodType === 'month'
+      ? getMonthlyOperatingSummary(companyId, activePeriodVal)
+      : null;
+    const totalBusinessRevenue = monthlyOperating?.totalRevenue ?? (
+      gasSalesAmount + stoveIncomeAmount + repairIncomeAmount + cylinderIncomeAmount + inspectionIncomeAmount + otherIncomeAmount
+    );
+    const currentReceivables = monthlyOperating?.receivables
+      || getAggregateReceivableSummary(companyId, new Date().toISOString().split('T')[0]);
+    const customerNames = new Map((getCustomers() || []).map(item => [item.id, item.name || item.shortName]));
+    const currentDebtOutstandingCustomers = (currentReceivables?.currentDebt?.rows || [])
+      .filter(item => Number(item.outstandingAmount || 0) > 0)
+      .map(item => ({
+        id: item.id,
+        customerName: item.customerName || item.counterpartyName || customerNames.get(item.customerId) || '未標示客戶',
+        amount: Number(item.outstandingAmount || 0)
+      }));
+    const repaymentAmount = activePeriodType === 'month'
+      ? Math.max(0, unpaidArAmount - Number(currentReceivables?.currentDebt?.outstandingAmount || 0))
+      : rawRepaymentAmount;
+    const monthlyReceiptAmount = activePeriodType === 'month'
+      ? Math.max(0, monthlyArAmount - Number(currentReceivables?.monthly?.outstandingAmount || 0))
+      : rawMonthlyReceiptAmount;
+    const repaymentDetails = receivableSettlements
+      .map(item => ({
+        id: item.id,
+        customerName: item.counterpartyName || item.customerName || '未標示客戶',
+        type: settlementType(item),
+        amount: Number(item.amount || 0),
+        attributedDate: item.date,
+        paymentDate: item.actualPaymentDate || item.date
+      }))
+      .sort((a, b) => `${a.paymentDate}:${a.customerName}`.localeCompare(`${b.paymentDate}:${b.customerName}`));
 
     return {
       gasSalesAmount: gasSalesAmount || 0,
       gasSalesPaidAmount: gasSalesPaidAmount || 0,
-      cashReceivedAmount: cashReceivedAmount || 0,
       repaymentAmount: repaymentAmount || 0,
+      monthlyReceiptAmount: monthlyReceiptAmount || 0,
+      currentDebtCashCollectionAmount: rawRepaymentAmount || 0,
       monthlyArAmount: monthlyArAmount || 0,
       unpaidArAmount: unpaidArAmount || 0,
       cylinderQty: cylinderQty || 0,
@@ -530,6 +534,12 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       depositIncomeAmount: depositIncomeAmount || 0,
       depositRefundAmount: depositRefundAmount || 0,
       otherIncomeAmount: otherIncomeAmount || 0
+      ,totalBusinessRevenue: totalBusinessRevenue || 0
+      ,currentMonthlyOutstanding: currentReceivables?.monthly?.outstandingAmount || 0
+      ,currentDebtOutstanding: currentReceivables?.currentDebt?.outstandingAmount || 0
+      ,currentDebtOutstandingCustomers
+      ,currentOutstandingTotal: (currentReceivables?.monthly?.outstandingAmount || 0) + (currentReceivables?.currentDebt?.outstandingAmount || 0)
+      ,repaymentDetails
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -579,7 +589,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['三、營業費用', '', pnl.totalExpenses],
         ...pnl.expenseItems.map(item => [item.code, item.name, item.amount]),
         [],
-        ['本期淨利潤 (Net Profit)', '', pnl.netProfit]
+        ['本期會計淨利（稅前） (Accounting Net Profit)', '', pnl.netProfit]
       ];
     } else if (reportType === 'balance') {
       csvRows = [
@@ -645,8 +655,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['應收帳款', agingReport.receivables.buckets.current.total, agingReport.receivables.buckets.days31to60.total, agingReport.receivables.buckets.days61to90.total, agingReport.receivables.buckets.over90.total, agingReport.receivables.total],
         ['應付帳款', agingReport.payables.buckets.current.total, agingReport.payables.buckets.days31to60.total, agingReport.payables.buckets.days61to90.total, agingReport.payables.buckets.over90.total, agingReport.payables.total],
         [],
-        ['客戶', '統編', '未收款', '未收筆數', '最長帳齡'],
-        ...customerReceivables.map(row => [row.name, row.taxId || '', row.receivableTotal, row.unpaidCount, row.oldestDays]),
+        ['發生日期', '類型', '原始金額', '已收金額', '尚未收款', '帳齡天數'],
+        ...agingReport.receivables.rows.map(row => [row.date, row.receivableType === 'monthly' ? '月結應收' : row.receivableType === 'current_debt' ? '現結欠款' : '其他應收', row.originalAmount, row.settledAmount, row.outstandingAmount, row.daysOverdue]),
         [],
         ['供應商', '統編', '未付款', '未付筆數', '最長帳齡'],
         ...supplierPayables.map(row => [row.name, row.taxId || '', row.payableTotal, row.unpaidCount, row.oldestDays])
@@ -657,17 +667,26 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         [`報表期間: ${activePeriodLabel}`],
         [],
         ['資料項目', '數值 / 金額'],
+        ['全店總營業額（當月發生）', dailySales.totalBusinessRevenue],
         ['瓦斯銷售總金額', dailySales.gasSalesAmount],
-        ['實收營業額', dailySales.cashReceivedAmount],
         ['瓦斯銷售已收款', dailySales.gasSalesPaidAmount],
-        ['還款金額', dailySales.repaymentAmount],
+        ['當月現結欠款已還', dailySales.repaymentAmount],
+        ['當月月結應收已還', dailySales.monthlyReceiptAmount],
+        ['現結欠款實際收款流水合計（含不同期別）', dailySales.currentDebtCashCollectionAmount],
         ['月結應收帳款', dailySales.monthlyArAmount],
         ['欠款金額', dailySales.unpaidArAmount],
+        ['目前未還月結應收', dailySales.currentMonthlyOutstanding],
+        ['目前未還現結欠款', dailySales.currentDebtOutstanding],
+        ['目前尚未收回合計', dailySales.currentOutstandingTotal],
         ['當日數量 (桶)', dailySales.cylinderQty],
         ['當日重量 (kg)', dailySales.gasKg],
         ['平均單價 (元/桶)', dailySales.avgPricePerCylinder ? dailySales.avgPricePerCylinder.toFixed(2) : '0.00'],
         ['平均單價 (元/kg)', dailySales.avgPricePerKg ? dailySales.avgPricePerKg.toFixed(2) : '0.00'],
         ['當日毛利', dailySales.grossProfit],
+        [],
+        ['客戶還款明細'],
+        ['客戶', '還款類型', '實際還款日期', '還款金額'],
+        ...dailySales.repaymentDetails.map(item => [item.customerName, item.type === RECEIVABLE_TYPES.MONTHLY ? '月結應收' : '現結欠款', item.paymentDate, item.amount]),
         ['爐具收入', dailySales.stoveIncomeAmount],
         ['維修/安裝 收入', dailySales.repairIncomeAmount],
         ['買桶收入', dailySales.cylinderIncomeAmount],
@@ -724,7 +743,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['營業收入', pnl.totalRevenue],
         ['營業毛利', pnl.grossProfit],
         ['毛利率', `${pnl.grossMargin.toFixed(2)}%`],
-        ['稅前淨利', pnl.netProfit],
+        ['會計淨利（稅前）', pnl.netProfit],
         ['瓦斯銷售公斤', gasProfit.totalKg],
         ['瓦斯毛利', gasProfit.grossProfit],
         ['期末瓦斯庫存公斤', gasInventory.endingKg],
@@ -816,7 +835,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} onClick={openRenderedDetail}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
@@ -968,7 +987,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
               {/* Revenue */}
               <div className="financial-row header-row" style={{ marginTop: '12px', fontSize: '0.95rem' }}>
-                <span>一、營業收入</span>
+                <span>一、銷售收入（應計基礎，含應收款）</span>
                 <span>${pnl.totalRevenue.toLocaleString()}</span>
               </div>
               {pnl.revenueItems.map((item, idx) => (
@@ -1028,7 +1047,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
               {/* Net Profit */}
               <div className={`financial-row ${pnl.netProfit >= 0 ? 'total-row' : 'loss-row'}`} style={{ marginTop: '24px', fontSize: '1.05rem' }}>
-                <span>本期稅前淨利</span>
+                <span>本期會計淨利（稅前）</span>
                 <span>${pnl.netProfit.toLocaleString()}</span>
               </div>
             </div>
@@ -1221,22 +1240,23 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 </div>
               </div>
 
-              <h3 style={{ fontSize: '1rem', margin: '16px 0 8px' }}>客戶未收款</h3>
+              <h3 style={{ fontSize: '1rem', margin: '16px 0 8px' }}>尚未收款應收明細</h3>
               <div className="table-responsive">
                 <table className="data-table">
-                  <thead><tr><th>客戶</th><th>統編</th><th style={{ textAlign: 'right' }}>未收款</th><th>未收筆數</th><th>最長帳齡</th></tr></thead>
+                  <thead><tr><th>發生日期</th><th>類型</th><th style={{ textAlign: 'right' }}>原始金額</th><th style={{ textAlign: 'right' }}>已收金額</th><th style={{ textAlign: 'right' }}>尚未收款</th><th>帳齡</th></tr></thead>
                   <tbody>
-                    {customerReceivables.map(row => (
+                    {agingReport.receivables.rows.map(row => (
                       <tr key={row.id}>
-                        <td>{row.name}</td>
-                        <td>{row.taxId || '-'}</td>
-                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${Number(row.receivableTotal || 0).toLocaleString()}</td>
-                        <td>{row.unpaidCount}</td>
-                        <td>{row.unpaidCount ? `${row.oldestDays} 天` : '-'}</td>
+                        <td>{row.date}</td>
+                        <td>{row.receivableType === 'monthly' ? '月結應收' : row.receivableType === 'current_debt' ? '現結欠款' : '其他應收'}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>${Number(row.originalAmount || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>${Number(row.settledAmount || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>${Number(row.outstandingAmount || 0).toLocaleString()}</td>
+                        <td>{row.daysOverdue} 天</td>
                       </tr>
                     ))}
-                    {customers.length === 0 && (
-                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>尚未建立客戶主檔</td></tr>
+                    {agingReport.receivables.rows.length === 0 && (
+                      <tr><td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>目前沒有尚未收款的應收帳款</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1290,8 +1310,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-blue)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💰 銷貨金流指標</h3>
               <div className="metrics-grid" style={{ marginBottom: '24px' }}>
                 <div className="metric-card accent-green">
-                  <span className="metric-label">實收營業額</span>
-                  <span className="metric-value">{formatCurrency(dailySales.cashReceivedAmount)}</span>
+                  <span className="metric-label">全店總營業額（當月發生）</span>
+                  <span className="metric-value">{formatCurrency(dailySales.totalBusinessRevenue)}</span>
                 </div>
                 <div className="metric-card accent-blue">
                   <span className="metric-label">瓦斯銷售總金額</span>
@@ -1302,9 +1322,19 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-value">{formatCurrency(dailySales.gasSalesPaidAmount)}</span>
                 </div>
                 <div className="metric-card accent-gold">
-                  <span className="metric-label">還款金額 (收回舊欠)</span>
+                  <span className="metric-label">當月現結欠款已還</span>
                   <span className="metric-value">{formatCurrency(dailySales.repaymentAmount)}</span>
                 </div>
+                <div className="metric-card accent-blue">
+                  <span className="metric-label">當月月結應收已還</span>
+                  <span className="metric-value">{formatCurrency(dailySales.monthlyReceiptAmount)}</span>
+                </div>
+                {dailySales.currentDebtCashCollectionAmount > 0 && (
+                  <div className="metric-card">
+                    <span className="metric-label">現結欠款實際收款流水合計（含不同期別）</span>
+                    <span className="metric-value">{formatCurrency(dailySales.currentDebtCashCollectionAmount)}</span>
+                  </div>
+                )}
                 <div className="metric-card accent-purple">
                   <span className="metric-label">月結應收帳款</span>
                   <span className="metric-value">{formatCurrency(dailySales.monthlyArAmount)}</span>
@@ -1313,6 +1343,41 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-label">欠款金額 (現結未付)</span>
                   <span className="metric-value">{formatCurrency(dailySales.unpaidArAmount)}</span>
                 </div>
+                <div className="metric-card accent-purple">
+                  <span className="metric-label">目前未還：月結應收</span>
+                  <span className="metric-value">{formatCurrency(dailySales.currentMonthlyOutstanding)}</span>
+                </div>
+                <div className="metric-card accent-red">
+                  <span className="metric-label">目前未還：現結欠款</span>
+                  <span className="metric-value">{formatCurrency(dailySales.currentDebtOutstanding)}</span>
+                  {dailySales.currentDebtOutstandingCustomers.map(item => (
+                    <span key={item.id} style={{ display: 'block', marginTop: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                      {item.customerName}：{formatCurrency(item.amount)}
+                    </span>
+                  ))}
+                </div>
+                <div className="metric-card accent-gold">
+                  <span className="metric-label">目前尚未收回合計</span>
+                  <span className="metric-value">{formatCurrency(dailySales.currentOutstandingTotal)}</span>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💳 舊系統實際還款流水（依客戶與實際還款日）</h3>
+              <div className="table-responsive" style={{ marginBottom: '24px' }}>
+                <table className="data-table">
+                  <thead><tr><th>客戶</th><th>還款類型</th><th>實際還款日期</th><th style={{ textAlign: 'right' }}>還款金額</th></tr></thead>
+                  <tbody>
+                    {dailySales.repaymentDetails.map(item => (
+                      <tr key={item.id}>
+                        <td>{item.customerName}</td>
+                        <td>{item.type === RECEIVABLE_TYPES.MONTHLY ? '月結應收' : '現結欠款'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.paymentDate}</td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
+                    {dailySales.repaymentDetails.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>此期間沒有還款紀錄</td></tr>}
+                  </tbody>
+                </table>
               </div>
 
               {/* Other Revenues */}
@@ -1711,7 +1776,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <div className="financial-row header-row"><span>營業收入</span><span>${pnl.totalRevenue.toLocaleString()}</span></div>
                   <div className="financial-row"><span>營業毛利</span><span>${pnl.grossProfit.toLocaleString()}</span></div>
                   <div className="financial-row"><span>毛利率</span><span>{pnl.grossMargin.toFixed(1)}%</span></div>
-                  <div className={`financial-row ${pnl.netProfit >= 0 ? 'total-row' : 'loss-row'}`}><span>稅前淨利</span><span>${pnl.netProfit.toLocaleString()}</span></div>
+                  <div className={`financial-row ${pnl.netProfit >= 0 ? 'total-row' : 'loss-row'}`}><span>會計淨利（稅前）</span><span>${pnl.netProfit.toLocaleString()}</span></div>
                 </div>
                 <div>
                   <div className="financial-row header-row"><span>瓦斯銷售公斤</span><span>{gasProfit.totalKg.toLocaleString()} kg</span></div>
@@ -2214,7 +2279,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 {/* Profit Metrics */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 'var(--border-radius-sm)' }}>
                   <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>本月淨利潤</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>本月會計淨利</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: dividends.isLoss ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                       ${dividends.netProfit.toLocaleString()}
                     </div>
@@ -2497,28 +2562,6 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
         )}
       </div>
-
-      {/* Drill Down Modal */}
-      {genericDetail && (
-        <div className="modal-overlay no-print" style={{ zIndex: 1240 }} onClick={() => setGenericDetail(null)}>
-          <div className="modal-content" style={{ maxWidth: '640px', width: '95%', maxHeight: '85vh' }} onClick={event => event.stopPropagation()}>
-            <div className="modal-header">
-              <span className="modal-title">🔍 {genericDetail.title}</span>
-              <button type="button" className="modal-close" onClick={() => setGenericDetail(null)}>×</button>
-            </div>
-            <div className="modal-body" style={{ padding: '20px', overflowY: 'auto' }}>
-              {genericDetail.values.map((field, index) => (
-                <div key={`${field.label}-${index}`} className="financial-row">
-                  <span>{field.label}</span><span style={{ textAlign: 'right', whiteSpace: 'pre-wrap' }}>{field.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setGenericDetail(null)}>關閉</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Drill Down Modal */}
       {drillDownCode && (

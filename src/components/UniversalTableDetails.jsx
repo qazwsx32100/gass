@@ -2,6 +2,33 @@ import { useEffect, useState } from 'react';
 
 const compactText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
+const normalizeDetailValue = (value) => {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'object') return JSON.stringify(value, null, 2);
+  return compactText(value) || '—';
+};
+
+const getExtraFields = (row) => {
+  if (!row.dataset.detailJson) return [];
+  try {
+    const parsed = JSON.parse(row.dataset.detailJson);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter(item => item && typeof item === 'object')
+        .map(item => ({ label: compactText(item.label) || '其他資料', value: normalizeDetailValue(item.value) }));
+    }
+    if (parsed && typeof parsed === 'object') {
+      return Object.entries(parsed).map(([label, value]) => ({
+        label: compactText(label) || '其他資料',
+        value: normalizeDetailValue(value)
+      }));
+    }
+  } catch {
+    // Ignore malformed optional metadata and keep the visible table details.
+  }
+  return [];
+};
+
 export default function UniversalTableDetails() {
   const [detail, setDetail] = useState(null);
 
@@ -28,11 +55,15 @@ export default function UniversalTableDetails() {
         }))
         .filter(field => field.label || field.value !== '—');
 
-      if (fields.length === 0) return;
-      const titleValue = fields.find(field => field.value && field.value !== '—')?.value || '資料明細';
+      const fieldLabels = new Set(fields.map(field => field.label));
+      const extraFields = getExtraFields(row).filter(field => !fieldLabels.has(field.label));
+      const allFields = [...fields, ...extraFields];
+
+      if (allFields.length === 0) return;
+      const titleValue = allFields.find(field => field.value && field.value !== '—')?.value || '資料明細';
       setDetail({
         title: row.dataset.detailTitle || titleValue,
-        fields
+        fields: allFields
       });
     };
 

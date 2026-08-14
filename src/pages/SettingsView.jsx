@@ -820,7 +820,11 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       showToast(result.error || '建立雲端備份失敗。', 'error');
       return;
     }
-    showToast('雲端備份已建立。', 'success');
+    if (result.drive?.status === 'uploaded') {
+      showToast('雲端備份已建立，並已同步至 Google Drive。', 'success');
+    } else {
+      showToast(`雲端備份已建立，但 Google Drive 同步失敗：${result.drive?.error || '請稍後重試。'}`, 'error');
+    }
     refreshCloudBackups();
   };
 
