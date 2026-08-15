@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildReceivableSettlementAllocations,
   calculateReceivablesByOriginMonth,
+  expandSettlementAttributions,
   RECEIVABLE_TYPES
 } from '../src/utils/receivables.js';
 
@@ -90,4 +91,52 @@ test('a later collection is allocated back to the receivable origin month', () =
   assert.equal(july.monthly.settledAmount, 2000);
   assert.equal(july.monthly.outstandingAmount, 3000);
   assert.equal(august.total.outstandingAmount, 0);
+});
+
+test('keeps the July attribution date when an imported receipt is paid in August', () => {
+  const entries = expandSettlementAttributions({
+    settlements: [{
+      id: 'SL-SYNC-SET-MONTHLY-1',
+      date: '2026-08-08',
+      attributionDate: '2026-07-29',
+      actualPaymentDate: '2026-08-08',
+      amount: 1190,
+      settlementCategory: RECEIVABLE_TYPES.MONTHLY
+    }]
+  });
+
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].attributionDate, '2026-07-29');
+  assert.equal(entries[0].attributionMonth, '2026-07');
+  assert.equal(entries[0].actualPaymentDate, '2026-08-08');
+  assert.equal(entries[0].amount, 1190);
+});
+
+test('splits one August receipt across each original receivable month', () => {
+  const entries = expandSettlementAttributions({
+    incomes: [
+      income('JUL-M', '2026-07-31', 2000, RECEIVABLE_TYPES.MONTHLY),
+      income('AUG-M', '2026-08-02', 1000, RECEIVABLE_TYPES.MONTHLY)
+    ],
+    settlements: [{
+      id: 'SET-MIXED',
+      date: '2026-08-10',
+      actualPaymentDate: '2026-08-10',
+      amount: 3000,
+      settlementCategory: RECEIVABLE_TYPES.MONTHLY,
+      receivableAllocations: [
+        { incomeId: 'JUL-M', originMonth: '2026-07', amount: 2000 },
+        { incomeId: 'AUG-M', originMonth: '2026-08', amount: 1000 }
+      ]
+    }]
+  });
+
+  assert.deepEqual(entries.map(item => ({
+    attributionDate: item.attributionDate,
+    actualPaymentDate: item.actualPaymentDate,
+    amount: item.amount
+  })), [
+    { attributionDate: '2026-07-31', actualPaymentDate: '2026-08-10', amount: 2000 },
+    { attributionDate: '2026-08-02', actualPaymentDate: '2026-08-10', amount: 1000 }
+  ]);
 });

@@ -5,7 +5,7 @@ import { canExportReports, canViewShareholderReports } from '../utils/permission
 import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
 import { syncLocalToSupabase } from '../db/supabaseService';
-import { isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
+import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -326,12 +326,13 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       item.correctionStatus !== 'corrected' &&
       item.correctionType !== 'reversal'
     );
-    // Get all Incomes and Expenses in active period
-    const allIncomes = getIncomes().filter(item =>
+    // Keep the complete income list for cross-month receivable attribution,
+    // then select the requested operating period for ordinary sales/expenses.
+    const companyIncomes = getIncomes().filter(item =>
       item.companyId === companyId &&
-      isActiveRecord(item) &&
-      isDateInPeriod(item.date, activePeriodType, activePeriodVal)
+      isActiveRecord(item)
     );
+    const allIncomes = companyIncomes.filter(item => isDateInPeriod(item.date, activePeriodType, activePeriodVal));
     const allExpenses = getExpenses().filter(item =>
       item.companyId === companyId &&
       isActiveRecord(item) &&
@@ -347,17 +348,29 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const gasSalesPaidAmount = gasSalesPaid.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Repayments (還款金額)
-    const gasSalesById = new Map(gasSales.map(item => [item.id, item]));
-    const receivableSettlements = getBankTransactions().filter(bt =>
+    const companyIncomeById = new Map(companyIncomes.map(item => [item.id, item]));
+    const activeSettlementTransactions = getBankTransactions().filter(bt =>
       bt.companyId === companyId &&
-      isActiveSettlementReceipt(bt) &&
-      isDateInPeriod(bt.date, activePeriodType, activePeriodVal)
+      isActiveSettlementReceipt(bt)
     );
-    const settlementType = item => resolveSettlementType(item, gasSalesById.get(item.sourceId));
+    const receivableSettlements = expandSettlementAttributions({
+      settlements: activeSettlementTransactions,
+      incomes: companyIncomes
+    }).filter(item => isDateInPeriod(item.attributionDate, activePeriodType, activePeriodVal));
+    const actualPeriodSettlements = activeSettlementTransactions.filter(item => (
+      isDateInPeriod(item.actualPaymentDate || item.date, activePeriodType, activePeriodVal)
+    ));
+    const settlementType = item => resolveSettlementType(
+      item,
+      companyIncomeById.get(item.sourceIncomeId || item.sourceId)
+    );
     const repayments = receivableSettlements.filter(item => settlementType(item) === RECEIVABLE_TYPES.CURRENT_DEBT);
     const monthlyReceipts = receivableSettlements.filter(item => settlementType(item) === RECEIVABLE_TYPES.MONTHLY);
     const rawRepaymentAmount = repayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const rawMonthlyReceiptAmount = monthlyReceipts.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const actualRepaymentAmount = actualPeriodSettlements
+      .filter(item => settlementType(item) === RECEIVABLE_TYPES.CURRENT_DEBT)
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Monthly Accounts Receivable (月結應收帳款)
     const monthlyAr = gasSales.filter(item => item.remarks === '當日營業彙總 - 月結');
@@ -505,7 +518,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         customerName: item.counterpartyName || item.customerName || '未標示客戶',
         type: settlementType(item),
         amount: Number(item.amount || 0),
-        attributedDate: item.date,
+        attributedDate: item.attributionDate || item.date,
         paymentDate: item.actualPaymentDate || item.date
       }))
       .sort((a, b) => `${a.paymentDate}:${a.customerName}`.localeCompare(`${b.paymentDate}:${b.customerName}`));
@@ -515,7 +528,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       gasSalesPaidAmount: gasSalesPaidAmount || 0,
       repaymentAmount: repaymentAmount || 0,
       monthlyReceiptAmount: monthlyReceiptAmount || 0,
-      currentDebtCashCollectionAmount: rawRepaymentAmount || 0,
+      currentDebtCashCollectionAmount: actualRepaymentAmount || 0,
       monthlyArAmount: monthlyArAmount || 0,
       unpaidArAmount: unpaidArAmount || 0,
       cylinderQty: cylinderQty || 0,
@@ -684,9 +697,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         ['平均單價 (元/kg)', dailySales.avgPricePerKg ? dailySales.avgPricePerKg.toFixed(2) : '0.00'],
         ['當日毛利', dailySales.grossProfit],
         [],
-        ['客戶還款明細'],
-        ['客戶', '還款類型', '實際還款日期', '還款金額'],
-        ...dailySales.repaymentDetails.map(item => [item.customerName, item.type === RECEIVABLE_TYPES.MONTHLY ? '月結應收' : '現結欠款', item.paymentDate, item.amount]),
+        ['客戶還款明細（依原帳款月份歸屬）'],
+        ['客戶', '還款類型', '帳款歸屬日期', '實際還款日期', '還款金額'],
+        ...dailySales.repaymentDetails.map(item => [item.customerName, item.type === RECEIVABLE_TYPES.MONTHLY ? '月結應收' : '現結欠款', item.attributedDate, item.paymentDate, item.amount]),
         ['爐具收入', dailySales.stoveIncomeAmount],
         ['維修/安裝 收入', dailySales.repairIncomeAmount],
         ['買桶收入', dailySales.cylinderIncomeAmount],
@@ -1362,20 +1375,21 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 </div>
               </div>
 
-              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💳 舊系統實際還款流水（依客戶與實際還款日）</h3>
+              <h3 style={{ fontSize: '1.1rem', margin: '0 0 16px 0', borderBottom: '2px solid var(--accent-gold)', paddingBottom: '6px', color: 'var(--text-primary)' }}>💳 客戶還款紀錄（依原帳款月份歸屬）</h3>
               <div className="table-responsive" style={{ marginBottom: '24px' }}>
                 <table className="data-table">
-                  <thead><tr><th>客戶</th><th>還款類型</th><th>實際還款日期</th><th style={{ textAlign: 'right' }}>還款金額</th></tr></thead>
+                  <thead><tr><th>客戶</th><th>還款類型</th><th>帳款歸屬日期</th><th>實際還款日期</th><th style={{ textAlign: 'right' }}>還款金額</th></tr></thead>
                   <tbody>
                     {dailySales.repaymentDetails.map(item => (
                       <tr key={item.id}>
                         <td>{item.customerName}</td>
                         <td>{item.type === RECEIVABLE_TYPES.MONTHLY ? '月結應收' : '現結欠款'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.attributedDate}</td>
                         <td style={{ fontFamily: 'var(--font-mono)' }}>{item.paymentDate}</td>
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-green)', fontWeight: 700 }}>{formatCurrency(item.amount)}</td>
                       </tr>
                     ))}
-                    {dailySales.repaymentDetails.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>此期間沒有還款紀錄</td></tr>}
+                    {dailySales.repaymentDetails.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>此期間沒有歸屬此帳款月份的還款紀錄</td></tr>}
                   </tbody>
                 </table>
               </div>

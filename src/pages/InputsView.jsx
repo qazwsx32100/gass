@@ -35,7 +35,7 @@ import {
   getGasInventoryForMonth,
   parseBankStatementText
 } from '../utils/financials';
-import { buildReceivableSettlementAllocations, calculateReceivablesByOriginMonth, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
+import { buildReceivableSettlementAllocations, calculateReceivablesByOriginMonth, expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { filterLedgerTransactions, summarizeLedgerTransactions } from '../utils/ledgerSearch';
 import {
   getCloudAttachmentUrl,
@@ -275,12 +275,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       }
     });
 
-    allBankTransactions.forEach(bt => {
-      const settlementType = resolveSettlementType(bt, incomeById.get(bt.sourceId));
+    const attributedSettlements = expandSettlementAttributions({
+      settlements: allBankTransactions,
+      incomes: allIncomes
+    });
+
+    attributedSettlements.forEach(bt => {
+      const settlementType = resolveSettlementType(bt, incomeById.get(bt.sourceIncomeId || bt.sourceId));
       const isRepayment = bt.sourceType === 'settlement' && bt.direction === 'in' && settlementType;
 
       if (isRepayment) {
-        const date = bt.date;
+        const date = bt.attributionDate || bt.date;
         if (!summaryByDate[date]) {
           summaryByDate[date] = {
             date,
@@ -1178,6 +1183,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
           companyId,
           bankId: selectedBankId,
           date: targetDate,
+          actualPaymentDate: targetDate,
           direction: 'in',
           transactionType: 'income',
           sourceType: 'settlement',

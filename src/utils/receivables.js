@@ -60,6 +60,61 @@ const isLegacyImportedSettlement = (item = {}) => (
 
 const getMonthKey = value => String(value || '').slice(0, 7);
 
+/**
+ * Expands one cash receipt into the receivable periods it settles.
+ *
+ * The cash date remains `actualPaymentDate`, while `attributionDate` points
+ * to the original customer charge. This lets July operating reports include
+ * a July receivable collected in August without changing the real cash date.
+ */
+export const expandSettlementAttributions = ({ settlements = [], incomes = [] } = {}) => {
+  const incomeById = new Map(incomes.filter(Boolean).map(item => [item.id, item]));
+
+  return settlements.flatMap(settlement => {
+    if (!settlement) return [];
+    const actualPaymentDate = settlement.actualPaymentDate || settlement.date || '';
+    const allocations = Array.isArray(settlement.receivableAllocations)
+      ? settlement.receivableAllocations.filter(item => asNumber(item?.amount) > 0)
+      : [];
+
+    if (allocations.length > 0) {
+      return allocations.map((allocation, index) => {
+        const sourceIncome = incomeById.get(allocation.incomeId);
+        const attributionDate = allocation.attributionDate
+          || sourceIncome?.date
+          || (allocation.originMonth ? `${allocation.originMonth}-01` : '')
+          || settlement.attributionDate
+          || settlement.date
+          || '';
+        return {
+          ...settlement,
+          id: `${settlement.id || 'SETTLEMENT'}::${allocation.incomeId || index}`,
+          sourceSettlementId: settlement.id || null,
+          sourceIncomeId: allocation.incomeId || sourceIncome?.id || null,
+          amount: asNumber(allocation.amount),
+          attributionDate,
+          attributionMonth: getMonthKey(attributionDate),
+          actualPaymentDate
+        };
+      });
+    }
+
+    const sourceIncome = incomeById.get(settlement.sourceId || settlement.incomeId);
+    const attributionDate = settlement.attributionDate
+      || sourceIncome?.date
+      || settlement.date
+      || '';
+    return [{
+      ...settlement,
+      sourceSettlementId: settlement.id || null,
+      sourceIncomeId: sourceIncome?.id || settlement.sourceId || settlement.incomeId || null,
+      attributionDate,
+      attributionMonth: getMonthKey(attributionDate),
+      actualPaymentDate
+    }];
+  });
+};
+
 const applyAmountToRow = (row, amount) => {
   const applied = Math.min(row.outstandingAmount, Math.max(0, asNumber(amount)));
   row.settledAmount += applied;
