@@ -384,25 +384,43 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 3: 應收帳款 */}
-        <div 
-          className="metric-card accent-red" 
+        {/* Card 3: 月結應收帳款 */}
+        <div
+          className="metric-card accent-red"
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => openDetailModal('receivables')}
-          title="點擊查看月結與現結欠款明細"
+          title="點擊查看月結應收帳款明細；不包含現結欠款"
         >
           <div className="metric-card-header">
-            <span className="metric-label">{periodVal} 應收帳款</span>
+            <span className="metric-label">應收帳款（月結）</span>
             <div className="metric-icon-wrapper red">💵</div>
           </div>
-          <span className="metric-value">${(receivablesTotal || 0).toLocaleString()}</span>
+          <span className="metric-value">${(monthlyReceivablesTotal || 0).toLocaleString()}</span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="metric-change neutral">月結 ${(monthlyReceivablesTotal || 0).toLocaleString()} · 欠款 ${(currentDebtTotal || 0).toLocaleString()}</span>
+            <span className="metric-change neutral">{periodVal} 月結目前未收</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
           </div>
         </div>
 
-        {/* Card 4: 當月已付成本 */}
+        {/* Card 4: 現結欠款 */}
+        <div
+          className="metric-card accent-red"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => openDetailModal('receivables')}
+          title="點擊查看客戶現結未付欠款明細"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">欠款（現結未付）</span>
+            <div className="metric-icon-wrapper red">欠</div>
+          </div>
+          <span className="metric-value">${(currentDebtTotal || 0).toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">{periodVal} 現結欠款目前未收</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-red)', fontWeight: 700 }}>🔍 點擊查看明細 ➔</span>
+          </div>
+        </div>
+
+        {/* Card 5: 當月已付成本 */}
         <div 
           className="metric-card accent-red" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
@@ -422,7 +440,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 5: 本月現金結餘 */}
+        {/* Card 6: 本月現金結餘 */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
@@ -444,9 +462,25 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 5: 可用現金餘額 (暫不顯示) */}
+        {/* Card 7: 可用現金餘額 */}
+        <div
+          className="metric-card accent-blue"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => openDetailModal('cash')}
+          title="點擊查看截至月底的現金與銀行帳戶餘額"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">可用現金餘額</span>
+            <div className="metric-icon-wrapper blue">🏦</div>
+          </div>
+          <span className={`metric-value ${(cashBalance || 0) < 0 ? 'text-danger' : ''}`}>${(cashBalance || 0).toLocaleString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">現金＋銀行存款</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看帳戶 ➔</span>
+          </div>
+        </div>
 
-        {/* Card 6: 本月瓦斯銷售公斤 */}
+        {/* Card 8: 本月瓦斯銷售公斤 */}
         <div 
           className="metric-card accent-green" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
@@ -464,7 +498,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 7: 本月瓦斯毛利 */}
+        {/* Card 9: 本月瓦斯毛利 */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
@@ -482,7 +516,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 8: 期末瓦斯庫存 */}
+        {/* Card 10: 期末瓦斯庫存 */}
         <div 
           className="metric-card accent-blue" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
