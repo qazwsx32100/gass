@@ -102,6 +102,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const receivablesTotal = receivablesSummary?.total?.outstandingAmount || 0;
   const monthlyReceivablesTotal = receivablesSummary?.monthly?.outstandingAmount || 0;
   const currentDebtTotal = receivablesSummary?.currentDebt?.outstandingAmount || 0;
+  const receivableDetailIsDebt = activeDetailModal === 'debt';
+  const activeReceivableSummary = receivableDetailIsDebt
+    ? receivablesSummary?.currentDebt
+    : receivablesSummary?.monthly;
+  const activeReceivableRows = (activeReceivableSummary?.rows || [])
+    .filter(item => Number(item.outstandingAmount || 0) > 0);
+  const activeReceivableLabel = receivableDetailIsDebt ? '現結欠款' : '月結應收帳款';
   const customerDetails = useMemo(() => {
     void triggerRefresh;
     return new Map((getCustomers() || []).map(item => [item.id, item]));
@@ -406,7 +413,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
         <div
           className="metric-card accent-red"
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
-          onClick={() => openDetailModal('receivables')}
+          onClick={() => openDetailModal('debt')}
           title="點擊查看客戶現結未付欠款明細"
         >
           <div className="metric-card-header">
@@ -741,7 +748,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid rgba(5, 178, 165, 0.15)', paddingBottom: '16px' }}>
               <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 {activeDetailModal === 'revenue' && '📈 當月營業額與實收明細'}
-                {activeDetailModal === 'receivables' && '💵 應收帳款與收款狀態'}
+                {activeDetailModal === 'receivables' && '💵 月結應收帳款明細'}
+                {activeDetailModal === 'debt' && '欠 現結欠款明細'}
                 {activeDetailModal === 'expenses' && '📉 當月已付成本明細'}
                 {activeDetailModal === 'profit' && '💰 本月現金結餘（現金基礎）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
@@ -836,37 +844,31 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               </div>
             )}
 
-            {activeDetailModal === 'receivables' && (
+            {(activeDetailModal === 'receivables' || activeDetailModal === 'debt') && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-red)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>目前尚未收回合計</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{activeReceivableLabel}原始金額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-red)', fontFamily: 'var(--font-mono)' }}>
-                      ${(receivablesTotal || 0).toLocaleString()} 元
+                      ${(activeReceivableSummary?.originalAmount || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-gold)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>月結尚未收款</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{activeReceivableLabel}已收金額</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      ${(receivablesSummary?.monthly?.outstandingAmount || 0).toLocaleString()} 元
+                      ${(activeReceivableSummary?.settledAmount || 0).toLocaleString()} 元
                     </div>
                   </div>
                   <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-blue)' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>現結欠款尚未收款</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{activeReceivableLabel}尚未收款</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                      ${(receivablesSummary?.currentDebt?.outstandingAmount || 0).toLocaleString()} 元
+                      ${(activeReceivableSummary?.outstandingAmount || 0).toLocaleString()} 元
                     </div>
                   </div>
                 </div>
 
-                {(receivablesSummary?.unmatchedSettlementAmount || 0) > 0 && (
-                  <div style={{ marginBottom: '14px', padding: '10px 12px', border: '1px solid rgba(245, 158, 11, 0.35)', background: 'rgba(245, 158, 11, 0.08)', color: 'var(--accent-gold)', borderRadius: '6px', fontSize: '0.85rem' }}>
-                    待核對收款：${Number(receivablesSummary.unmatchedSettlementAmount).toLocaleString()}。舊收款超過可沖抵欠款，系統未將差額列為營業收入。
-                  </div>
-                )}
-
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ fontWeight: '700' }}>尚未收款明細（最舊欠款優先沖抵）</div>
+                  <div style={{ fontWeight: '700' }}>{activeReceivableLabel}尚未收款明細</div>
                   <button className="btn btn-primary btn-sm" onClick={() => { setActiveDetailModal(null); if (onNavigate) onNavigate('inputs'); }}>
                     前往日常金流入帳
                   </button>
@@ -885,7 +887,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {(receivablesSummary?.rows || []).map(item => {
+                      {activeReceivableRows.map(item => {
                         const customer = customerDetails.get(item.customerId);
                         const customerName = item.customerName || customer?.name || customer?.shortName || '未標示客戶';
                         const typeLabel = item.receivableType === 'monthly' ? '月結應收' : item.receivableType === 'current_debt' ? '現結欠款' : '其他應收';
@@ -916,10 +918,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         </tr>
                         );
                       })}
-                      {(receivablesSummary?.rows || []).length === 0 && (
+                      {activeReceivableRows.length === 0 && (
                         <tr>
                           <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '20px' }}>
-                            目前沒有尚未收款的應收帳款。
+                            目前沒有尚未收款的{activeReceivableLabel}。
                           </td>
                         </tr>
                       )}
