@@ -73,6 +73,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return getMonthlyOperatingSummary(companyId, prevPeriodVal);
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
+  const attributedNetProfit = (monthlyOperating?.actualRevenue || 0) - (cashNetProfit?.totalExpenses || 0);
+  const prevAttributedNetProfit = (prevMonthlyOperating?.actualRevenue || 0) - (prevCashNetProfit?.totalExpenses || 0);
+
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
     void triggerRefresh;
@@ -226,8 +229,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const expChange = (prevCashNetProfit?.totalExpenses || 0) > 0
     ? (((cashNetProfit?.totalExpenses || 0) - (prevCashNetProfit?.totalExpenses || 0)) / (prevCashNetProfit?.totalExpenses || 1)) * 100
     : 0;
-  const profitChange = (prevCashNetProfit?.netProfit || 0) !== 0
-    ? (((cashNetProfit?.netProfit || 0) - (prevCashNetProfit?.netProfit || 0)) / Math.abs(prevCashNetProfit?.netProfit || 1)) * 100
+  const profitChange = prevAttributedNetProfit !== 0
+    ? ((attributedNetProfit - prevAttributedNetProfit) / Math.abs(prevAttributedNetProfit)) * 100
     : 0;
 
   // AI Insights generator
@@ -447,19 +450,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 6: 本月現金結餘 */}
+        {/* Card 6: 本月實收結餘（歸屬原月份） */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => openDetailModal('profit')}
-          title="點擊查看本月損益結構拆解"
+          title="點擊查看按營業額原始發生月份歸屬的實收結餘"
         >
           <div className="metric-card-header">
-            <span className="metric-label">本月現金結餘</span>
+            <span className="metric-label">本月實收結餘（歸屬原月份）</span>
             <div className="metric-icon-wrapper gold">💰</div>
           </div>
-          <span className={`metric-value ${(cashNetProfit?.netProfit || 0) < 0 ? 'text-danger' : ''}`}>
-            ${(cashNetProfit?.netProfit || 0).toLocaleString()}
+          <span className={`metric-value ${attributedNetProfit < 0 ? 'text-danger' : ''}`}>
+            ${attributedNetProfit.toLocaleString()}
           </span>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className={`metric-change ${profitChange >= 0 ? 'up' : 'down'}`}>
@@ -733,7 +736,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {activeDetailModal === 'receivables' && '💵 月結應收帳款明細'}
                 {activeDetailModal === 'debt' && '欠 現結欠款明細'}
                 {activeDetailModal === 'expenses' && '📉 當月已付成本明細'}
-                {activeDetailModal === 'profit' && '💰 本月現金結餘（現金基礎）'}
+                {activeDetailModal === 'profit' && '💰 本月實收結餘（歸屬原月份）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
                 {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
@@ -992,32 +995,32 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div>
                 <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
                   <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
-                    📊 {periodVal} 現金淨利計算：
+                    📊 {periodVal} 實收結餘計算（歸屬原月份）：
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➕ 本月實收金額</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(cashNetProfit?.totalRevenue || 0).toLocaleString()} 元</strong>
+                      <span>➕ 本月實收營業額（歸屬原月份）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlyOperating?.actualRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>➖ 本月已付成本與費用</span>
                       <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(cashNetProfit?.totalExpenses || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
-                      <span>💰 本月現金結餘 [結餘率 {((cashNetProfit?.totalRevenue || 0) > 0 ? ((cashNetProfit?.netProfit || 0) / cashNetProfit.totalRevenue * 100) : 0).toFixed(1)}%]</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: (cashNetProfit?.netProfit || 0) >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
-                        ${(cashNetProfit?.netProfit || 0).toLocaleString()} 元
+                      <span>💰 本月實收結餘 [結餘率 {((monthlyOperating?.actualRevenue || 0) > 0 ? (attributedNetProfit / monthlyOperating.actualRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: attributedNetProfit >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+                        ${attributedNetProfit.toLocaleString()} 元
                       </strong>
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                      未收應收帳款與尚未付款的應付款不列入；正式會計損益請以報表中心為準。
+                      跨月收到的還款歸回原欠款月份，不列入收款月份；未收應收帳款與尚未付款的應付款不列入。
                     </div>
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.15)' }}>
-                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>前三大收入來源：</div>
+                    <div style={{ fontWeight: '700', marginBottom: '10px', color: 'var(--accent-blue)' }}>本月現金流入來源（含跨月還款，僅供核對）：</div>
                     {topCashIncomeSources.length > 0 ? (
                       topCashIncomeSources.map((item, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
