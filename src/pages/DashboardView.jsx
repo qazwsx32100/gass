@@ -1136,6 +1136,19 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 </div>
 
                 <div style={{ padding: '16px', backgroundColor: 'rgba(5, 178, 165, 0.05)', borderRadius: '12px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--accent-gold)', marginBottom: '8px' }}>
+                    💰 平均售價計算方式：
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.7' }}>
+                    <div><strong>平均售價</strong> ＝ 本月瓦斯銷貨總收入 ÷ 本月瓦斯銷售公斤數</div>
+                    <div>
+                      ＝ ${(gasProfit?.totalRevenue || 0).toLocaleString()} 元 ÷ {(gasProfit?.totalKg || 0).toLocaleString()} kg
+                      ＝ <strong style={{ color: 'var(--accent-gold)' }}>
+                        ${(gasProfit?.totalKg || 0) > 0 ? ((gasProfit?.totalRevenue || 0) / gasProfit.totalKg).toFixed(2) : '0.00'} / kg
+                      </strong>
+                    </div>
+                    <div>瓦斯銷貨總收入包含現收、月結應收與現結欠款；後續還款不會再次增加銷貨收入。</div>
+                  </div>
                   <div style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--accent-blue)', marginBottom: '8px' }}>
                     🛢️ 瓦斯進銷存數量評估公式：
                   </div>

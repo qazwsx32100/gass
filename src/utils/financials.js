@@ -4,6 +4,7 @@ import { getIncomes, getExpenses, getShareholderLedger, getShareholders, getBank
 import { calculateAggregateReceivables, calculateReceivablesByOriginMonth, isActiveSettlementReceipt } from './receivables';
 import { calculateCashRevenue } from './cashRevenue';
 import { calculateCashExpenses } from './cashExpenses';
+import { isGasRevenueEntry } from './gasRevenue';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -887,6 +888,15 @@ const getApprovedGasSales = (companyId, periodType = 'all', periodVal = null) =>
   )
 );
 
+const getApprovedGasRevenueEntries = (companyId, periodType = 'all', periodVal = null) => (
+  getIncomes().filter(item =>
+    item.companyId === companyId &&
+    isActivePostedRecord(item) &&
+    isGasRevenueEntry(item) &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  )
+);
+
 export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const config = getGasInventoryPeriods().find(item => item.companyId === companyId && item.yearMonth === yearMonth);
   const openingKg = Number(config?.openingKg || 0);
@@ -911,7 +921,8 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const soldKg = monthSales.reduce((sum, item) => sum + Number(item.gasKg || 0), 0);
   
   // 應計基礎：當月發生的瓦斯銷售全數列入；後續還款不重複增加營業額。
-  const gasRevenue = monthSales.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const gasRevenue = getApprovedGasRevenueEntries(companyId, 'month', yearMonth)
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const gasCogs = Math.round(soldKg * averageCostPerKg);
   const bookEndingKg = Math.max(0, availableKg - soldKg - shrinkageKg);
@@ -952,6 +963,8 @@ export const getGasInventoryValuationAtDate = (companyId, dateStr) => {
 
 export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => {
   const sales = getApprovedGasSales(companyId, periodType, periodVal);
+  const supplementalRevenue = getApprovedGasRevenueEntries(companyId, periodType, periodVal)
+    .filter(item => Number(item.gasKg || 0) <= 0);
 
   const dailyMap = {};
   let totalKg = 0;
@@ -974,6 +987,15 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
     totalKg += kg;
     totalRevenue += revenue;
     totalCogs += cogs;
+  });
+
+  supplementalRevenue.forEach(item => {
+    const revenue = Number(item.amount || 0);
+    if (!dailyMap[item.date]) {
+      dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
+    }
+    dailyMap[item.date].revenue += revenue;
+    totalRevenue += revenue;
   });
 
   const dailyRows = Object.values(dailyMap)
