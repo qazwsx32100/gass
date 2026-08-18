@@ -5,6 +5,7 @@ import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, in
 import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
+import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
 
 const pageLoaders = {
   dashboard: () => import('./pages/DashboardView'),
@@ -17,14 +18,16 @@ const pageLoaders = {
   auditZone: () => import('./pages/AuditZoneView')
 };
 
-const DashboardView = lazy(pageLoaders.dashboard);
-const InputsView = lazy(pageLoaders.inputs);
-const ReportsView = lazy(pageLoaders.reports);
-const SettingsView = lazy(pageLoaders.settings);
-const FirebaseView = lazy(pageLoaders.firebase);
-const CylindersView = lazy(pageLoaders.cylinders);
-const ShareholderZoneView = lazy(pageLoaders.shareholderZone);
-const AuditZoneView = lazy(pageLoaders.auditZone);
+const recoverablePage = (pageName) => lazy(() => lazyImportWithRecovery(pageLoaders[pageName], pageName));
+
+const DashboardView = recoverablePage('dashboard');
+const InputsView = recoverablePage('inputs');
+const ReportsView = recoverablePage('reports');
+const SettingsView = recoverablePage('settings');
+const FirebaseView = recoverablePage('firebase');
+const CylindersView = recoverablePage('cylinders');
+const ShareholderZoneView = recoverablePage('shareholderZone');
+const AuditZoneView = recoverablePage('auditZone');
 
 const currentTaiwanPeriod = (() => {
   const value = new Intl.DateTimeFormat('zh-TW', {
