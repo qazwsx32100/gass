@@ -33,14 +33,27 @@ const expenses = [
 
 const accountNames = { 6101: '員工薪資', 610110: '工錢', 6102: '租金支出' };
 
-test('searches salary account and lists only the selected payroll month', () => {
+test('searches salary account by the actual expense date, not payroll month', () => {
   const result = filterLedgerTransactions(expenses, {
     query: '員工薪資',
     yearMonth: '2026-08',
     accountNames
   });
 
-  assert.deepEqual(result.map(item => item.employeeName), ['王小明']);
+  assert.deepEqual(result.map(item => item.employeeName), ['王小明', '陳小華']);
+});
+
+test('does not move a July non-salary expense into August because of legacy payroll metadata', () => {
+  const legacyGasExpense = {
+    id: 'EXP-LEGACY-GAS',
+    date: '2026-07-31',
+    accountCode: '5101',
+    payrollMonth: '2026-08',
+    amount: 479507
+  };
+
+  assert.equal(filterLedgerTransactions([legacyGasExpense], { yearMonth: '2026-08', accountNames }).length, 0);
+  assert.equal(filterLedgerTransactions([legacyGasExpense], { yearMonth: '2026-07', accountNames }).length, 1);
 });
 
 test('searches employee name, counterparty, remarks, and transaction id', () => {
@@ -69,8 +82,8 @@ test('searching a parent salary account includes its wage subaccounts', () => {
     accountNames
   });
 
-  assert.deepEqual(result.map(item => item.id).sort(), ['EXP-001', 'EXP-SUB-1']);
-  assert.equal(summarizeLedgerTransactions(result).amount, 44090);
+  assert.deepEqual(result.map(item => item.id).sort(), ['EXP-001', 'EXP-002', 'EXP-SUB-1']);
+  assert.equal(summarizeLedgerTransactions(result).amount, 83090);
 });
 
 test('supports multiple keywords and totals the visible results', () => {

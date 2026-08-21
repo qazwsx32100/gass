@@ -792,7 +792,7 @@ export const getPayrollReport = (companyId, periodType = 'month', periodVal = ne
     item.correctionStatus !== 'corrected' &&
     item.correctionType !== 'reversal' &&
     item.accountCode && item.accountCode.startsWith('6101') &&
-    isDateInPeriod(item.payrollMonth ? `${item.payrollMonth}-01` : item.date, periodType, periodVal)
+    isDateInPeriod(item.date, periodType, periodVal)
   );
   const grossSalary = salaryRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const manualLaborInsurance = salaryRows.reduce((sum, item) => sum + Number(item.laborInsurance || 0), 0);

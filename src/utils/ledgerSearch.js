@@ -13,11 +13,10 @@ const normalizeSearchText = (value) => String(value ?? '')
   .replace(/\s+/g, ' ')
   .trim();
 
-const getTransactionMonth = (item) => {
-  const payrollMonth = String(item?.payrollMonth || '').slice(0, 7);
-  if (payrollMonth) return payrollMonth;
-  return String(item?.date || '').slice(0, 7);
-};
+// Ledger periods always follow the date on which the transaction actually
+// occurred. `payrollMonth` is descriptive payroll metadata only; using it as
+// the ledger month can move a July expense into the August expense list.
+const getTransactionMonth = (item) => String(item?.date || '').slice(0, 7);
 
 export const filterLedgerTransactions = (items = [], options = {}) => {
   const {

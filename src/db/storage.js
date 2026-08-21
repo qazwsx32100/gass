@@ -90,6 +90,7 @@ export const normalizeTransaction = (item) => {
   const vatAmount = item.vatAmount === '' || item.vatAmount === null || item.vatAmount === undefined
     ? null
     : Number(item.vatAmount) || 0;
+  const isSalaryExpense = String(item.accountCode || '').startsWith('6101');
 
   return {
     ...item,
@@ -117,12 +118,12 @@ export const normalizeTransaction = (item) => {
     taxType,
     taxIncluded,
     vatAmount,
-    employeeName: item.employeeName || '',
-    payrollMonth: item.payrollMonth || String(item.date || '').slice(0, 7),
-    laborInsurance: Number(item.laborInsurance) || 0,
-    healthInsurance: Number(item.healthInsurance) || 0,
-    pension: Number(item.pension) || 0,
-    withholdingTax: Number(item.withholdingTax) || 0,
+    employeeName: isSalaryExpense ? (item.employeeName || '') : '',
+    payrollMonth: isSalaryExpense ? (item.payrollMonth || String(item.date || '').slice(0, 7)) : '',
+    laborInsurance: isSalaryExpense ? (Number(item.laborInsurance) || 0) : 0,
+    healthInsurance: isSalaryExpense ? (Number(item.healthInsurance) || 0) : 0,
+    pension: isSalaryExpense ? (Number(item.pension) || 0) : 0,
+    withholdingTax: isSalaryExpense ? (Number(item.withholdingTax) || 0) : 0,
     createdBy: item.createdBy || 'SYSTEM',
     createdByName: item.createdByName || '系統管理員',
     createdByRole: item.createdByRole || USER_ROLES.ADMIN,

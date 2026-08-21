@@ -970,8 +970,10 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       taxType: item.taxType || 'taxable',
       taxIncluded: item.taxIncluded ?? true,
       vatAmount: item.vatAmount ?? '',
-      employeeName: item.employeeName || '',
-      payrollMonth: item.payrollMonth || String(item.date || '').slice(0, 7),
+      employeeName: String(item.accountCode || '').startsWith('6101') ? (item.employeeName || '') : '',
+      payrollMonth: String(item.accountCode || '').startsWith('6101')
+        ? (item.payrollMonth || String(item.date || '').slice(0, 7))
+        : '',
       laborInsurance: item.laborInsurance || '',
       healthInsurance: item.healthInsurance || '',
       pension: item.pension || '',
@@ -1247,6 +1249,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const paymentMethod = formData.paymentMethod || 'cash';
     const normalizedBankId = paymentMethod === 'bank_transfer' || activeSubTab === 'loan' ? formData.bankId : '';
     const paymentStatus = formData.paymentStatus || (['receivable', 'payable', 'check'].includes(paymentMethod) ? 'unpaid' : 'paid');
+    const isSalaryExpense = activeSubTab === 'expense' && String(formData.accountCode || '').startsWith('6101');
     const paymentFields = {
       paymentMethod,
       bankId: normalizedBankId,
@@ -1264,12 +1267,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       taxType: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? 'non_vat' : (formData.taxType || 'taxable'),
       taxIncluded: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? true : (formData.taxIncluded ?? true),
       vatAmount: activeSubTab === 'expense' && isExcludedFromInvoice(formData.accountCode) ? 0 : vatAmountVal,
-      employeeName: formData.employeeName || '',
-      payrollMonth: formData.payrollMonth || String(formData.date || '').slice(0, 7),
-      laborInsurance: parseFloat(formData.laborInsurance) || 0,
-      healthInsurance: parseFloat(formData.healthInsurance) || 0,
-      pension: parseFloat(formData.pension) || 0,
-      withholdingTax: parseFloat(formData.withholdingTax) || 0
+      employeeName: isSalaryExpense ? (formData.employeeName || '') : '',
+      payrollMonth: isSalaryExpense ? (formData.payrollMonth || String(formData.date || '').slice(0, 7)) : '',
+      laborInsurance: isSalaryExpense ? (parseFloat(formData.laborInsurance) || 0) : 0,
+      healthInsurance: isSalaryExpense ? (parseFloat(formData.healthInsurance) || 0) : 0,
+      pension: isSalaryExpense ? (parseFloat(formData.pension) || 0) : 0,
+      withholdingTax: isSalaryExpense ? (parseFloat(formData.withholdingTax) || 0) : 0
     };
     const calculationFields = {
       unitPrice: unitPriceVal,
