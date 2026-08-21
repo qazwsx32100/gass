@@ -70,14 +70,18 @@ export const deriveGasVehicleInventory = (state = {}) => {
       const vehicleId = cylinder.vehicleId || cylinder.locationId;
       const latestMovement = movements
         .filter(movement => movement.cylinderId === cylinder.id && movement.toLocationType === 'vehicle')
-        .sort((a, b) => String(b.createdAt || b.movementDate || '').localeCompare(String(a.createdAt || a.movementDate || '')))[0];
+        .sort((a, b) => {
+          const occurrenceCompare = String(b.movementDate || b.createdAt || '').localeCompare(String(a.movementDate || a.createdAt || ''));
+          if (occurrenceCompare !== 0) return occurrenceCompare;
+          return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+        })[0];
 
       return {
         id: `VINV-${cylinder.companyId || 'COMP'}-${vehicleId}-${cylinder.id}`,
         companyId: cylinder.companyId || '',
         vehicleId,
         cylinderId: cylinder.id,
-        loadedAt: latestMovement?.createdAt || latestMovement?.movementDate || cylinder.updatedAt || new Date().toISOString(),
+        loadedAt: latestMovement?.movementDate || latestMovement?.createdAt || cylinder.updatedAt || new Date().toISOString(),
         unloadedAt: '',
         status: 'on_vehicle',
         updatedAt: cylinder.updatedAt || new Date().toISOString()

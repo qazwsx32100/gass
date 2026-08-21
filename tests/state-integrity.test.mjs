@@ -43,6 +43,30 @@ test('derives current delivery vehicle inventory from cylinder locations', () =>
   assert.equal(inventory[0].status, 'on_vehicle');
 });
 
+test('uses the actual movement date before the later system entry time', () => {
+  const inventory = deriveGasVehicleInventory({
+    gasCylinders: [cylinder],
+    gasCylinderMovements: [
+      {
+        id: 'MOV-OLDER-EVENT-LATE-ENTRY',
+        cylinderId: cylinder.id,
+        toLocationType: 'vehicle',
+        movementDate: '2026-07-15',
+        createdAt: '2026-08-21T12:00:00.000Z'
+      },
+      {
+        id: 'MOV-LATER-EVENT-EARLY-ENTRY',
+        cylinderId: cylinder.id,
+        toLocationType: 'vehicle',
+        movementDate: '2026-07-20',
+        createdAt: '2026-07-20T08:00:00.000Z'
+      }
+    ]
+  });
+
+  assert.equal(inventory[0].loadedAt, '2026-07-20');
+});
+
 test('rejects delivery vehicle inventory above configured capacity', () => {
   const result = validateGasInventoryState({}, {
     gasDeliveryVehicles: [{ ...vehicle, capacityCylinders: 1 }],

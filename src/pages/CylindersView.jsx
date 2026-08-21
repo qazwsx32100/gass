@@ -400,7 +400,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       return list.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     }
     if (activeSubTab === 'gasMovements') {
-      return [...gasCylinderMovements].sort((a, b) => new Date(b.createdAt || b.movementDate) - new Date(a.createdAt || a.movementDate));
+      return [...gasCylinderMovements].sort((a, b) => {
+        const occurrenceCompare = String(b.movementDate || b.createdAt || '').localeCompare(String(a.movementDate || a.createdAt || ''));
+        if (occurrenceCompare !== 0) return occurrenceCompare;
+        return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+      });
     }
     return [];
   }, [activeSubTab, gasPurchases, gasInventoryPeriods, gasCylinders, gasDeliveryVehicles, customerCylinderDeposits, gasCylinderMovements, purchaseStartDate, purchaseEndDate, searchText, locationFilter]);

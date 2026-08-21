@@ -728,7 +728,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'gasCylinders') return gasCylinders.sort((a, b) => String(a.cylinderNo || '').localeCompare(String(b.cylinderNo || '')));
     if (activeSubTab === 'gasVehicles') return gasDeliveryVehicles.sort((a, b) => String(a.plateNo || a.id).localeCompare(String(b.plateNo || b.id)));
     if (activeSubTab === 'gasDeposits') return customerCylinderDeposits.sort((a, b) => new Date(b.startedAt || b.createdAt) - new Date(a.startedAt || a.createdAt));
-    if (activeSubTab === 'gasMovements') return gasCylinderMovements.sort((a, b) => new Date(b.createdAt || b.movementDate) - new Date(a.createdAt || a.movementDate));
+    if (activeSubTab === 'gasMovements') return gasCylinderMovements.sort((a, b) => {
+      const occurrenceCompare = String(b.movementDate || b.createdAt || '').localeCompare(String(a.movementDate || a.createdAt || ''));
+      if (occurrenceCompare !== 0) return occurrenceCompare;
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
     if (activeSubTab === 'assets') return getFixedAssets().filter(item => item.companyId === companyId).sort((a, b) => b.acquisitionDate.localeCompare(a.acquisitionDate));
     if (activeSubTab === 'shareholder') return getShareholderLedger().filter(s => s.companyId === companyId).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
     if (activeSubTab === 'loan') return getLoans().filter(l => l.companyId === companyId);
@@ -2248,7 +2252,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <thead>
                 <tr>
                   <th>資料 ID</th>
-                  <th>記帳日期</th>
+                  <th>交易發生日</th>
                   <th>收付類型</th>
                   <th>會計科目</th>
                   <th>金額 (TWD)</th>
@@ -2631,7 +2635,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               </div>
               <div className="form-group" style={{ marginBottom: 0, minWidth: '170px' }}>
                 <label className="form-label" htmlFor="ledger-search-month">
-                  {activeSubTab === 'expense' ? '費用發生月份' : '記帳月份'}
+                  {activeSubTab === 'expense' ? '費用發生月份' : '收入發生月份'}
                 </label>
                 <input
                   id="ledger-search-month"
@@ -2667,7 +2671,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'income' && (
                   <tr>
                     <th>流水號 ID</th>
-                    <th style={{ minWidth: '110px' }}>記帳日期</th>
+                    <th style={{ minWidth: '110px' }}>收入發生日</th>
                     <th style={{ minWidth: '150px' }}>科目</th>
                     <th>收款方式</th>
                     <th>單價</th>
@@ -2697,7 +2701,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 )}
                 {activeSubTab === 'dailySummary' && (
                   <tr>
-                    <th>記帳日期</th>
+                    <th>營運日期</th>
                     <th>瓦斯銷售總額（含未收）</th>
                     <th>已收金額</th>
                     <th>欠款金額</th>
@@ -2783,7 +2787,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'shareholder' && (
                   <tr>
                     <th>流水號 ID</th>
-                    <th>記帳日期</th>
+                    <th>權益異動日期</th>
                     <th>股東姓名</th>
                     <th>異動類型</th>
                     <th>異動金額</th>
@@ -2855,7 +2859,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         {showCreatorAudit && (
                           <td style={{ minWidth: '110px' }}>
                             <div style={{ fontWeight: 600 }}>{item.createdByName || '系統管理員'}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{formatDateTime(item.createdAt)}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>系統登錄：{formatDateTime(item.createdAt)}</div>
                           </td>
                         )}
                         <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>
@@ -3066,7 +3070,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                         {showCreatorAudit && (
                           <td style={{ minWidth: '110px' }}>
                             <div style={{ fontWeight: 600 }}>{item.createdByName || '系統管理員'}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{formatDateTime(item.createdAt)}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>系統登錄：{formatDateTime(item.createdAt)}</div>
                           </td>
                         )}
                         <td style={{ minWidth: '160px', maxWidth: '240px', whiteSpace: 'normal' }}>
@@ -3255,7 +3259,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                         <div className="form-group">
-                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>記帳日期</label>
+                          <label className="form-label" style={{ minHeight: '38px', display: 'block' }}>營運日期</label>
                           <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                         </div>
                         <div className="form-group">
@@ -3390,7 +3394,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 1. Date Field */}
                 {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
-                    <label className="form-label">{activeSubTab === 'expense' ? '費用發生日' : '記帳日期'}</label>
+                    <label className="form-label">
+                      {activeSubTab === 'expense'
+                        ? '費用發生日'
+                        : activeSubTab === 'income'
+                          ? '收入發生日'
+                          : activeSubTab === 'shareholder'
+                            ? '權益異動日期'
+                            : '交易發生日'}
+                    </label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                   </div>
                 )}
@@ -4445,7 +4457,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div>
                     <SectionHeader title="💰 基本交易明細" />
                     <DetailRow label="交易單號 (ID)" value={item.id} isBold={true} />
-                    <DetailRow label={type === 'expense' ? '費用發生日' : '記帳日期'} value={item.date} />
+                    <DetailRow label={type === 'expense' ? '費用發生日' : '收入發生日'} value={item.date} />
                     <DetailRow label="交易類型" value={type === 'income' ? '收入' : '支出'} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
                     <DetailRow label="會計科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} isBold={true} />
                     {item.accountCode && item.accountCode.startsWith('6101') && item.employeeName && (
@@ -4493,7 +4505,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       <div style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{item.remarks || '（無備註說明）'}</div>
                     </div>
                     <DetailRow label="經辦人員" value={item.createdByName || '系統管理員'} />
-                    <DetailRow label="建立時間" value={formatDateTime(item.createdAt)} />
+                    <DetailRow label="系統登錄時間（稽核用）" value={formatDateTime(item.createdAt)} />
 
                     {/* History Chain Timeline */}
                     {chain.length > 1 && (
@@ -4736,7 +4748,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div>
                     <SectionHeader title="👤 股東權益異動" />
                     <DetailRow label="流水號 (ID)" value={item.id} isBold={true} />
-                    <DetailRow label="記帳日期" value={item.date} />
+                    <DetailRow label="權益異動日期" value={item.date} />
                     <DetailRow label="股東姓名" value={getShareholderName(item.shareholderId)} isBold={true} />
                     <DetailRow label="權益異動類型" value={item.type === 'join' ? '原始入股' : item.type === 'increase' ? '股東增資' : '減資提領'} color={item.type === 'decrease' ? 'var(--accent-red)' : 'var(--accent-gold)'} isBold={true} />
                     <DetailRow label="異動金額" value={fmtVal(item.amount)} color={item.type === 'decrease' ? 'var(--accent-red)' : 'var(--accent-gold)'} isBold={true} />
