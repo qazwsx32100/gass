@@ -35,7 +35,7 @@ import {
   getGasInventoryForMonth,
   parseBankStatementText
 } from '../utils/financials';
-import { buildReceivableSettlementAllocations, calculateReceivablesByOriginMonth, expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
+import { buildReceivableSettlementAllocations, calculateAggregateReceivables, calculateReceivablesByOriginMonth, expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { filterLedgerTransactions, summarizeLedgerTransactions } from '../utils/ledgerSearch';
 import {
   getCloudAttachmentUrl,
