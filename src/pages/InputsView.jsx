@@ -2630,7 +2630,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0, minWidth: '170px' }}>
-                <label className="form-label" htmlFor="ledger-search-month">記帳月份</label>
+                <label className="form-label" htmlFor="ledger-search-month">
+                  {activeSubTab === 'expense' ? '費用發生月份' : '記帳月份'}
+                </label>
                 <input
                   id="ledger-search-month"
                   type="month"
@@ -2681,7 +2683,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {activeSubTab === 'expense' && (
                   <tr>
                     <th>流水號 ID</th>
-                    <th style={{ minWidth: '110px' }}>記帳日期</th>
+                    <th style={{ minWidth: '110px' }}>費用發生日</th>
                     <th style={{ minWidth: '150px' }}>科目</th>
                     <th>付款方式</th>
                     <th>單價</th>
@@ -3388,7 +3390,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 1. Date Field */}
                 {activeSubTab !== 'loan' && activeSubTab !== 'gas' && activeSubTab !== 'assets' && !GAS_OPERATION_TABS.includes(activeSubTab) && (
                   <div className="form-group">
-                    <label className="form-label">記帳日期</label>
+                    <label className="form-label">{activeSubTab === 'expense' ? '費用發生日' : '記帳日期'}</label>
                     <input type="date" required className="form-control" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                   </div>
                 )}
@@ -4443,7 +4445,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div>
                     <SectionHeader title="💰 基本交易明細" />
                     <DetailRow label="交易單號 (ID)" value={item.id} isBold={true} />
-                    <DetailRow label="記帳日期" value={item.date} />
+                    <DetailRow label={type === 'expense' ? '費用發生日' : '記帳日期'} value={item.date} />
                     <DetailRow label="交易類型" value={type === 'income' ? '收入' : '支出'} color={type === 'income' ? 'var(--accent-green)' : 'var(--accent-red)'} isBold={true} />
                     <DetailRow label="會計科目" value={`${item.accountCode || ''} ${getAccountName(item.accountCode)}`} isBold={true} />
                     {item.accountCode && item.accountCode.startsWith('6101') && item.employeeName && (

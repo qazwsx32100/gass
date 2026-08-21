@@ -2598,7 +2598,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>記帳日期</th>
+                        <th>交易發生日</th>
                         <th>項目</th>
                         <th>收付款方式 / 狀態</th>
                         <th>備註</th>
@@ -2705,7 +2705,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>記帳日期</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>
+                    {selectedTransaction.type === 'expense' ? '費用發生日' : '收入發生日'}
+                  </label>
                   <div style={{ fontWeight: '600' }}>{selectedTransaction.date}</div>
                 </div>
                 <div>
