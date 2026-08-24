@@ -5,6 +5,7 @@ import { calculateAggregateReceivables, calculateReceivablesByOriginMonth, isAct
 import { calculateCashRevenue } from './cashRevenue';
 import { calculateCashExpenses } from './cashExpenses';
 import { isGasRevenueEntry } from './gasRevenue';
+import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -76,17 +77,11 @@ export const getCashNetProfitSummary = (companyId, periodType, periodVal) => {
   };
 };
 
-const isDepositIncome = item => (
-  item?.syncType === 'revenue_deposit' ||
-  String(item?.remarks || '').includes('押瓶') ||
-  String(item?.remarks || '').includes('押金')
-);
-
 /**
  * Monthly operating view used by the dashboard and management reports.
  * Revenue is recognized in its origin month. Later collections reduce that
  * same month's receivable balance instead of inflating the collection month.
- * Customer deposits are balance-sheet money and are deliberately excluded.
+ * Customer cylinder deposits are included as operating revenue per company policy.
  */
 export const getMonthlyOperatingSummary = (companyId, yearMonth) => {
   const incomes = getIncomes();
@@ -98,15 +93,7 @@ export const getMonthlyOperatingSummary = (companyId, yearMonth) => {
     incomes,
     bankTransactions
   });
-  const entries = incomes.filter(item =>
-    item?.companyId === companyId &&
-    isActivePostedRecord(item) &&
-    String(item.date || '').startsWith(yearMonth) &&
-    item.syncType !== 'receivable_opening' &&
-    !String(item.remarks || '').includes('尚未核銷') &&
-    !String(item.remarks || '').includes('欠款餘額') &&
-    !isDepositIncome(item)
-  );
+  const entries = selectMonthlyOperatingRevenueEntries({ incomes, companyId, yearMonth });
   const totalRevenue = entries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstandingReceivables = receivables.total.outstandingAmount;
 

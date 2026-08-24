@@ -494,7 +494,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ? getMonthlyOperatingSummary(companyId, activePeriodVal)
       : null;
     const totalBusinessRevenue = monthlyOperating?.totalRevenue ?? (
-      gasSalesAmount + stoveIncomeAmount + repairIncomeAmount + cylinderIncomeAmount + inspectionIncomeAmount + otherIncomeAmount
+      gasSalesAmount + stoveIncomeAmount + repairIncomeAmount + cylinderIncomeAmount + inspectionIncomeAmount + depositIncomeAmount + otherIncomeAmount
     );
     const currentReceivables = monthlyOperating?.receivables
       || getAggregateReceivableSummary(companyId, new Date().toISOString().split('T')[0]);
