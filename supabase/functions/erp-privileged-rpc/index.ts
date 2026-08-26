@@ -5,12 +5,14 @@ const ALLOWED_FUNCTIONS = new Set([
   "erp_create_backup",
   "erp_get_app_state",
   "erp_get_app_state_meta",
+  "erp_list_legacy_customer_cylinder_events",
   "erp_list_backups",
   "erp_mark_backup_drive_result",
   "erp_refresh_relational_mirror_deferred",
   "erp_restore_backup",
   "erp_set_app_state",
   "erp_sync_shenglong_finance",
+  "erp_upsert_legacy_customer_cylinder_events",
 ]);
 
 const json = (body: unknown, status = 200) => new Response(

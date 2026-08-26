@@ -155,6 +155,36 @@ const authHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+export const fetchLegacyCustomerCylinderEvents = async ({
+  companyId,
+  search = '',
+  eventType = '',
+  startDate = '',
+  endDate = '',
+  cursor = null,
+  signal
+}) => {
+  const params = new URLSearchParams({ companyId });
+  if (search) params.set('search', search);
+  if (eventType) params.set('eventType', eventType);
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  if (cursor?.date && cursor?.id) {
+    params.set('cursorDate', cursor.date);
+    params.set('cursorId', String(cursor.id));
+  }
+
+  const response = await apiFetch(`/api/customer-cylinder-events?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json', ...authHeaders() },
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(await getResponseError(response, '客戶押瓶歷史讀取失敗。'));
+  }
+  return response.json();
+};
+
 const readLocalJson = (key) => {
   try {
     const value = localStorage.getItem(key);

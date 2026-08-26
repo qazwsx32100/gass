@@ -14,6 +14,7 @@ import { canInputBasicLedger } from '../utils/permissions';
 import { getGasInventoryForMonth } from '../utils/financials';
 import GasMonthlyIntakePanel from '../components/GasMonthlyIntakePanel';
 import { applyMonthlyGasPrice } from '../utils/gasPricing';
+import { fetchLegacyCustomerCylinderEvents } from '../db/supabaseService';
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
 const GAS_CYLINDER_STATUS_OPTIONS = [
@@ -59,6 +60,120 @@ const GAS_MOVEMENT_TYPE_OPTIONS = [
 
 const optionLabel = (options, value) => options.find(option => option.value === value)?.label || value || '-';
 
+const legacyCylinderQuantityText = (item) => [
+  ['50kg', item.quantity50kg],
+  ['20kg', item.quantity20kg],
+  ['18kg', item.quantity18kg],
+  ['16kg', item.quantity16kg],
+  ['10kg', item.quantity10kg],
+  ['新4kg', item.quantityNew4kg],
+  ['4kg', item.quantity4kg]
+]
+  .filter(([, quantity]) => Number(quantity || 0) > 0)
+  .map(([size, quantity]) => `${size}×${Number(quantity).toLocaleString()}`)
+  .join('、') || '未填桶數';
+
+function LegacyCylinderEventTable({
+  items,
+  loading,
+  error,
+  total,
+  pageNumber,
+  hasPrevious,
+  hasNext,
+  onPrevious,
+  onNext,
+  onEdit,
+  onDelete
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
+        <div>
+          <strong>舊系統押瓶／退押完整紀錄</strong>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '3px' }}>
+            依實際發生日期顯示；舊系統流水為唯讀，重新同步不會重複新增。
+          </div>
+        </div>
+        <span className="badge approved">共 {Number(total || 0).toLocaleString()} 筆</span>
+      </div>
+      {error && (
+        <div className="alert alert-danger" role="alert" style={{ marginBottom: '12px' }}>{error}</div>
+      )}
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>流水 ID</th>
+              <th>發生日期</th>
+              <th>類型</th>
+              <th>客戶</th>
+              <th>鋼瓶規格／桶數</th>
+              <th>押金金額</th>
+              <th>付款狀態</th>
+              <th>經手／備註</th>
+              <th style={{ textAlign: 'right' }}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && items.length === 0 ? (
+              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px 0' }}>正在讀取舊系統押瓶紀錄…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>📭 查無符合條件的押瓶／退押紀錄。</td></tr>
+            ) : items.map(item => (
+              <tr key={`${item.sourceSystem}-${item.legacyId}`} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 62px' }}>
+                <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>
+                  {item.sourceSystem === 'gass' ? item.legacyId : `舊-${item.legacyId}`}
+                </td>
+                <td style={{ fontFamily: 'var(--font-mono)' }}>
+                  <div>{item.occurredOn || '-'}</div>
+                  {item.returnedAt && item.returnedAt !== item.occurredOn && (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>退押：{item.returnedAt}</div>
+                  )}
+                </td>
+                <td>
+                  <span className={`badge ${item.eventType === 'deposit' ? 'approved' : 'draft'}`}>
+                    {item.eventType === 'deposit' ? '押瓶' : '退押'}
+                  </span>
+                </td>
+                <td>
+                  <div style={{ fontWeight: 700 }}>{item.customerName || `客戶 #${item.customerId}`}</div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>{item.customerPhone || item.customerAddress || '-'}</div>
+                </td>
+                <td style={{ fontFamily: 'var(--font-mono)', whiteSpace: 'normal' }}>{legacyCylinderQuantityText(item)}</td>
+                <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', fontWeight: 700 }}>{formatCurrency(item.amount || 0)}</td>
+                <td>
+                  {item.paymentStatus === 'Y' ? '已付款' : item.paymentStatus === 'O' ? '欠款' : item.paymentStatus || '未註記'}
+                  {item.paymentDate && <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>{item.paymentDate}</div>}
+                </td>
+                <td style={{ whiteSpace: 'normal', maxWidth: '240px' }}>
+                  <div>{item.handledBy || '-'}</div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                    {[item.locationName, item.remarks, item.legacyOrderId ? `訂單 ${item.legacyOrderId}` : ''].filter(Boolean).join('・') || '舊系統鋼瓶流水'}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {item.sourceSystem === 'gass' ? (
+                    <>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(item.originalRecord)} style={{ marginRight: '8px' }}>修改</button>
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => onDelete(item.originalRecord.id)}>刪除</button>
+                    </>
+                  ) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>唯讀</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>第 {pageNumber} 頁</span>
+        <button type="button" className="btn btn-secondary btn-sm" aria-label="上一頁" title="上一頁" disabled={!hasPrevious || loading} onClick={onPrevious}>‹</button>
+        <button type="button" className="btn btn-secondary btn-sm" aria-label="下一頁" title="下一頁" disabled={!hasNext || loading} onClick={onNext}>›</button>
+      </div>
+    </div>
+  );
+}
+
 export default function CylindersView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', userRole }) {
   const [activeSubTab, setActiveSubTab] = useState('gasPurchases');
   const [editingItem, setEditingItem] = useState(null);
@@ -71,6 +186,12 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const [locationFilter, setLocationFilter] = useState('');
   const [purchaseStartDate, setPurchaseStartDate] = useState('');
   const [purchaseEndDate, setPurchaseEndDate] = useState('');
+  const [depositStartDate, setDepositStartDate] = useState('');
+  const [depositEndDate, setDepositEndDate] = useState('');
+  const [depositEventType, setDepositEventType] = useState('');
+  const [legacyDepositCursor, setLegacyDepositCursor] = useState(null);
+  const [legacyDepositCursorStack, setLegacyDepositCursorStack] = useState([]);
+  const [legacyDepositData, setLegacyDepositData] = useState({ items: [], total: 0, nextCursor: null, loading: false, error: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 100;
 
@@ -151,6 +272,98 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     void triggerRefresh;
     return getCustomers().filter(item => item.companyId === companyId);
   }, [companyId, triggerRefresh]);
+
+  useEffect(() => {
+    setLegacyDepositCursor(null);
+    setLegacyDepositCursorStack([]);
+  }, [companyId, searchText, depositEventType, depositStartDate, depositEndDate]);
+
+  useEffect(() => {
+    if (activeSubTab !== 'gasDeposits') return undefined;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLegacyDepositData(previous => ({ ...previous, loading: true, error: '' }));
+      try {
+        const result = await fetchLegacyCustomerCylinderEvents({
+          companyId,
+          search: searchText.trim(),
+          eventType: depositEventType,
+          startDate: depositStartDate,
+          endDate: depositEndDate,
+          cursor: legacyDepositCursor,
+          signal: controller.signal
+        });
+        setLegacyDepositData({
+          items: Array.isArray(result.items) ? result.items : [],
+          total: Number(result.total || 0),
+          nextCursor: result.nextCursor || null,
+          loading: false,
+          error: ''
+        });
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+        setLegacyDepositData(previous => ({
+          ...previous,
+          loading: false,
+          error: error?.message || '客戶押瓶歷史讀取失敗。'
+        }));
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeSubTab, companyId, searchText, depositEventType, depositStartDate, depositEndDate, legacyDepositCursor]);
+
+  const currentDepositRows = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    return customerCylinderDeposits
+      .filter(item => {
+        const eventType = item.depositStatus === 'returned' ? 'refund' : 'deposit';
+        const occurrenceDate = item.returnedAt || item.startedAt || '';
+        if (depositEventType && eventType !== depositEventType) return false;
+        if (depositStartDate && occurrenceDate < depositStartDate) return false;
+        if (depositEndDate && occurrenceDate > depositEndDate) return false;
+        if (!query) return true;
+        return [item.customerName, item.customerPhone, item.customerAddress, item.remarks, item.id]
+          .some(value => String(value || '').toLowerCase().includes(query));
+      })
+      .map(item => ({
+        sourceSystem: 'gass',
+        legacyId: item.id,
+        occurredOn: item.returnedAt || item.startedAt || item.createdAt?.slice(0, 10) || '',
+        returnedAt: item.returnedAt || '',
+        eventType: item.depositStatus === 'returned' ? 'refund' : 'deposit',
+        customerId: item.customerId || '',
+        customerName: item.customerName || '',
+        customerPhone: item.customerPhone || '',
+        customerAddress: item.customerAddress || '',
+        quantity50kg: Number(item.cylinderSpecKg) === 50 ? Number(item.quantity || 1) : 0,
+        quantity20kg: Number(item.cylinderSpecKg) === 20 ? Number(item.quantity || 1) : 0,
+        quantity18kg: Number(item.cylinderSpecKg) === 18 ? Number(item.quantity || 1) : 0,
+        quantity16kg: Number(item.cylinderSpecKg) === 16 ? Number(item.quantity || 1) : 0,
+        quantity10kg: Number(item.cylinderSpecKg) === 10 ? Number(item.quantity || 1) : 0,
+        quantityNew4kg: 0,
+        quantity4kg: Number(item.cylinderSpecKg) === 4 ? Number(item.quantity || 1) : 0,
+        amount: Number(item.depositAmount || 0),
+        paymentStatus: item.paymentStatus || '',
+        paymentDate: item.paymentDate || '',
+        handledBy: item.operator || item.updatedBy || '',
+        locationName: '',
+        remarks: item.remarks || '',
+        originalRecord: item
+      }));
+  }, [customerCylinderDeposits, searchText, depositEventType, depositStartDate, depositEndDate]);
+
+  const displayedDepositRows = useMemo(() => (
+    [...(legacyDepositCursor ? [] : currentDepositRows), ...legacyDepositData.items].sort((left, right) => {
+      const dateCompare = String(right.occurredOn || '').localeCompare(String(left.occurredOn || ''));
+      if (dateCompare !== 0) return dateCompare;
+      return String(right.legacyId || '').localeCompare(String(left.legacyId || ''), undefined, { numeric: true });
+    })
+  ), [currentDepositRows, legacyDepositData.items, legacyDepositCursor]);
 
   const cylinderStockSummary = useMemo(() => {
     const summary = {
@@ -1020,6 +1233,27 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           </>
         )}
 
+        {activeSubTab === 'gasDeposits' && (
+          <>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>開始日期</label>
+              <input type="date" className="form-control" style={{ width: '160px' }} value={depositStartDate} onChange={event => setDepositStartDate(event.target.value)} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>結束日期</label>
+              <input type="date" className="form-control" style={{ width: '160px' }} value={depositEndDate} onChange={event => setDepositEndDate(event.target.value)} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>紀錄類型</label>
+              <select className="select-dropdown" value={depositEventType} onChange={event => setDepositEventType(event.target.value)}>
+                <option value="">押瓶＋退押</option>
+                <option value="deposit">只看押瓶</option>
+                <option value="refund">只看退押</option>
+              </select>
+            </div>
+          </>
+        )}
+
         {(activeSubTab === 'gasCylinders' || activeSubTab === 'gasDeposits') && (
           <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
             <input
@@ -1128,8 +1362,34 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         </div>
       )}
 
+      {activeSubTab === 'gasDeposits' && (
+        <LegacyCylinderEventTable
+          items={displayedDepositRows}
+          loading={legacyDepositData.loading}
+          error={legacyDepositData.error}
+          total={legacyDepositData.total + currentDepositRows.length}
+          pageNumber={legacyDepositCursorStack.length + 1}
+          hasPrevious={legacyDepositCursorStack.length > 0}
+          hasNext={Boolean(legacyDepositData.nextCursor)}
+          onPrevious={() => {
+            setLegacyDepositCursorStack(previous => {
+              const nextStack = previous.slice(0, -1);
+              setLegacyDepositCursor(previous.at(-1) || null);
+              return nextStack;
+            });
+          }}
+          onNext={() => {
+            if (!legacyDepositData.nextCursor) return;
+            setLegacyDepositCursorStack(previous => [...previous, legacyDepositCursor]);
+            setLegacyDepositCursor(legacyDepositData.nextCursor);
+          }}
+          onEdit={handleOpenEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
       {/* Data Table */}
-      {activeSubTab !== 'gasIntakeReport' && <div className="table-responsive">
+      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && <div className="table-responsive">
         <table className="data-table">
           <thead>
             {activeSubTab === 'gasPurchases' && (
@@ -1443,7 +1703,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           </tbody>
         </table>
       </div>}
-      {activeSubTab !== 'gasIntakeReport' && filteredItems.length > pageSize && (
+      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && filteredItems.length > pageSize && (
         <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
             第 {currentPage} / {totalPages} 頁，共 {filteredItems.length.toLocaleString()} 筆
