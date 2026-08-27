@@ -185,6 +185,32 @@ export const fetchLegacyCustomerCylinderEvents = async ({
   return response.json();
 };
 
+export const fetchLegacyCylinderMovements = async ({
+  companyId,
+  search = '',
+  statusCode = '',
+  startDate = '',
+  endDate = '',
+  page = 1,
+  signal
+}) => {
+  const params = new URLSearchParams({ companyId, page: String(page) });
+  if (search) params.set('search', search);
+  if (statusCode) params.set('statusCode', statusCode);
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+
+  const response = await apiFetch(`/api/cylinder-movements?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json', ...authHeaders() },
+    signal
+  });
+  if (!response.ok) {
+    throw new Error(await getResponseError(response, '鋼瓶異動歷史讀取失敗。'));
+  }
+  return response.json();
+};
+
 const readLocalJson = (key) => {
   try {
     const value = localStorage.getItem(key);

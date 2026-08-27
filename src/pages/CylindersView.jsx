@@ -14,7 +14,7 @@ import { canInputBasicLedger } from '../utils/permissions';
 import { getGasInventoryForMonth } from '../utils/financials';
 import GasMonthlyIntakePanel from '../components/GasMonthlyIntakePanel';
 import { applyMonthlyGasPrice } from '../utils/gasPricing';
-import { fetchLegacyCustomerCylinderEvents } from '../db/supabaseService';
+import { fetchLegacyCustomerCylinderEvents, fetchLegacyCylinderMovements } from '../db/supabaseService';
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
 const GAS_CYLINDER_STATUS_OPTIONS = [
@@ -56,6 +56,26 @@ const GAS_MOVEMENT_TYPE_OPTIONS = [
   { value: 'send_maintenance', label: '送檢 / 維修' },
   { value: 'scrap', label: '報廢' },
   { value: 'manual_adjustment', label: '人工調整' }
+];
+
+const LEGACY_MOVEMENT_STATUS_OPTIONS = [
+  { value: '', label: '全部異動類型' },
+  { value: 'B', label: '購入新桶' },
+  { value: 'S', label: '售出鋼瓶' },
+  { value: 'C', label: '送出檢驗' },
+  { value: 'P', label: '檢驗送回' },
+  { value: 'F', label: '送出修理' },
+  { value: 'X', label: '修理送回' },
+  { value: 'Y', label: '換桶' },
+  { value: 'T', label: '報廢鋼瓶' },
+  { value: 'D', label: '分裝場收桶' },
+  { value: 'O', label: '客戶欠桶／押瓶' },
+  { value: 'R', label: '欠桶歸還／退押' },
+  { value: 'G', label: '客戶借桶' },
+  { value: 'E', label: '借桶歸還' },
+  { value: 'H', label: '寄桶' },
+  { value: 'K', label: '寄桶取回' },
+  { value: 'L', label: '舊系統期初鋼瓶彙總' }
 ];
 
 const optionLabel = (options, value) => options.find(option => option.value === value)?.label || value || '-';
@@ -174,6 +194,71 @@ function LegacyCylinderEventTable({
   );
 }
 
+const legacyMovementLabel = (item) => {
+  if (item.statusCode === 'L' && Number(item.legacyId) === 4314) return '舊系統期初鋼瓶彙總';
+  return LEGACY_MOVEMENT_STATUS_OPTIONS.find(option => option.value === item.statusCode)?.label || item.movementLabel || '其他異動';
+};
+
+const signedMovementQuantityText = (item) => [
+  ['50kg', item.quantity50kg], ['20kg', item.quantity20kg], ['18kg', item.quantity18kg],
+  ['16kg', item.quantity16kg], ['10kg', item.quantity10kg], ['新4kg', item.quantityNew4kg], ['4kg', item.quantity4kg]
+]
+  .filter(([, quantity]) => Number(quantity || 0) !== 0)
+  .map(([size, quantity]) => `${size} ${Number(quantity) > 0 ? '+' : ''}${Number(quantity).toLocaleString()}`)
+  .join('、') || item.cylinderText || '未填桶數';
+
+function LegacyCylinderMovementTable({ items, loading, error, total, page, onPage }) {
+  const totalPages = Math.max(1, Math.ceil(Number(total || 0) / 100));
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
+        <div>
+          <strong>舊系統鋼瓶異動完整紀錄</strong>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '3px' }}>
+            依實際發生日期顯示；保留原始正負桶數與未填日期紀錄，舊流水為唯讀。
+          </div>
+        </div>
+        <span className="badge approved">共 {Number(total || 0).toLocaleString()} 筆</span>
+      </div>
+      {error && <div className="alert alert-danger" role="alert" style={{ marginBottom: '12px' }}>{error}</div>}
+      <div className="table-responsive">
+        <table className="data-table">
+          <thead><tr><th>流水 ID</th><th>發生日期</th><th>異動類型</th><th>客戶／供應商</th><th>規格／桶數</th><th>金額</th><th>經手／備註</th><th>來源</th></tr></thead>
+          <tbody>
+            {loading && items.length === 0 ? (
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px 0' }}>正在讀取舊系統鋼瓶異動…</td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>📭 查無符合條件的鋼瓶異動。</td></tr>
+            ) : items.map(item => (
+              <tr key={`${item.sourceSystem}-${item.legacyId}`} style={{ contentVisibility: 'auto', containIntrinsicSize: '0 62px' }}>
+                <td style={{ fontFamily: 'var(--font-mono)' }}>{item.sourceSystem === 'gass' ? item.legacyId : `舊-${item.legacyId}`}</td>
+                <td style={{ fontFamily: 'var(--font-mono)' }}>{item.occurredOn || <span style={{ color: 'var(--accent-red)' }}>日期未填</span>}</td>
+                <td><span className="badge pending">{item.sourceSystem === 'gass' ? item.movementLabel : legacyMovementLabel(item)}</span></td>
+                <td>
+                  <div style={{ fontWeight: 700 }}>{item.customerName || item.provider || item.locationName || '-'}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>{item.customerPhone || item.customerAddress || item.counterpartyDetail || '-'}</div>
+                </td>
+                <td style={{ fontFamily: 'var(--font-mono)', whiteSpace: 'normal' }}>{signedMovementQuantityText(item)}</td>
+                <td style={{ fontFamily: 'var(--font-mono)', color: Number(item.amount || 0) < 0 ? 'var(--accent-red)' : 'var(--accent-gold)', fontWeight: 700 }}>{formatCurrency(item.amount || 0)}</td>
+                <td style={{ whiteSpace: 'normal', maxWidth: '260px' }}>
+                  <div>{item.handledBy || '-'}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.76rem' }}>{[item.locationName, item.fromToText, item.legacyOrderId ? `訂單 ${item.legacyOrderId}` : '', item.legacyOldData, item.remarks].filter(Boolean).join('・') || '-'}</div>
+                </td>
+                <td>{item.sourceSystem === 'gass' ? '新系統' : '舊系統（唯讀）'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>第 {page} / {totalPages} 頁</span>
+        <button type="button" className="btn btn-secondary btn-sm" aria-label="上一頁" disabled={page <= 1 || loading} onClick={() => onPage(page - 1)}>‹</button>
+        <button type="button" className="btn btn-secondary btn-sm" aria-label="下一頁" disabled={page >= totalPages || loading} onClick={() => onPage(page + 1)}>›</button>
+      </div>
+    </div>
+  );
+}
+
 export default function CylindersView({ companyId, triggerRefresh, onDataChange, operatorName = '未知使用者', userRole }) {
   const [activeSubTab, setActiveSubTab] = useState('gasPurchases');
   const [editingItem, setEditingItem] = useState(null);
@@ -192,6 +277,11 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
   const [legacyDepositCursor, setLegacyDepositCursor] = useState(null);
   const [legacyDepositCursorStack, setLegacyDepositCursorStack] = useState([]);
   const [legacyDepositData, setLegacyDepositData] = useState({ items: [], total: 0, nextCursor: null, loading: false, error: '' });
+  const [movementStartDate, setMovementStartDate] = useState('');
+  const [movementEndDate, setMovementEndDate] = useState('');
+  const [movementStatusCode, setMovementStatusCode] = useState('');
+  const [legacyMovementPage, setLegacyMovementPage] = useState(1);
+  const [legacyMovementData, setLegacyMovementData] = useState({ items: [], total: 0, loading: false, error: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 100;
 
@@ -317,6 +407,42 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
     };
   }, [activeSubTab, companyId, searchText, depositEventType, depositStartDate, depositEndDate, legacyDepositCursor]);
 
+  useEffect(() => {
+    setLegacyMovementPage(1);
+  }, [companyId, searchText, movementStatusCode, movementStartDate, movementEndDate]);
+
+  useEffect(() => {
+    if (activeSubTab !== 'gasMovements') return undefined;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLegacyMovementData(previous => ({ ...previous, loading: true, error: '' }));
+      try {
+        const result = await fetchLegacyCylinderMovements({
+          companyId,
+          search: searchText.trim(),
+          statusCode: movementStatusCode,
+          startDate: movementStartDate,
+          endDate: movementEndDate,
+          page: legacyMovementPage,
+          signal: controller.signal
+        });
+        setLegacyMovementData({
+          items: Array.isArray(result.items) ? result.items : [],
+          total: Number(result.total || 0),
+          loading: false,
+          error: ''
+        });
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+        setLegacyMovementData(previous => ({ ...previous, loading: false, error: error?.message || '鋼瓶異動歷史讀取失敗。' }));
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeSubTab, companyId, searchText, movementStatusCode, movementStartDate, movementEndDate, legacyMovementPage]);
+
   const currentDepositRows = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return customerCylinderDeposits
@@ -364,6 +490,51 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
       return String(right.legacyId || '').localeCompare(String(left.legacyId || ''), undefined, { numeric: true });
     })
   ), [currentDepositRows, legacyDepositData.items, legacyDepositCursor]);
+
+  const currentMovementRows = useMemo(() => {
+    if (movementStatusCode) return [];
+    const query = searchText.trim().toLowerCase();
+    const locationText = (type, id, item) => {
+      if (type === 'vehicle') {
+        const vehicle = gasDeliveryVehicles.find(entry => entry.id === id || entry.plateNo === id);
+        return vehicle ? `${vehicle.plateNo}${vehicle.name ? ` / ${vehicle.name}` : ''}` : id || '配送車';
+      }
+      if (type === 'customer') return item.customerName || customers.find(customer => customer.id === (id || item.customerId))?.name || id || '客戶';
+      return optionLabel(GAS_LOCATION_OPTIONS, type);
+    };
+    return gasCylinderMovements.filter(item => {
+      const date = item.movementDate || item.createdAt?.slice(0, 10) || '';
+      if (movementStartDate && date < movementStartDate) return false;
+      if (movementEndDate && date > movementEndDate) return false;
+      if (!query) return true;
+      return [item.id, item.remarks, item.operator, item.customerName, item.cylinderId]
+        .some(value => String(value || '').toLowerCase().includes(query));
+    }).map(item => {
+      const cylinder = gasCylinders.find(entry => entry.id === item.cylinderId);
+      const fromText = locationText(item.fromLocationType, item.fromLocationId, item);
+      const toText = locationText(item.toLocationType, item.toLocationId, item);
+      return {
+        sourceSystem: 'gass',
+        legacyId: item.id,
+        occurredOn: item.movementDate || item.createdAt?.slice(0, 10) || '',
+        movementLabel: optionLabel(GAS_MOVEMENT_TYPE_OPTIONS, item.movementType),
+        customerName: item.customerName || '',
+        cylinderText: cylinder ? `${cylinder.cylinderNo || cylinder.id}${cylinder.specKg ? `／${cylinder.specKg}kg` : ''}` : item.cylinderId || '未指定鋼瓶',
+        amount: 0,
+        handledBy: item.operator || '',
+        fromToText: `${fromText} → ${toText}`,
+        remarks: item.remarks || ''
+      };
+    });
+  }, [gasCylinderMovements, gasCylinders, gasDeliveryVehicles, customers, movementStartDate, movementEndDate, movementStatusCode, searchText]);
+
+  const displayedMovementRows = useMemo(() => (
+    [...(legacyMovementPage === 1 ? currentMovementRows : []), ...legacyMovementData.items].sort((left, right) => {
+      const dateCompare = String(right.occurredOn || '').localeCompare(String(left.occurredOn || ''));
+      if (dateCompare !== 0) return dateCompare;
+      return String(right.legacyId || '').localeCompare(String(left.legacyId || ''), undefined, { numeric: true });
+    })
+  ), [currentMovementRows, legacyMovementData.items, legacyMovementPage]);
 
   const cylinderStockSummary = useMemo(() => {
     const summary = {
@@ -1254,11 +1425,30 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           </>
         )}
 
-        {(activeSubTab === 'gasCylinders' || activeSubTab === 'gasDeposits') && (
+        {activeSubTab === 'gasMovements' && (
+          <>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>開始日期</label>
+              <input type="date" className="form-control" style={{ width: '160px' }} value={movementStartDate} onChange={event => setMovementStartDate(event.target.value)} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>結束日期</label>
+              <input type="date" className="form-control" style={{ width: '160px' }} value={movementEndDate} onChange={event => setMovementEndDate(event.target.value)} />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '4px' }}>異動類型</label>
+              <select className="select-dropdown" value={movementStatusCode} onChange={event => setMovementStatusCode(event.target.value)}>
+                {LEGACY_MOVEMENT_STATUS_OPTIONS.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+          </>
+        )}
+
+        {(activeSubTab === 'gasCylinders' || activeSubTab === 'gasDeposits' || activeSubTab === 'gasMovements') && (
           <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
             <input
               type="text"
-              placeholder={activeSubTab === 'gasCylinders' ? "搜尋鋼瓶編號、條碼、備註..." : "搜尋客戶名稱、電話..."}
+              placeholder={activeSubTab === 'gasCylinders' ? '搜尋鋼瓶編號、條碼、備註...' : activeSubTab === 'gasMovements' ? '搜尋客戶、供應商、經手人、流水 ID...' : '搜尋客戶名稱、電話...'}
               className="form-control"
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
@@ -1388,8 +1578,19 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
         />
       )}
 
+      {activeSubTab === 'gasMovements' && (
+        <LegacyCylinderMovementTable
+          items={displayedMovementRows}
+          loading={legacyMovementData.loading}
+          error={legacyMovementData.error}
+          total={legacyMovementData.total}
+          page={legacyMovementPage}
+          onPage={setLegacyMovementPage}
+        />
+      )}
+
       {/* Data Table */}
-      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && <div className="table-responsive">
+      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && activeSubTab !== 'gasMovements' && <div className="table-responsive">
         <table className="data-table">
           <thead>
             {activeSubTab === 'gasPurchases' && (
@@ -1703,7 +1904,7 @@ export default function CylindersView({ companyId, triggerRefresh, onDataChange,
           </tbody>
         </table>
       </div>}
-      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && filteredItems.length > pageSize && (
+      {activeSubTab !== 'gasIntakeReport' && activeSubTab !== 'gasDeposits' && activeSubTab !== 'gasMovements' && filteredItems.length > pageSize && (
         <div className="table-pagination" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px' }}>
           <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
             第 {currentPage} / {totalPages} 頁，共 {filteredItems.length.toLocaleString()} 筆
