@@ -6,6 +6,7 @@ import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
 import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
+import { calculateOperatingProfit } from '../utils/operatingProfit';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -28,6 +29,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const [drillDownName, setDrillDownName] = useState('');
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState(null);
   const [selectedAuditCategory, setSelectedAuditCategory] = useState(null);
+  const [showOperatingProfitDetail, setShowOperatingProfitDetail] = useState(false);
 
   const handleQuickUpdate = async (id, isIncome, updates) => {
     if (isIncome) {
@@ -333,11 +335,12 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       isActiveRecord(item)
     );
     const allIncomes = companyIncomes.filter(item => isDateInPeriod(item.date, activePeriodType, activePeriodVal));
-    const allExpenses = getExpenses().filter(item =>
+    const companyExpenses = getExpenses().filter(item =>
       item.companyId === companyId &&
-      isActiveRecord(item) &&
-      isDateInPeriod(item.date, activePeriodType, activePeriodVal)
+      isActiveRecord(item)
     );
+    const allExpenses = companyExpenses.filter(item => isDateInPeriod(item.date, activePeriodType, activePeriodVal));
+    const chartOfAccounts = getChartOfAccounts();
 
     // Gas Sales (4101)
     const gasSales = allIncomes.filter(item => item.accountCode === '4101' && String(item.remarks || '').startsWith('當日營業彙總 -'));
@@ -496,6 +499,16 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     const totalBusinessRevenue = monthlyOperating?.totalRevenue ?? (
       gasSalesAmount + stoveIncomeAmount + repairIncomeAmount + cylinderIncomeAmount + inspectionIncomeAmount + depositIncomeAmount + otherIncomeAmount
     );
+    const operatingProfit = calculateOperatingProfit({
+      companyExpenses,
+      activeExpenses: allExpenses,
+      chartOfAccounts,
+      periodType: activePeriodType,
+      periodValue: activePeriodVal,
+      totalRevenue: totalBusinessRevenue,
+      gasSalesAmount,
+      gasGrossProfit: totalGrossProfit
+    });
     const currentReceivables = monthlyOperating?.receivables
       || getAggregateReceivableSummary(companyId, new Date().toISOString().split('T')[0]);
     const customerNames = new Map((getCustomers() || []).map(item => [item.id, item.name || item.shortName]));
@@ -553,6 +566,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ,currentDebtOutstandingCustomers
       ,currentOutstandingTotal: (currentReceivables?.monthly?.outstandingAmount || 0) + (currentReceivables?.currentDebt?.outstandingAmount || 0)
       ,repaymentDetails
+      ,operatingProfit
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -1326,6 +1340,23 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-label">全店總營業額（當月發生）</span>
                   <span className="metric-value">{formatCurrency(dailySales.totalBusinessRevenue)}</span>
                 </div>
+                <button
+                  type="button"
+                  className={`metric-card ${dailySales.operatingProfit.operatingProfit >= 0 ? 'accent-green' : 'accent-red'}`}
+                  style={{ width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
+                  onClick={() => setShowOperatingProfitDetail(true)}
+                  aria-label="查看實際營運淨利計算明細"
+                >
+                  <span className="metric-label">
+                    {activePeriodType === 'date' ? '當日' : activePeriodType === 'month' ? '本月' : '期間'}實際營運淨利
+                  </span>
+                  <span className="metric-value" style={{ color: dailySales.operatingProfit.operatingProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    {formatCurrency(Math.round(dailySales.operatingProfit.operatingProfit))}
+                  </span>
+                  <span style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    淨利率 {dailySales.operatingProfit.operatingMargin.toFixed(1)}% · 點擊查看算法
+                  </span>
+                </button>
                 <div className="metric-card accent-blue">
                   <span className="metric-label">瓦斯銷售總金額</span>
                   <span className="metric-value">{formatCurrency(dailySales.gasSalesAmount)}</span>
@@ -1478,6 +1509,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 <p>• <strong>欠款金額</strong>：現結但尚未付款（未結清）的項目。</p>
                 <p>• <strong>還款金額</strong>：期間內來自「收款結算」的入帳銀行交易。</p>
                 <p>• <strong>當日估算毛利</strong>：瓦斯銷售收入扣除以日為單位估算的當日進貨成本。</p>
+                <p>• <strong>實際營運淨利</strong>：全店營業額－瓦斯銷售成本－其他變動支出－固定成本分攤；固定成本只供分析，不會改動原始支出。</p>
               </div>
             </div>
           </div>
@@ -2576,6 +2608,114 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
         )}
       </div>
+
+      {showOperatingProfitDetail && (
+        <div
+          className="modal-overlay no-print"
+          style={{ zIndex: 1220 }}
+          onClick={() => setShowOperatingProfitDetail(false)}
+          role="presentation"
+        >
+          <div
+            className="modal-content"
+            style={{ maxWidth: '900px', width: '95%', maxHeight: '88vh' }}
+            onClick={event => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="operating-profit-detail-title"
+          >
+            <div className="modal-header">
+              <span id="operating-profit-detail-title" className="modal-title">
+                💰 實際營運淨利計算明細（{activePeriodLabel}）
+              </span>
+              <button type="button" className="modal-close" onClick={() => setShowOperatingProfitDetail(false)} aria-label="關閉">×</button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '20px', overflowY: 'auto' }}>
+              <div className="metrics-grid" style={{ marginBottom: '20px' }}>
+                <div className="metric-card accent-green">
+                  <span className="metric-label">全店營業額</span>
+                  <span className="metric-value">{formatCurrency(Math.round(dailySales.operatingProfit.totalRevenue))}</span>
+                </div>
+                <div className="metric-card accent-red">
+                  <span className="metric-label">減：瓦斯銷售成本</span>
+                  <span className="metric-value">-{formatCurrency(Math.round(dailySales.operatingProfit.gasCost))}</span>
+                </div>
+                <div className="metric-card accent-red">
+                  <span className="metric-label">減：其他變動支出</span>
+                  <span className="metric-value">-{formatCurrency(Math.round(dailySales.operatingProfit.variableExpenses))}</span>
+                </div>
+                <div className="metric-card accent-gold">
+                  <span className="metric-label">減：固定成本分攤</span>
+                  <span className="metric-value">-{formatCurrency(Math.round(dailySales.operatingProfit.fixedCostAllocated))}</span>
+                </div>
+              </div>
+
+              <div className="financial-summary" style={{ marginBottom: '20px' }}>
+                <div className="financial-row total" style={{ fontSize: '1.08rem' }}>
+                  <span>實際營運淨利（淨利率 {dailySales.operatingProfit.operatingMargin.toFixed(1)}%）</span>
+                  <span style={{ color: dailySales.operatingProfit.operatingProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    {formatCurrency(Math.round(dailySales.operatingProfit.operatingProfit))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="alert-box note" style={{ marginBottom: '20px' }}>
+                固定成本以當月已登錄的薪資、店租、保險、電信、折舊及會計費等項目，按當月天數分攤。瓦斯進貨不會列入其他變動支出，因為瓦斯銷售成本已經扣除一次。這項分析不會修改任何原始收入或手動支出。
+              </div>
+
+              <h3 style={{ fontSize: '1rem', margin: '0 0 10px' }}>固定成本分攤來源</h3>
+              <div className="table-responsive" style={{ marginBottom: '20px' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr><th>發生日</th><th>固定成本項目</th><th style={{ textAlign: 'right' }}>原始金額</th><th>分攤方式</th><th style={{ textAlign: 'right' }}>本期分攤</th></tr>
+                  </thead>
+                  <tbody>
+                    {dailySales.operatingProfit.fixedExpenseDetails.map(item => (
+                      <tr key={`fixed-${item.id}`}>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                        <td>{item.accountName}{item.remarks ? `｜${item.remarks}` : ''}</td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(Math.round(item.amount))}</td>
+                        <td>{item.selectedDays} / {item.daysInMonth} 天</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(Math.round(item.allocatedAmount))}</td>
+                      </tr>
+                    ))}
+                    {dailySales.operatingProfit.fixedExpenseDetails.length === 0 && (
+                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '18px' }}>此月份尚未登錄可辨識的固定成本，因此目前分攤為 0 元。</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 style={{ fontSize: '1rem', margin: '0 0 10px' }}>本期其他變動支出</h3>
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>發生日</th><th>支出項目</th><th>備註</th><th style={{ textAlign: 'right' }}>金額</th></tr>
+                  </thead>
+                  <tbody>
+                    {dailySales.operatingProfit.variableExpenseDetails.map(item => (
+                      <tr key={`variable-${item.id}`}>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date}</td>
+                        <td>{item.accountName}</td>
+                        <td>{item.remarks || '—'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(Math.round(item.amount))}</td>
+                      </tr>
+                    ))}
+                    {dailySales.operatingProfit.variableExpenseDetails.length === 0 && (
+                      <tr><td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '18px' }}>此期間沒有其他變動支出。</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowOperatingProfitDetail(false)}>關閉視窗</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Drill Down Modal */}
       {drillDownCode && (
