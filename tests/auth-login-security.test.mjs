@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveAdminCredential } from '../api/auth-login.js';
+import {
+  resolveAdminCredential,
+  resolveAdminLoginCredential
+} from '../api/auth-login.js';
 import { hashPassword, verifyPassword } from '../api/_auth.js';
 
 test('uses the owner account credential when admin security was not initialized', () => {
@@ -40,4 +43,32 @@ test('reports a missing admin credential when no safe fallback exists', () => {
 
   assert.equal(resolved.source, 'missing');
   assert.equal(verifyPassword('anything', resolved.record, resolved.fallbackPassword), false);
+});
+
+test('uses a temporary recovery password when the stored admin password is stale', () => {
+  const storedCredential = hashPassword('forgotten-password');
+  const resolved = resolveAdminLoginCredential(
+    { shareholders: [] },
+    storedCredential,
+    'temporary-recovery-password',
+    'temporary-recovery-password'
+  );
+
+  assert.equal(resolved.source, 'environmentRecovery');
+  assert.equal(
+    verifyPassword('temporary-recovery-password', resolved.record, resolved.fallbackPassword),
+    true
+  );
+});
+
+test('keeps a valid stored admin password authoritative', () => {
+  const storedCredential = hashPassword('current-admin-password');
+  const resolved = resolveAdminLoginCredential(
+    { shareholders: [] },
+    storedCredential,
+    'current-admin-password',
+    'temporary-recovery-password'
+  );
+
+  assert.equal(resolved.source, 'adminSecurity');
 });

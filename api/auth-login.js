@@ -3,6 +3,7 @@ import { captureServerException } from './_monitoring.js';
 import {
   fetchAppState,
   getClientIp,
+  hashPassword,
   sanitizeStateForClient,
   saveAppState,
   sendJson,
@@ -142,6 +143,29 @@ export const resolveAdminCredential = (state = {}, security = {}, defaultPasswor
   return { record: security, fallbackPassword: '', source: 'missing' };
 };
 
+// Emergency recovery only. A successful login using ADMIN_DEFAULT_PASSWORD
+// replaces the stale stored credential; remove the variable after recovery.
+export const resolveAdminLoginCredential = (
+  state = {},
+  security = {},
+  attemptedPassword = '',
+  defaultPassword = ''
+) => {
+  const stored = resolveAdminCredential(state, security, '');
+  if (
+    stored.source !== 'missing' &&
+    verifyPassword(attemptedPassword, stored.record, stored.fallbackPassword)
+  ) {
+    return stored;
+  }
+
+  if (defaultPassword && verifyPassword(attemptedPassword, {}, defaultPassword)) {
+    return { record: {}, fallbackPassword: defaultPassword, source: 'environmentRecovery' };
+  }
+
+  return stored;
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -187,7 +211,12 @@ export default async function handler(req, res) {
       const displayName = getAdminDisplayName(state);
       const defaultPassword = getAdminDefaultPassword();
       const hasStoredAdminPassword = Boolean(security.password || (security.passwordHash && security.passwordSalt));
-      const adminCredential = resolveAdminCredential(state, security, defaultPassword);
+      const adminCredential = resolveAdminLoginCredential(
+        state,
+        security,
+        password,
+        defaultPassword
+      );
 
       if (adminCredential.source === 'missing') {
         console.warn('Admin password not initialized in admin security, owner account, or environment.');
@@ -199,7 +228,12 @@ export default async function handler(req, res) {
         return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
       }
 
-      if (!hasStoredAdminPassword) {
+      if (adminCredential.source === 'environmentRecovery') {
+        Object.assign(security, hashPassword(password));
+        delete security.password;
+        security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
+        security.pendingDevices = (security.pendingDevices || []).filter(item => item.id !== device.id);
+      } else if (!hasStoredAdminPassword) {
         if (adminCredential.record.passwordHash && adminCredential.record.passwordSalt) {
           security.passwordHash = adminCredential.record.passwordHash;
           security.passwordSalt = adminCredential.record.passwordSalt;
