@@ -1,9 +1,0 @@
-.vercel
-.env*
-!.env.example
-node_modules
-*.log
-service-account*.json
-
-.vercel
-.env*
