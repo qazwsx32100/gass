@@ -3,3 +3,7 @@ backups
 .env.*
 *.local
 *.log
+tests/
+scripts/
+shenglong-line-sync/
+artifacts/
