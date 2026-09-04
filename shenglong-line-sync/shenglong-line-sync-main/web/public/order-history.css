@@ -1,0 +1,51 @@
+.product .history-price {
+  color: #078443;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.product .no-history {
+  color: #b04b20;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.history-item {
+  display: grid;
+  gap: 10px;
+}
+
+.history-head,
+.history-foot,
+.history-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.history-lines {
+  display: grid;
+  gap: 7px;
+  padding: 10px 0;
+  border-block: 1px dashed #dce7df;
+}
+
+.history-line strong {
+  color: #47584d;
+  font-size: 13px;
+  text-align: right;
+}
+
+.history-foot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.history-foot > strong {
+  text-align: right;
+}
+
+.status {
+  white-space: nowrap;
+}

@@ -7,6 +7,7 @@ import {
   sendJson
 } from './_auth.js';
 import { uploadBackupToGoogleDrive } from './_google-drive.js';
+import { sendErrorAlert, sendSystemReport } from './_telegram.js';
 
 const isAuthorizedCron = (req) => {
   const authHeader = req.headers.authorization || '';
@@ -58,6 +59,12 @@ export default async function handler(req, res) {
         status: drive.status,
         fileId: drive.fileId || null
       });
+
+      // 備份成功：推播至匯報中心
+      await sendSystemReport({
+        title: '每日排程備份成功',
+        content: `💾 *備份編號*：\`${String(backup.backup_id).slice(0, 8)}\`\n📦 *檔案名稱*：\`${filename}\`\n☁️ *Google Drive 狀態*：${drive.status || '成功'}\n📊 *資料大小*：${Math.round((backup.state_bytes || 0) / 1024)} KB`
+      }).catch(() => {});
     } catch (driveError) {
       await captureServerException(driveError, {
         tags: { endpoint: '/api/cron-daily-backup', operation: 'google-drive-upload' }
@@ -68,6 +75,15 @@ export default async function handler(req, res) {
         errorMessage: driveError.message
       });
       drive = { skipped: false, status: 'failed', error: driveError.message };
+
+      // 備份失敗：推播至回報群與匯報中心（附帶一鍵排錯重試按鈕）
+      await sendErrorAlert({
+        title: '雲端硬碟備份上傳失敗',
+        error: driveError,
+        source: 'Cron 每日備份',
+        errorType: 'backup',
+        actionId: String(backup.backup_id).slice(0, 8)
+      }).catch(() => {});
     }
 
     return sendJson(res, 200, {
@@ -83,6 +99,14 @@ export default async function handler(req, res) {
     await captureServerException(error, {
       tags: { endpoint: '/api/cron-daily-backup', method: req.method, status: 500 }
     });
+
+    await sendErrorAlert({
+      title: '每日備份任務執行例外',
+      error,
+      source: 'Cron 每日備份',
+      errorType: 'backup'
+    }).catch(() => {});
+
     return sendJson(res, 500, { ok: false, error: 'Backup failed.' });
   }
 }

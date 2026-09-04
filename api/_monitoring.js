@@ -44,5 +44,19 @@ export const captureServerException = async (error, context = {}) => {
   });
 
   await Sentry.flush(1500);
+
+  // 同步告警至 Telegram 回報群與匯報中心
+  try {
+    const { sendErrorAlert } = await import('./_telegram.js');
+    await sendErrorAlert({
+      title: '後端 API 伺服器異常',
+      error,
+      source: safeContext.tags?.endpoint || 'API Server',
+      errorType: safeContext.tags?.operation?.includes('drive') ? 'backup' : 'general'
+    });
+  } catch (_tgErr) {
+    // 忽略推播本身的錯誤，防止次生中斷
+  }
+
   return true;
 };

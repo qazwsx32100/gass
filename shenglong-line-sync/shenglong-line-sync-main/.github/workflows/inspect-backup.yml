@@ -1,0 +1,64 @@
+name: Inspect ShengLong backup
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_PID: Express
+          MSSQL_SA_PASSWORD: ${{ format('SL!{0}Aa9x', github.run_id) }}
+        ports:
+          - 1433:1433
+    env:
+      DRIVE_FILE_ID: 1OC6IaMO7nnz3PRR6SG8d_lxsyujSqo0A
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      MSSQL_SA_PASSWORD: ${{ format('SL!{0}Aa9x', github.run_id) }}
+      BACKUP_PATH: /tmp/ShengLong_hour.bak
+      REPORT_PATH: schema-report.md
+
+    steps:
+      - name: Check out private repository
+        uses: actions/checkout@v4
+
+      - name: Install Python dependencies
+        run: |
+          sudo ACCEPT_EULA=Y apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+          python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Download the private Drive backup
+        run: python scripts/download_drive_backup.py
+
+      - name: Copy backup into the temporary SQL Server
+        run: |
+          SQL_CONTAINER="$(docker ps --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest --format '{{.ID}}' | head -n 1)"
+          test -n "$SQL_CONTAINER"
+          docker exec "$SQL_CONTAINER" mkdir -p /var/opt/mssql/backup
+          docker cp "$BACKUP_PATH" "$SQL_CONTAINER:/var/opt/mssql/backup/ShengLong_hour.bak"
+          docker exec --user root "$SQL_CONTAINER" chown mssql:mssql /var/opt/mssql/backup/ShengLong_hour.bak
+
+      - name: Restore backup and create schema-only report
+        run: python scripts/inspect_backup.py
+
+      - name: Upload schema-only report
+        uses: actions/upload-artifact@v4
+        with:
+          name: shenglong-schema-report
+          path: schema-report.md
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Remove customer backup from runner
+        if: always()
+        run: rm -f "$BACKUP_PATH"
+

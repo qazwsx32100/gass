@@ -28,6 +28,9 @@ backups
 *.sln
 *.sw?
 
-# Prevent database backups from committing to git
+# Prevent database backups and artifacts from committing to git
 backups/
 /backups/
+/artifacts/
+artifacts/
+dist-*/
