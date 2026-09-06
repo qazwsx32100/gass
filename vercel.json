@@ -8,6 +8,12 @@
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/api/customer-history", "destination": "/api/telegram-webhook" },
+    { "source": "/api/ecpay-checkout", "destination": "/api/ecpay" },
+    { "source": "/api/ecpay-callback", "destination": "/api/ecpay" },
+    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

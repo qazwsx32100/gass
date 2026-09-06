@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import handler from '../api/backup-status.js';
+import handler from '../api/_backup-status.js';
 
 const createResponse = () => ({
   statusCode: 200,

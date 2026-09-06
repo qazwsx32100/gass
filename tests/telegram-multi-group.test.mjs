@@ -110,7 +110,7 @@ test('Telegram: sendOrderNotification dispatches to order group and report cente
 });
 
 test('Customer History API: returns customer history HTML and JSON format', async () => {
-  const customerHistoryHandler = (await import('../api/customer-history.js')).default;
+  const customerHistoryHandler = (await import('../api/_customer-history.js')).default;
 
   // 測試 HTML 輸出
   let htmlOutput = '';

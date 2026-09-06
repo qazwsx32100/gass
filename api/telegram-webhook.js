@@ -12,6 +12,7 @@ import {
   sendTelegramMessage
 } from './_telegram.js';
 import { fetchWithTimeout } from './_fetch.js';
+import handleCustomerHistory from './_customer-history.js';
 
 /**
  * 回應 Telegram Callback Query (消除使用者端按鈕轉圈狀態)
@@ -36,8 +37,12 @@ const answerCallbackQuery = async (token, callbackQueryId, text = '', showAlert 
 const taipeiTime = () => new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    return handleCustomerHistory(req, res);
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'GET, POST');
     return sendJson(res, 405, { ok: false, error: 'Method not allowed' });
   }
 

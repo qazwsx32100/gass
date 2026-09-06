@@ -11,6 +11,7 @@ import {
   verifyToken
 } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
+import handleBackupStatus from './_backup-status.js';
 
 const isApprovedDevice = (security, deviceId) => (
   Boolean(deviceId) &&
@@ -45,6 +46,10 @@ const isBackupRateLimited = (req, session) => {
 };
 
 export default async function handler(req, res) {
+  if (req.headers['x-system-status-token'] || req.query?.type === 'backup') {
+    return handleBackupStatus(req, res);
+  }
+
   if (!['GET', 'POST'].includes(req.method)) {
     res.setHeader('Allow', 'GET, POST');
     return sendJson(res, 405, { ok: false, error: 'Method not allowed' });
