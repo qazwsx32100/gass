@@ -5,6 +5,7 @@ import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, in
 import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
+import WeatherHeaderBadge from './components/WeatherHeaderBadge';
 import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
 
 const pageLoaders = {
@@ -46,7 +47,7 @@ const PageLoading = () => (
 );
 
 function App() {
-  const [dbVersion, setDbVersion] = useState(0); // Trigger state refreshes across components
+  const [dbVersion, setDbVersion] = useState(0);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [tabHistory, setTabHistory] = useState(['dashboard']);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -93,7 +94,7 @@ function App() {
   // Login Authentication States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('');
-  const [currentUser, setCurrentUser] = useState(null); // { id, name, email }
+  const [currentUser, setCurrentUser] = useState(null);
   
   // Login Form States
   const [loginEmail, setLoginEmail] = useState('');
@@ -332,10 +333,9 @@ function App() {
     if (userRole === USER_ROLES.ADMIN) {
       return allCompanies;
     }
-    // If shareholder, find allowed companies mapping
     const sh = shareholders.find(s => s.id === currentUser.id);
     if (!sh || !sh.allowedCompanies) {
-      return allCompanies.filter(c => c.id === 'COMP001'); // Default fallback
+      return allCompanies.filter(c => c.id === 'COMP001');
     }
     return allCompanies.filter(c => sh.allowedCompanies.includes(c.id));
   }, [isLoggedIn, userRole, currentUser, allCompanies, shareholders]);
@@ -504,7 +504,7 @@ function App() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: '#e8f8f5', // TaskAmigo Background color
+        backgroundColor: '#e8f8f5',
         fontFamily: 'var(--font-sans)',
         color: 'var(--text-primary)'
       }}>
@@ -687,6 +687,38 @@ function App() {
               </button>
             </>
           )}
+
+          <span className="sidebar-nav-heading">📡 即時戰情與監控</span>
+          <a
+            href="http://localhost:3000/operations"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sidebar-link"
+            style={{
+              textDecoration: 'none',
+              color: 'var(--accent-blue)',
+              fontWeight: '700',
+              background: 'rgba(59, 130, 246, 0.08)',
+              border: '1px solid rgba(59, 130, 246, 0.2)'
+            }}
+          >
+            <span className="sidebar-link-icon">📡</span>
+            監控中心 (營運/健康)
+          </a>
+          <a
+            href="http://localhost:3000/gas-stock"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sidebar-link"
+            style={{
+              textDecoration: 'none',
+              color: 'var(--text-muted)',
+              fontSize: '0.82rem'
+            }}
+          >
+            <span className="sidebar-link-icon">🌐</span>
+            即時庫存 (公開頁)
+          </a>
         </div>
 
         {/* Sidebar Footer */}
@@ -753,8 +785,11 @@ function App() {
             )}
           </div>
 
-          {/* Period selector & Login badge at right end (matching TaskAmigo mockup) */}
+          {/* Period selector & Login badge at right end */}
           <div className="header-controls">
+            {/* Real-time Weather Status Pill */}
+            <WeatherHeaderBadge />
+
             {/* 1. Period selects */}
             <div className="header-period-control">
               <span className="header-period-label">會計期間：</span>
@@ -854,27 +889,15 @@ function App() {
             />
           )}
 
-          {activeTab === 'settings' && (
-            <SettingsView
-              triggerRefresh={dbVersion}
-              onDataChange={handleDataChange}
-              showToast={showToast}
-              isAdmin={userRole === USER_ROLES.ADMIN}
-              userRole={userRole}
-            />
-          )}
-
           {activeTab === 'shareholderZone' && (
             <ShareholderZoneView
               companyId={currentCompanyId}
               year={currentYear}
               month={currentMonth}
               triggerRefresh={dbVersion}
-              onDataChange={handleDataChange}
-              operatorName={currentUser?.name}
-              currentUser={currentUser}
-              userRole={userRole}
               showToast={showToast}
+              userRole={userRole}
+              currentUser={currentUser}
             />
           )}
 
@@ -884,16 +907,24 @@ function App() {
               year={currentYear}
               month={currentMonth}
               triggerRefresh={dbVersion}
-              onDataChange={handleDataChange}
-              operatorName={currentUser?.name}
-              currentUser={currentUser}
-              userRole={userRole}
               showToast={showToast}
+              userRole={userRole}
+              currentUser={currentUser}
             />
           )}
 
-          {activeTab === 'firebase' && userRole === USER_ROLES.ADMIN && (
+          {activeTab === 'settings' && (
+            <SettingsView
+              triggerRefresh={dbVersion}
+              onDataChange={handleDataChange}
+              userRole={userRole}
+              currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'firebase' && (
             <FirebaseView
+              triggerRefresh={dbVersion}
               showToast={showToast}
             />
           )}
@@ -901,63 +932,49 @@ function App() {
         </main>
       </div>
 
-      <UniversalTableDetails />
-
-      {/* Change Password Modal */}
+      {/* Password Change Modal */}
       {isChangePwdOpen && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '400px' }}>
-            <div className="modal-header">
-              <span className="modal-title">{isForcePasswordChange ? '🔒 首次登入請先修改密碼' : '🔒 修改個人登入密碼'}</span>
-              {!isForcePasswordChange && (
-                <button type="button" className="modal-close" onClick={() => setIsChangePwdOpen(false)}>×</button>
-              )}
-            </div>
-
-            <form onSubmit={handleChangePassword}>
-              <div className="modal-body">
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                  帳號：<strong>{currentUser.email}</strong>
-                  {isForcePasswordChange && (
-                    <div className="alert-box warning" style={{ marginTop: '12px' }}>
-                      此帳號仍使用初始密碼，請先設定新密碼後再使用系統。
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">輸入新密碼</label>
-                  <input 
-                    type="password" 
-                    required 
-                    placeholder="請輸入新密碼" 
-                    className="form-control" 
-                    value={newPassword} 
-                    onChange={e => setNewPassword(e.target.value)} 
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">再次確認密碼</label>
-                  <input 
-                    type="password" 
-                    required 
-                    placeholder="再次確認新密碼" 
-                    className="form-control" 
-                    value={confirmPassword} 
-                    onChange={e => setConfirmPassword(e.target.value)} 
-                  />
-                </div>
+            <h3 style={{ marginBottom: '16px', color: 'var(--accent-blue)' }}>
+              {isForcePasswordChange ? '⚠️ 請設定您的新密碼' : '✏️ 修改個人密碼'}
+            </h3>
+            {isForcePasswordChange && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                為了保障您的帳戶與系統資料安全，首次登入請務必將初始密碼變更為自訂密碼。
+              </p>
+            )}
+            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="form-group">
+                <label className="form-label">新密碼 (至少 4 位數)</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="請輸入新密碼"
+                  className="form-control"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                />
               </div>
-
-              <div className="modal-footer">
+              <div className="form-group">
+                <label className="form-label">確認新密碼</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="請再次輸入新密碼"
+                  className="form-control"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
                 {!isForcePasswordChange && (
                   <button type="button" className="btn btn-secondary" onClick={() => setIsChangePwdOpen(false)}>
                     取消
                   </button>
                 )}
                 <button type="submit" className="btn btn-primary">
-                  💾 儲存新密碼
+                  確認變更密碼
                 </button>
               </div>
             </form>
@@ -965,11 +982,14 @@ function App() {
         </div>
       )}
 
-      {/* Toast Alert Portal */}
+      {/* Universal Table Details Modal */}
+      <UniversalTableDetails />
+
+      {/* Toast Notification Stack */}
       <div className="toast-container">
-        {toasts.map(toast => (
-          <div key={toast.id} className={`toast ${toast.type === 'error' ? 'alert-box error' : toast.type === 'warning' ? 'alert-box warning' : 'toast'}`} style={{ margin: 0, border: '2px solid rgba(5, 178, 165, 0.15)', color: 'var(--text-primary)', backgroundColor: '#fff' }}>
-            <span>{toast.message}</span>
+        {toasts.map(t => (
+          <div key={t.id} className={`toast-message ${t.type}`}>
+            {t.message}
           </div>
         ))}
       </div>

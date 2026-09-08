@@ -11,7 +11,7 @@ export const INITIAL_SHAREHOLDERS = [
     email: 'qazwsx32100@gmail.com',
     idCard: 'A123456789',
     phone: '0912-345-678',
-    password: '6789', // Last 4 digits of ID card A123456789
+    password: 'windsboy123',
     role: 'business_reviewer',
     allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs']

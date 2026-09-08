@@ -7,6 +7,7 @@ import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment 
 import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { calculateOperatingProfit } from '../utils/operatingProfit';
+import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -863,6 +864,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Weather Revenue Correlation BI Module */}
+      <WeatherRevenueWidget />
+
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
