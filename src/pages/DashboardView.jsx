@@ -83,6 +83,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   // by shareholder dividends. Cash collections remain visible in their own card.
   const attributedNetProfit = pnl?.netProfit || 0;
   const prevAttributedNetProfit = prevPnl?.netProfit || 0;
+  const cashBasisNetProfit = (monthlyOperating?.actualRevenue || 0) - (cashNetProfit?.totalExpenses || 0);
 
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
@@ -483,6 +484,26 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
+        {/* Card 7: 本月實收制結餘 */}
+        <div
+          className="metric-card accent-blue"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => openDetailModal('cashProfit')}
+          title="點擊查看實際收款制結餘；未收月結與欠款不列入"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">本月實收制結餘</span>
+            <div className="metric-icon-wrapper blue">💵</div>
+          </div>
+          <span className={`metric-value ${cashBasisNetProfit < 0 ? 'text-danger' : ''}`}>
+            ${cashBasisNetProfit.toLocaleString()}
+          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">未收款不列入</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看結構 ➔</span>
+          </div>
+        </div>
+
         {/* Card 8: 本月瓦斯銷售公斤 */}
         <div 
           className="metric-card accent-green" 
@@ -747,6 +768,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {activeDetailModal === 'receivables' && '💵 月結應收帳款明細'}
                 {activeDetailModal === 'debt' && '欠 現結欠款明細'}
                 {activeDetailModal === 'expenses' && '📉 當月已付成本明細'}
+                {activeDetailModal === 'cashProfit' && '💵 本月實收制結餘'}
                 {activeDetailModal === 'profit' && '💰 本月會計淨利（股東分紅基礎）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
@@ -998,6 +1020,33 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {activeDetailModal === 'cashProfit' && (
+              <div>
+                <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
+                    📊 {periodVal} 實際收款制計算：
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➕ 已實際收款營業額（歸屬原月份）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlyOperating?.actualRevenue || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 已實際付款成本與費用（含手動進氣）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(cashNetProfit?.totalExpenses || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
+                      <span>💵 本月實收制結餘</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: cashBasisNetProfit >= 0 ? 'var(--accent-blue)' : 'var(--accent-red)' }}>${cashBasisNetProfit.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      月結與現結欠款在尚未收款時不列入；後續還款歸回原營業月份。股東分紅另採發生制會計淨利。
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
