@@ -74,8 +74,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return getMonthlyOperatingSummary(companyId, prevPeriodVal);
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
-  const attributedNetProfit = (monthlyOperating?.actualRevenue || 0) - (cashNetProfit?.totalExpenses || 0);
-  const prevAttributedNetProfit = (prevMonthlyOperating?.actualRevenue || 0) - (prevCashNetProfit?.totalExpenses || 0);
+  const prevPnl = useMemo(() => {
+    void triggerRefresh;
+    return getIncomeStatement(companyId, 'month', prevPeriodVal) || { netProfit: 0 };
+  }, [companyId, prevPeriodVal, triggerRefresh]);
+
+  // Keep the dashboard profit card identical to the accounting profit used
+  // by shareholder dividends. Cash collections remain visible in their own card.
+  const attributedNetProfit = pnl?.netProfit || 0;
+  const prevAttributedNetProfit = prevPnl?.netProfit || 0;
 
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
@@ -454,15 +461,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 6: 本月實收結餘（歸屬原月份） */}
+        {/* Card 6: 本月會計淨利（股東分紅基礎） */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => openDetailModal('profit')}
-          title="點擊查看按營業額原始發生月份歸屬的實收結餘"
+          title="點擊查看與股東分紅相同口徑的會計淨利"
         >
           <div className="metric-card-header">
-            <span className="metric-label">本月實收結餘（歸屬原月份）</span>
+            <span className="metric-label">本月會計淨利（股東分紅基礎）</span>
             <div className="metric-icon-wrapper gold">💰</div>
           </div>
           <span className={`metric-value ${attributedNetProfit < 0 ? 'text-danger' : ''}`}>
@@ -740,7 +747,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {activeDetailModal === 'receivables' && '💵 月結應收帳款明細'}
                 {activeDetailModal === 'debt' && '欠 現結欠款明細'}
                 {activeDetailModal === 'expenses' && '📉 當月已付成本明細'}
-                {activeDetailModal === 'profit' && '💰 本月實收結餘（歸屬原月份）'}
+                {activeDetailModal === 'profit' && '💰 本月會計淨利（股東分紅基礎）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
                 {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
@@ -999,25 +1006,29 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               <div>
                 <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
                   <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
-                    📊 {periodVal} 實收結餘計算（歸屬原月份）：
+                    📊 {periodVal} 會計淨利計算（股東分紅基礎）：
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➕ 本月實收營業額（歸屬原月份）</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlyOperating?.actualRevenue || 0).toLocaleString()} 元</strong>
+                      <span>➕ 本月營業收入（依發生月份）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(pnl?.totalRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➖ 本月已付成本與費用</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(cashNetProfit?.totalExpenses || 0).toLocaleString()} 元</strong>
+                      <span>➖ 本月銷貨成本</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalCogs || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 本月營業費用</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalExpenses || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
-                      <span>💰 本月實收結餘 [結餘率 {((monthlyOperating?.actualRevenue || 0) > 0 ? (attributedNetProfit / monthlyOperating.actualRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <span>💰 本月會計淨利 [淨利率 {((pnl?.totalRevenue || 0) > 0 ? (attributedNetProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
                       <strong style={{ fontFamily: 'var(--font-mono)', color: attributedNetProfit >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
                         ${attributedNetProfit.toLocaleString()} 元
                       </strong>
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                      跨月收到的還款歸回原欠款月份，不列入收款月份；未收應收帳款與尚未付款的應付款不列入。
+                      本數字與股東分紅使用相同公式；跨月收款歸回原收入月份，不會重複增加營業收入。
                     </div>
                   </div>
                 </div>

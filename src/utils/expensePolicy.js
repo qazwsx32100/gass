@@ -15,3 +15,8 @@ export const isSystemEstimatedExpenseEntry = (item = {}) => {
     .map(value => String(value || '').trim().toLowerCase())
     .some(value => SYSTEM_ESTIMATE_MARKERS.has(value));
 };
+
+export const isManualGasCostExpenseEntry = (item = {}) => (
+  String(item.accountCode || '').startsWith('5101') &&
+  !isSystemEstimatedExpenseEntry(item)
+);

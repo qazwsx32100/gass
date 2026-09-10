@@ -6,6 +6,7 @@ import { calculateCashRevenue } from './cashRevenue';
 import { calculateCashExpenses } from './cashExpenses';
 import { isGasRevenueEntry } from './gasRevenue';
 import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
+import { isManualGasCostExpenseEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 
 const isBankTransfer = (item) => !!item.bankId;
 
@@ -884,6 +885,15 @@ const getApprovedGasRevenueEntries = (companyId, periodType = 'all', periodVal =
   )
 );
 
+const getApprovedManualGasCostEntries = (companyId, periodType = 'all', periodVal = null) => (
+  getExpenses().filter(item =>
+    item.companyId === companyId &&
+    isActivePostedRecord(item) &&
+    isManualGasCostExpenseEntry(item) &&
+    isDateInPeriod(item.date, periodType, periodVal)
+  )
+);
+
 export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const config = getGasInventoryPeriods().find(item => item.companyId === companyId && item.yearMonth === yearMonth);
   const openingKg = Number(config?.openingKg || 0);
@@ -896,9 +906,10 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
     ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.totalKg || 0), 0)
     : Number(config?.purchaseKg || 0);
 
-  const purchaseAmount = monthDailyPurchases.length > 0
-    ? monthDailyPurchases.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-    : Number(config?.purchaseAmount || 0);
+  // Official cost comes only from manually posted 5101-series vouchers.
+  // Daily intake amounts remain reference data and never affect settlement.
+  const manualGasCosts = getApprovedManualGasCostEntries(companyId, 'month', yearMonth);
+  const purchaseAmount = manualGasCosts.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const shrinkageKg = Number(config?.shrinkageKg || 0);
   const availableKg = openingKg + purchaseKg;
@@ -911,7 +922,7 @@ export const getGasInventoryForMonth = (companyId, yearMonth) => {
   const gasRevenue = getApprovedGasRevenueEntries(companyId, 'month', yearMonth)
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-  const gasCogs = Math.round(soldKg * averageCostPerKg);
+  const gasCogs = purchaseAmount;
   const bookEndingKg = Math.max(0, availableKg - soldKg - shrinkageKg);
   const endingKg = config?.physicalEndingKg === null || config?.physicalEndingKg === undefined ? bookEndingKg : Number(config.physicalEndingKg || 0);
   const endingCost = Math.round(endingKg * averageCostPerKg);
@@ -959,21 +970,17 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
   let totalCogs = 0;
 
   sales.forEach(item => {
-    const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
     const kg = Number(item.gasKg || 0);
     
     const revenue = Number(item.amount || 0);
 
-    const cogs = Math.round(kg * monthCost.averageCostPerKg);
     if (!dailyMap[item.date]) {
       dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
     }
     dailyMap[item.date].gasKg += kg;
     dailyMap[item.date].revenue += revenue;
-    dailyMap[item.date].cogs += cogs;
     totalKg += kg;
     totalRevenue += revenue;
-    totalCogs += cogs;
   });
 
   supplementalRevenue.forEach(item => {
@@ -983,6 +990,15 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
     }
     dailyMap[item.date].revenue += revenue;
     totalRevenue += revenue;
+  });
+
+  getApprovedManualGasCostEntries(companyId, periodType, periodVal).forEach(item => {
+    const cogs = Number(item.amount || 0);
+    if (!dailyMap[item.date]) {
+      dailyMap[item.date] = { date: item.date, gasKg: 0, revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0 };
+    }
+    dailyMap[item.date].cogs += cogs;
+    totalCogs += cogs;
   });
 
   const dailyRows = Object.values(dailyMap)
@@ -1061,25 +1077,18 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
 
     if (remarks === '當日營業彙總 - 現收') {
       const kg = Number(item.gasKg || 0);
-      const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
-      const cogs = Math.round(kg * monthCost.averageCostPerKg);
-
       const revenue = Number(item.amount || 0);
 
       row.gasKg += kg;
       row.gasRevenue += revenue;
-      row.gasCogs += cogs;
     } else if (remarks === '當日營業彙總 - 月結' || remarks === '當日營業彙總 - 賒欠') {
       return;
     } else if (accountCode === '4101') {
       const isCashPaid = item.paymentStatus === 'paid' && item.paymentMethod !== 'receivable';
       if (isCashPaid) {
         const kg = Number(item.gasKg || 0);
-        const monthCost = getGasInventoryForMonth(companyId, toYearMonth(item.date));
-        const cogs = Math.round(kg * monthCost.averageCostPerKg);
         row.gasKg += kg;
         row.gasRevenue += Number(item.amount || 0);
-        row.gasCogs += cogs;
       }
     } else if (remarks === '當日營業彙總 - 爐具收入' || accountCode === '4104' || accountName.includes('爐具')) {
       row.stoveRevenue += Number(item.amount || 0);
@@ -1102,6 +1111,7 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
   });
 
   allExpenses.forEach(item => {
+    if (isSystemEstimatedExpenseEntry(item)) return;
     const row = ensureDateRow(item.date);
     const remarks = item.remarks || '';
     const accountCode = item.accountCode || '';
@@ -1112,6 +1122,11 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
     const isStove = remarks.includes('爐具') || remarks.includes('零件') || remarks.includes('材料') || accountName.includes('爐具') || accountName.includes('零件') || accountName.includes('材料');
     const isInspection = remarks.includes('檢驗') || accountName.includes('檢驗');
     const isDeposit = remarks.includes('押瓶') || remarks.includes('押金') || accountName.includes('押瓶') || accountName.includes('押金');
+
+    if (isManualGasCostExpenseEntry(item)) {
+      row.gasCogs += Number(item.amount || 0);
+      return;
+    }
 
     if (isStove) {
       row.stoveCogs += Number(item.amount || 0);
@@ -1256,7 +1271,6 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
   const incomes = getIncomes().filter(
     item => item.companyId === companyId &&
       isActivePostedRecord(item) &&
-      !item.summaryOnly &&
       item.syncType !== 'receivable_opening' &&
       !String(item.remarks || '').includes('尚未核銷') &&
       !String(item.remarks || '').includes('欠款餘額') &&
@@ -1293,7 +1307,7 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
   const expenseItems = {};
   expenses.forEach(exp => {
     const originalCode = exp.accountCode || '';
-    const isGasPurchaseInventory = originalCode === '5101';
+    const isGasPurchaseInventory = originalCode.startsWith('5101');
     if (isGasPurchaseInventory) return;
 
     const mainCode = originalCode.length >= 4 ? originalCode.substring(0, 4) : originalCode;
@@ -1309,9 +1323,9 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
   const totalRevenue = Object.values(revenueItems).reduce((sum, i) => sum + i.amount, 0);
   const gasProfit = getGasGrossProfitForPeriod(companyId, periodType, periodVal);
   if (gasProfit.totalCogs > 0) {
-    cogsItems.AUTO_GAS_COGS = {
-      code: 'AUTO',
-      name: '瓦斯銷貨成本（月加權平均）',
+    cogsItems.MANUAL_GAS_COGS = {
+      code: '5101',
+      name: '手動進氣成本（正式結算）',
       amount: gasProfit.totalCogs
     };
   }

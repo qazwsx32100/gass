@@ -6,6 +6,7 @@ import { isGasRevenueEntry } from '../src/utils/gasRevenue.js';
 test('gas revenue includes cash sales, monthly receivables, and current debt summaries', () => {
   assert.equal(isGasRevenueEntry({ gasKg: 20, amount: 700 }), true);
   assert.equal(isGasRevenueEntry({ summaryOnly: true, syncType: 'daily_summary_monthly', amount: 1200 }), true);
+  assert.equal(isGasRevenueEntry({ summaryOnly: true, syncType: 'daily_summary_monthly_correction', amount: 4595 }), true);
   assert.equal(isGasRevenueEntry({ summaryOnly: true, syncType: 'daily_summary_debt', amount: 500 }), true);
 });
 
