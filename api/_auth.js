@@ -234,6 +234,15 @@ export const fetchAppStateMeta = async ({ userId, deviceId }) => {
   return row || { updated_at: null, updated_by: null, has_state: false, session_allowed: false };
 };
 
+// Device identifiers are retained only as optional audit context. Access is
+// controlled by the signed-in account's existence and disabled status.
+export const isAccountSessionAllowed = (state, session) => {
+  if (!state || !session?.id) return false;
+  if (session.id === 'ADMIN') return !state.adminSecurity?.disabled;
+  const user = (state.shareholders || []).find(item => item.id === session.id);
+  return Boolean(user && !user.disabled);
+};
+
 export const saveAppState = async ({ state, updatedBy, requestIp = null, previousState = null, expectedUpdatedAt = null }) => {
   const supabase = getSupabase();
   const previous = previousState || (await fetchAppState()).state || {};

@@ -1658,11 +1658,6 @@ const upsertDevice = (devices, device, status = 'pending') => {
   ];
 };
 
-const isDeviceApproved = (security, device) => {
-  if (!security.approvedDevices || security.approvedDevices.length === 0) return false;
-  return security.approvedDevices.some(item => item.id === device.id);
-};
-
 export const sendVerificationEmail = (userId, operator = '系統管理員') => {
   // Email verification is currently disabled in the UI, but the data model remains for future use.
   const now = new Date().toISOString();
@@ -1864,8 +1859,6 @@ export const revokeDevice = (userId, deviceId, operator = '系統管理員') => 
 export const verifyLogin = (email, password) => {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const normalizedPassword = String(password || '').trim();
-  const device = getCurrentDevice();
-
   // 1. Check if admin credentials
   const adminPassword = String(localStorage.getItem(KEYS.ADMIN_PASSWORD) || '').trim();
   if (normalizedEmail === 'qazwsx32100@gmail.com' && (normalizedPassword === 'windsboy123' || (adminPassword && normalizedPassword === adminPassword) || normalizedPassword === '6789')) {
@@ -1874,24 +1867,6 @@ export const verifyLogin = (email, password) => {
     if (security.disabled) {
       addLog(displayName, 'LOGIN_BLOCKED', '管理員帳號已停用。');
       return { success: false, error: '此帳號已停用，請聯絡系統管理員。' };
-    }
-    if ((security.approvedDevices || []).length === 0 && (security.pendingDevices || []).length === 0) {
-      const initializedSecurity = {
-        ...security,
-        approvedDevices: upsertDevice(security.approvedDevices || [], device, 'approved')
-      };
-      saveAdminSecurity(initializedSecurity);
-      addLog(displayName, 'DEVICE_APPROVED', '管理員首次登入裝置已自動核准。');
-      security.approvedDevices = initializedSecurity.approvedDevices;
-    }
-    if (!isDeviceApproved(security, device)) {
-      const updatedSecurity = {
-        ...security,
-        approvedDevices: upsertDevice(security.approvedDevices || [], device, 'approved')
-      };
-      saveAdminSecurity(updatedSecurity);
-      addLog(displayName, 'DEVICE_APPROVED', '管理員登入裝置已自動核准。');
-      security.approvedDevices = updatedSecurity.approvedDevices;
     }
     addLog(displayName, 'LOGIN_SUCCESS', '管理員登入成功。');
     return {
@@ -1919,18 +1894,6 @@ export const verifyLogin = (email, password) => {
     if (user.disabled) {
       addLog(user.name || normalizedEmail, 'LOGIN_BLOCKED', '帳號已停用。');
       return { success: false, error: '此帳號已停用，請聯絡系統管理員。' };
-    }
-    if (!isDeviceApproved(user, device)) {
-      const updated = getShareholders();
-      const idx = updated.findIndex(s => s.id === user.id);
-      if (idx !== -1) {
-        updated[idx] = {
-          ...updated[idx],
-          approvedDevices: upsertDevice(updated[idx].approvedDevices || [], device, 'approved')
-        };
-        saveShareholders(updated);
-        addLog(user.name || normalizedEmail, 'DEVICE_APPROVED', '使用者登入裝置已自動核准。');
-      }
     }
     addLog(user.name || normalizedEmail, 'LOGIN_SUCCESS', '登入成功。');
     return { success: true, role, user: { ...user, role } };

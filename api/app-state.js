@@ -1,27 +1,8 @@
 import { captureServerException } from './_monitoring.js';
-import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
+import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, isAccountSessionAllowed, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import { sanitizeInactiveCompanies } from '../src/utils/companyState.js';
 import { validateGasInventoryState } from '../src/utils/stateIntegrity.js';
-
-const isApprovedDevice = (security, deviceId) => (
-  Boolean(deviceId) &&
-  Array.isArray(security?.approvedDevices) &&
-  security.approvedDevices.some(device => device.id === deviceId)
-);
-
-const isSessionAllowed = (state, session) => {
-  if (!state || !session?.id) return false;
-
-  if (session.id === 'ADMIN') {
-    const security = state.adminSecurity || {};
-    return !security.disabled && isApprovedDevice(security, session.deviceId);
-  }
-
-  const user = (state.shareholders || []).find(item => item.id === session.id);
-  if (!user || user.disabled) return false;
-  return isApprovedDevice(user, session.deviceId);
-};
 
 const getSessionUser = (state, session) => {
   if (!state || !session?.id) return null;
@@ -334,14 +315,18 @@ export default async function handler(req, res) {
       if (String(req.query?.meta || '') === '1') {
         const meta = await fetchAppStateMeta({ userId: session.id, deviceId: session.deviceId });
         if (!meta.session_allowed) {
-          return sendJson(res, 401, { error: 'Session is no longer allowed.' });
+          const row = await fetchAppState();
+          if (!isAccountSessionAllowed(row?.state || {}, session)) {
+            return sendJson(res, 401, { error: 'Session is no longer allowed.' });
+          }
+          meta.session_allowed = true;
         }
         return sendJson(res, 200, meta);
       }
 
       const row = await fetchAppState();
       const activeState = sanitizeInactiveCompanies(row.state || {});
-      if (!isSessionAllowed(activeState, session)) {
+      if (!isAccountSessionAllowed(activeState, session)) {
         return sendJson(res, 401, { error: 'Session is no longer allowed.' });
       }
       const publicSession = getPublicSessionForClient(activeState, session);
@@ -353,7 +338,7 @@ export default async function handler(req, res) {
     }
 
     const current = await fetchAppState();
-    if (!isSessionAllowed(current.state, session)) {
+    if (!isAccountSessionAllowed(current.state, session)) {
       return sendJson(res, 401, { error: 'Session is no longer allowed.' });
     }
 

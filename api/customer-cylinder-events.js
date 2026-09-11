@@ -4,6 +4,7 @@ import {
   getBearerToken,
   getClientIp,
   getSyncSecret,
+  isAccountSessionAllowed,
   sendJson,
   verifyToken
 } from './_auth.js';
@@ -59,22 +60,6 @@ const listLegacyCustomerCylinderEvents = async (params) => {
   return row || { items: [], total: 0, nextCursor: null };
 };
 
-const isApprovedDevice = (security, deviceId) => (
-  Boolean(deviceId) &&
-  Array.isArray(security?.approvedDevices) &&
-  security.approvedDevices.some(device => device.id === deviceId)
-);
-
-const isSessionAllowed = (state, session) => {
-  if (!state || !session?.id) return false;
-  if (session.id === 'ADMIN') {
-    const security = state.adminSecurity || {};
-    return !security.disabled && isApprovedDevice(security, session.deviceId);
-  }
-  const user = (state.shareholders || []).find(item => item.id === session.id);
-  return Boolean(user && !user.disabled && isApprovedDevice(user, session.deviceId));
-};
-
 const cleanDate = (value) => {
   const date = String(value || '').trim();
   return DATE_PATTERN.test(date) ? date : null;
@@ -103,7 +88,7 @@ export default async function handler(req, res) {
 
   try {
     const current = await fetchAppState();
-    if (!isSessionAllowed(current.state || {}, session)) {
+    if (!isAccountSessionAllowed(current.state || {}, session)) {
       return sendJson(res, 401, { ok: false, error: 'Session is no longer allowed.' });
     }
 

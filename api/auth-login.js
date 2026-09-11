@@ -45,43 +45,6 @@ const clearLoginRateLimit = (req, email) => {
   loginRateLimiter.clear([rateLimitKeys(req, email).identity]);
 };
 
-const upsertDevice = (devices = [], device = {}, status = 'pending') => {
-  const now = new Date().toISOString();
-  const list = Array.isArray(devices) ? [...devices] : [];
-  const id = device.id || `DEV${Date.now()}`;
-  const idx = list.findIndex(item => item.id === id);
-
-  if (idx >= 0) {
-    list[idx] = {
-      ...list[idx],
-      label: list[idx].label || device.label || id,
-      userAgent: list[idx].userAgent || device.userAgent || '',
-      lastSeenAt: now
-    };
-    return list;
-  }
-
-  return [
-    ...list,
-    {
-      id,
-      label: device.label || id,
-      userAgent: device.userAgent || '',
-      firstSeenAt: device.firstSeenAt || now,
-      lastSeenAt: now,
-      status,
-      requestedAt: status === 'pending' ? now : null,
-      approvedAt: status === 'approved' ? now : null
-    }
-  ];
-};
-
-const isDeviceApproved = (security, device) => (
-  Boolean(device?.id) &&
-  Array.isArray(security?.approvedDevices) &&
-  security.approvedDevices.some(item => item.id === device.id)
-);
-
 const createLog = (operator, action, details) => ({
   id: `LOG${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
   timestamp: new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Taipei' }),
@@ -186,7 +149,7 @@ export default async function handler(req, res) {
     if (!email || email.length > 254 || !password || password.length > 256) {
       return sendJson(res, 400, { success: false, error: '登入資料格式不正確。' });
     }
-    if (!String(device.id || '').trim() || String(device.id).length > 200) {
+    if (String(device.id || '').length > 200) {
       return sendJson(res, 400, { success: false, error: '登入裝置識別資料不正確。' });
     }
 
@@ -231,8 +194,6 @@ export default async function handler(req, res) {
       if (adminCredential.source === 'environmentRecovery') {
         Object.assign(security, hashPassword(password));
         delete security.password;
-        security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
-        security.pendingDevices = (security.pendingDevices || []).filter(item => item.id !== device.id);
       } else if (!hasStoredAdminPassword) {
         if (adminCredential.record.passwordHash && adminCredential.record.passwordSalt) {
           security.passwordHash = adminCredential.record.passwordHash;
@@ -249,27 +210,6 @@ export default async function handler(req, res) {
         return sendJson(res, 403, { success: false, error: '此帳號已停用，請聯絡主管理員。' });
       }
 
-      if ((security.approvedDevices || []).length === 0 && (security.pendingDevices || []).length === 0) {
-        security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
-      }
-
-      if (!isDeviceApproved(security, device)) {
-        security.pendingDevices = upsertDevice(security.pendingDevices, device, 'pending');
-        state = appendLog(
-          { ...state, adminSecurity: security },
-          displayName,
-          'DEVICE_PENDING',
-          '主管理員新裝置登入待核准'
-        );
-        await saveAppState({ state, updatedBy: displayName, requestIp: getClientIp(req), previousState });
-        return sendJson(res, 403, {
-          success: false,
-          code: 'DEVICE_APPROVAL_REQUIRED',
-          error: '這是新裝置，請先由已核准裝置中的主管理員核准。'
-        });
-      }
-
-      security.approvedDevices = upsertDevice(security.approvedDevices, device, 'approved');
       state = appendLog({ ...state, adminSecurity: security }, displayName, 'LOGIN_SUCCESS', '主管理員登入成功');
       persistSuccessfulLogin({
         state,
@@ -319,29 +259,6 @@ export default async function handler(req, res) {
       return sendJson(res, 403, { success: false, error: '此帳號已停用，請聯絡主管理員。' });
     }
 
-    if (!isDeviceApproved(user, device)) {
-      shareholders[idx] = {
-        ...shareholders[idx],
-        pendingDevices: upsertDevice(shareholders[idx].pendingDevices || [], device, 'pending')
-      };
-      state = appendLog(
-        { ...state, shareholders },
-        user.name || email,
-        'DEVICE_PENDING',
-        '新裝置登入待核准'
-      );
-      await saveAppState({ state, updatedBy: user.name || email, requestIp: getClientIp(req), previousState });
-      return sendJson(res, 403, {
-        success: false,
-        code: 'DEVICE_APPROVAL_REQUIRED',
-        error: '這是新裝置，請聯絡主管理員核准後再登入。'
-      });
-    }
-
-    shareholders[idx] = {
-      ...shareholders[idx],
-      approvedDevices: upsertDevice(shareholders[idx].approvedDevices || [], device, 'approved')
-    };
     state = appendLog({ ...state, shareholders }, user.name || email, 'LOGIN_SUCCESS', '登入成功');
     persistSuccessfulLogin({
       state,

@@ -2,6 +2,7 @@ import {
   fetchAppState,
   getBearerToken,
   getClientIp,
+  isAccountSessionAllowed,
   sanitizeStateForClient,
   sendJson,
   verifyToken
@@ -31,21 +32,12 @@ const isAttachmentRateLimited = (req, session) => {
   return attachmentRateLimiter.check([{ key, max: ATTACHMENT_RATE_LIMIT_MAX }]);
 };
 
-const isApprovedDevice = (security, deviceId) => (
-  Boolean(deviceId) &&
-  Array.isArray(security?.approvedDevices) &&
-  security.approvedDevices.some(device => device.id === deviceId)
-);
-
 const getSessionUser = (state, session) => {
+  if (!isAccountSessionAllowed(state, session)) return null;
   if (session?.id === 'ADMIN') {
-    const security = state.adminSecurity || {};
-    return !security.disabled && isApprovedDevice(security, session.deviceId)
-      ? { id: 'ADMIN', role: 'admin', name: session.name || '主管理員' }
-      : null;
+    return { id: 'ADMIN', role: 'admin', name: session.name || '主管理員' };
   }
   const user = (state.shareholders || []).find(item => item.id === session?.id);
-  if (!user || user.disabled || !isApprovedDevice(user, session.deviceId)) return null;
   return user;
 };
 

@@ -12,7 +12,7 @@ import {
   getAuditArchive,
   getAdminSecurity,
   getPeriodLocks, setPeriodLock,
-  setAccountDisabled, approveDevice, rejectDevice, revokeDevice,
+  setAccountDisabled,
   getBudgets, saveBudgets,
   getSystemConfig, saveSystemConfig,
   getLogs,
@@ -698,16 +698,13 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     }
   };
 
-  const handleSecurityAction = async (action, userId, deviceId = null) => {
+  const handleSecurityAction = async (action, userId) => {
     let ok = false;
     if (action === 'disable') {
       const reason = window.prompt('請輸入停用原因') || '管理員停用';
       ok = setAccountDisabled(userId, true, reason);
     }
     if (action === 'enable') ok = setAccountDisabled(userId, false, '');
-    if (action === 'approveDevice') ok = approveDevice(userId, deviceId);
-    if (action === 'rejectDevice') ok = rejectDevice(userId, deviceId);
-    if (action === 'revokeDevice') ok = revokeDevice(userId, deviceId);
 
     if (!ok) {
       showToast('操作失敗，請確認資料後再試。', 'error');
@@ -1224,44 +1221,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     )}
                   </div>
 
-                  <div className="security-device-grid">
-                    <div>
-                      <div className="security-section-title">待核准裝置</div>
-                      {(user.pendingDevices || []).length === 0 ? (
-                        <div className="security-empty">目前沒有待核准裝置</div>
-                      ) : (
-                        (user.pendingDevices || []).map(device => (
-                          <div key={device.id} className="security-device-row">
-                            <div>
-                              <strong>{device.label || device.id}</strong>
-                              <span>{device.requestedAt ? new Date(device.requestedAt).toLocaleString() : ''}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button className="btn btn-primary btn-sm" onClick={() => handleSecurityAction('approveDevice', user.id, device.id)}>核准</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleSecurityAction('rejectDevice', user.id, device.id)}>拒絕</button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="security-section-title">已核准裝置</div>
-                      {(user.approvedDevices || []).length === 0 ? (
-                        <div className="security-empty">尚未核准任何裝置</div>
-                      ) : (
-                        (user.approvedDevices || []).map(device => (
-                          <div key={device.id} className="security-device-row">
-                            <div>
-                              <strong>{device.label || device.id}</strong>
-                              <span>{device.approvedAt ? `核准：${new Date(device.approvedAt).toLocaleString()}` : ''}</span>
-                            </div>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleSecurityAction('revokeDevice', user.id, device.id)}>撤銷</button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
+                  <div className="security-empty">裝置認證已取消；此帳號可在任何裝置使用帳號密碼登入。</div>
                 </div>
               ))}
             </div>

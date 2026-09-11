@@ -118,7 +118,7 @@ const normalizeCloudError = (status, error = '', fallback = '雲端同步失敗�
     return '雲端登入已失效，請登出後重新登入再儲存。';
   }
   if (/Session is no longer allowed/i.test(message)) {
-    return '這個帳號或裝置已不在允許清單內，請重新登入或請管理員核准裝置。';
+    return '這個帳號已停用或不在允許清單內，請重新登入或聯絡管理員。';
   }
   if (/Insufficient role permissions/i.test(message) || /read-only/i.test(message)) {
     return '目前雲端登入帳號沒有修改資料權限，請登出後用系統管理員重新登入。';
