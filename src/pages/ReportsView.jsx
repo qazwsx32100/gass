@@ -19,6 +19,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   }); // pnl, balance, gas, investor, dividend
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [reserveRatio, setReserveRatio] = useState(0.1); // 10% reserve by default
+  const [reserveMode, setReserveMode] = useState('ratio');
+  const [customReserveAmount, setCustomReserveAmount] = useState(null);
   const [periodMode, setPeriodMode] = useState('month');
   const [singleDate, setSingleDate] = useState(`${year}-${month}-01`);
   const [rangeStart, setRangeStart] = useState(`${year}-${month}-01`);
@@ -95,8 +97,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       } else {
         setReserveRatio(0.1);
       }
+      if (match?.reserveMode === 'amount' && match.reserveAmount !== null && match.reserveAmount !== undefined) {
+        setReserveMode('amount');
+        setCustomReserveAmount(Number(match.reserveAmount));
+      } else {
+        setReserveMode('ratio');
+        setCustomReserveAmount(null);
+      }
     } else {
       setReserveRatio(0.1);
+      setReserveMode('ratio');
+      setCustomReserveAmount(null);
     }
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -124,8 +135,14 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   // 3. Compute Dividend Data
   const dividends = useMemo(() => {
     void triggerRefresh;
-    return getDividendsForPeriod(companyId, activePeriodType, activePeriodVal, reserveRatio);
-  }, [companyId, activePeriodType, activePeriodVal, reserveRatio, triggerRefresh]);
+    return getDividendsForPeriod(
+      companyId,
+      activePeriodType,
+      activePeriodVal,
+      reserveRatio,
+      reserveMode === 'amount' ? customReserveAmount : null
+    );
+  }, [companyId, activePeriodType, activePeriodVal, reserveRatio, reserveMode, customReserveAmount, triggerRefresh]);
 
   const [customAmountText, setCustomAmountText] = useState('');
   const [reservePercentText, setReservePercentText] = useState('');
@@ -140,9 +157,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   useEffect(() => {
     if (!isPercentFocused) {
-      setReservePercentText(String(Math.round(reserveRatio * 100)));
+      setReservePercentText(String(Number((dividends?.reserveRatio * 100 || 0).toFixed(2))));
     }
-  }, [reserveRatio, isPercentFocused]);
+  }, [dividends?.reserveRatio, isPercentFocused]);
 
   // 4. Drill Down Transactions Query
   const drillDownTransactions = useMemo(() => {
@@ -2335,7 +2352,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>保留公積金 ({Math.round(reserveRatio * 100)}%)</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>保留公積金 ({(dividends.reserveRatio * 100).toFixed(2)}%，依{reserveMode === 'amount' ? '金額' : '比例'})</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
                       -${dividends.reserveAmount.toLocaleString()}
                     </div>
@@ -2370,10 +2387,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           onChange={e => {
                             const valText = e.target.value;
                             setCustomAmountText(valText);
+                            if (valText === '') {
+                              setReserveMode('ratio');
+                              setCustomReserveAmount(null);
+                              return;
+                            }
                             const valNum = Number(valText || 0);
                             const val = Math.max(0, isNaN(valNum) ? 0 : valNum);
                             const maxVal = dividends.netProfit;
                             const finalVal = val > maxVal ? maxVal : val;
+                            setReserveMode('amount');
+                            setCustomReserveAmount(finalVal);
                             setReserveRatio(dividends.netProfit > 0 ? finalVal / dividends.netProfit : 0);
                           }} 
                         />
@@ -2398,6 +2422,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                               setReservePercentText(valText);
                               const valNum = Number(valText || 0);
                               const val = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
+                              setReserveMode('ratio');
+                              setCustomReserveAmount(null);
                               setReserveRatio(val / 100);
                             }} 
                           />
@@ -2416,7 +2442,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                         className="form-control" 
                         style={{ padding: '0', cursor: 'pointer', height: '6px' }} 
                         value={reserveRatio} 
-                        onChange={e => setReserveRatio(parseFloat(e.target.value))} 
+                        onChange={e => {
+                          setReserveMode('ratio');
+                          setCustomReserveAmount(null);
+                          setReserveRatio(parseFloat(e.target.value));
+                        }}
                       />
                     </div>
                     
@@ -2434,14 +2464,18 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           if (idx !== -1) {
                             locks[idx] = {
                               ...locks[idx],
-                              reserveRatio: reserveRatio
+                              reserveRatio: dividends.reserveRatio,
+                              reserveMode,
+                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
                             };
                           } else {
                             locks.push({
                               companyId,
                               yearMonth: activePeriodVal,
                               locked: false,
-                              reserveRatio: reserveRatio
+                              reserveRatio: dividends.reserveRatio,
+                              reserveMode,
+                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
                             });
                           }
                           savePeriodLocks(locks);

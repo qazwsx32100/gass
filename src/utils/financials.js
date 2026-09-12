@@ -7,6 +7,7 @@ import { calculateCashExpenses } from './cashExpenses';
 import { isGasRevenueEntry } from './gasRevenue';
 import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 import { isManualGasCostExpenseEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
+import { calculateDividendReserve } from './dividendReserve';
 
 const CASH_LEDGER_START_DATE = '2026-07-01';
 
@@ -1502,6 +1503,9 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
   if (match && match.reserveRatio !== null && match.reserveRatio !== undefined) {
     activeRatio = match.reserveRatio;
   }
+  const savedReserveAmount = match?.reserveMode === 'amount' && match.reserveAmount !== null && match.reserveAmount !== undefined
+    ? match.reserveAmount
+    : null;
 
   // 1. Calculate P&L for this month
   const pnl = getIncomeStatement(companyId, 'month', yearMonthStr);
@@ -1517,8 +1521,10 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
   let isLoss = netProfit <= 0;
 
   if (!isLoss) {
-    reserveAmount = Math.round(netProfit * activeRatio);
-    totalDividends = netProfit - reserveAmount;
+    const allocation = calculateDividendReserve(netProfit, activeRatio, savedReserveAmount);
+    reserveAmount = allocation.reserveAmount;
+    activeRatio = allocation.reserveRatio;
+    totalDividends = allocation.totalDividends;
   }
 
   const shareholderDividends = (equity.shareholders || []).map(sh => {
@@ -1540,6 +1546,7 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
     netProfit,
     isLoss,
     reserveRatio: activeRatio,
+    reserveMode: savedReserveAmount !== null ? 'amount' : 'ratio',
     reserveAmount,
     totalDividends,
     distributableAmount: totalDividends,
@@ -1548,16 +1555,8 @@ export const getDividendsForMonth = (companyId, yearMonthStr, reserveRatio = 0.1
   };
 };
 
-export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveRatio = 0.1) => {
-  // Try to resolve saved reserveRatio from periodLocks
+export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveRatio = 0.1, reserveAmountOverride = null) => {
   let activeRatio = reserveRatio;
-  if (periodType === 'month') {
-    const locks = getPeriodLocks();
-    const match = locks.find(item => item.companyId === companyId && item.yearMonth === periodVal);
-    if (match && match.reserveRatio !== null && match.reserveRatio !== undefined) {
-      activeRatio = match.reserveRatio;
-    }
-  }
 
   const pnl = getIncomeStatement(companyId, periodType, periodVal);
   const netProfit = pnl.netProfit;
@@ -1569,8 +1568,10 @@ export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveR
   const isLoss = netProfit <= 0;
 
   if (!isLoss) {
-    reserveAmount = Math.round(netProfit * activeRatio);
-    totalDividends = netProfit - reserveAmount;
+    const allocation = calculateDividendReserve(netProfit, activeRatio, reserveAmountOverride);
+    reserveAmount = allocation.reserveAmount;
+    activeRatio = allocation.reserveRatio;
+    totalDividends = allocation.totalDividends;
   }
 
   const shareholderDividends = equity.shareholders.map(sh => ({
@@ -1583,6 +1584,7 @@ export const getDividendsForPeriod = (companyId, periodType, periodVal, reserveR
     netProfit,
     isLoss,
     reserveRatio: activeRatio,
+    reserveMode: reserveAmountOverride !== null && reserveAmountOverride !== undefined ? 'amount' : 'ratio',
     reserveAmount,
     totalDividends,
     shareholderDividends
