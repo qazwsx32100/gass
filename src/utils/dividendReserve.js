@@ -14,3 +14,11 @@ export const calculateDividendReserve = (netProfit, reserveRatio = 0.1, reserveA
     totalDividends: profit - reserveAmount
   };
 };
+
+export const normalizeDividendReserveSettings = (item = {}) => ({
+  reserveRatio: item.reserveRatio !== undefined && item.reserveRatio !== null ? Number(item.reserveRatio) : null,
+  reserveMode: item.reserveMode === 'amount' ? 'amount' : 'ratio',
+  reserveAmount: item.reserveMode === 'amount' && item.reserveAmount !== undefined && item.reserveAmount !== null
+    ? Math.max(0, Number(item.reserveAmount) || 0)
+    : null
+});

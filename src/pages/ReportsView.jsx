@@ -2479,10 +2479,14 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                             });
                           }
                           savePeriodLocks(locks);
-                          
-                          // Dispatch global refresh event & sync to Supabase
+
                           window.dispatchEvent(new Event('bp_data_changed'));
-                          showToast('💾 公積金設定已成功儲存並同步！', 'success');
+                          const synced = await syncLocalToSupabase('股東分紅公積金設定');
+                          if (synced) {
+                            showToast(`💾 公積金設定已依${reserveMode === 'amount' ? '金額' : '比例'}儲存並同步！`, 'success');
+                          } else {
+                            showToast('❌ 公積金設定已暫存於本機，但雲端同步失敗，請稍後再試。', 'error');
+                          }
                         }}
                       >
                         💾 儲存設定

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateDividendReserve } from '../src/utils/dividendReserve.js';
+import { calculateDividendReserve, normalizeDividendReserveSettings } from '../src/utils/dividendReserve.js';
 
 test('custom reserve amount overrides the percentage exactly', () => {
   assert.deepEqual(calculateDividendReserve(33287, 0.1, 5000), {
@@ -22,4 +22,16 @@ test('percentage is used when no custom amount is provided', () => {
 
 test('custom reserve amount is clamped to available profit', () => {
   assert.equal(calculateDividendReserve(1000, 0.1, 5000).reserveAmount, 1000);
+});
+
+test('amount mode and amount survive period setting normalization', () => {
+  assert.deepEqual(normalizeDividendReserveSettings({
+    reserveRatio: 0.1502,
+    reserveMode: 'amount',
+    reserveAmount: 5000
+  }), {
+    reserveRatio: 0.1502,
+    reserveMode: 'amount',
+    reserveAmount: 5000
+  });
 });

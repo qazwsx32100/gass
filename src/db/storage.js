@@ -13,6 +13,7 @@ import {
   INITIAL_LOGS
 } from './mockData';
 import { sanitizeInactiveCompanies } from '../utils/companyState';
+import { normalizeDividendReserveSettings } from '../utils/dividendReserve';
 
 const KEYS = {
   COMPANIES: 'bp_companies',
@@ -443,7 +444,7 @@ export const normalizePeriodLock = (item) => ({
   unlockedAt: item.unlockedAt || null,
   unlockedBy: item.unlockedBy || '',
   remarks: item.remarks || '',
-  reserveRatio: item.reserveRatio !== undefined && item.reserveRatio !== null ? Number(item.reserveRatio) : null
+  ...normalizeDividendReserveSettings(item)
 });
 
 export const normalizeCustomer = (item = {}) => ({
