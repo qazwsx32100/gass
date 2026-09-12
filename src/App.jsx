@@ -852,6 +852,7 @@ function App() {
               month={currentMonth}
               triggerRefresh={dbVersion}
               userRole={userRole}
+              currentUser={currentUser}
               onNavigate={setActiveTab}
             />
           )}

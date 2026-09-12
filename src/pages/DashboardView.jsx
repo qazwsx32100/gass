@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
-import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers } from '../db/storage';
+import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers, getShareholderLedger } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
+import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
 import LedgerCategoryBreakdown from '../components/LedgerCategoryBreakdown';
 import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import { entriesForCategory, groupLedgerEntriesByCategory } from '../utils/ledgerCategories';
 
-export default function DashboardView({ companyId, year, month, triggerRefresh, userRole, onNavigate }) {
+export default function DashboardView({ companyId, year, month, triggerRefresh, userRole, currentUser, onNavigate }) {
   const periodVal = `${year}-${month}`;
   const showShareholderReports = canViewShareholderReports(userRole);
+  const showOwnerBalance = canViewOwnerCashBalance(userRole, currentUser);
   const [activeDetailModal, setActiveDetailModal] = useState(null);
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('');
 
@@ -91,6 +93,32 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     const lastDayStr = getPeriodEndDate('month', periodVal);
     const balances = getBankBalancesAtDate(companyId, lastDayStr) || [];
     return balances.reduce((sum, b) => sum + (b?.currentBalance || 0), 0);
+  }, [companyId, periodVal, triggerRefresh]);
+
+  const cashBalanceBreakdown = useMemo(() => {
+    void triggerRefresh;
+    const endDate = getPeriodEndDate('month', periodVal);
+    const cashFlow = getCashNetProfitSummary(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate
+    });
+    const initialBalance = (getBanks() || [])
+      .filter(item => item?.companyId === companyId)
+      .reduce((sum, item) => sum + Number(item.initialBalance || 0), 0);
+    const shareholderNet = (getShareholderLedger() || [])
+      .filter(item => item?.companyId === companyId && item?.date <= endDate)
+      .reduce((sum, item) => {
+        const amount = Number(item.amount || 0);
+        if (item.type === 'join' || item.type === 'increase') return sum + amount;
+        if (item.type === 'decrease') return sum - amount;
+        return sum;
+      }, 0);
+    return {
+      initialBalance,
+      shareholderNet,
+      cashIncome: Number(cashFlow?.totalRevenue || 0),
+      cashExpense: Number(cashFlow?.totalExpenses || 0)
+    };
   }, [companyId, periodVal, triggerRefresh]);
 
   // Dividends for the month
@@ -313,7 +341,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   return (
     <div>
       {/* Petty Cash Threshold Warning */}
-      {pettyCashBalance < 2000 && (
+      {showOwnerBalance && pettyCashBalance < 2000 && (
         <div className="alert-box warning" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '10px' }}>
           ⚠️ <strong>營運警訊：</strong> 店內零用金 (現金) 餘額過低！目前水位僅為 <strong>${pettyCashBalance.toLocaleString()} 元</strong>，低於安全限額 $2,000 元，請管理員儘速提現撥補！
         </div>
@@ -557,6 +585,28 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分佈 ➔</span>
           </div>
         </div>
+
+        {/* Owner-only card: current cash and bank balance */}
+        {showOwnerBalance && (
+          <div
+            className="metric-card accent-blue"
+            style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            onClick={() => openDetailModal('cash')}
+            title="僅楊孟龍管理員可查看；點擊查看資金結餘計算明細"
+          >
+            <div className="metric-card-header">
+              <span className="metric-label">目前資金結餘（管理人專用）</span>
+              <div className="metric-icon-wrapper blue">🏦</div>
+            </div>
+            <span className={`metric-value ${cashBalance < 0 ? 'text-danger' : ''}`}>
+              ${(cashBalance || 0).toLocaleString()}
+            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="metric-change neutral">現金＋銀行存款</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔒 楊孟龍專用・查看明細 ➔</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Charts & Shareholder Split */}
@@ -1110,13 +1160,29 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               </div>
             )}
 
-            {activeDetailModal === 'cash' && (
+            {showOwnerBalance && activeDetailModal === 'cash' && (
               <div>
                 <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', marginBottom: '20px', borderLeft: '4px solid var(--accent-blue)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底全公司總資金水位 (現金 + 銀行存款)</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
                     ${(cashBalance || 0).toLocaleString()} 元
                   </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                  {[
+                    ['期初餘額', cashBalanceBreakdown.initialBalance, false],
+                    ['股東投入淨額', cashBalanceBreakdown.shareholderNet, false],
+                    ['7 月起實際收款', cashBalanceBreakdown.cashIncome, false],
+                    ['7 月起實際支出', cashBalanceBreakdown.cashExpense, true]
+                  ].map(([label, amount, negative]) => (
+                    <div key={label} style={{ padding: '14px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{label}</div>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: negative ? 'var(--accent-red)' : 'var(--accent-blue)' }}>
+                        {negative ? '−' : '+'}${Number(amount || 0).toLocaleString()} 元
+                      </strong>
+                    </div>
+                  ))}
                 </div>
 
                 <div style={{ fontWeight: '700', marginBottom: '10px' }}>各資金與銀行帳戶水位列表：</div>

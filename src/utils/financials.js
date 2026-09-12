@@ -8,7 +8,7 @@ import { isGasRevenueEntry } from './gasRevenue';
 import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 import { isManualGasCostExpenseEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 
-const isBankTransfer = (item) => !!item.bankId;
+const CASH_LEDGER_START_DATE = '2026-07-01';
 
 // Helper: Check if date falls within a period
 // periodType: 'month' (e.g. '2026-06'), 'quarter' (e.g. '2026-Q2'), 'year' (e.g. '2026'), 'all'
@@ -61,7 +61,9 @@ export const getCashRevenueSummary = (companyId, periodType, periodVal) => calcu
 });
 
 export const getCashExpenseSummary = (companyId, periodType, periodVal) => calculateCashExpenses({
-  expenses: getExpenses().filter(item => item.companyId === companyId),
+  expenses: getExpenses().filter(item =>
+    item.companyId === companyId && !isSystemEstimatedExpenseEntry(item)
+  ),
   bankTransactions: getBankTransactions().filter(item => item.companyId === companyId),
   isDateIncluded: date => isDateInPeriod(date, periodType, periodVal)
 });
@@ -1354,44 +1356,38 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
  */
 export const getBankBalancesAtDate = (companyId, dateStr) => {
   const banks = getBanks().filter(b => b.companyId === companyId);
-  const incomes = getIncomes().filter(i => i.companyId === companyId && i.date <= dateStr && i.status === 'approved' && isBankTransfer(i));
-  const expenses = getExpenses().filter(e => e.companyId === companyId && e.date <= dateStr && e.status === 'approved' && isBankTransfer(e));
   const shLedger = getShareholderLedger().filter(s => s.companyId === companyId && s.date <= dateStr);
-  const receivableSettlements = getBankTransactions().filter(item =>
-    item.companyId === companyId &&
-    isActiveSettlementReceipt(item) &&
-    item.date <= dateStr
-  );
-  // Note: For simplicity, assume all shareholder investments/reductions went through BANK001/002/003 based on first bank found
+  const cashRevenue = getCashRevenueSummary(companyId, 'range', {
+    startDate: CASH_LEDGER_START_DATE,
+    endDate: dateStr
+  });
+  const cashExpenses = getCashExpenseSummary(companyId, 'range', {
+    startDate: CASH_LEDGER_START_DATE,
+    endDate: dateStr
+  });
   
   const balanceMap = {};
   banks.forEach(b => {
     balanceMap[b.id] = b.initialBalance;
   });
 
-  // Add Approved Incomes
-  incomes.forEach(i => {
-    if (balanceMap[i.bankId] !== undefined) {
-      balanceMap[i.bankId] += i.amount;
-    }
-  });
-
-  // Subtract Approved Expenses
-  expenses.forEach(e => {
-    if (balanceMap[e.bankId] !== undefined) {
-      balanceMap[e.bankId] -= e.amount;
-    }
-  });
-
-  receivableSettlements.forEach(item => {
-    if (balanceMap[item.bankId] !== undefined) {
-      balanceMap[item.bankId] += Number(item.amount || 0);
-    }
-  });
-
   // Add/Subtract Shareholder investments
   // Default to the first bank of the company if not specified
   const primaryBankId = banks[0]?.id;
+  cashRevenue.entries.forEach(item => {
+    const bankId = item.bankId || primaryBankId;
+    if (balanceMap[bankId] !== undefined) {
+      balanceMap[bankId] += Number(item.amount || 0);
+    }
+  });
+
+  cashExpenses.entries.forEach(item => {
+    const bankId = item.bankId || primaryBankId;
+    if (balanceMap[bankId] !== undefined) {
+      balanceMap[bankId] -= Number(item.amount || 0);
+    }
+  });
+
   shLedger.forEach(tx => {
     const bankId = tx.bankId || primaryBankId;
     if (balanceMap[bankId] !== undefined) {
