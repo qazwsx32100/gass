@@ -918,6 +918,8 @@ function App() {
             <SettingsView
               triggerRefresh={dbVersion}
               onDataChange={handleDataChange}
+              showToast={showToast}
+              isAdmin={userRole === USER_ROLES.ADMIN}
               userRole={userRole}
               currentUser={currentUser}
             />
