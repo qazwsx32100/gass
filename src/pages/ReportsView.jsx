@@ -8,6 +8,7 @@ import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { calculateOperatingProfit } from '../utils/operatingProfit';
 import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
+import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -915,6 +916,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
                   🛍️ 營業狀況
                 </button>
+                <button className={`tab-btn ${reportType === 'monthlyDelivery' ? 'active' : ''}`} onClick={() => setReportType('monthlyDelivery')}>
+                  🚚 歷史月支數與日均
+                </button>
                 <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
                   應收/應付
                 </button>
@@ -1332,6 +1336,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               </div>
             </div>
           </div>
+        )}
+
+        {reportType === 'monthlyDelivery' && (
+          <GasMonthlyDeliveryReportPanel />
         )}
 
         {reportType === 'dailySales' && (
