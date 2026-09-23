@@ -7,6 +7,7 @@ import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
 import WeatherHeaderBadge from './components/WeatherHeaderBadge';
 import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
+import { INITIAL_CHART_OF_ACCOUNTS } from './db/mockData';
 
 const pageLoaders = {
   dashboard: () => import('./pages/DashboardView'),
@@ -126,11 +127,24 @@ function App() {
       try {
         const coa = JSON.parse(coaStr);
         let changed = false;
+        const existingCodes = new Set(coa.map(account => account.code));
+        INITIAL_CHART_OF_ACCOUNTS.forEach(defaultAccount => {
+          const existing = coa.find(account => account.code === defaultAccount.code);
+          if (!existing) {
+            coa.push({ ...defaultAccount });
+            existingCodes.add(defaultAccount.code);
+            changed = true;
+            return;
+          }
+          if (defaultAccount.parentCode && !existing.parentCode && existing.name === defaultAccount.name) {
+            existing.parentCode = defaultAccount.parentCode;
+            changed = true;
+          }
+        });
         if (!coa.some(account => account.code === '4104')) {
           coa.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
           changed = true;
         }
-        const existingCodes = new Set(coa.map(account => account.code));
         coa
           .filter(account => account.code.startsWith('5102') && account.code !== '5102')
           .forEach(account => {
