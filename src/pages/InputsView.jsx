@@ -587,13 +587,6 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const revenueAccountGroups = useMemo(() => buildAccountGroups(revenueAccounts), [revenueAccounts]);
   const expenseAccountGroups = useMemo(() => buildAccountGroups(cogsExpenseAccounts), [cogsExpenseAccounts]);
   const activeAccountGroups = activeSubTab === 'income' ? revenueAccountGroups : expenseAccountGroups;
-  const selectedTopLevelCode = getTopLevelAccount(
-    accounts.find(account => account.code === formData.accountCode),
-    accounts
-  )?.code || '';
-  const selectedAccountGroup = activeAccountGroups.find(group => group.parent.code === selectedTopLevelCode)
-    || activeAccountGroups[0]
-    || null;
   const gasInventoryStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const activeDeposits = customerCylinderDeposits.filter(item => item.depositStatus === 'active');
@@ -687,6 +680,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     disposalDate: '',
     disposalAmount: ''
   });
+  const selectedTopLevelCode = getTopLevelAccount(
+    accounts.find(account => account.code === formData.accountCode),
+    accounts
+  )?.code || '';
+  const selectedAccountGroup = activeAccountGroups.find(group => group.parent.code === selectedTopLevelCode)
+    || activeAccountGroups[0]
+    || null;
 
   // Combined unpaid AR/AP items
   const unpaidArapItems = useMemo(() => {
