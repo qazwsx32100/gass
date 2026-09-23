@@ -1,4 +1,4 @@
-import { isSystemEstimatedExpenseEntry } from './expensePolicy.js';
+import { isShareholderDistributionEntry, isSystemEstimatedExpenseEntry } from './expensePolicy.js';
 
 const FIXED_ACCOUNT_PREFIXES = ['6101', '6102', '6201'];
 const FIXED_COST_KEYWORDS = [
@@ -108,6 +108,7 @@ export const calculateOperatingProfit = ({
     .filter(isActiveExpense)
     .filter(expense => selectedDaysByMonth.has(String(expense.date || '').slice(0, 7)))
     .filter(expense => !isSystemEstimatedExpenseEntry(expense))
+    .filter(expense => !isShareholderDistributionEntry(expense))
     .filter(expense => !isGasInventoryPurchaseExpense(expense, accountNames.get(expense.accountCode)))
     .filter(expense => isFixedOperatingExpense(expense, accountNames.get(expense.accountCode)))
     .map(expense => {
@@ -128,6 +129,7 @@ export const calculateOperatingProfit = ({
   const variableExpenseDetails = activeExpenses
     .filter(isActiveExpense)
     .filter(expense => !isSystemEstimatedExpenseEntry(expense))
+    .filter(expense => !isShareholderDistributionEntry(expense))
     .filter(expense => !isGasInventoryPurchaseExpense(expense, accountNames.get(expense.accountCode)))
     .filter(expense => !isFixedOperatingExpense(expense, accountNames.get(expense.accountCode)))
     .map(expense => ({

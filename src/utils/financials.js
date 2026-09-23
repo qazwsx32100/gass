@@ -6,7 +6,7 @@ import { calculateCashRevenue } from './cashRevenue';
 import { calculateCashExpenses } from './cashExpenses';
 import { isGasRevenueEntry } from './gasRevenue';
 import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
-import { isManualGasCostExpenseEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
+import { isManualGasCostExpenseEntry, isShareholderDistributionEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 import { calculateDividendReserve } from './dividendReserve';
 
 const CASH_LEDGER_START_DATE = '2026-07-01';
@@ -69,9 +69,21 @@ export const getCashExpenseSummary = (companyId, periodType, periodVal) => calcu
   isDateIncluded: date => isDateInPeriod(date, periodType, periodVal)
 });
 
+export const getCashOperatingExpenseSummary = (companyId, periodType, periodVal) => calculateCashExpenses({
+  expenses: getExpenses().filter(item =>
+    item.companyId === companyId &&
+    !isSystemEstimatedExpenseEntry(item) &&
+    !isShareholderDistributionEntry(item)
+  ),
+  bankTransactions: getBankTransactions().filter(item =>
+    item.companyId === companyId && !isShareholderDistributionEntry(item)
+  ),
+  isDateIncluded: date => isDateInPeriod(date, periodType, periodVal)
+});
+
 export const getCashNetProfitSummary = (companyId, periodType, periodVal) => {
   const revenue = getCashRevenueSummary(companyId, periodType, periodVal);
-  const expenses = getCashExpenseSummary(companyId, periodType, periodVal);
+  const expenses = getCashOperatingExpenseSummary(companyId, periodType, periodVal);
   return {
     revenue,
     expenses,
@@ -483,14 +495,15 @@ export const getJournalEntries = (companyId, periodType = 'month', periodVal = n
   getExpenses()
     .filter(item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal))
     .forEach(item => {
+      const isDividend = isShareholderDistributionEntry(item);
       pushEntry(entries, {
         id: `J-${item.id}`,
         sourceId: item.id,
-        sourceType: 'expense',
+        sourceType: isDividend ? 'equity_distribution' : 'expense',
         date: item.date,
         description: item.remarks || '支出傳票',
         lines: [
-          { side: 'debit', accountCode: item.accountCode, accountName: accountName(item.accountCode, '營業費用'), amount: Number(item.amount || 0) },
+          { side: 'debit', accountCode: isDividend ? '3301' : item.accountCode, accountName: isDividend ? '未分配盈餘' : accountName(item.accountCode, '營業費用'), amount: Number(item.amount || 0) },
           { side: 'credit', accountCode: item.paymentMethod === 'payable' ? '2102' : '1101', accountName: cashAccountName({ ...item, amount: -Number(item.amount || 0) }), amount: Number(item.amount || 0) }
         ]
       });
@@ -1032,6 +1045,7 @@ export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
   const allExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
+    !isShareholderDistributionEntry(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
@@ -1281,7 +1295,10 @@ export const getIncomeStatement = (companyId, periodType, periodVal) => {
   );
   
   const expenses = getExpenses().filter(
-    item => item.companyId === companyId && isActivePostedRecord(item) && isDateInPeriod(item.date, periodType, periodVal)
+    item => item.companyId === companyId &&
+      isActivePostedRecord(item) &&
+      !isShareholderDistributionEntry(item) &&
+      isDateInPeriod(item.date, periodType, periodVal)
   );
 
   const accounts = getChartOfAccounts();
@@ -1634,6 +1651,7 @@ export const getPartsGrossProfitReport = (companyId, periodType, periodVal) => {
   const allExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
     item.status === 'approved' &&
+    !isShareholderDistributionEntry(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
 

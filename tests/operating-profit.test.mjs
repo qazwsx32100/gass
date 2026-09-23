@@ -12,6 +12,8 @@ const accounts = [
   { code: '6101', name: '員工薪資' },
   { code: '6102', name: '店租費用' },
   { code: '6104', name: '車輛折舊與維修' },
+  { code: '6110', name: '股東分紅' },
+  { code: '611001', name: '曄鏵' },
   { code: '6199', name: '其他費用' }
 ];
 
@@ -65,4 +67,25 @@ test('整月報表會扣除整月固定成本', () => {
 
   assert.equal(result.fixedCostAllocated, 21000);
   assert.equal(result.operatingProfit, 29000);
+});
+
+test('股東分紅降低現金但不會再次降低營業淨利', () => {
+  const result = calculateOperatingProfit({
+    companyExpenses: [
+      { id: 'dividend', date: '2026-08-20', accountCode: '611001', amount: 30000, status: 'approved' }
+    ],
+    activeExpenses: [
+      { id: 'dividend', date: '2026-08-20', accountCode: '611001', amount: 30000, status: 'approved' }
+    ],
+    chartOfAccounts: accounts,
+    periodType: 'month',
+    periodValue: '2026-08',
+    totalRevenue: 100000,
+    gasSalesAmount: 0,
+    gasGrossProfit: 0
+  });
+
+  assert.equal(result.fixedCostAllocated, 0);
+  assert.equal(result.variableExpenses, 0);
+  assert.equal(result.operatingProfit, 100000);
 });

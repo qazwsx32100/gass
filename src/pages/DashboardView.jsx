@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashExpenseSummary, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
 import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers, getShareholderLedger } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
@@ -102,6 +102,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       startDate: '2026-07-01',
       endDate
     });
+    const cashOutflow = getCashExpenseSummary(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate
+    });
     const initialBalance = (getBanks() || [])
       .filter(item => item?.companyId === companyId)
       .reduce((sum, item) => sum + Number(item.initialBalance || 0), 0);
@@ -117,7 +121,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       initialBalance,
       shareholderNet,
       cashIncome: Number(cashFlow?.totalRevenue || 0),
-      cashExpense: Number(cashFlow?.totalExpenses || 0)
+      cashExpense: Number(cashOutflow?.totalExpenses || 0)
     };
   }, [companyId, periodVal, triggerRefresh]);
 

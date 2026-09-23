@@ -55,6 +55,9 @@ export const INITIAL_CHART_OF_ACCOUNTS = [
   { code: '410401', name: '雙口瓦斯爐', type: 'revenue', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' },
   { code: '410402', name: '強制排氣熱水器', type: 'revenue', desc: '16L 數位恆溫強制排氣熱水器（子項目）', subGroup: '熱水器類' },
   { code: '410403', name: '低壓安全調整器', type: 'revenue', desc: 'R280 帶超流切斷安全防護調整器（子項目）', subGroup: '調整器類' },
+
+  // Equity
+  { code: '3301', name: '未分配盈餘', type: 'equity', desc: '累積未分配盈餘及股東盈餘分配' },
   
   // Cost of Goods Sold (COGS)
   { code: '5101', name: '進氣成本', type: 'cogs', desc: '瓦斯分裝廠進氣成本' },
