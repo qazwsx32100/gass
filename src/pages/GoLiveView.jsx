@@ -23,6 +23,7 @@ import {
   getShareholderLedger
 } from '../db/storage';
 import { getCustomerReceivableSummary, getSupplierPayableSummary } from '../utils/financials';
+import { validateRestoreDrill } from '../utils/monthClose';
 
 const statusLabel = {
   pending: '待確認',
@@ -281,6 +282,11 @@ export default function GoLiveView({ companies, onDataChange, showToast }) {
 
   const handleAddDrill = async (event) => {
     event.preventDefault();
+    const validation = validateRestoreDrill(drillDraft);
+    if (!validation.valid) {
+      showToast(`還原演練資料不完整：${validation.errors.join('、')}`, 'error');
+      return;
+    }
     const now = new Date().toISOString();
     saveBackupRestoreDrills([
       {

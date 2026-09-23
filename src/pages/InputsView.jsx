@@ -20,6 +20,8 @@ import {
   isPeriodLocked
 } from '../db/storage';
 import { buildAccountGroups, getTopLevelAccount } from '../utils/accountHierarchy';
+import { activeAccountsOnly } from '../utils/accountUsage';
+import { isShareholderDistributionEntry } from '../utils/expensePolicy';
 import {
   canInputBasicLedger,
   canManageShareholderLedger,
@@ -574,8 +576,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (!reconciliationBankId && banks[0]?.id) setReconciliationBankId(banks[0].id);
   }, [banks, reconciliationBankId]);
 
-  const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
-  const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
+  const revenueAccounts = useMemo(() => accounts
+    .filter(a => a.type === 'revenue')
+    .filter(a => activeAccountsOnly(a) || a.code === editingItem?.accountCode)
+    .sort((a, b) => a.code.localeCompare(b.code)), [accounts, editingItem]);
+  const cogsExpenseAccounts = useMemo(() => accounts
+    .filter(a => a.type === 'cogs' || a.type === 'expense')
+    .filter(a => activeAccountsOnly(a) || a.code === editingItem?.accountCode)
+    .sort((a, b) => a.code.localeCompare(b.code)), [accounts, editingItem]);
   const revenueAccountGroups = useMemo(() => buildAccountGroups(revenueAccounts), [revenueAccounts]);
   const expenseAccountGroups = useMemo(() => buildAccountGroups(cogsExpenseAccounts), [cogsExpenseAccounts]);
   const activeAccountGroups = activeSubTab === 'income' ? revenueAccountGroups : expenseAccountGroups;
@@ -1370,6 +1378,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       }
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
+      const entryNature = isShareholderDistributionEntry({ accountCode: formData.accountCode }) ? 'equity_distribution' : '';
       if (editingItem) {
         if (editingItem.status === 'void') {
           window.alert('已作廢的支出不能修改。');
@@ -1384,6 +1393,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               pendingChanges: {
                 date: formData.date,
                 accountCode: formData.accountCode,
+                entryNature,
                 ...paymentFields,
                 ...calculationFields,
                 amount: amountVal,
@@ -1397,7 +1407,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             showToast('已提交修改申請，等待管理員核准！', 'info');
             success = true;
           } else {
-            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
+            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
             archiveChange({ collection: 'expenses', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '支出資料修改' });
             saveExpenses(db);
             addLog(operatorName, 'UPDATE_EXPENSE', `Update expense ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
@@ -1406,7 +1416,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         }
       } else {
         const newId = generateId('expense', formData.date);
-        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
+        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
         saveExpenses(db);
         addLog(operatorName, 'CREATE_EXPENSE', `Create expense ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
@@ -3762,6 +3772,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div className="form-group">
                     <label className="form-label">{activeSubTab === 'income' ? '收入金額' : '支出金額'}</label>
                     <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                  </div>
+                )}
+
+                {activeSubTab === 'expense' && isShareholderDistributionEntry({ accountCode: formData.accountCode }) && (
+                  <div className="alert-box info" style={{ margin: 0 }}>
+                    此筆會記為股東盈餘分配：扣減現金／銀行與未分配盈餘，不列入本期損益費用。
                   </div>
                 )}
 

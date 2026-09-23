@@ -205,9 +205,13 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       startDate = `${activePeriodVal}-01`;
     }
     
-    const allIncomes = getIncomes().filter(i => i.companyId === companyId && i.status === 'approved' && i.date < startDate);
-    const allExpenses = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date < startDate);
-    const companyPriorProfit = allIncomes.reduce((s, i) => s + i.amount, 0) - allExpenses.reduce((s, e) => s + (e.amount + (e.cogsAmount || 0)), 0);
+    const priorEndDate = new Date(`${startDate}T00:00:00Z`);
+    priorEndDate.setDate(priorEndDate.getDate() - 1);
+    const priorPeriod = getIncomeStatement(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate: priorEndDate.toISOString().slice(0, 10)
+    });
+    const companyPriorProfit = priorPeriod.netProfit;
     
     // Ownership shares at end of period
     const getShareholderSharesAtDate = (cid, dateStr) => {
