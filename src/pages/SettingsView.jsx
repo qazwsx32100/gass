@@ -22,6 +22,7 @@ import {
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
 import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
 import { getNextCompanyId } from '../utils/companyState';
+import { findParentAccount } from '../utils/accountHierarchy';
 import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
@@ -291,6 +292,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       type: 'expense', 
       desc: '',
       subGroup: '',
+      parentCode: '',
       
       compName: '', 
       compDesc: ''
@@ -332,7 +334,8 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         accountName: item.name || '',
         type: item.type || 'expense',
         desc: item.desc || '',
-        subGroup: item.subGroup || ''
+        subGroup: item.subGroup || '',
+        parentCode: item.parentCode || findParentAccount(item, accounts)?.code || ''
       });
     } else if (activeSettingsTab === 'company') {
       setFormData({
@@ -551,6 +554,14 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         return;
       }
 
+      if (formData.parentCode) {
+        const parent = db.find(account => account.code === formData.parentCode);
+        if (!parent || parent.type !== formData.type || parent.code === newCode) {
+          showToast('第一層大分類不存在、類型不同，或與明細科目相同。', 'error');
+          return;
+        }
+      }
+
       // Check uniqueness if code is new or changed
       if (!editingItem || oldCode !== newCode) {
         if (db.some(a => a.code === newCode)) {
@@ -596,7 +607,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       if (editingItem) {
         const idx = db.findIndex(a => a.code === oldCode);
         if (idx !== -1) {
-          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' };
+          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '', parentCode: formData.parentCode || '' };
           db[idx] = updatedAccount;
           archiveChange({ 
             collection: 'chartOfAccounts', 
@@ -664,7 +675,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           success = true;
         }
       } else {
-        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' });
+        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '', parentCode: formData.parentCode || '' });
         syncMatchingAccount(db, newCode, newCode, formData.accountName, formData.desc, formData.subGroup);
         saveChartOfAccounts(db);
         success = true;
@@ -934,6 +945,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     {activeSettingsTab === 'accounts' && (
                       <tr>
                         <th>科目代碼</th>
+                        <th>第一層大分類</th>
                         <th>科目名稱</th>
                         <th>類型</th>
                         <th>備註</th>
@@ -1017,12 +1029,16 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     {activeSettingsTab === 'accounts' && (() => {
                       const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
                       return sorted.map((a, idx) => {
-                        const isSub = sorted.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                        const parent = findParentAccount(a, sorted);
+                        const isSub = Boolean(parent);
                         return (
                           <tr key={idx} style={{ backgroundColor: isSub ? 'rgba(0, 0, 0, 0.015)' : 'transparent' }}>
                             <td style={{ fontFamily: 'var(--font-mono)', paddingLeft: isSub ? '24px' : '12px' }}>
                               {isSub ? <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>↳</span> : null}
                               {a.code}
+                            </td>
+                            <td style={{ fontWeight: isSub ? 600 : 700, color: isSub ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
+                              {parent ? `${parent.code} ${parent.name}` : `${a.code} ${a.name}`}
                             </td>
                             <td style={{ 
                               fontWeight: isSub ? '400' : '700',
@@ -1704,11 +1720,25 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     </div>
                     <div className="form-group">
                       <label className="form-label">科目類型</label>
-                      <select required className="select-dropdown" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                      <select required className="select-dropdown" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value, parentCode: '' })}>
                         <option value="revenue">收入 (Revenue)</option>
                         <option value="cogs">銷貨成本 (COGS)</option>
                         <option value="expense">支出 (Expense)</option>
                       </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">第一層大分類</label>
+                      <select className="select-dropdown" style={{ width: '100%' }} value={formData.parentCode || ''} onChange={e => setFormData({ ...formData, parentCode: e.target.value })}>
+                        <option value="">本身就是第一層大分類</option>
+                        {accounts
+                          .filter(account => account.type === formData.type && account.code !== (editingItem?.code || ''))
+                          .filter(account => !findParentAccount(account, accounts))
+                          .sort((a, b) => a.code.localeCompare(b.code))
+                          .map(account => <option key={account.code} value={account.code}>{account.code} - {account.name}</option>)}
+                      </select>
+                      <div style={{ marginTop: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        第二層科目只能歸屬一個大分類；既有科目會依代碼前綴自動辨識。
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">科目備註</label>

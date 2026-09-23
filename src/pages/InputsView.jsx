@@ -19,6 +19,7 @@ import {
   archiveChange, archiveDeletion,
   isPeriodLocked
 } from '../db/storage';
+import { buildAccountGroups, getTopLevelAccount } from '../utils/accountHierarchy';
 import {
   canInputBasicLedger,
   canManageShareholderLedger,
@@ -575,6 +576,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
   const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
   const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
+  const revenueAccountGroups = useMemo(() => buildAccountGroups(revenueAccounts), [revenueAccounts]);
+  const expenseAccountGroups = useMemo(() => buildAccountGroups(cogsExpenseAccounts), [cogsExpenseAccounts]);
   const gasInventoryStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const activeDeposits = customerCylinderDeposits.filter(item => item.depositStatus === 'active');
@@ -2016,7 +2019,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
   // Lookups helper
   const getAccountName = (code) => {
-    return accounts.find(a => a.code === code)?.name || code || '未知科目';
+    const account = accounts.find(a => a.code === code);
+    if (!account) return code || '未知科目';
+    const parent = getTopLevelAccount(account, accounts);
+    return parent && parent.code !== account.code
+      ? `${parent.name} › ${account.name}`
+      : account.name;
   };
 
   const getBankName = (id) => {
@@ -3752,7 +3760,21 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 3. Account Category */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">會計科目</label>
+                    <label className="form-label">第一層大分類</label>
+                    <select
+                      required
+                      className="select-dropdown"
+                      style={{ width: '100%', marginBottom: '10px' }}
+                      value={getTopLevelAccount(accounts.find(account => account.code === formData.accountCode), accounts)?.code || ''}
+                      onChange={e => setFormData({ ...formData, accountCode: e.target.value })}
+                    >
+                      {(activeSubTab === 'income' ? revenueAccountGroups : expenseAccountGroups).map(group => (
+                        <option key={group.parent.code} value={group.parent.code}>
+                          {group.parent.code} - {group.parent.name}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="form-label">第二層明細科目</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.accountCode} onChange={e => setFormData({ ...formData, accountCode: e.target.value })}>
                       {activeSubTab === 'income' 
                         ? (() => {
