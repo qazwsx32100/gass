@@ -7,6 +7,7 @@ import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment 
 import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { calculateOperatingProfit } from '../utils/operatingProfit';
+import { isEffectiveForReport } from '../utils/reportEligibility';
 import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
 
@@ -126,6 +127,19 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getIncomeStatement(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
+  const reportReconciliationTotals = useMemo(() => {
+    void triggerRefresh;
+    const sumRaw = rows => rows
+      .filter(item => item.companyId === companyId && isDateInPeriod(item.date, activePeriodType, activePeriodVal))
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    return {
+      rawIncome: sumRaw(getIncomes()),
+      rawExpense: sumRaw(getExpenses()),
+      effectiveIncome: pnl.totalRevenue,
+      effectiveExpense: pnl.totalCogs + pnl.totalExpenses
+    };
+  }, [companyId, activePeriodType, activePeriodVal, pnl.totalRevenue, pnl.totalCogs, pnl.totalExpenses, triggerRefresh]);
+
   // 2. Compute Balance Sheet Data
   const balanceSheet = useMemo(() => {
     void triggerRefresh;
@@ -166,8 +180,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   const drillDownTransactions = useMemo(() => {
     void triggerRefresh;
     if (!drillDownCode) return [];
-    const incs = getIncomes().filter(i => i.companyId === companyId && i.accountCode === drillDownCode && i.status === 'approved');
-    const exps = getExpenses().filter(e => e.companyId === companyId && e.accountCode === drillDownCode && e.status === 'approved');
+    const incs = getIncomes().filter(i => i.companyId === companyId && i.accountCode === drillDownCode && isEffectiveForReport(i));
+    const exps = getExpenses().filter(e => e.companyId === companyId && e.accountCode === drillDownCode && isEffectiveForReport(e));
     
     const all = [
       ...incs.map(i => ({ ...i, type: 'income' })),
@@ -346,11 +360,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   const dailySales = useMemo(() => {
     void triggerRefresh;
-    const isActiveRecord = item => (
-      (!item.status || item.status === 'approved') &&
-      item.correctionStatus !== 'corrected' &&
-      item.correctionType !== 'reversal'
-    );
+    const isActiveRecord = isEffectiveForReport;
     // Keep the complete income list for cross-month receivable attribution,
     // then select the requested operating period for ordinary sales/expenses.
     const companyIncomes = getIncomes().filter(item =>
@@ -1031,6 +1041,18 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               </span>
             </div>
             <div className="card-body">
+              <div className="grid-2col" style={{ marginBottom: '20px' }}>
+                <div className="summary-card">
+                  <strong>收入總額對照</strong>
+                  <div>原始總額（含更正／沖銷／作廢）：{formatCurrency(reportReconciliationTotals.rawIncome)}</div>
+                  <div>報表有效總額：{formatCurrency(reportReconciliationTotals.effectiveIncome)}</div>
+                </div>
+                <div className="summary-card">
+                  <strong>支出總額對照</strong>
+                  <div>原始總額（含更正／沖銷／作廢）：{formatCurrency(reportReconciliationTotals.rawExpense)}</div>
+                  <div>報表有效總額（依損益規則）：{formatCurrency(reportReconciliationTotals.effectiveExpense)}</div>
+                </div>
+              </div>
               <div className="grid-2col" style={{ marginBottom: '24px' }}>
                 <PieChart title="收入科目比例" items={revenuePieItems} emptyText="此期間沒有收入資料" />
                 <PieChart title="支出科目比例" items={expensePieItems} emptyText="此期間沒有支出資料" />

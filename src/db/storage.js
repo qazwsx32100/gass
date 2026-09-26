@@ -14,6 +14,7 @@ import {
 } from './mockData';
 import { sanitizeInactiveCompanies } from '../utils/companyState';
 import { normalizeDividendReserveSettings } from '../utils/dividendReserve';
+import { normalizeReportEligibility } from '../utils/reportEligibility';
 
 const KEYS = {
   COMPANIES: 'bp_companies',
@@ -93,7 +94,7 @@ export const normalizeTransaction = (item) => {
     : Number(item.vatAmount) || 0;
   const isSalaryExpense = String(item.accountCode || '').startsWith('6101');
 
-  return {
+  return normalizeReportEligibility({
     ...item,
     status,
     paymentMethod,
@@ -159,7 +160,7 @@ export const normalizeTransaction = (item) => {
     paidByMethod: item.paidByMethod || null,
     paidBankId: item.paidBankId || null,
     settlementId: item.settlementId || null
-  };
+  });
 };
 
 const normalizeShareholder = (item) => ({
@@ -718,7 +719,7 @@ export const initializeDB = (forceReset = false) => {
     const coaSeed = keepOrSeed(KEYS.CHART_OF_ACCOUNTS, INITIAL_CHART_OF_ACCOUNTS);
     if (Array.isArray(coaSeed)) {
       if (!coaSeed.some(a => a.code === '4104')) {
-        coaSeed.push({ code: '4104', name: '爐具/零件銷貨收入', type: 'revenue', desc: '商品出貨收入' });
+        coaSeed.push({ code: '4104', name: '爐具／瓦斯零件銷貨收入', type: 'revenue', desc: '對應 5102 進貨明細，商品必須先入庫才能銷售' });
       }
       if (!coaSeed.some(a => a.code === '410401')) {
         coaSeed.push({ code: '410401', name: '雙口瓦斯爐', type: 'revenue', desc: '家用雙口防乾燒瓦斯爐（子項目）', subGroup: '爐具類' });
@@ -1121,12 +1122,12 @@ export const getShareholderLedger = () => read(KEYS.SHAREHOLDER_LEDGER);
 export const saveShareholderLedger = (data) => write(KEYS.SHAREHOLDER_LEDGER, data);
 
 // Incomes API
-export const getIncomes = () => read(KEYS.INCOMES);
-export const saveIncomes = (data) => write(KEYS.INCOMES, data);
+export const getIncomes = () => read(KEYS.INCOMES).map(normalizeTransaction);
+export const saveIncomes = (data) => write(KEYS.INCOMES, data.map(normalizeTransaction));
 
 // Expenses API
-export const getExpenses = () => read(KEYS.EXPENSES);
-export const saveExpenses = (data) => write(KEYS.EXPENSES, data);
+export const getExpenses = () => read(KEYS.EXPENSES).map(normalizeTransaction);
+export const saveExpenses = (data) => write(KEYS.EXPENSES, data.map(normalizeTransaction));
 
 // Loans API
 export const getLoans = () => read(KEYS.LOANS);

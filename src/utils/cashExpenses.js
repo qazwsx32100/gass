@@ -1,14 +1,8 @@
-const isActiveApprovedRecord = (item) => (
-  item?.status === 'approved' &&
-  item.correctionStatus !== 'corrected' &&
-  item.correctionType !== 'reversal'
-);
+import { isEffectiveForReport } from './reportEligibility.js';
 
-const isActiveSettlement = (item) => (
-  item?.status !== 'void' &&
-  item?.correctionStatus !== 'corrected' &&
-  item?.correctionType !== 'reversal'
-);
+const isActiveApprovedRecord = isEffectiveForReport;
+
+const isActiveSettlement = isEffectiveForReport;
 
 const isDirectlyPaidExpense = (item) => (
   isActiveApprovedRecord(item) &&

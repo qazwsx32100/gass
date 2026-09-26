@@ -8,6 +8,7 @@ import { isGasRevenueEntry } from './gasRevenue';
 import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 import { isManualGasCostExpenseEntry, isShareholderDistributionEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 import { calculateDividendReserve } from './dividendReserve';
+import { isEffectiveForReport } from './reportEligibility';
 
 const CASH_LEDGER_START_DATE = '2026-07-01';
 
@@ -123,11 +124,7 @@ export const getMonthlyOperatingSummary = (companyId, yearMonth) => {
   };
 };
 
-const isActivePostedRecord = item => (
-  item?.status === 'approved' &&
-  item.correctionStatus !== 'corrected' &&
-  item.correctionType !== 'reversal'
-);
+const isActivePostedRecord = isEffectiveForReport;
 
 const daysBetween = (fromDate, toDate) => {
   if (!fromDate || !toDate) return 0;
@@ -166,7 +163,7 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
     .map(item => makeRow({ ...item, amount: item.outstandingAmount }, 'receivable'));
 
   const payables = getExpenses()
-    .filter(item => item.companyId === companyId && item.status === 'approved' && item.paymentStatus === 'unpaid')
+    .filter(item => item.companyId === companyId && isEffectiveForReport(item) && item.paymentStatus === 'unpaid')
     .map(item => makeRow(item, 'payable'));
 
   const summarize = (rows) => {
@@ -241,7 +238,7 @@ export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().to
   const customers = getCustomers().filter(item => item.companyId === companyId && item.status !== 'inactive');
   const unpaidIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     item.paymentStatus === 'unpaid'
   );
 
@@ -266,7 +263,7 @@ export const getSupplierPayableSummary = (companyId, asOfDate = new Date().toISO
   const suppliers = getSuppliers().filter(item => item.companyId === companyId && item.status !== 'inactive');
   const unpaidExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     item.paymentStatus === 'unpaid'
   );
 
@@ -354,10 +351,10 @@ export const buildBankReconciliation = ({ companyId, bankId, statementDate, stat
   const rows = Array.isArray(statementRows) ? statementRows : [];
   const systemRows = [
     ...getIncomes()
-      .filter(item => item.companyId === companyId && item.bankId === bankId && item.status === 'approved')
+      .filter(item => item.companyId === companyId && item.bankId === bankId && isEffectiveForReport(item))
       .map(item => ({ ...item, type: 'income', signedAmount: Number(item.amount || 0) })),
     ...getExpenses()
-      .filter(item => item.companyId === companyId && item.bankId === bankId && item.status === 'approved')
+      .filter(item => item.companyId === companyId && item.bankId === bankId && isEffectiveForReport(item))
       .map(item => ({ ...item, type: 'expense', signedAmount: -Number(item.amount || 0) }))
   ].filter(item => !statementDate || item.date <= statementDate);
 
@@ -477,7 +474,7 @@ export const getJournalEntries = (companyId, periodType = 'month', periodVal = n
   const entries = [];
 
   getIncomes()
-    .filter(item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal))
+    .filter(item => item.companyId === companyId && isEffectiveForReport(item) && isDateInPeriod(item.date, periodType, periodVal))
     .forEach(item => {
       pushEntry(entries, {
         id: `J-${item.id}`,
@@ -493,7 +490,7 @@ export const getJournalEntries = (companyId, periodType = 'month', periodVal = n
     });
 
   getExpenses()
-    .filter(item => item.companyId === companyId && item.status === 'approved' && isDateInPeriod(item.date, periodType, periodVal))
+    .filter(item => item.companyId === companyId && isEffectiveForReport(item) && isDateInPeriod(item.date, periodType, periodVal))
     .forEach(item => {
       const isDividend = isShareholderDistributionEntry(item);
       pushEntry(entries, {
@@ -750,12 +747,12 @@ const netSalesAmount = (item) => {
 export const getVatReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
   const taxableIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
   const taxableExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     !(item.accountCode && item.accountCode.startsWith('6101')) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
@@ -792,9 +789,7 @@ export const getVatReport = (companyId, periodType = 'month', periodVal = new Da
 export const getPayrollReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
   const salaryRows = getExpenses().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
-    item.correctionStatus !== 'corrected' &&
-    item.correctionType !== 'reversal' &&
+    isEffectiveForReport(item) &&
     item.accountCode && item.accountCode.startsWith('6101') &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
@@ -823,8 +818,8 @@ export const getAuditReadinessReport = (companyId, periodType = 'month', periodV
   const entries = getJournalEntries(companyId, periodType, periodVal);
   const incomes = getIncomes().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
   const expenses = getExpenses().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
-  const approvedWithoutAttachment = [...incomes, ...expenses].filter(item => item.status === 'approved' && !item.receiptAttachment);
-  const taxableWithoutInvoice = [...incomes, ...expenses].filter(item => item.status === 'approved' && isVatTaxable(item) && !item.invoiceNo);
+  const approvedWithoutAttachment = [...incomes, ...expenses].filter(item => isEffectiveForReport(item) && !item.receiptAttachment);
+  const taxableWithoutInvoice = [...incomes, ...expenses].filter(item => isEffectiveForReport(item) && isVatTaxable(item) && !item.invoiceNo);
   const pendingRows = [...incomes, ...expenses].filter(item => String(item.status || '').startsWith('pending'));
   const unbalancedEntries = entries.filter(entry => !entry.balanced);
 
@@ -1038,13 +1033,13 @@ export const getGasGrossProfitForPeriod = (companyId, periodType, periodVal) => 
 export const getCompanyProfitReport = (companyId, periodType, periodVal) => {
   const allIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
   const allExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     !isShareholderDistributionEntry(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
@@ -1644,13 +1639,13 @@ export const getPartsGrossProfitReport = (companyId, periodType, periodVal) => {
   const allAccounts = getChartOfAccounts();
   const allIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );
 
   const allExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
-    item.status === 'approved' &&
+    isEffectiveForReport(item) &&
     !isShareholderDistributionEntry(item) &&
     isDateInPeriod(item.date, periodType, periodVal)
   );

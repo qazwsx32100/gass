@@ -22,6 +22,8 @@ import {
 import { buildAccountGroups, getTopLevelAccount } from '../utils/accountHierarchy';
 import { activeAccountsOnly } from '../utils/accountUsage';
 import { isShareholderDistributionEntry } from '../utils/expensePolicy';
+import { isEffectiveForReport } from '../utils/reportEligibility';
+import { getMerchandiseStock, isMerchandisePurchaseAccount, isMerchandiseSalesAccount, validateMerchandiseTransaction } from '../utils/merchandiseInventory';
 import {
   canInputBasicLedger,
   canManageShareholderLedger,
@@ -188,8 +190,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     return true;
   };
   const getDailySalesSummaries = useCallback(() => {
-    const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
-    const allExpenses = getExpenses().filter(item => item.companyId === companyId && item.status === 'approved');
+    const allIncomes = getIncomes().filter(item => item.companyId === companyId && isEffectiveForReport(item));
+    const allExpenses = getExpenses().filter(item => item.companyId === companyId && isEffectiveForReport(item));
     const allBankTransactions = getBankTransactions().filter(item => item.companyId === companyId && isActiveSettlementReceipt(item));
     const incomeById = new Map(allIncomes.map(item => [item.id, item]));
 
@@ -402,15 +404,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       i.companyId === companyId && 
       i.paymentMethod === 'check' && 
       i.status === 'approved' &&
-      i.correctionStatus !== 'corrected' &&
-      i.correctionType !== 'reversal'
+      isEffectiveForReport(i)
     );
     const exps = getExpenses().filter(e => 
       e.companyId === companyId && 
       e.paymentMethod === 'check' && 
       e.status === 'approved' &&
-      e.correctionStatus !== 'corrected' &&
-      e.correctionType !== 'reversal'
+      isEffectiveForReport(e)
     );
 
     const all = [
@@ -687,6 +687,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const selectedAccountGroup = activeAccountGroups.find(group => group.parent.code === selectedTopLevelCode)
     || activeAccountGroups[0]
     || null;
+  const merchandiseStock = useMemo(() => {
+    if (!isMerchandisePurchaseAccount(formData.accountCode) && !isMerchandiseSalesAccount(formData.accountCode)) return null;
+    return getMerchandiseStock({
+      companyId,
+      accountCode: formData.accountCode,
+      incomes: getIncomes(),
+      expenses: getExpenses(),
+      excludeId: editingItem?.id || ''
+    });
+  }, [companyId, formData.accountCode, editingItem, triggerRefresh]);
 
   // Combined unpaid AR/AP items
   const unpaidArapItems = useMemo(() => {
@@ -695,15 +705,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       i.companyId === companyId && 
       i.paymentStatus === 'unpaid' && 
       i.status === 'approved' &&
-      i.correctionStatus !== 'corrected' &&
-      i.correctionType !== 'reversal'
+      isEffectiveForReport(i)
     );
     const expenses = getExpenses().filter(e => 
       e.companyId === companyId && 
       e.paymentStatus === 'unpaid' && 
       e.status === 'approved' &&
-      e.correctionStatus !== 'corrected' &&
-      e.correctionType !== 'reversal'
+      isEffectiveForReport(e)
     );
     
     const combined = [
@@ -720,8 +728,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'income') {
       const rows = getIncomes().filter(i => 
         i.companyId === companyId &&
-        i.correctionStatus !== 'corrected' &&
-        i.correctionType !== 'reversal'
+        isEffectiveForReport(i)
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -733,8 +740,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'expense') {
       const rows = getExpenses().filter(e => 
         e.companyId === companyId &&
-        e.correctionStatus !== 'corrected' &&
-        e.correctionType !== 'reversal'
+        isEffectiveForReport(e)
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -1253,6 +1259,21 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const quantityVal = parseFloat(formData.quantity) || 0;
     const calculatedAmountVal = unitPriceVal > 0 && quantityVal > 0 ? unitPriceVal * quantityVal : 0;
     const amountVal = parseFloat(formData.amount) || calculatedAmountVal || 0;
+    if (activeSubTab === 'income' || activeSubTab === 'expense') {
+      const merchandiseValidation = validateMerchandiseTransaction({
+        kind: activeSubTab,
+        companyId,
+        accountCode: formData.accountCode,
+        quantity: quantityVal,
+        incomes: getIncomes(),
+        expenses: getExpenses(),
+        excludeId: editingItem?.id || ''
+      });
+      if (!merchandiseValidation.valid) {
+        window.alert(merchandiseValidation.message);
+        return;
+      }
+    }
     const principalVal = parseFloat(formData.principal) || 0;
     const interestVal = parseFloat(formData.interestRate) || 0;
     const monthsVal = parseInt(formData.months, 10) || 0;
@@ -1778,6 +1799,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         else saveExpenses(filtered);
         addLog(actor, '核准刪除', `已核准刪除 ${id}。`);
         onDataChange();
+        return;
+      }
+      const candidate = item.status === 'pending_edit_review' && item.pendingChanges
+        ? { ...item, ...item.pendingChanges }
+        : item;
+      const merchandiseValidation = validateMerchandiseTransaction({
+        kind: isIncome ? 'income' : 'expense',
+        companyId,
+        accountCode: candidate.accountCode,
+        quantity: candidate.quantity,
+        incomes: getIncomes(),
+        expenses: getExpenses(),
+        excludeId: item.id
+      });
+      if (!merchandiseValidation.valid) {
+        window.alert(merchandiseValidation.message);
         return;
       }
       if (item.status === 'pending_edit_review' && item.pendingChanges) {
@@ -2710,6 +2747,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
+                    <th>更改紀錄</th>
                     {showActionColumn && <th style={{ textAlign: 'right', minWidth: '180px' }}>操作</th>}
                   </tr>
                 )}
@@ -2725,6 +2763,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
+                    <th>更改紀錄</th>
                     {showActionColumn && <th style={{ textAlign: 'right', minWidth: '180px' }}>操作</th>}
                   </tr>
                 )}
@@ -2905,6 +2944,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               </button>
                             </div>
                           )}
+                        </td>
+                        <td style={{ minWidth: '180px', maxWidth: '280px', whiteSpace: 'normal', color: 'var(--accent-orange, #c77700)', fontSize: '0.85rem' }}>
+                          {item.correctionReason || (item.correctionOf ? `更正自 ${item.correctionOf}` : '—')}
                         </td>
                       </>
                     )}
@@ -3116,6 +3158,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               </button>
                             </div>
                           )}
+                        </td>
+                        <td style={{ minWidth: '180px', maxWidth: '280px', whiteSpace: 'normal', color: 'var(--accent-orange, #c77700)', fontSize: '0.85rem' }}>
+                          {item.correctionReason || (item.correctionOf ? `更正自 ${item.correctionOf}` : '—')}
                         </td>
                       </>
                     )}
@@ -3772,6 +3817,16 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div className="form-group">
                     <label className="form-label">{activeSubTab === 'income' ? '收入金額' : '支出金額'}</label>
                     <input type="number" required placeholder="請輸入金額" className="form-control" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+                  </div>
+                )}
+
+                {merchandiseStock && (
+                  <div className={`alert-box ${merchandiseStock.available > 0 ? 'success' : 'warning'}`} style={{ margin: 0 }}>
+                    <strong>商品庫存：</strong>
+                    已進貨 {merchandiseStock.purchased.toLocaleString()} 件、
+                    已銷售 {merchandiseStock.sold.toLocaleString()} 件、
+                    目前可售 {merchandiseStock.available.toLocaleString()} 件。
+                    {activeSubTab === 'income' && merchandiseStock.available <= 0 ? '請先登錄並核准進貨。' : ''}
                   </div>
                 )}
 

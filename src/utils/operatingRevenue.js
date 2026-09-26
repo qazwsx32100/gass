@@ -1,8 +1,6 @@
-const isActiveOperatingRevenue = item => (
-  item?.status === 'approved' &&
-  item.correctionStatus !== 'corrected' &&
-  item.correctionType !== 'reversal'
-);
+import { isEffectiveForReport } from './reportEligibility.js';
+
+const isActiveOperatingRevenue = isEffectiveForReport;
 
 export const selectMonthlyOperatingRevenueEntries = ({ incomes = [], companyId, yearMonth }) => (
   incomes.filter(item =>
