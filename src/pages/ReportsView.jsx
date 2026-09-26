@@ -10,6 +10,7 @@ import { calculateOperatingProfit } from '../utils/operatingProfit';
 import { isEffectiveForReport } from '../utils/reportEligibility';
 import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
+import { getTaiwanDateString } from '../utils/taiwanDate';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -374,6 +375,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     );
     const allExpenses = companyExpenses.filter(item => isDateInPeriod(item.date, activePeriodType, activePeriodVal));
     const chartOfAccounts = getChartOfAccounts();
+    const accountNameByCode = new Map(chartOfAccounts.map(account => [account.code, account.name || '']));
 
     // Gas Sales (4101)
     const gasSales = allIncomes.filter(item => item.accountCode === '4101' && String(item.remarks || '').startsWith('當日營業彙總 -'));
@@ -456,7 +458,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
     allExpenses.forEach(exp => {
       const code = exp.accountCode;
-      const accountName = getChartOfAccounts().find(a => a.code === code)?.name || '';
+      const accountName = accountNameByCode.get(code) || '';
 
       const isBuyCylinder = accountName.includes('買桶') || accountName.includes('鋼瓶') || accountName.includes('購桶');
       const isRepair = accountName.includes('維修') || accountName.includes('修繕') || accountName.includes('保養');
@@ -474,34 +476,34 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     });
 
     // Stove Income (爐具收入) - Code 4104 or name containing "爐具"
-    const stoveIncomes = allIncomes.filter(item => item.accountCode === '4104' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('爐具'));
+    const stoveIncomes = allIncomes.filter(item => item.accountCode === '4104' || (accountNameByCode.get(item.accountCode) || '').includes('爐具'));
     const stoveIncomeAmount = stoveIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Repair Income (維修收入) - Code 4102 or name containing "維修" / "服務"
-    const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務'));
+    const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (accountNameByCode.get(item.accountCode) || '').includes('維修') || (accountNameByCode.get(item.accountCode) || '').includes('服務'));
     const repairIncomeAmount = repairIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Cylinder Incomes (買桶收入)
     const cylinderIncomes = allIncomes.filter(item => 
       item.remarks?.includes('買桶') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('買桶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('鋼瓶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('購桶')
+      (accountNameByCode.get(item.accountCode) || '').includes('買桶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('鋼瓶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('購桶')
     );
     const cylinderIncomeAmount = cylinderIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Inspection Incomes (檢驗費收入)
     const inspectionIncomes = allIncomes.filter(item => 
       item.remarks?.includes('檢驗') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('檢驗')
+      (accountNameByCode.get(item.accountCode) || '').includes('檢驗')
     );
     const inspectionIncomeAmount = inspectionIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Deposit Incomes (押瓶收入)
     const depositIncomes = allIncomes.filter(item => 
       item.remarks?.includes('押瓶') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('押瓶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('押金')
+      (accountNameByCode.get(item.accountCode) || '').includes('押瓶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('押金')
     );
     const depositIncomeAmount = depositIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
@@ -543,7 +545,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       gasGrossProfit: totalGrossProfit
     });
     const currentReceivables = monthlyOperating?.receivables
-      || getAggregateReceivableSummary(companyId, new Date().toISOString().split('T')[0]);
+      || getAggregateReceivableSummary(companyId, getTaiwanDateString());
     const customerNames = new Map((getCustomers() || []).map(item => [item.id, item.name || item.shortName]));
     const currentDebtOutstandingCustomers = (currentReceivables?.currentDebt?.rows || [])
       .filter(item => Number(item.outstandingAmount || 0) > 0)
@@ -599,6 +601,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ,currentDebtOutstandingCustomers
       ,currentOutstandingTotal: (currentReceivables?.monthly?.outstandingAmount || 0) + (currentReceivables?.currentDebt?.outstandingAmount || 0)
       ,repaymentDetails
+      ,receivableAsOfDate: currentReceivables?.asOfDate || getTaiwanDateString()
       ,operatingProfit
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
@@ -1443,11 +1446,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-value">{formatCurrency(dailySales.unpaidArAmount)}</span>
                 </div>
                 <div className="metric-card accent-purple">
-                  <span className="metric-label">目前未還：月結應收</span>
+                  <span className="metric-label">目前未還：月結應收（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentMonthlyOutstanding)}</span>
                 </div>
                 <div className="metric-card accent-red">
-                  <span className="metric-label">目前未還：現結欠款</span>
+                  <span className="metric-label">目前未還：現結欠款（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentDebtOutstanding)}</span>
                   {dailySales.currentDebtOutstandingCustomers.map(item => (
                     <span key={item.id} style={{ display: 'block', marginTop: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -1456,7 +1459,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   ))}
                 </div>
                 <div className="metric-card accent-gold">
-                  <span className="metric-label">目前尚未收回合計</span>
+                  <span className="metric-label">目前尚未收回合計（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentOutstandingTotal)}</span>
                 </div>
               </div>

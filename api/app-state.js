@@ -3,6 +3,7 @@ import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, isAccoun
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import { sanitizeInactiveCompanies } from '../src/utils/companyState.js';
 import { validateGasInventoryState } from '../src/utils/stateIntegrity.js';
+import { validateStateTransactionAmounts } from '../src/utils/transactionAmount.js';
 
 const getSessionUser = (state, session) => {
   if (!state || !session?.id) return null;
@@ -195,6 +196,9 @@ const isWriteRateLimited = (req, session) => {
 };
 
 export const validateStateWriteScope = (previousState, nextState, sessionUser) => {
+  const amounts = validateStateTransactionAmounts(nextState);
+  if (!amounts.ok) return amounts;
+
   const approvedIntegrity = validateApprovedTransactionIntegrity(previousState, nextState);
   if (!approvedIntegrity.ok) return approvedIntegrity;
 

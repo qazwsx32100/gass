@@ -15,6 +15,7 @@ import {
 import { sanitizeInactiveCompanies } from '../utils/companyState';
 import { normalizeDividendReserveSettings } from '../utils/dividendReserve';
 import { normalizeReportEligibility } from '../utils/reportEligibility';
+import { parseTransactionAmount } from '../utils/transactionAmount';
 
 const KEYS = {
   COMPANIES: 'bp_companies',
@@ -77,6 +78,7 @@ export const getRoleLabel = (role) => {
 };
 
 export const normalizeTransaction = (item) => {
+  const amount = parseTransactionAmount(item.amount);
   const status = LEGACY_STATUS_MAP[item.status] || item.status || 'pending_admin_review';
   const paymentMethod = item.paymentMethod || (item.bankId ? 'bank_transfer' : 'cash');
   const unitPrice = Number(item.unitPrice) || 0;
@@ -96,6 +98,7 @@ export const normalizeTransaction = (item) => {
 
   return normalizeReportEligibility({
     ...item,
+    amount: amount.ok ? amount.value : null,
     status,
     paymentMethod,
     paymentStatus,
@@ -960,8 +963,8 @@ export const initializeDB = (forceReset = false) => {
           normalized.date = new Date().toISOString().split('T')[0];
           isItemChanged = true;
         }
-        if (isNaN(normalized.amount) || normalized.amount === null || normalized.amount === undefined) {
-          normalized.amount = 0;
+        if (typeof normalized.amount !== 'number' || !Number.isFinite(normalized.amount)) {
+          normalized.amount = item.amount;
           isItemChanged = true;
         }
         if (!normalized.accountCode || typeof normalized.accountCode !== 'string') {
@@ -987,8 +990,8 @@ export const initializeDB = (forceReset = false) => {
           normalized.date = new Date().toISOString().split('T')[0];
           isItemChanged = true;
         }
-        if (isNaN(normalized.amount) || normalized.amount === null || normalized.amount === undefined) {
-          normalized.amount = 0;
+        if (typeof normalized.amount !== 'number' || !Number.isFinite(normalized.amount)) {
+          normalized.amount = item.amount;
           isItemChanged = true;
         }
         if (!normalized.accountCode || typeof normalized.accountCode !== 'string') {

@@ -9,6 +9,7 @@ import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 import { isManualGasCostExpenseEntry, isShareholderDistributionEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 import { calculateDividendReserve } from './dividendReserve';
 import { isEffectiveForReport } from './reportEligibility';
+import { getTaiwanDateString } from './taiwanDate';
 
 const CASH_LEDGER_START_DATE = '2026-07-01';
 
@@ -105,7 +106,7 @@ export const getMonthlyOperatingSummary = (companyId, yearMonth) => {
   const bankTransactions = getBankTransactions();
   const receivables = calculateReceivablesByOriginMonth({
     companyId,
-    asOfDate: new Date().toISOString().split('T')[0],
+    asOfDate: getTaiwanDateString(),
     originMonth: yearMonth,
     incomes,
     bankTransactions
@@ -140,7 +141,7 @@ const getAgingBucket = (days) => {
   return '90+';
 };
 
-export const getAgingReport = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+export const getAgingReport = (companyId, asOfDate = getTaiwanDateString()) => {
   const makeRow = (item, type) => {
     const dueDate = item.dueDate || item.checkDueDate || item.date;
     const daysOverdue = daysBetween(dueDate, asOfDate);
@@ -207,7 +208,7 @@ export const getAgingReport = (companyId, asOfDate = new Date().toISOString().sp
   };
 };
 
-export const getAggregateReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => (
+export const getAggregateReceivableSummary = (companyId, asOfDate = getTaiwanDateString()) => (
   calculateAggregateReceivables({
     companyId,
     asOfDate,
@@ -234,7 +235,7 @@ const matchSupplierExpense = (expense, supplier) => {
     .some(value => String(value || '').includes(target));
 };
 
-export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+export const getCustomerReceivableSummary = (companyId, asOfDate = getTaiwanDateString()) => {
   const customers = getCustomers().filter(item => item.companyId === companyId && item.status !== 'inactive');
   const unpaidIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
@@ -259,7 +260,7 @@ export const getCustomerReceivableSummary = (companyId, asOfDate = new Date().to
   }).sort((a, b) => b.receivableTotal - a.receivableTotal);
 };
 
-export const getSupplierPayableSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+export const getSupplierPayableSummary = (companyId, asOfDate = getTaiwanDateString()) => {
   const suppliers = getSuppliers().filter(item => item.companyId === companyId && item.status !== 'inactive');
   const unpaidExpenses = getExpenses().filter(item =>
     item.companyId === companyId &&
