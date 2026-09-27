@@ -9,10 +9,11 @@
     }
   },
   "rewrites": [
-    { "source": "/api/customer-history", "destination": "/api/telegram-webhook" },
-    { "source": "/api/ecpay-checkout", "destination": "/api/ecpay" },
-    { "source": "/api/ecpay-callback", "destination": "/api/ecpay" },
-    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" }
+    { "source": "/api/customer-history", "destination": "https://erp-weld-three-96.vercel.app/api/telegram-webhook" },
+    { "source": "/api/ecpay-checkout", "destination": "https://erp-weld-three-96.vercel.app/api/ecpay" },
+    { "source": "/api/ecpay-callback", "destination": "https://erp-weld-three-96.vercel.app/api/ecpay" },
+    { "source": "/api/backup-status", "destination": "https://erp-weld-three-96.vercel.app/api/backups?type=backup" },
+    { "source": "/api/:path*", "destination": "https://erp-weld-three-96.vercel.app/api/:path*" }
   ],
   "headers": [
     {
@@ -45,7 +46,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://oauth2.googleapis.com https://*.ingest.sentry.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://*.supabase.co https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://oauth2.googleapis.com https://*.ingest.sentry.io https://erp-weld-three-96.vercel.app https://*.tile.openstreetmap.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw; object-src 'none'"
         }
       ]
     }
