@@ -424,10 +424,24 @@ function App() {
   // Handle Login Submission
   const handleLogin = async (e) => {
     e.preventDefault();
-    const result = isSupabaseConnected()
-      ? await loginViaCloud({ email: loginEmail, password: loginPassword, device: getCurrentDevice() })
-      : verifyLogin(loginEmail, loginPassword);
-    if (result.success) {
+    let result = null;
+    try {
+      if (isSupabaseConnected()) {
+        result = await loginViaCloud({ email: loginEmail, password: loginPassword, device: getCurrentDevice() });
+      }
+    } catch (err) {
+      console.warn('Cloud login attempt error:', err);
+    }
+
+    // Resilient Fallback: If cloud login failed or returned an error, check local/admin credentials
+    if (!result || !result.success) {
+      const localResult = verifyLogin(loginEmail, loginPassword);
+      if (localResult.success) {
+        result = localResult;
+      }
+    }
+
+    if (result && result.success) {
       setIsLoggedIn(true);
       setUserRole(result.role);
       setCurrentUser(result.user);
@@ -440,14 +454,19 @@ function App() {
         setIsChangePwdOpen(true);
       }
       if (isSupabaseConnected()) {
-        await initSupabaseSync((updatedBy) => {
-          showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
-          setDbVersion(prev => prev + 1);
-        });
+        try {
+          await initSupabaseSync((updatedBy) => {
+            showToast(`☁️ 偵測到雲端資料更新（來自：${updatedBy}），已同步畫面。`, 'info');
+            setDbVersion(prev => prev + 1);
+          });
+        } catch (syncErr) {
+          console.warn('Background sync init warning:', syncErr);
+        }
       }
-      showToast(`👋 歡迎回來，${result.user.name}！系統已成功載入您的權限。`, 'success');
+      showToast(`👋 歡迎回來，${result.user.name || '使用者'}！系統已成功載入您的權限。`, 'success');
     } else {
-      setLoginError(result.error);
+      const errorMsg = result?.error || '帳號或密碼錯誤，請重新輸入。';
+      setLoginError(errorMsg);
       showToast('❌ 登入失敗！請確認帳號密碼。', 'error');
     }
   };
