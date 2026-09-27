@@ -10,6 +10,7 @@ import { calculateOperatingProfit } from '../utils/operatingProfit';
 import { isEffectiveForReport } from '../utils/reportEligibility';
 import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
+import GasCustomerMapPanel from '../components/GasCustomerMapPanel';
 import { getTaiwanDateString } from '../utils/taiwanDate';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
@@ -936,6 +937,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 <button className={`tab-btn ${reportType === 'monthlyDelivery' ? 'active' : ''}`} onClick={() => setReportType('monthlyDelivery')}>
                   🚚 歷史月支數與日均
                 </button>
+                <button className={`tab-btn ${reportType === 'customerMap' ? 'active' : ''}`} onClick={() => setReportType('customerMap')}>
+                  🗺️ 客戶分佈地圖
+                </button>
                 <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
                   應收/應付
                 </button>
@@ -1369,6 +1373,10 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
         {reportType === 'monthlyDelivery' && (
           <GasMonthlyDeliveryReportPanel />
+        )}
+
+        {reportType === 'customerMap' && (
+          <GasCustomerMapPanel />
         )}
 
         {reportType === 'dailySales' && (
