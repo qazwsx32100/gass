@@ -2178,7 +2178,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       amount: -Math.abs(Number(item.amount || 0)),
       calculatedAmount: -Math.abs(Number(item.calculatedAmount || item.amount || 0)),
       status: 'approved',
-      remarks: `沖銷 ${item.id}：${reason}`,
+      remarks: item.remarks || '',
+      correctionReason: reason,
       createdBy: actorId,
       createdByName: actor,
       createdByRole: userRole,
@@ -2195,7 +2196,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       id: correctedId,
       date: correctionDate,
       status: 'pending_admin_review',
-      remarks: `更正 ${item.id}：請編輯此筆後送審。原因：${reason}`,
+      remarks: item.remarks || '',
+      correctionReason: reason,
       createdBy: actorId,
       createdByName: actor,
       createdByRole: userRole,
@@ -3759,6 +3761,24 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                 {/* 2. Amount Field */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <>
+                    {formData.correctionOf && (
+                      <div style={{
+                        backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                        border: '1px solid rgba(234, 88, 12, 0.25)',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        marginBottom: '16px',
+                        color: 'var(--accent-orange, #c2410c)',
+                        fontSize: '0.88rem'
+                      }}>
+                        <div style={{ fontWeight: 600 }}>🏷️ 此為更正單據（原單號：{formData.correctionOf}）</div>
+                        {formData.correctionReason && (
+                          <div style={{ marginTop: '2px', color: 'var(--text-secondary)' }}>
+                            更正原因：{formData.correctionReason}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label">單價 (TWD)</label>
@@ -4494,6 +4514,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>備註</span>
                       <div style={{ wordBreak: 'break-all', whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>{item.remarks || '（無備註說明）'}</div>
                     </div>
+                    {item.correctionOf && (
+                      <DetailRow label="更正來源單號" value={item.correctionOf} color="var(--accent-orange, #c2410c)" isBold={true} />
+                    )}
+                    {item.correctionReason && (
+                      <DetailRow label="更改／更正原因" value={item.correctionReason} color="var(--accent-orange, #c2410c)" />
+                    )}
                     <DetailRow label="經辦人員" value={item.createdByName || '系統管理員'} />
                     <DetailRow label="系統登錄時間（稽核用）" value={formatDateTime(item.createdAt)} />
 
