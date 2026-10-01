@@ -1,3 +1,5 @@
+import { isEffectiveForReport } from './reportEligibility.js';
+
 export const RECEIVABLE_TYPES = Object.freeze({
   MONTHLY: 'monthly',
   CURRENT_DEBT: 'current_debt',
@@ -9,7 +11,7 @@ const asNumber = (value) => {
   return Number.isFinite(number) ? number : 0;
 };
 
-const isApproved = (item) => !item?.status || item.status === 'approved';
+const isApproved = isEffectiveForReport;
 
 export const getReceivableType = (item = {}) => {
   if (Object.values(RECEIVABLE_TYPES).includes(item.receivableType)) return item.receivableType;
@@ -48,8 +50,6 @@ export const resolveSettlementType = (item = {}, sourceIncome = null) => {
 
 export const isActiveSettlementReceipt = (item = {}) => (
   isApproved(item) &&
-  item.correctionStatus !== 'corrected' &&
-  item.correctionType !== 'reversal' &&
   item.direction === 'in' &&
   item.sourceType === 'settlement'
 );
@@ -141,8 +141,6 @@ export const calculateReceivablesByOriginMonth = ({
     .filter(item =>
       item?.companyId === companyId &&
       isApproved(item) &&
-      item.correctionStatus !== 'corrected' &&
-      item.correctionType !== 'reversal' &&
       item.paymentStatus === 'unpaid' &&
       (!asOfDate || String(item.date || '') <= asOfDate)
     )

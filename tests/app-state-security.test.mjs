@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { secureStateForSave } from '../api/_auth.js';
+import { isAccountSessionAllowed, secureStateForSave } from '../api/_auth.js';
 import { getPublicSessionForClient, validateStateWriteScope } from '../api/app-state.js';
 
 const approvedIncome = {
@@ -21,6 +21,27 @@ const baseState = {
   shareholders: [{ id: 'SH001', name: 'Owner' }],
   logs: []
 };
+
+test('allows an enabled account on an unrecognized device', () => {
+  const state = {
+    adminSecurity: { disabled: false, approvedDevices: [] },
+    shareholders: [{ id: 'SH002', disabled: false, approvedDevices: [] }]
+  };
+
+  assert.equal(isAccountSessionAllowed(state, { id: 'ADMIN', deviceId: 'NEW-ADMIN-DEVICE' }), true);
+  assert.equal(isAccountSessionAllowed(state, { id: 'SH002', deviceId: 'NEW-USER-DEVICE' }), true);
+});
+
+test('still blocks disabled or missing accounts after device approval is removed', () => {
+  const state = {
+    adminSecurity: { disabled: true },
+    shareholders: [{ id: 'SH002', disabled: true }]
+  };
+
+  assert.equal(isAccountSessionAllowed(state, { id: 'ADMIN' }), false);
+  assert.equal(isAccountSessionAllowed(state, { id: 'SH002' }), false);
+  assert.equal(isAccountSessionAllowed(state, { id: 'SH999' }), false);
+});
 
 test('blocks material edits to approved income even for admin', () => {
   const nextState = {

@@ -4,6 +4,7 @@ import {
   fetchAppState,
   getBearerToken,
   getClientIp,
+  isAccountSessionAllowed,
   listCloudBackups,
   restoreCloudBackup,
   sanitizeStateForClient,
@@ -13,16 +14,8 @@ import {
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import handleBackupStatus from './_backup-status.js';
 
-const isApprovedDevice = (security, deviceId) => (
-  Boolean(deviceId) &&
-  Array.isArray(security?.approvedDevices) &&
-  security.approvedDevices.some(device => device.id === deviceId)
-);
-
 const isAdminSessionAllowed = (state, session) => {
-  if (!state || session?.id !== 'ADMIN') return false;
-  const security = state.adminSecurity || {};
-  return !security.disabled && isApprovedDevice(security, session.deviceId);
+  return session?.id === 'ADMIN' && isAccountSessionAllowed(state, session);
 };
 
 const parseBody = (req) => (

@@ -1,10 +1,7 @@
 import { isActiveSettlementReceipt } from './receivables.js';
+import { isEffectiveForReport } from './reportEligibility.js';
 
-const isActiveApprovedRecord = (item) => (
-  (!item?.status || item.status === 'approved') &&
-  item.correctionStatus !== 'corrected' &&
-  item.correctionType !== 'reversal'
-);
+const isActiveApprovedRecord = isEffectiveForReport;
 
 const isDirectlyCollectedIncome = (item) => (
   isActiveApprovedRecord(item) &&

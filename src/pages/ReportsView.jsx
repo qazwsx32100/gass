@@ -7,6 +7,11 @@ import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment 
 import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { calculateOperatingProfit } from '../utils/operatingProfit';
+import { isEffectiveForReport } from '../utils/reportEligibility';
+import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
+import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
+import GasCustomerMapPanel from '../components/GasCustomerMapPanel';
+import { getTaiwanDateString } from '../utils/taiwanDate';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
@@ -18,6 +23,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   }); // pnl, balance, gas, investor, dividend
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [reserveRatio, setReserveRatio] = useState(0.1); // 10% reserve by default
+  const [reserveMode, setReserveMode] = useState('ratio');
+  const [customReserveAmount, setCustomReserveAmount] = useState(null);
   const [periodMode, setPeriodMode] = useState('month');
   const [singleDate, setSingleDate] = useState(`${year}-${month}-01`);
   const [rangeStart, setRangeStart] = useState(`${year}-${month}-01`);
@@ -94,8 +101,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       } else {
         setReserveRatio(0.1);
       }
+      if (match?.reserveMode === 'amount' && match.reserveAmount !== null && match.reserveAmount !== undefined) {
+        setReserveMode('amount');
+        setCustomReserveAmount(Number(match.reserveAmount));
+      } else {
+        setReserveMode('ratio');
+        setCustomReserveAmount(null);
+      }
     } else {
       setReserveRatio(0.1);
+      setReserveMode('ratio');
+      setCustomReserveAmount(null);
     }
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
@@ -113,6 +129,19 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     return getIncomeStatement(companyId, activePeriodType, activePeriodVal);
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
 
+  const reportReconciliationTotals = useMemo(() => {
+    void triggerRefresh;
+    const sumRaw = rows => rows
+      .filter(item => item.companyId === companyId && isDateInPeriod(item.date, activePeriodType, activePeriodVal))
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    return {
+      rawIncome: sumRaw(getIncomes()),
+      rawExpense: sumRaw(getExpenses()),
+      effectiveIncome: pnl.totalRevenue,
+      effectiveExpense: pnl.totalCogs + pnl.totalExpenses
+    };
+  }, [companyId, activePeriodType, activePeriodVal, pnl.totalRevenue, pnl.totalCogs, pnl.totalExpenses, triggerRefresh]);
+
   // 2. Compute Balance Sheet Data
   const balanceSheet = useMemo(() => {
     void triggerRefresh;
@@ -123,8 +152,14 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
   // 3. Compute Dividend Data
   const dividends = useMemo(() => {
     void triggerRefresh;
-    return getDividendsForPeriod(companyId, activePeriodType, activePeriodVal, reserveRatio);
-  }, [companyId, activePeriodType, activePeriodVal, reserveRatio, triggerRefresh]);
+    return getDividendsForPeriod(
+      companyId,
+      activePeriodType,
+      activePeriodVal,
+      reserveRatio,
+      reserveMode === 'amount' ? customReserveAmount : null
+    );
+  }, [companyId, activePeriodType, activePeriodVal, reserveRatio, reserveMode, customReserveAmount, triggerRefresh]);
 
   const [customAmountText, setCustomAmountText] = useState('');
   const [reservePercentText, setReservePercentText] = useState('');
@@ -139,16 +174,16 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   useEffect(() => {
     if (!isPercentFocused) {
-      setReservePercentText(String(Math.round(reserveRatio * 100)));
+      setReservePercentText(String(Number((dividends?.reserveRatio * 100 || 0).toFixed(2))));
     }
-  }, [reserveRatio, isPercentFocused]);
+  }, [dividends?.reserveRatio, isPercentFocused]);
 
   // 4. Drill Down Transactions Query
   const drillDownTransactions = useMemo(() => {
     void triggerRefresh;
     if (!drillDownCode) return [];
-    const incs = getIncomes().filter(i => i.companyId === companyId && i.accountCode === drillDownCode && i.status === 'approved');
-    const exps = getExpenses().filter(e => e.companyId === companyId && e.accountCode === drillDownCode && e.status === 'approved');
+    const incs = getIncomes().filter(i => i.companyId === companyId && i.accountCode === drillDownCode && isEffectiveForReport(i));
+    const exps = getExpenses().filter(e => e.companyId === companyId && e.accountCode === drillDownCode && isEffectiveForReport(e));
     
     const all = [
       ...incs.map(i => ({ ...i, type: 'income' })),
@@ -186,9 +221,13 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       startDate = `${activePeriodVal}-01`;
     }
     
-    const allIncomes = getIncomes().filter(i => i.companyId === companyId && i.status === 'approved' && i.date < startDate);
-    const allExpenses = getExpenses().filter(e => e.companyId === companyId && e.status === 'approved' && e.date < startDate);
-    const companyPriorProfit = allIncomes.reduce((s, i) => s + i.amount, 0) - allExpenses.reduce((s, e) => s + (e.amount + (e.cogsAmount || 0)), 0);
+    const priorEndDate = new Date(`${startDate}T00:00:00Z`);
+    priorEndDate.setDate(priorEndDate.getDate() - 1);
+    const priorPeriod = getIncomeStatement(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate: priorEndDate.toISOString().slice(0, 10)
+    });
+    const companyPriorProfit = priorPeriod.netProfit;
     
     // Ownership shares at end of period
     const getShareholderSharesAtDate = (cid, dateStr) => {
@@ -323,11 +362,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   const dailySales = useMemo(() => {
     void triggerRefresh;
-    const isActiveRecord = item => (
-      (!item.status || item.status === 'approved') &&
-      item.correctionStatus !== 'corrected' &&
-      item.correctionType !== 'reversal'
-    );
+    const isActiveRecord = isEffectiveForReport;
     // Keep the complete income list for cross-month receivable attribution,
     // then select the requested operating period for ordinary sales/expenses.
     const companyIncomes = getIncomes().filter(item =>
@@ -341,6 +376,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     );
     const allExpenses = companyExpenses.filter(item => isDateInPeriod(item.date, activePeriodType, activePeriodVal));
     const chartOfAccounts = getChartOfAccounts();
+    const accountNameByCode = new Map(chartOfAccounts.map(account => [account.code, account.name || '']));
 
     // Gas Sales (4101)
     const gasSales = allIncomes.filter(item => item.accountCode === '4101' && String(item.remarks || '').startsWith('當日營業彙總 -'));
@@ -423,7 +459,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
     allExpenses.forEach(exp => {
       const code = exp.accountCode;
-      const accountName = getChartOfAccounts().find(a => a.code === code)?.name || '';
+      const accountName = accountNameByCode.get(code) || '';
 
       const isBuyCylinder = accountName.includes('買桶') || accountName.includes('鋼瓶') || accountName.includes('購桶');
       const isRepair = accountName.includes('維修') || accountName.includes('修繕') || accountName.includes('保養');
@@ -441,34 +477,34 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
     });
 
     // Stove Income (爐具收入) - Code 4104 or name containing "爐具"
-    const stoveIncomes = allIncomes.filter(item => item.accountCode === '4104' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('爐具'));
+    const stoveIncomes = allIncomes.filter(item => item.accountCode === '4104' || (accountNameByCode.get(item.accountCode) || '').includes('爐具'));
     const stoveIncomeAmount = stoveIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Repair Income (維修收入) - Code 4102 or name containing "維修" / "服務"
-    const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('維修') || (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('服務'));
+    const repairIncomes = allIncomes.filter(item => item.accountCode === '4102' || (accountNameByCode.get(item.accountCode) || '').includes('維修') || (accountNameByCode.get(item.accountCode) || '').includes('服務'));
     const repairIncomeAmount = repairIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Cylinder Incomes (買桶收入)
     const cylinderIncomes = allIncomes.filter(item => 
       item.remarks?.includes('買桶') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('買桶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('鋼瓶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('購桶')
+      (accountNameByCode.get(item.accountCode) || '').includes('買桶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('鋼瓶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('購桶')
     );
     const cylinderIncomeAmount = cylinderIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Inspection Incomes (檢驗費收入)
     const inspectionIncomes = allIncomes.filter(item => 
       item.remarks?.includes('檢驗') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('檢驗')
+      (accountNameByCode.get(item.accountCode) || '').includes('檢驗')
     );
     const inspectionIncomeAmount = inspectionIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
     // Deposit Incomes (押瓶收入)
     const depositIncomes = allIncomes.filter(item => 
       item.remarks?.includes('押瓶') || 
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('押瓶') ||
-      (getChartOfAccounts().find(a => a.code === item.accountCode)?.name || '').includes('押金')
+      (accountNameByCode.get(item.accountCode) || '').includes('押瓶') ||
+      (accountNameByCode.get(item.accountCode) || '').includes('押金')
     );
     const depositIncomeAmount = depositIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
@@ -510,7 +546,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       gasGrossProfit: totalGrossProfit
     });
     const currentReceivables = monthlyOperating?.receivables
-      || getAggregateReceivableSummary(companyId, new Date().toISOString().split('T')[0]);
+      || getAggregateReceivableSummary(companyId, getTaiwanDateString());
     const customerNames = new Map((getCustomers() || []).map(item => [item.id, item.name || item.shortName]));
     const currentDebtOutstandingCustomers = (currentReceivables?.currentDebt?.rows || [])
       .filter(item => Number(item.outstandingAmount || 0) > 0)
@@ -566,6 +602,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
       ,currentDebtOutstandingCustomers
       ,currentOutstandingTotal: (currentReceivables?.monthly?.outstandingAmount || 0) + (currentReceivables?.currentDebt?.outstandingAmount || 0)
       ,repaymentDetails
+      ,receivableAsOfDate: currentReceivables?.asOfDate || getTaiwanDateString()
       ,operatingProfit
     };
   }, [companyId, activePeriodType, activePeriodVal, triggerRefresh]);
@@ -863,6 +900,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Weather Revenue Correlation BI Module */}
+      <WeatherRevenueWidget />
+
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
@@ -893,6 +933,12 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 </button>
                 <button className={`tab-btn ${reportType === 'dailySales' ? 'active' : ''}`} onClick={() => setReportType('dailySales')}>
                   🛍️ 營業狀況
+                </button>
+                <button className={`tab-btn ${reportType === 'monthlyDelivery' ? 'active' : ''}`} onClick={() => setReportType('monthlyDelivery')}>
+                  🚚 歷史月支數與日均
+                </button>
+                <button className={`tab-btn ${reportType === 'customerMap' ? 'active' : ''}`} onClick={() => setReportType('customerMap')}>
+                  🗺️ 客戶分佈地圖
                 </button>
                 <button className={`tab-btn ${reportType === 'arap' ? 'active' : ''}`} onClick={() => setReportType('arap')}>
                   應收/應付
@@ -1002,6 +1048,18 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               </span>
             </div>
             <div className="card-body">
+              <div className="grid-2col" style={{ marginBottom: '20px' }}>
+                <div className="summary-card">
+                  <strong>收入總額對照</strong>
+                  <div>原始總額（含更正／沖銷／作廢）：{formatCurrency(reportReconciliationTotals.rawIncome)}</div>
+                  <div>報表有效總額：{formatCurrency(reportReconciliationTotals.effectiveIncome)}</div>
+                </div>
+                <div className="summary-card">
+                  <strong>支出總額對照</strong>
+                  <div>原始總額（含更正／沖銷／作廢）：{formatCurrency(reportReconciliationTotals.rawExpense)}</div>
+                  <div>報表有效總額（依損益規則）：{formatCurrency(reportReconciliationTotals.effectiveExpense)}</div>
+                </div>
+              </div>
               <div className="grid-2col" style={{ marginBottom: '24px' }}>
                 <PieChart title="收入科目比例" items={revenuePieItems} emptyText="此期間沒有收入資料" />
                 <PieChart title="支出科目比例" items={expensePieItems} emptyText="此期間沒有支出資料" />
@@ -1313,6 +1371,14 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
           </div>
         )}
 
+        {reportType === 'monthlyDelivery' && (
+          <GasMonthlyDeliveryReportPanel />
+        )}
+
+        {reportType === 'customerMap' && (
+          <GasCustomerMapPanel />
+        )}
+
         {reportType === 'dailySales' && (
           <div className="card">
             <div className="card-header">
@@ -1388,11 +1454,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   <span className="metric-value">{formatCurrency(dailySales.unpaidArAmount)}</span>
                 </div>
                 <div className="metric-card accent-purple">
-                  <span className="metric-label">目前未還：月結應收</span>
+                  <span className="metric-label">目前未還：月結應收（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentMonthlyOutstanding)}</span>
                 </div>
                 <div className="metric-card accent-red">
-                  <span className="metric-label">目前未還：現結欠款</span>
+                  <span className="metric-label">目前未還：現結欠款（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentDebtOutstanding)}</span>
                   {dailySales.currentDebtOutstandingCustomers.map(item => (
                     <span key={item.id} style={{ display: 'block', marginTop: '6px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
@@ -1401,7 +1467,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                   ))}
                 </div>
                 <div className="metric-card accent-gold">
-                  <span className="metric-label">目前尚未收回合計</span>
+                  <span className="metric-label">目前尚未收回合計（截至 {dailySales.receivableAsOfDate}）</span>
                   <span className="metric-value">{formatCurrency(dailySales.currentOutstandingTotal)}</span>
                 </div>
               </div>
@@ -2331,7 +2397,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>保留公積金 ({Math.round(reserveRatio * 100)}%)</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>保留公積金 ({(dividends.reserveRatio * 100).toFixed(2)}%，依{reserveMode === 'amount' ? '金額' : '比例'})</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
                       -${dividends.reserveAmount.toLocaleString()}
                     </div>
@@ -2366,10 +2432,17 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           onChange={e => {
                             const valText = e.target.value;
                             setCustomAmountText(valText);
+                            if (valText === '') {
+                              setReserveMode('ratio');
+                              setCustomReserveAmount(null);
+                              return;
+                            }
                             const valNum = Number(valText || 0);
                             const val = Math.max(0, isNaN(valNum) ? 0 : valNum);
                             const maxVal = dividends.netProfit;
                             const finalVal = val > maxVal ? maxVal : val;
+                            setReserveMode('amount');
+                            setCustomReserveAmount(finalVal);
                             setReserveRatio(dividends.netProfit > 0 ? finalVal / dividends.netProfit : 0);
                           }} 
                         />
@@ -2394,6 +2467,8 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                               setReservePercentText(valText);
                               const valNum = Number(valText || 0);
                               const val = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
+                              setReserveMode('ratio');
+                              setCustomReserveAmount(null);
                               setReserveRatio(val / 100);
                             }} 
                           />
@@ -2412,7 +2487,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                         className="form-control" 
                         style={{ padding: '0', cursor: 'pointer', height: '6px' }} 
                         value={reserveRatio} 
-                        onChange={e => setReserveRatio(parseFloat(e.target.value))} 
+                        onChange={e => {
+                          setReserveMode('ratio');
+                          setCustomReserveAmount(null);
+                          setReserveRatio(parseFloat(e.target.value));
+                        }}
                       />
                     </div>
                     
@@ -2430,21 +2509,29 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           if (idx !== -1) {
                             locks[idx] = {
                               ...locks[idx],
-                              reserveRatio: reserveRatio
+                              reserveRatio: dividends.reserveRatio,
+                              reserveMode,
+                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
                             };
                           } else {
                             locks.push({
                               companyId,
                               yearMonth: activePeriodVal,
                               locked: false,
-                              reserveRatio: reserveRatio
+                              reserveRatio: dividends.reserveRatio,
+                              reserveMode,
+                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
                             });
                           }
                           savePeriodLocks(locks);
-                          
-                          // Dispatch global refresh event & sync to Supabase
+
                           window.dispatchEvent(new Event('bp_data_changed'));
-                          showToast('💾 公積金設定已成功儲存並同步！', 'success');
+                          const synced = await syncLocalToSupabase('股東分紅公積金設定');
+                          if (synced) {
+                            showToast(`💾 公積金設定已依${reserveMode === 'amount' ? '金額' : '比例'}儲存並同步！`, 'success');
+                          } else {
+                            showToast('❌ 公積金設定已暫存於本機，但雲端同步失敗，請稍後再試。', 'error');
+                          }
                         }}
                       >
                         💾 儲存設定

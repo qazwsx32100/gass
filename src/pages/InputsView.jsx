@@ -19,6 +19,11 @@ import {
   archiveChange, archiveDeletion,
   isPeriodLocked
 } from '../db/storage';
+import { buildAccountGroups, getTopLevelAccount } from '../utils/accountHierarchy';
+import { activeAccountsOnly } from '../utils/accountUsage';
+import { isShareholderDistributionEntry } from '../utils/expensePolicy';
+import { isEffectiveForReport } from '../utils/reportEligibility';
+import { getMerchandiseStock, isMerchandisePurchaseAccount, isMerchandiseSalesAccount, validateMerchandiseTransaction } from '../utils/merchandiseInventory';
 import {
   canInputBasicLedger,
   canManageShareholderLedger,
@@ -185,8 +190,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     return true;
   };
   const getDailySalesSummaries = useCallback(() => {
-    const allIncomes = getIncomes().filter(item => item.companyId === companyId && item.status === 'approved');
-    const allExpenses = getExpenses().filter(item => item.companyId === companyId && item.status === 'approved');
+    const allIncomes = getIncomes().filter(item => item.companyId === companyId && isEffectiveForReport(item));
+    const allExpenses = getExpenses().filter(item => item.companyId === companyId && isEffectiveForReport(item));
     const allBankTransactions = getBankTransactions().filter(item => item.companyId === companyId && isActiveSettlementReceipt(item));
     const incomeById = new Map(allIncomes.map(item => [item.id, item]));
 
@@ -399,15 +404,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       i.companyId === companyId && 
       i.paymentMethod === 'check' && 
       i.status === 'approved' &&
-      i.correctionStatus !== 'corrected' &&
-      i.correctionType !== 'reversal'
+      isEffectiveForReport(i)
     );
     const exps = getExpenses().filter(e => 
       e.companyId === companyId && 
       e.paymentMethod === 'check' && 
       e.status === 'approved' &&
-      e.correctionStatus !== 'corrected' &&
-      e.correctionType !== 'reversal'
+      isEffectiveForReport(e)
     );
 
     const all = [
@@ -573,8 +576,17 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (!reconciliationBankId && banks[0]?.id) setReconciliationBankId(banks[0].id);
   }, [banks, reconciliationBankId]);
 
-  const revenueAccounts = useMemo(() => accounts.filter(a => a.type === 'revenue').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
-  const cogsExpenseAccounts = useMemo(() => accounts.filter(a => a.type === 'cogs' || a.type === 'expense').sort((a, b) => a.code.localeCompare(b.code)), [accounts]);
+  const revenueAccounts = useMemo(() => accounts
+    .filter(a => a.type === 'revenue')
+    .filter(a => activeAccountsOnly(a) || a.code === editingItem?.accountCode)
+    .sort((a, b) => a.code.localeCompare(b.code)), [accounts, editingItem]);
+  const cogsExpenseAccounts = useMemo(() => accounts
+    .filter(a => a.type === 'cogs' || a.type === 'expense')
+    .filter(a => activeAccountsOnly(a) || a.code === editingItem?.accountCode)
+    .sort((a, b) => a.code.localeCompare(b.code)), [accounts, editingItem]);
+  const revenueAccountGroups = useMemo(() => buildAccountGroups(revenueAccounts), [revenueAccounts]);
+  const expenseAccountGroups = useMemo(() => buildAccountGroups(cogsExpenseAccounts), [cogsExpenseAccounts]);
+  const activeAccountGroups = activeSubTab === 'income' ? revenueAccountGroups : expenseAccountGroups;
   const gasInventoryStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const activeDeposits = customerCylinderDeposits.filter(item => item.depositStatus === 'active');
@@ -668,6 +680,23 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     disposalDate: '',
     disposalAmount: ''
   });
+  const selectedTopLevelCode = getTopLevelAccount(
+    accounts.find(account => account.code === formData.accountCode),
+    accounts
+  )?.code || '';
+  const selectedAccountGroup = activeAccountGroups.find(group => group.parent.code === selectedTopLevelCode)
+    || activeAccountGroups[0]
+    || null;
+  const merchandiseStock = useMemo(() => {
+    if (!isMerchandisePurchaseAccount(formData.accountCode) && !isMerchandiseSalesAccount(formData.accountCode)) return null;
+    return getMerchandiseStock({
+      companyId,
+      accountCode: formData.accountCode,
+      incomes: getIncomes(),
+      expenses: getExpenses(),
+      excludeId: editingItem?.id || ''
+    });
+  }, [companyId, formData.accountCode, editingItem, triggerRefresh]);
 
   // Combined unpaid AR/AP items
   const unpaidArapItems = useMemo(() => {
@@ -676,15 +705,13 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       i.companyId === companyId && 
       i.paymentStatus === 'unpaid' && 
       i.status === 'approved' &&
-      i.correctionStatus !== 'corrected' &&
-      i.correctionType !== 'reversal'
+      isEffectiveForReport(i)
     );
     const expenses = getExpenses().filter(e => 
       e.companyId === companyId && 
       e.paymentStatus === 'unpaid' && 
       e.status === 'approved' &&
-      e.correctionStatus !== 'corrected' &&
-      e.correctionType !== 'reversal'
+      isEffectiveForReport(e)
     );
     
     const combined = [
@@ -701,8 +728,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'income') {
       const rows = getIncomes().filter(i => 
         i.companyId === companyId &&
-        i.correctionStatus !== 'corrected' &&
-        i.correctionType !== 'reversal'
+        isEffectiveForReport(i)
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -714,8 +740,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'expense') {
       const rows = getExpenses().filter(e => 
         e.companyId === companyId &&
-        e.correctionStatus !== 'corrected' &&
-        e.correctionType !== 'reversal'
+        isEffectiveForReport(e)
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -1234,6 +1259,21 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     const quantityVal = parseFloat(formData.quantity) || 0;
     const calculatedAmountVal = unitPriceVal > 0 && quantityVal > 0 ? unitPriceVal * quantityVal : 0;
     const amountVal = parseFloat(formData.amount) || calculatedAmountVal || 0;
+    if (activeSubTab === 'income' || activeSubTab === 'expense') {
+      const merchandiseValidation = validateMerchandiseTransaction({
+        kind: activeSubTab,
+        companyId,
+        accountCode: formData.accountCode,
+        quantity: quantityVal,
+        incomes: getIncomes(),
+        expenses: getExpenses(),
+        excludeId: editingItem?.id || ''
+      });
+      if (!merchandiseValidation.valid) {
+        window.alert(merchandiseValidation.message);
+        return;
+      }
+    }
     const principalVal = parseFloat(formData.principal) || 0;
     const interestVal = parseFloat(formData.interestRate) || 0;
     const monthsVal = parseInt(formData.months, 10) || 0;
@@ -1359,6 +1399,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       }
     } else if (activeSubTab === 'expense') {
       const db = getExpenses();
+      const entryNature = isShareholderDistributionEntry({ accountCode: formData.accountCode }) ? 'equity_distribution' : '';
       if (editingItem) {
         if (editingItem.status === 'void') {
           window.alert('已作廢的支出不能修改。');
@@ -1373,6 +1414,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               pendingChanges: {
                 date: formData.date,
                 accountCode: formData.accountCode,
+                entryNature,
                 ...paymentFields,
                 ...calculationFields,
                 amount: amountVal,
@@ -1386,7 +1428,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
             showToast('已提交修改申請，等待管理員核准！', 'info');
             success = true;
           } else {
-            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
+            db[index] = { ...db[index], date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, status: 'approved', pendingChanges: null };
             archiveChange({ collection: 'expenses', recordId: editingItem.id, action: 'update', before: editingItem, after: db[index], actor: operatorName, reason: '支出資料修改' });
             saveExpenses(db);
             addLog(operatorName, 'UPDATE_EXPENSE', `Update expense ${editingItem.id}: $${editingItem.amount.toLocaleString()} -> $${amountVal.toLocaleString()}.`);
@@ -1395,7 +1437,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         }
       } else {
         const newId = generateId('expense', formData.date);
-        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
+        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
         saveExpenses(db);
         addLog(operatorName, 'CREATE_EXPENSE', `Create expense ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
@@ -1759,6 +1801,22 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         onDataChange();
         return;
       }
+      const candidate = item.status === 'pending_edit_review' && item.pendingChanges
+        ? { ...item, ...item.pendingChanges }
+        : item;
+      const merchandiseValidation = validateMerchandiseTransaction({
+        kind: isIncome ? 'income' : 'expense',
+        companyId,
+        accountCode: candidate.accountCode,
+        quantity: candidate.quantity,
+        incomes: getIncomes(),
+        expenses: getExpenses(),
+        excludeId: item.id
+      });
+      if (!merchandiseValidation.valid) {
+        window.alert(merchandiseValidation.message);
+        return;
+      }
       if (item.status === 'pending_edit_review' && item.pendingChanges) {
         db[index] = {
           ...item,
@@ -2016,7 +2074,12 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   };
   // Lookups helper
   const getAccountName = (code) => {
-    return accounts.find(a => a.code === code)?.name || code || '未知科目';
+    const account = accounts.find(a => a.code === code);
+    if (!account) return code || '未知科目';
+    const parent = getTopLevelAccount(account, accounts);
+    return parent && parent.code !== account.code
+      ? `${parent.name} › ${account.name}`
+      : account.name;
   };
 
   const getBankName = (id) => {
@@ -2684,6 +2747,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
+                    <th>更改紀錄</th>
                     {showActionColumn && <th style={{ textAlign: 'right', minWidth: '180px' }}>操作</th>}
                   </tr>
                 )}
@@ -2699,6 +2763,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>狀態</th>
                     {showCreatorAudit && <th>建立人</th>}
                     <th>備註</th>
+                    <th>更改紀錄</th>
                     {showActionColumn && <th style={{ textAlign: 'right', minWidth: '180px' }}>操作</th>}
                   </tr>
                 )}
@@ -2879,6 +2944,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               </button>
                             </div>
                           )}
+                        </td>
+                        <td style={{ minWidth: '180px', maxWidth: '280px', whiteSpace: 'normal', color: 'var(--accent-orange, #c77700)', fontSize: '0.85rem' }}>
+                          {item.correctionReason || (item.correctionOf ? `更正自 ${item.correctionOf}` : '—')}
                         </td>
                       </>
                     )}
@@ -3090,6 +3158,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                               </button>
                             </div>
                           )}
+                        </td>
+                        <td style={{ minWidth: '180px', maxWidth: '280px', whiteSpace: 'normal', color: 'var(--accent-orange, #c77700)', fontSize: '0.85rem' }}>
+                          {item.correctionReason || (item.correctionOf ? `更正自 ${item.correctionOf}` : '—')}
                         </td>
                       </>
                     )}
@@ -3749,139 +3820,47 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   </div>
                 )}
 
+                {merchandiseStock && (
+                  <div className={`alert-box ${merchandiseStock.available > 0 ? 'success' : 'warning'}`} style={{ margin: 0 }}>
+                    <strong>商品庫存：</strong>
+                    已進貨 {merchandiseStock.purchased.toLocaleString()} 件、
+                    已銷售 {merchandiseStock.sold.toLocaleString()} 件、
+                    目前可售 {merchandiseStock.available.toLocaleString()} 件。
+                    {activeSubTab === 'income' && merchandiseStock.available <= 0 ? '請先登錄並核准進貨。' : ''}
+                  </div>
+                )}
+
+                {activeSubTab === 'expense' && isShareholderDistributionEntry({ accountCode: formData.accountCode }) && (
+                  <div className="alert-box info" style={{ margin: 0 }}>
+                    此筆會記為股東盈餘分配：扣減現金／銀行與未分配盈餘，不列入本期損益費用。
+                  </div>
+                )}
+
                 {/* 3. Account Category */}
                 {(activeSubTab === 'income' || activeSubTab === 'expense') && (
                   <div className="form-group">
-                    <label className="form-label">會計科目</label>
+                    <label className="form-label">第一層大分類</label>
+                    <select
+                      required
+                      className="select-dropdown"
+                      style={{ width: '100%', marginBottom: '10px' }}
+                      value={selectedTopLevelCode}
+                      onChange={e => setFormData({ ...formData, accountCode: e.target.value })}
+                    >
+                      {activeAccountGroups.map(group => (
+                        <option key={group.parent.code} value={group.parent.code}>
+                          {group.parent.code} - {group.parent.name}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="form-label">第二層明細科目</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.accountCode} onChange={e => setFormData({ ...formData, accountCode: e.target.value })}>
-                      {activeSubTab === 'income' 
-                        ? (() => {
-                            // 1. Separate 4104 sub-accounts from others
-                            const sub4104 = revenueAccounts.filter(a => a.code.startsWith('4104') && a.code !== '4104');
-                            
-                            // Group 4104 sub-accounts dynamically based on custom subGroup field, with keyword fallback
-                            const groupsMap = {};
-                            
-                            sub4104.forEach(a => {
-                              let groupName = (a.subGroup || '').trim();
-                              if (!groupName) {
-                                const searchStr = `${a.name} ${a.desc || ''}`;
-                                if (searchStr.includes('爐具') || searchStr.includes('爐')) {
-                                  groupName = '爐具類';
-                                } else if (searchStr.includes('調整器') || searchStr.includes('中壓') || searchStr.includes('低壓')) {
-                                  groupName = '調整器類';
-                                } else if (searchStr.includes('熱水器')) {
-                                  groupName = '熱水器類';
-                                } else {
-                                  groupName = '其他零件類';
-                                }
-                              }
-                              
-                              if (!groupsMap[groupName]) {
-                                groupsMap[groupName] = [];
-                              }
-                              groupsMap[groupName].push(a);
-                            });
-
-                            // Remaining accounts (non-4104 sub-accounts and the main 4104 itself)
-                            const mainAndOtherSubAccounts = revenueAccounts.filter(a => !a.code.startsWith('4104') || a.code === '4104');
-
-                            // Build the final select options array
-                            const optionsList = [];
-
-                            mainAndOtherSubAccounts.forEach(a => {
-                              const isSub = revenueAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
-                              optionsList.push(
-                                <option key={a.code} value={a.code}>
-                                  {isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})
-                                </option>
-                              );
-
-                              // If it is the main '4104' account, insert all its sub-groups
-                              if (a.code === '4104') {
-                                Object.keys(groupsMap).sort().forEach(gName => {
-                                  const groupAccounts = groupsMap[gName];
-                                  if (groupAccounts.length > 0) {
-                                    optionsList.push(
-                                      <optgroup key={`group-rev-${gName}`} label={`　　▼ 4104 爐具/零件 - ${gName}`}>
-                                        {groupAccounts.map(sub => (
-                                          <option key={sub.code} value={sub.code}>
-                                            　　↳ {sub.code} - {sub.name} ({sub.desc})
-                                          </option>
-                                        ))}
-                                      </optgroup>
-                                    );
-                                  }
-                                });
-                              }
-                            });
-
-                            return optionsList;
-                          })()
-                        : (() => {
-                            // 1. Separate 5102 sub-accounts from others
-                            const sub5102 = cogsExpenseAccounts.filter(a => a.code.startsWith('5102') && a.code !== '5102');
-                            
-                            // Group 5102 sub-accounts dynamically based on custom subGroup field, with keyword fallback
-                            const groupsMap = {};
-                            
-                            sub5102.forEach(a => {
-                              let groupName = (a.subGroup || '').trim();
-                              if (!groupName) {
-                                const searchStr = `${a.name} ${a.desc || ''}`;
-                                if (searchStr.includes('爐具') || searchStr.includes('爐')) {
-                                  groupName = '爐具類';
-                                } else if (searchStr.includes('調整器') || searchStr.includes('中壓') || searchStr.includes('低壓')) {
-                                  groupName = '調整器類';
-                                } else if (searchStr.includes('熱水器')) {
-                                  groupName = '熱水器類';
-                                } else {
-                                  groupName = '其他零件類';
-                                }
-                              }
-                              
-                              if (!groupsMap[groupName]) {
-                                groupsMap[groupName] = [];
-                              }
-                              groupsMap[groupName].push(a);
-                            });
-
-                            // Remaining accounts (non-5102 sub-accounts and the main 5102 itself)
-                            const mainAndOtherSubAccounts = cogsExpenseAccounts.filter(a => !a.code.startsWith('5102') || a.code === '5102');
-
-                            // Build the final select options array
-                            const optionsList = [];
-
-                            mainAndOtherSubAccounts.forEach(a => {
-                              const isSub = cogsExpenseAccounts.some(p => p.code !== a.code && a.code.startsWith(p.code));
-                              optionsList.push(
-                                <option key={a.code} value={a.code}>
-                                  {isSub ? '　↳ ' : ''}{a.code} - {a.name} ({a.desc})
-                                </option>
-                              );
-
-                              // If it is the main '5102' account, insert all its sub-groups
-                              if (a.code === '5102') {
-                                Object.keys(groupsMap).sort().forEach(gName => {
-                                  const groupAccounts = groupsMap[gName];
-                                  if (groupAccounts.length > 0) {
-                                    optionsList.push(
-                                      <optgroup key={`group-${gName}`} label={`　　▼ 5102 材料零件 - ${gName}`}>
-                                        {groupAccounts.map(sub => (
-                                          <option key={sub.code} value={sub.code}>
-                                            　　↳ {sub.code} - {sub.name} ({sub.desc})
-                                          </option>
-                                        ))}
-                                      </optgroup>
-                                    );
-                                  }
-                                });
-                              }
-                            });
-
-                            return optionsList;
-                          })()
-                      }
+                      {(selectedAccountGroup?.accounts || []).map(account => (
+                        <option key={account.code} value={account.code}>
+                          {account.code === selectedAccountGroup.parent.code ? '一般／未細分：' : ''}
+                          {account.code} - {account.name}{account.desc ? `（${account.desc}）` : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 )}

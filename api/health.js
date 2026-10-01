@@ -27,6 +27,10 @@ export default async function handler(req, res) {
       ok: false,
       service: 'gass-erp-api',
       database: 'unreachable',
+      errorMessage: String(error?.message || error),
+      hasSupabaseUrl: Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+      hasSyncSecret: Boolean(process.env.ERP_SYNC_SECRET),
+      hasSecretKey: Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY),
       timestamp: new Date().toISOString()
     });
   }

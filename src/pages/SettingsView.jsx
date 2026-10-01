@@ -12,16 +12,20 @@ import {
   getAuditArchive,
   getAdminSecurity,
   getPeriodLocks, setPeriodLock,
-  setAccountDisabled, approveDevice, rejectDevice, revokeDevice,
+  setAccountDisabled,
   getBudgets, saveBudgets,
   getSystemConfig, saveSystemConfig,
   getLogs,
   getIncomes, saveIncomes,
-  getExpenses, saveExpenses
+  getExpenses, saveExpenses,
+  getBackupRestoreDrills
 } from '../db/storage';
 import { canEditShareholderSettings, canViewShareholderInfo, SENSITIVE_BOOKKEEPER_TABS } from '../utils/permissions';
-import { getAuditReadinessReport, getShareholderSharesAtDate } from '../utils/financials';
+import { getAuditReadinessReport, getBankBalancesAtDate, getCashNetProfitSummary, getGasGrossProfitForPeriod, getIncomeStatement, getMonthlyOperatingSummary, getPeriodEndDate, getShareholderSharesAtDate } from '../utils/financials';
 import { getNextCompanyId } from '../utils/companyState';
+import { findParentAccount } from '../utils/accountHierarchy';
+import { getAccountUsage } from '../utils/accountUsage';
+import { compareMonthlyBaseline, getLatestRestoreDrillStatus } from '../utils/monthClose';
 import { createManualCloudBackup, getLastCloudSyncError, listCloudBackups, restoreCloudBackup } from '../db/supabaseService';
 import GoLiveView from './GoLiveView';
 
@@ -210,7 +214,10 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   const [periodLockForm, setPeriodLockForm] = useState({
     companyId: companies[0]?.id || '',
     yearMonth: new Date().toISOString().slice(0, 7),
-    remarks: ''
+    remarks: '',
+    expectedRevenue: '',
+    expectedExpenses: '',
+    expectedReceivables: ''
   });
   const closeReadiness = useMemo(() => {
     void triggerRefresh;
@@ -221,7 +228,53 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     }
     return getAuditReadinessReport(companyId, 'month', yearMonth);
   }, [periodLockForm.companyId, periodLockForm.yearMonth, companies, triggerRefresh]);
-  const closeBlockers = (closeReadiness.pendingRows?.length || 0) + (closeReadiness.unbalancedEntries?.length || 0);
+  const closeFinancials = useMemo(() => {
+    void triggerRefresh;
+    const companyId = periodLockForm.companyId || companies[0]?.id || '';
+    const yearMonth = periodLockForm.yearMonth || new Date().toISOString().slice(0, 7);
+    if (!companyId || !yearMonth) return null;
+    const operating = getMonthlyOperatingSummary(companyId, yearMonth);
+    const cash = getCashNetProfitSummary(companyId, 'month', yearMonth);
+    const pnl = getIncomeStatement(companyId, 'month', yearMonth);
+    const gas = getGasGrossProfitForPeriod(companyId, 'month', yearMonth);
+    const endDate = getPeriodEndDate('month', yearMonth);
+    const bankBalance = getBankBalancesAtDate(companyId, endDate).reduce((sum, item) => sum + Number(item.currentBalance || 0), 0);
+    return {
+      operatingRevenue: operating.totalRevenue,
+      cashRevenue: cash.totalRevenue,
+      cashExpenses: cash.totalExpenses,
+      outstandingReceivables: operating.outstandingReceivables,
+      manualGasCost: gas.totalCogs,
+      accountingProfit: pnl.netProfit,
+      bankBalance
+    };
+  }, [periodLockForm.companyId, periodLockForm.yearMonth, companies, triggerRefresh]);
+  const baselineComparison = useMemo(() => compareMonthlyBaseline({
+    expectedRevenue: periodLockForm.expectedRevenue,
+    expectedExpenses: periodLockForm.expectedExpenses,
+    expectedReceivables: periodLockForm.expectedReceivables,
+    actualRevenue: closeFinancials?.operatingRevenue || 0,
+    actualExpenses: closeFinancials?.cashExpenses || 0,
+    actualReceivables: closeFinancials?.outstandingReceivables || 0
+  }), [periodLockForm.expectedRevenue, periodLockForm.expectedExpenses, periodLockForm.expectedReceivables, closeFinancials]);
+  const restoreDrillStatus = useMemo(() => {
+    void triggerRefresh;
+    return getLatestRestoreDrillStatus(getBackupRestoreDrills());
+  }, [triggerRefresh]);
+  const accountUsageByCode = useMemo(() => {
+    void triggerRefresh;
+    const usageData = {
+      incomes: getIncomes(),
+      expenses: getExpenses(),
+      budgets: getBudgets(),
+      accounts
+    };
+    return new Map(accounts.map(account => [account.code, getAccountUsage(account.code, usageData)]));
+  }, [accounts, triggerRefresh]);
+  const closeBlockers = (closeReadiness.pendingRows?.length || 0) +
+    (closeReadiness.unbalancedEntries?.length || 0) +
+    baselineComparison.mismatchCount +
+    (restoreDrillStatus.recent ? 0 : 1);
 
   const handlePeriodLockToggle = async (locked) => {
     const targetCompanyId = periodLockForm.companyId || companies[0]?.id || '';
@@ -232,7 +285,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
 
 
     if (locked && closeBlockers > 0) {
-      window.alert(`關帳前仍有 ${closeBlockers} 個必須處理的項目：待審資料或傳票不平衡。請先處理完再關帳。`);
+      window.alert(`關帳前仍有 ${closeBlockers} 個必須處理的項目：待審資料、傳票不平衡、新舊系統差異或備份還原演練逾期。請先處理完再關帳。`);
       return;
     }
     const confirmed = window.confirm(`${locked ? '鎖定' : '重新開放'} ${periodLockForm.yearMonth}？`);
@@ -251,6 +304,11 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         unbalancedCount: closeReadiness.unbalancedEntries?.length || 0,
         missingReceiptCount: closeReadiness.approvedWithoutAttachment?.length || 0,
         missingInvoiceCount: closeReadiness.taxableWithoutInvoice?.length || 0,
+        baselineRows: baselineComparison.rows,
+        baselineMismatchCount: baselineComparison.mismatchCount,
+        restoreDrillRecent: restoreDrillStatus.recent,
+        restoreDrillId: restoreDrillStatus.drill?.id || '',
+        financials: closeFinancials,
         checkedAt: new Date().toISOString()
       }
     });
@@ -291,6 +349,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       type: 'expense', 
       desc: '',
       subGroup: '',
+      parentCode: '',
       
       compName: '', 
       compDesc: ''
@@ -332,7 +391,8 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         accountName: item.name || '',
         type: item.type || 'expense',
         desc: item.desc || '',
-        subGroup: item.subGroup || ''
+        subGroup: item.subGroup || '',
+        parentCode: item.parentCode || findParentAccount(item, accounts)?.code || ''
       });
     } else if (activeSettingsTab === 'company') {
       setFormData({
@@ -551,6 +611,14 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
         return;
       }
 
+      if (formData.parentCode) {
+        const parent = db.find(account => account.code === formData.parentCode);
+        if (!parent || parent.type !== formData.type || parent.code === newCode) {
+          showToast('第一層大分類不存在、類型不同，或與明細科目相同。', 'error');
+          return;
+        }
+      }
+
       // Check uniqueness if code is new or changed
       if (!editingItem || oldCode !== newCode) {
         if (db.some(a => a.code === newCode)) {
@@ -596,7 +664,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       if (editingItem) {
         const idx = db.findIndex(a => a.code === oldCode);
         if (idx !== -1) {
-          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' };
+          const updatedAccount = { ...db[idx], code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '', parentCode: formData.parentCode || '' };
           db[idx] = updatedAccount;
           archiveChange({ 
             collection: 'chartOfAccounts', 
@@ -664,7 +732,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
           success = true;
         }
       } else {
-        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '' });
+        db.push({ code: newCode, name: formData.accountName, type: formData.type, desc: formData.desc, subGroup: formData.subGroup || '', parentCode: formData.parentCode || '' });
         syncMatchingAccount(db, newCode, newCode, formData.accountName, formData.desc, formData.subGroup);
         saveChartOfAccounts(db);
         success = true;
@@ -698,16 +766,13 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     }
   };
 
-  const handleSecurityAction = async (action, userId, deviceId = null) => {
+  const handleSecurityAction = async (action, userId) => {
     let ok = false;
     if (action === 'disable') {
       const reason = window.prompt('請輸入停用原因') || '管理員停用';
       ok = setAccountDisabled(userId, true, reason);
     }
     if (action === 'enable') ok = setAccountDisabled(userId, false, '');
-    if (action === 'approveDevice') ok = approveDevice(userId, deviceId);
-    if (action === 'rejectDevice') ok = rejectDevice(userId, deviceId);
-    if (action === 'revokeDevice') ok = revokeDevice(userId, deviceId);
 
     if (!ok) {
       showToast('操作失敗，請確認資料後再試。', 'error');
@@ -739,6 +804,16 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       saveBanks(getBanks().filter(b => b.id !== id));
     } else if (activeSettingsTab === 'accounts') {
       const item = getChartOfAccounts().find(a => a.code === id);
+      const usage = getAccountUsage(id, {
+        incomes: getIncomes(),
+        expenses: getExpenses(),
+        budgets: getBudgets(),
+        accounts: getChartOfAccounts()
+      });
+      if (!usage.canDelete) {
+        window.alert(`此科目不可刪除：已有 ${usage.transactionCount} 筆交易、${usage.budgetCount} 筆預算、${usage.childCount} 個子科目。請改用停用。`);
+        return;
+      }
       if (item) archiveDeletion({ collection: 'chartOfAccounts', record: item, actor: '系統管理員', reason });
       let coaList = getChartOfAccounts().filter(a => a.code !== id);
 
@@ -765,6 +840,26 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
       cloudSaved === false ? getCloudSyncFailureMessage('資料已刪除並保留稽核紀錄，但雲端同步失敗') : '資料已刪除，稽核紀錄會保留一年。',
       cloudSaved === false ? 'error' : 'info'
     );
+  };
+
+  const handleAccountStatusToggle = async (account) => {
+    const db = getChartOfAccounts();
+    const idx = db.findIndex(item => item.code === account.code);
+    if (idx === -1) return;
+    const disabled = account.disabled !== true;
+    db[idx] = { ...db[idx], disabled };
+    archiveChange({
+      collection: 'chartOfAccounts',
+      recordId: account.code,
+      action: disabled ? 'disable' : 'enable',
+      before: account,
+      after: db[idx],
+      actor: '系統管理員',
+      reason: disabled ? '會計科目停用' : '會計科目重新啟用'
+    });
+    saveChartOfAccounts(db);
+    const cloudSaved = await onDataChange();
+    showToast(cloudSaved === false ? getCloudSyncFailureMessage('科目狀態已更新，但雲端同步失敗') : disabled ? '科目已停用，歷史交易仍保留。' : '科目已重新啟用。', cloudSaved === false ? 'error' : 'success');
   };
 
   // Database resets/backups
@@ -937,8 +1032,11 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     {activeSettingsTab === 'accounts' && (
                       <tr>
                         <th>科目代碼</th>
+                        <th>第一層大分類</th>
                         <th>科目名稱</th>
                         <th>類型</th>
+                        <th>交易 / 預算</th>
+                        <th>狀態</th>
                         <th>備註</th>
                         <th style={{ textAlign: 'right' }}>操作</th>
                       </tr>
@@ -1020,12 +1118,18 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     {activeSettingsTab === 'accounts' && (() => {
                       const sorted = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
                       return sorted.map((a, idx) => {
-                        const isSub = sorted.some(p => p.code !== a.code && a.code.startsWith(p.code));
+                        const parent = findParentAccount(a, sorted);
+                        const isSub = Boolean(parent);
+                        const usage = accountUsageByCode.get(a.code) || { transactionCount: 0, budgetCount: 0, canDelete: true };
+                        const typeLabel = a.type === 'revenue' ? '收入' : a.type === 'cogs' ? '銷貨成本' : a.type === 'equity' ? '權益' : '支出';
                         return (
                           <tr key={idx} style={{ backgroundColor: isSub ? 'rgba(0, 0, 0, 0.015)' : 'transparent' }}>
                             <td style={{ fontFamily: 'var(--font-mono)', paddingLeft: isSub ? '24px' : '12px' }}>
                               {isSub ? <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>↳</span> : null}
                               {a.code}
+                            </td>
+                            <td style={{ fontWeight: isSub ? 600 : 700, color: isSub ? 'var(--accent-blue)' : 'var(--text-primary)' }}>
+                              {parent ? `${parent.code} ${parent.name}` : `${a.code} ${a.name}`}
                             </td>
                             <td style={{ 
                               fontWeight: isSub ? '400' : '700',
@@ -1033,15 +1137,33 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                             }}>{a.name}</td>
                             <td>
                               <span className={`badge ${a.type === 'revenue' ? 'approved' : a.type === 'cogs' ? 'pending' : 'void'}`} style={{ opacity: isSub ? 0.85 : 1 }}>
-                                {a.type === 'revenue' ? '收入' : a.type === 'cogs' ? '銷貨成本' : '支出'}
+                                {typeLabel}
                                 {isSub ? ' (子)' : ''}
+                              </span>
+                            </td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>
+                              {usage.transactionCount} 筆 / {usage.budgetCount} 筆
+                            </td>
+                            <td>
+                              <span className={`badge ${a.disabled === true ? 'void' : 'approved'}`}>
+                                {a.disabled === true ? '已停用' : '使用中'}
                               </span>
                             </td>
                             <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{a.desc}</td>
                             <td style={{ textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(a)}>編輯</button>
-                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(a.code)}>刪除</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleAccountStatusToggle(a)}>
+                                  {a.disabled === true ? '啟用' : '停用'}
+                                </button>
+                                <button
+                                  className="btn btn-danger btn-sm"
+                                  onClick={() => handleDelete(a.code)}
+                                  disabled={!usage.canDelete}
+                                  title={usage.canDelete ? '刪除未使用科目' : '已有交易、預算或子科目，請改用停用'}
+                                >
+                                  刪除
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1224,44 +1346,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     )}
                   </div>
 
-                  <div className="security-device-grid">
-                    <div>
-                      <div className="security-section-title">待核准裝置</div>
-                      {(user.pendingDevices || []).length === 0 ? (
-                        <div className="security-empty">目前沒有待核准裝置</div>
-                      ) : (
-                        (user.pendingDevices || []).map(device => (
-                          <div key={device.id} className="security-device-row">
-                            <div>
-                              <strong>{device.label || device.id}</strong>
-                              <span>{device.requestedAt ? new Date(device.requestedAt).toLocaleString() : ''}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button className="btn btn-primary btn-sm" onClick={() => handleSecurityAction('approveDevice', user.id, device.id)}>核准</button>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleSecurityAction('rejectDevice', user.id, device.id)}>拒絕</button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="security-section-title">已核准裝置</div>
-                      {(user.approvedDevices || []).length === 0 ? (
-                        <div className="security-empty">尚未核准任何裝置</div>
-                      ) : (
-                        (user.approvedDevices || []).map(device => (
-                          <div key={device.id} className="security-device-row">
-                            <div>
-                              <strong>{device.label || device.id}</strong>
-                              <span>{device.approvedAt ? `核准：${new Date(device.approvedAt).toLocaleString()}` : ''}</span>
-                            </div>
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleSecurityAction('revokeDevice', user.id, device.id)}>撤銷</button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
+                  <div className="security-empty">裝置認證已取消；此帳號可在任何裝置使用帳號密碼登入。</div>
                 </div>
               ))}
             </div>
@@ -1308,6 +1393,78 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                   onChange={e => setPeriodLockForm({ ...periodLockForm, remarks: e.target.value })}
                   placeholder="例如：完成本月結帳檢查"
                 />
+              </div>
+
+              <div className="card" style={{ boxShadow: 'none', border: '1px solid var(--border-color)' }}>
+                <div className="card-header"><span className="card-title">舊系統月結基準（可選）</span></div>
+                <div className="card-body">
+                  <p style={{ marginTop: 0, color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+                    輸入舊系統同月份的數字，關帳前會自動比對；查無資料的項目可留空。
+                  </p>
+                  <div className="form-row">
+                    {[
+                      ['expectedRevenue', '總營業額'],
+                      ['expectedExpenses', '實際支出'],
+                      ['expectedReceivables', '未收款']
+                    ].map(([key, label]) => (
+                      <div className="form-group" key={key}>
+                        <label className="form-label">舊系統{label}</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={periodLockForm[key]}
+                          onChange={e => setPeriodLockForm({ ...periodLockForm, [key]: e.target.value })}
+                          placeholder="留空表示不比對"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {closeFinancials && (
+                <div className="summary-grid">
+                  {[
+                    ['當月總營業額', closeFinancials.operatingRevenue],
+                    ['實收營收', closeFinancials.cashRevenue],
+                    ['實際支出', closeFinancials.cashExpenses],
+                    ['尚未收款', closeFinancials.outstandingReceivables],
+                    ['手動進氣成本', closeFinancials.manualGasCost],
+                    ['會計淨利', closeFinancials.accountingProfit],
+                    ['銀行結餘', closeFinancials.bankBalance]
+                  ].map(([label, value]) => (
+                    <div className="summary-card" key={label}>
+                      <div className="summary-label">{label}</div>
+                      <div className="summary-value" style={{ fontSize: '1.1rem' }}>${Number(value || 0).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="table-responsive">
+                <table className="data-table">
+                  <thead><tr><th>比對項目</th><th>舊系統</th><th>新系統</th><th>差額</th><th>結果</th></tr></thead>
+                  <tbody>
+                    {baselineComparison.rows.map(row => (
+                      <tr key={row.key}>
+                        <td>{row.label}</td>
+                        <td>{row.expected === null ? '未輸入' : `$${row.expected.toLocaleString()}`}</td>
+                        <td>${row.actual.toLocaleString()}</td>
+                        <td>{row.difference === null ? '-' : `$${row.difference.toLocaleString()}`}</td>
+                        <td><span className={`badge ${row.matched ? 'approved' : 'void'}`}>{row.expected === null ? '未比對' : row.matched ? '一致' : '有差異'}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={`alert-box ${restoreDrillStatus.recent ? 'success' : 'warning'}`} style={{ margin: 0 }}>
+                <strong>備份還原演練：</strong>
+                {restoreDrillStatus.recent
+                  ? `最近一次通過為 ${restoreDrillStatus.ageDays} 天前，符合 90 天內要求。`
+                  : restoreDrillStatus.passed
+                    ? `最近一次通過已是 ${restoreDrillStatus.ageDays} 天前，請至「正式上線準備」重新演練。`
+                    : '尚無通過的備份還原演練，請至「正式上線準備」建立完整驗證紀錄。'}
               </div>
 
               <div className={`alert-box ${closeBlockers > 0 ? 'warning' : 'success'}`} style={{ margin: 0, alignItems: 'flex-start' }}>
@@ -1379,7 +1536,9 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                               待審 {lock.closeChecklist.pendingCount || 0}、
                               不平衡 {lock.closeChecklist.unbalancedCount || 0}、
                               缺憑證 {lock.closeChecklist.missingReceiptCount || 0}、
-                              缺發票 {lock.closeChecklist.missingInvoiceCount || 0}
+                              缺發票 {lock.closeChecklist.missingInvoiceCount || 0}、
+                              新舊差異 {lock.closeChecklist.baselineMismatchCount || 0}、
+                              還原演練 {lock.closeChecklist.restoreDrillRecent ? '合格' : '不合格'}
                             </>
                           ) : '-'}
                         </td>
@@ -1744,11 +1903,25 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     </div>
                     <div className="form-group">
                       <label className="form-label">科目類型</label>
-                      <select required className="select-dropdown" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
+                      <select required className="select-dropdown" style={{ width: '100%' }} value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value, parentCode: '' })}>
                         <option value="revenue">收入 (Revenue)</option>
                         <option value="cogs">銷貨成本 (COGS)</option>
                         <option value="expense">支出 (Expense)</option>
                       </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">第一層大分類</label>
+                      <select className="select-dropdown" style={{ width: '100%' }} value={formData.parentCode || ''} onChange={e => setFormData({ ...formData, parentCode: e.target.value })}>
+                        <option value="">本身就是第一層大分類</option>
+                        {accounts
+                          .filter(account => account.type === formData.type && account.code !== (editingItem?.code || ''))
+                          .filter(account => !findParentAccount(account, accounts))
+                          .sort((a, b) => a.code.localeCompare(b.code))
+                          .map(account => <option key={account.code} value={account.code}>{account.code} - {account.name}</option>)}
+                      </select>
+                      <div style={{ marginTop: '6px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        第二層科目只能歸屬一個大分類；既有科目會依代碼前綴自動辨識。
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">科目備註</label>

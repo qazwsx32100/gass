@@ -1,0 +1,2 @@
+[functions.erp-privileged-rpc]
+verify_jwt = true

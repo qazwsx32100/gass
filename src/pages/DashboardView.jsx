@@ -1,15 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
-import { getIncomes, getExpenses, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers } from '../db/storage';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashExpenseSummary, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
+import { getIncomes, getExpenses, getBankTransactions, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers, getShareholderLedger } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
+import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
 import LedgerCategoryBreakdown from '../components/LedgerCategoryBreakdown';
+import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import { entriesForCategory, groupLedgerEntriesByCategory } from '../utils/ledgerCategories';
+import { isEffectiveForReport } from '../utils/reportEligibility';
 
-export default function DashboardView({ companyId, year, month, triggerRefresh, userRole, onNavigate }) {
+export default function DashboardView({ companyId, year, month, triggerRefresh, userRole, currentUser, onNavigate }) {
   const periodVal = `${year}-${month}`;
   const showShareholderReports = canViewShareholderReports(userRole);
+  const showOwnerBalance = canViewOwnerCashBalance(userRole, currentUser);
   const [activeDetailModal, setActiveDetailModal] = useState(null);
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('');
 
@@ -73,8 +77,16 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return getMonthlyOperatingSummary(companyId, prevPeriodVal);
   }, [companyId, prevPeriodVal, triggerRefresh]);
 
-  const attributedNetProfit = (monthlyOperating?.actualRevenue || 0) - (cashNetProfit?.totalExpenses || 0);
-  const prevAttributedNetProfit = (prevMonthlyOperating?.actualRevenue || 0) - (prevCashNetProfit?.totalExpenses || 0);
+  const prevPnl = useMemo(() => {
+    void triggerRefresh;
+    return getIncomeStatement(companyId, 'month', prevPeriodVal) || { netProfit: 0 };
+  }, [companyId, prevPeriodVal, triggerRefresh]);
+
+  // Keep the dashboard profit card identical to the accounting profit used
+  // by shareholder dividends. Cash collections remain visible in their own card.
+  const attributedNetProfit = pnl?.netProfit || 0;
+  const prevAttributedNetProfit = prevPnl?.netProfit || 0;
+  const cashBasisNetProfit = (monthlyOperating?.actualRevenue || 0) - (cashNetProfit?.totalExpenses || 0);
 
   // Cash / Bank balance at the end of the month
   const cashBalance = useMemo(() => {
@@ -82,6 +94,39 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     const lastDayStr = getPeriodEndDate('month', periodVal);
     const balances = getBankBalancesAtDate(companyId, lastDayStr) || [];
     return balances.reduce((sum, b) => sum + (b?.currentBalance || 0), 0);
+  }, [companyId, periodVal, triggerRefresh]);
+
+  const cashBalanceBreakdown = useMemo(() => {
+    void triggerRefresh;
+    const endDate = getPeriodEndDate('month', periodVal);
+    const cashFlow = getCashNetProfitSummary(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate
+    });
+    const cashOutflow = getCashExpenseSummary(companyId, 'range', {
+      startDate: '2026-07-01',
+      endDate
+    });
+    const initialBalance = (getBanks() || [])
+      .filter(item => item?.companyId === companyId)
+      .reduce((sum, item) => sum + Number(item.initialBalance || 0), 0);
+    const shareholderNet = (getShareholderLedger() || [])
+      .filter(item => item?.companyId === companyId && item?.date <= endDate)
+      .reduce((sum, item) => {
+        const amount = Number(item.amount || 0);
+        if (item.type === 'join' || item.type === 'increase') return sum + amount;
+        if (item.type === 'decrease') return sum - amount;
+        return sum;
+      }, 0);
+    return {
+      initialBalance,
+      shareholderNet,
+      cashIncome: Number(cashFlow?.totalRevenue || 0),
+      cashExpense: Number(cashOutflow?.totalExpenses || 0),
+      surplusFunds: Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0),
+      availableFunds: (Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0)) - initialBalance,
+      totalFunds: shareholderNet + (Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0))
+    };
   }, [companyId, periodVal, triggerRefresh]);
 
   // Dividends for the month
@@ -123,7 +168,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     const list = getExpenses() || [];
     return list.filter(e =>
       e && e.companyId === companyId &&
-      e.status === 'approved' &&
+      isEffectiveForReport(e) &&
       e.date && typeof e.date === 'string' && e.date.startsWith(periodVal)
     );
   }, [companyId, periodVal, triggerRefresh]);
@@ -158,6 +203,35 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     const lastDayStr = getPeriodEndDate('month', periodVal);
     return getBankBalancesAtDate(companyId, lastDayStr) || [];
   }, [companyId, periodVal, triggerRefresh]);
+
+  const julyCashSummary = useMemo(() => {
+    void triggerRefresh;
+    const dates = [
+      ...(getIncomes() || []).filter(item => item?.companyId === companyId).map(item => item.date),
+      ...(getExpenses() || []).filter(item => item?.companyId === companyId).map(item => item.date),
+      ...(getBankTransactions() || []).filter(item => item?.companyId === companyId).map(item => item.date || item.transactionDate)
+    ].filter(Boolean).sort();
+    const endDate = dates[dates.length - 1] || new Date().toISOString().slice(0, 10);
+    const income = getCashNetProfitSummary(companyId, 'range', { startDate: '2026-07-01', endDate });
+    const expense = getCashExpenseSummary(companyId, 'range', { startDate: '2026-07-01', endDate });
+    return {
+      income: Number(income?.totalRevenue || 0),
+      expense: Number(expense?.totalExpenses || 0),
+      endDate
+    };
+  }, [companyId, triggerRefresh]);
+
+  // 顯示用資金分類：公司預留現金與可動用銀行資金分開，兩者合計才是總額。
+  const classifiedBankRows = useMemo(() => {
+    const reserve = Number(cashBalanceBreakdown.initialBalance || 0);
+    const total = Number(cashBalanceBreakdown.totalFunds || 0);
+    const available = total - reserve;
+    const petty = (bankBalancesList || []).find(b => b.id === 'BANK_PETTY' || b.bankId === 'BANK_PETTY');
+    const banks = (bankBalancesList || []).filter(b => b.id !== 'BANK_PETTY' && b.bankId !== 'BANK_PETTY');
+    const reserveRow = petty ? [{ ...petty, id: 'BANK_RESERVE_DISPLAY', displayCategory: '公司預留現金', initialBalance: reserve, currentBalance: reserve }] : [];
+    const availableRow = [{ ...(banks[0] || petty || { id: 'BANK_AVAILABLE_DISPLAY', accountNo: '-' }), id: 'BANK_AVAILABLE_DISPLAY', displayCategory: '銀行資金', initialBalance: Number(cashBalanceBreakdown.shareholderNet || 0), currentBalance: available }];
+    return [...reserveRow, ...availableRow, ...banks.slice(1).map(b => ({ ...b, displayCategory: '銀行資金' }))];
+  }, [bankBalancesList, cashBalanceBreakdown]);
 
   // Budgets & Actual Expenditures
   const budgetProgressItems = useMemo(() => {
@@ -246,7 +320,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
     const fuelExp = (currentMonthExpenses || []).filter(e => e && e.accountCode === '6104').reduce((sum, e) => sum + (e.amount || 0), 0);
     const prevFuelExp = (getExpenses() || [])
-      .filter(e => e && e.companyId === companyId && e.status === 'approved' && e.accountCode === '6104' && e.date && typeof e.date === 'string' && e.date.startsWith(prevPeriodVal))
+      .filter(e => e && e.companyId === companyId && isEffectiveForReport(e) && e.accountCode === '6104' && e.date && typeof e.date === 'string' && e.date.startsWith(prevPeriodVal))
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     if (fuelExp > prevFuelExp * 1.15 && prevFuelExp > 0) {
@@ -304,7 +378,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   return (
     <div>
       {/* Petty Cash Threshold Warning */}
-      {pettyCashBalance < 2000 && (
+      {showOwnerBalance && pettyCashBalance < 2000 && (
         <div className="alert-box warning" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '10px' }}>
           ⚠️ <strong>營運警訊：</strong> 店內零用金 (現金) 餘額過低！目前水位僅為 <strong>${pettyCashBalance.toLocaleString()} 元</strong>，低於安全限額 $2,000 元，請管理員儘速提現撥補！
         </div>
@@ -353,6 +427,9 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
       )}
+
+      {/* Weather Revenue Intelligence Widget */}
+      <WeatherRevenueWidget monthlyRevenue={monthlyOperating?.totalRevenue || pnl?.totalRevenue || 0} />
 
       {/* Metrics Row - Interactive Metric Cards */}
       <div className="metrics-grid">
@@ -450,15 +527,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Card 6: 本月實收結餘（歸屬原月份） */}
+        {/* Card 6: 本月會計淨利（股東分紅基礎） */}
         <div 
           className="metric-card accent-gold" 
           style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
           onClick={() => openDetailModal('profit')}
-          title="點擊查看按營業額原始發生月份歸屬的實收結餘"
+          title="點擊查看與股東分紅相同口徑的會計淨利"
         >
           <div className="metric-card-header">
-            <span className="metric-label">本月實收結餘（歸屬原月份）</span>
+            <span className="metric-label">本月會計淨利（股東分紅基礎）</span>
             <div className="metric-icon-wrapper gold">💰</div>
           </div>
           <span className={`metric-value ${attributedNetProfit < 0 ? 'text-danger' : ''}`}>
@@ -469,6 +546,26 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               {profitChange >= 0 ? '↑' : '↓'} {Math.abs(profitChange).toFixed(1)}% <span style={{color: 'var(--text-tertiary)'}}>較上月</span>
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>🔍 點擊查看結構 ➔</span>
+          </div>
+        </div>
+
+        {/* Card 7: 本月實收制結餘 */}
+        <div
+          className="metric-card accent-blue"
+          style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+          onClick={() => openDetailModal('cashProfit')}
+          title="點擊查看實際收款制結餘；未收月結與欠款不列入"
+        >
+          <div className="metric-card-header">
+            <span className="metric-label">本月實收制結餘</span>
+            <div className="metric-icon-wrapper blue">💵</div>
+          </div>
+          <span className={`metric-value ${cashBasisNetProfit < 0 ? 'text-danger' : ''}`}>
+            ${cashBasisNetProfit.toLocaleString()}
+          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="metric-change neutral">未收款不列入</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看結構 ➔</span>
           </div>
         </div>
 
@@ -525,6 +622,28 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔍 點擊查看分佈 ➔</span>
           </div>
         </div>
+
+        {/* Owner-only card: current cash and bank balance */}
+        {showOwnerBalance && (
+          <div
+            className="metric-card accent-blue"
+            style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            onClick={() => openDetailModal('cash')}
+            title="僅楊孟龍管理員可查看；點擊查看資金結餘計算明細"
+          >
+            <div className="metric-card-header">
+              <span className="metric-label">目前資金結餘（管理人專用）</span>
+              <div className="metric-icon-wrapper blue">🏦</div>
+            </div>
+            <span className={`metric-value ${(cashBalanceBreakdown.totalFunds || 0) < 0 ? 'text-danger' : ''}`}>
+              ${(Number(cashBalanceBreakdown.totalFunds || 0)).toLocaleString()}
+            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="metric-change neutral">現金＋銀行存款</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔒 楊孟龍專用・查看明細 ➔</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Charts & Shareholder Split */}
@@ -736,7 +855,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {activeDetailModal === 'receivables' && '💵 月結應收帳款明細'}
                 {activeDetailModal === 'debt' && '欠 現結欠款明細'}
                 {activeDetailModal === 'expenses' && '📉 當月已付成本明細'}
-                {activeDetailModal === 'profit' && '💰 本月實收結餘（歸屬原月份）'}
+                {activeDetailModal === 'cashProfit' && '💵 本月實收制結餘'}
+                {activeDetailModal === 'profit' && '💰 本月會計淨利（股東分紅基礎）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
                 {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
@@ -991,29 +1111,60 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               </div>
             )}
 
+            {activeDetailModal === 'cashProfit' && (
+              <div>
+                <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
+                    📊 {periodVal} 實際收款制計算：
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➕ 已實際收款營業額（歸屬原月份）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlyOperating?.actualRevenue || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 已實際付款成本與費用（含手動進氣）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(cashNetProfit?.totalExpenses || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
+                      <span>💵 本月實收制結餘</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: cashBasisNetProfit >= 0 ? 'var(--accent-blue)' : 'var(--accent-red)' }}>${cashBasisNetProfit.toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                      月結與現結欠款在尚未收款時不列入；後續還款歸回原營業月份。股東分紅另採發生制會計淨利。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeDetailModal === 'profit' && (
               <div>
                 <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(5, 178, 165, 0.2)' }}>
                   <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-blue)' }}>
-                    📊 {periodVal} 實收結餘計算（歸屬原月份）：
+                    📊 {periodVal} 會計淨利計算（股東分紅基礎）：
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➕ 本月實收營業額（歸屬原月份）</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(monthlyOperating?.actualRevenue || 0).toLocaleString()} 元</strong>
+                      <span>➕ 本月營業收入（依發生月份）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)' }}>${(pnl?.totalRevenue || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>➖ 本月已付成本與費用</span>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(cashNetProfit?.totalExpenses || 0).toLocaleString()} 元</strong>
+                      <span>➖ 本月銷貨成本</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalCogs || 0).toLocaleString()} 元</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>➖ 本月營業費用</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>-${(pnl?.totalExpenses || 0).toLocaleString()} 元</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--accent-blue)', paddingTop: '10px', fontSize: '1.1rem', fontWeight: '800' }}>
-                      <span>💰 本月實收結餘 [結餘率 {((monthlyOperating?.actualRevenue || 0) > 0 ? (attributedNetProfit / monthlyOperating.actualRevenue * 100) : 0).toFixed(1)}%]</span>
+                      <span>💰 本月會計淨利 [淨利率 {((pnl?.totalRevenue || 0) > 0 ? (attributedNetProfit / pnl.totalRevenue * 100) : 0).toFixed(1)}%]</span>
                       <strong style={{ fontFamily: 'var(--font-mono)', color: attributedNetProfit >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
                         ${attributedNetProfit.toLocaleString()} 元
                       </strong>
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
-                      跨月收到的還款歸回原欠款月份，不列入收款月份；未收應收帳款與尚未付款的應付款不列入。
+                      本數字與股東分紅使用相同公式；跨月收款歸回原收入月份，不會重複增加營業收入。
                     </div>
                   </div>
                 </div>
@@ -1046,12 +1197,53 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
               </div>
             )}
 
-            {activeDetailModal === 'cash' && (
+            {showOwnerBalance && activeDetailModal === 'cash' && (
               <div>
                 <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '12px', marginBottom: '20px', borderLeft: '4px solid var(--accent-blue)' }}>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>截至月底全公司總資金水位 (現金 + 銀行存款)</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--accent-blue)', fontFamily: 'var(--font-mono)' }}>
-                    ${(cashBalance || 0).toLocaleString()} 元
+                    ${(Number(cashBalanceBreakdown.totalFunds || 0)).toLocaleString()} 元
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>🪙 盈餘資金</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>來自營運產生之可運用資金</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                      <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>公司預留現金</div>
+                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.initialBalance || 0).toLocaleString()}</strong>
+                      </div>
+                      <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可動用資金</div>
+                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.availableFunds || 0).toLocaleString()}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>👥 股東投入</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>股東投入之資金</div>
+                    <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>股東投入</div>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.shareholderNet || 0).toLocaleString()}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: '14px 16px', backgroundColor: 'rgba(0, 180, 170, 0.08)', borderRadius: '10px', border: '1px solid rgba(0, 180, 170, 0.2)', marginBottom: '20px' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>總額（股東投入＋盈餘資金）</div>
+                  <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>
+                    ${(Number(cashBalanceBreakdown.shareholderNet || 0) + Number(cashBalanceBreakdown.surplusFunds || 0)).toLocaleString()} 元
+                  </strong>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ padding: '14px 16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>115 年 7 月起總收入</div>
+                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.1rem' }}>${julyCashSummary.income.toLocaleString()} 元</strong>
+                  </div>
+                  <div style={{ padding: '14px 16px', backgroundColor: 'rgba(239, 68, 68, 0.06)', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>115 年 7 月起總支出</div>
+                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '1.1rem' }}>−${julyCashSummary.expense.toLocaleString()} 元</strong>
                   </div>
                 </div>
 
@@ -1068,13 +1260,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       </tr>
                     </thead>
                     <tbody>
-                      {(bankBalancesList || []).map(b => {
-                        const isPetty = b.id === 'BANK_PETTY' || b.bankId === 'BANK_PETTY';
+                      {classifiedBankRows.map(b => {
+                        const isPetty = b.displayCategory === '公司預留現金';
                         const isLowPetty = isPetty && (b.currentBalance || 0) < 2000;
                         return (
                           <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
                             <td style={{ fontWeight: '700' }}>
-                              {isPetty ? '💵 店內零用金 (現金)' : `🏦 ${b.name}`}
+                              {isPetty ? '💵 公司預留現金' : '🏦 銀行資金｜公司可動用資金'}
                             </td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>{b.accountNo || '-'}</td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>${(b.initialBalance || 0).toLocaleString()}</td>
