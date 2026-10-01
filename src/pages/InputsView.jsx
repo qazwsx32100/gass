@@ -346,6 +346,14 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   const [editingItem, setEditingItem] = useState(null); // If null, we are adding new
   const [detailItem, setDetailItem] = useState(null);
 
+  // Local Toast Notification (showToast used throughout this component)
+  const [localToasts, setLocalToasts] = useState([]);
+  const showToast = (message, type = 'success') => {
+    const id = Date.now() + Math.random();
+    setLocalToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setLocalToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
+
   const handleRowClick = (e, item, type) => {
     if (
       e.target.closest('button') ||
@@ -1437,7 +1445,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         }
       } else {
         const newId = generateId('expense', formData.date);
-        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields });
+        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields, ...(isAdmin ? { status: 'approved' } : {}) });
         saveExpenses(db);
         addLog(operatorName, 'CREATE_EXPENSE', `Create expense ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
@@ -4808,6 +4816,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
               <button type="button" className="btn btn-secondary" onClick={closeReceiptPreview}>關閉附件</button>
             </div>
           </div>
+        </div>
+      )}
+      {localToasts.length > 0 && (
+        <div className="toast-container">
+          {localToasts.map(t => (
+            <div key={t.id} className={`toast${t.type === 'error' ? ' alert-box error' : t.type === 'warning' ? ' alert-box warning' : ''}`}>
+              <span>{t.message}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
