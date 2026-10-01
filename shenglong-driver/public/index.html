@@ -305,8 +305,32 @@
     const currentDriver = initDriver();
     let currentTab = 'active';
 
-    // 模擬或遠端訂單資料（完全不含內部財務/成本資料）
+    // 訂單本地快取
     let orders = JSON.parse(localStorage.getItem('sl_driver_orders_cache') || '[]');
+
+    function saveOrders() {
+      localStorage.setItem('sl_driver_orders_cache', JSON.stringify(orders));
+    }
+
+    // 從主系統 API 同步司機任務
+    async function syncRemoteTasks() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code') || 'D01';
+      try {
+        const res = await fetch(`https://erp-weld-three-96.vercel.app/api/driver-tasks?code=${code}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.tasks)) {
+            // 合併遠端任務與本地配送狀態
+            orders = data.tasks;
+            saveOrders();
+            render();
+          }
+        }
+      } catch (e) {
+        console.log('離線模式或使用快取任務');
+      }
+    }
 
     if (orders.length === 0) {
       // 預設樣品單
@@ -317,9 +341,9 @@
           phone: '0912345678',
           address: '新北市板橋區文化路一段120號',
           specs: '50kg × 2',
-          needSelectBarrel: true, // 需挑桶
+          needSelectBarrel: true,
           note: '放後門廚房，要空桶',
-          status: 'assigned', // assigned | delivering | delivered | settled
+          status: 'assigned',
           assignedDriver: currentDriver
         },
         {
@@ -337,10 +361,6 @@
       saveOrders();
     }
 
-    function saveOrders() {
-      localStorage.setItem('sl_driver_orders_cache', JSON.stringify(orders));
-    }
-
     function showToast(text) {
       const t = document.getElementById('toast');
       t.textContent = text;
@@ -355,23 +375,39 @@
       render();
     }
 
-    function startDelivery(orderId) {
+    async function startDelivery(orderId) {
       const ord = orders.find(o => o.id === orderId);
       if (ord) {
         ord.status = 'delivering';
         saveOrders();
         showToast('🚚 開始配送！路上小心安全');
         render();
+
+        try {
+          await fetch('https://erp-weld-three-96.vercel.app/api/driver-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, newStatus: 'delivering' })
+          });
+        } catch (e) {}
       }
     }
 
-    function finishDelivery(orderId) {
+    async function finishDelivery(orderId) {
       const ord = orders.find(o => o.id === orderId);
       if (ord) {
         ord.status = 'delivered';
         saveOrders();
         showToast('✔️ 已送達！等待主機確認');
         render();
+
+        try {
+          await fetch('https://erp-weld-three-96.vercel.app/api/driver-tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, newStatus: 'delivered' })
+          });
+        } catch (e) {}
       }
     }
 
@@ -474,8 +510,9 @@
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // 啟動渲染
+    // 啟動渲染與同步雲端派送單
     render();
+    syncRemoteTasks();
   </script>
 </body>
 </html>
