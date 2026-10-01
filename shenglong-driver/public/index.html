@@ -254,6 +254,21 @@
   </header>
 
   <main>
+    <!-- 累積未繳金額與待送狀態卡 (TASKAMIGO 薄荷綠質感) -->
+    <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border-radius: 14px; border: 1px solid #10b981; padding: 14px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(6, 95, 70, 0.3);">
+      <div>
+        <div style="font-size: 12px; color: #a7f3d0; font-weight: 600;">已指派未完成累積待收金額</div>
+        <div id="unpaid-amount-display" style="font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
+          NT$ 0
+        </div>
+      </div>
+      <div style="text-align: right;">
+        <button onclick="syncRemoteTasks()" style="background: rgba(16,185,129,0.25); border: 1px solid #34d399; color: #a7f3d0; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+          🔄 重新整理
+        </button>
+      </div>
+    </div>
+
     <!-- 標籤頁：待處理(數量) / 已完成(數量) -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-active" onclick="switchTab('active')">
@@ -271,12 +286,14 @@
   <div id="toast"></div>
 
   <script>
-    // 司機代碼對應表 (管理者可直接給連結: ?code=D01 或 ?name=阿強)
+    // 司機代碼對應表 (管理者可直接給連結: ?code=D01 或 ?name=游柏林)
     const DRIVER_MAP = {
-      'D01': '阿強 (陳志強)',
-      'D02': '小林 (林志豪)',
-      'D03': '阿成 (王大成)',
-      'D04': '阿宏 (黃建宏)'
+      'D01': '游柏林',
+      'D02': '小龍',
+      'D03': '阿強 (陳志強)',
+      'D04': '小林 (林志豪)',
+      'D05': '阿成 (王大成)',
+      'D06': '阿宏 (黃建宏)'
     };
 
     // 取得當前司機身分（優先順序：URL參數 > localStorage > 預設阿強）
@@ -312,23 +329,39 @@
       localStorage.setItem('sl_driver_orders_cache', JSON.stringify(orders));
     }
 
+    // API 呼叫工具函式 (支援相對路徑與雲端後端無縫切換)
+    async function apiRequest(endpoint, options = {}) {
+      try {
+        const localRes = await fetch(endpoint, options);
+        if (localRes.ok) return await localRes.json();
+      } catch (err) {}
+      const fallbackUrl = `https://erp-weld-three-96.vercel.app${endpoint}`;
+      const fallbackRes = await fetch(fallbackUrl, options);
+      if (fallbackRes.ok) return await fallbackRes.json();
+      throw new Error('API 無法連線');
+    }
+
     // 從主系統 API 同步司機任務
     async function syncRemoteTasks() {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code') || 'D01';
+      const name = urlParams.get('name');
+      const queryParam = name ? `name=${encodeURIComponent(name)}` : `code=${encodeURIComponent(code)}`;
+
       try {
-        const res = await fetch(`https://erp-weld-three-96.vercel.app/api/driver-tasks?code=${code}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.tasks)) {
-            // 合併遠端任務與本地配送狀態
-            orders = data.tasks;
-            saveOrders();
-            render();
+        const data = await apiRequest(`/api/driver-tasks?${queryParam}`);
+        if (data && Array.isArray(data.tasks)) {
+          if (data.driverName) {
+            document.getElementById('driver-name-display').textContent = `👤 ${data.driverName}`;
           }
+          orders = data.tasks;
+          saveOrders();
+          render();
+          showToast('🔄 任務清單已更新至最新狀態');
         }
       } catch (e) {
         console.log('離線模式或使用快取任務');
+        render();
       }
     }
 
@@ -341,6 +374,7 @@
           phone: '0912345678',
           address: '新北市板橋區文化路一段120號',
           specs: '50kg × 2',
+          total: 3900,
           needSelectBarrel: true,
           note: '放後門廚房，要空桶',
           status: 'assigned',
@@ -352,9 +386,10 @@
           phone: '0922888999',
           address: '新北市板橋區中山路二段45號',
           specs: '20kg × 1',
+          total: 850,
           needSelectBarrel: false,
           note: '送到請直接按鈴',
-          status: 'assigned',
+          status: 'delivering',
           assignedDriver: currentDriver
         }
       ];
@@ -384,7 +419,7 @@
         render();
 
         try {
-          await fetch('https://erp-weld-three-96.vercel.app/api/driver-tasks', {
+          await apiRequest('/api/driver-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId, newStatus: 'delivering' })
@@ -402,7 +437,7 @@
         render();
 
         try {
-          await fetch('https://erp-weld-three-96.vercel.app/api/driver-tasks', {
+          await apiRequest('/api/driver-tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId, newStatus: 'delivered' })
@@ -412,9 +447,22 @@
     }
 
     function render() {
-      const myOrders = orders.filter(o => o.assignedDriver === currentDriver);
+      const myOrders = orders.filter(o => {
+        if (!o.assignedDriver) return true;
+        return o.assignedDriver === currentDriver ||
+               o.assignedDriver.includes(currentDriver) ||
+               currentDriver.includes(o.assignedDriver);
+      });
       const activeList = myOrders.filter(o => o.status !== 'settled' && o.status !== 'delivered');
       const completedList = myOrders.filter(o => o.status === 'settled' || o.status === 'delivered');
+
+      // 計算已指派未完成累積待收金額
+      const unfinished = myOrders.filter(o => o.status === 'assigned' || o.status === 'delivering');
+      const unpaidSum = unfinished.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+      const unpaidEl = document.getElementById('unpaid-amount-display');
+      if (unpaidEl) {
+        unpaidEl.textContent = `NT$ ${unpaidSum.toLocaleString()}`;
+      }
 
       // 更新純數量標籤（無金額）
       document.getElementById('tab-active').textContent = `待處理 (${activeList.length})`;

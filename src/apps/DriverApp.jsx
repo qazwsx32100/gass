@@ -8,15 +8,17 @@ import {
 import { sendSystemNotification, requestNotificationPermission, getNotificationPermission, playNotificationChime } from '../utils/notificationService';
 
 const DRIVER_CODE_MAP = {
-  'D01': '阿強 (陳志強)',
-  'D02': '小林 (林志豪)',
-  'D03': '阿成 (王大成)',
-  'D04': '阿宏 (黃建宏)'
+  'D01': '游柏林',
+  'D02': '小龍',
+  'D03': '阿強 (陳志強)',
+  'D04': '小林 (林志豪)',
+  'D05': '阿成 (王大成)',
+  'D06': '阿宏 (黃建宏)'
 };
 
 export default function DriverApp() {
   const [currentDriver, setCurrentDriver] = useState(() => {
-    // 優先讀取 URL 參數 ?code=D01 或 ?name=阿強
+    // 優先讀取 URL 參數 ?code=D01 或 ?name=游柏林
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
@@ -32,7 +34,7 @@ export default function DriverApp() {
         return decoded;
       }
     }
-    return localStorage.getItem('sl_current_driver') || '阿強 (陳志強)';
+    return localStorage.getItem('sl_current_driver') || '游柏林';
   });
 
   const [orders, setOrders] = useState(() => getCentralOrders());
@@ -103,6 +105,7 @@ export default function DriverApp() {
     return sum + qty;
   }, 0);
   const todayTotalCash = completedOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const todayUnpaidAmount = activeOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
   return (
     <div style={{
@@ -179,6 +182,32 @@ export default function DriverApp() {
 
       {/* 主畫面內容 */}
       <main style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
+        {/* 累積未繳金額與待送狀態卡 (TASKAMIGO 薄荷質感) */}
+        <div style={{
+          background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)',
+          borderRadius: '14px',
+          border: '1px solid #10b981',
+          padding: '14px 18px',
+          marginBottom: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 12px rgba(6, 95, 70, 0.3)'
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#a7f3d0', fontWeight: 600 }}>已指派未完成累積待收金額</div>
+            <div style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px' }}>
+              NT$ {todayUnpaidAmount.toLocaleString()}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '12px', color: '#a7f3d0' }}>待配送任務</div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#34d399' }}>
+              {activeOrders.length} <span style={{ fontSize: '13px', fontWeight: 500, color: '#a7f3d0' }}>單</span>
+            </div>
+          </div>
+        </div>
+
         {/* 任務分類切換：只留 待處理(數量) 和 已完成(數量) */}
         <div style={{
           display: 'grid',
