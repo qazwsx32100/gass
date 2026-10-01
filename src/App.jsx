@@ -215,11 +215,19 @@ function App() {
       }
       if (!restoredSession) clearCloudSessionToken();
 
-      // Clear one-time verification tokens from the address bar.
+      // Clear legacy read-only viewer / Firebase share URL contamination & one-time tokens
       const params = new URLSearchParams(window.location.search);
+      const isLegacyShareUrl = params.get('share') === 'true' ||
+        params.get('role') === 'viewer' ||
+        params.has('apiKey') ||
+        params.has('project');
       const verifyEmailToken = params.get('verifyEmailToken');
-      if (verifyEmailToken) {
+
+      if (isLegacyShareUrl || verifyEmailToken) {
         window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+        if (isLegacyShareUrl) {
+          showToast('🛡️ 系統已自動清除舊版唯讀分享參數，請使用管理員或股東帳號登入。', 'info');
+        }
       }
 
       setDbVersion(prev => prev + 1);

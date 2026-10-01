@@ -259,16 +259,17 @@ export const saveAppState = async ({ state, updatedBy, requestIp = null, previou
   const saved = row || { ok: true };
 
   if (saved.updated_at) {
-    const mirrorTask = refreshRelationalMirror(saved.updated_at).catch(async error => {
-      console.error('Deferred relational mirror refresh failed', error);
-      await captureServerException(error, {
-        tags: { operation: 'relational-mirror-refresh', status: 500 }
-      });
+    // Fully decoupled background mirror refresh: capped to 2000ms max
+    // to strictly protect the Vercel serverless function ceiling and never block user writes.
+    const mirrorTask = Promise.race([
+      refreshRelationalMirror(saved.updated_at),
+      new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), 2000))
+    ]).catch((error) => {
+      console.warn('Deferred relational mirror refresh notice:', error?.message || error);
     });
     try {
       waitUntil(mirrorTask);
-    } catch (error) {
-      console.error('Failed to register relational mirror background task', error);
+    } catch {
       void mirrorTask;
     }
   }
@@ -277,7 +278,7 @@ export const saveAppState = async ({ state, updatedBy, requestIp = null, previou
 };
 
 export const refreshRelationalMirror = async (expectedUpdatedAt) => {
-  const supabase = getSupabase(40000);
+  const supabase = getSupabase(2500);
   const { data, error } = await supabase.rpc('erp_refresh_relational_mirror_deferred', {
     p_secret: getSyncSecret(),
     p_expected_updated_at: expectedUpdatedAt

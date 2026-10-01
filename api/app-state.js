@@ -157,6 +157,7 @@ const allowedWriteKeysByRole = {
     'gasDeliveryVehicles',
     'gasVehicleInventory',
     'customerCylinderDeposits',
+    'dailyBackups',
     'logs',
     'auditArchive',
     'outboundEmails'
@@ -175,6 +176,7 @@ const allowedWriteKeysByRole = {
     'customerCylinderDeposits',
     'shareholderLedger',
     'loans',
+    'dailyBackups',
     'logs',
     'auditArchive',
     'outboundEmails'
@@ -381,7 +383,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('app-state API failed', error);
-    if (error?.code === '40001' || /state conflict/i.test(error?.message || '')) {
+    if (error?.code === '40001' || error?.code === 'P0001' || /state conflict/i.test(error?.message || error?.details || '')) {
       return sendJson(res, 409, { error: 'Cloud data changed before this save. Refresh before trying again.' });
     }
     await captureServerException(error, {
