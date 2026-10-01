@@ -40,7 +40,10 @@ const changedTopLevelKeys = (before = {}, after = {}) => {
 
 const changedRecordKeys = (before = {}, after = {}) => {
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
-  return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
+  return [...keys].filter(key => {
+    if (before?.[key] === undefined) return false;
+    return stableStringify(before?.[key]) !== stableStringify(after?.[key]);
+  });
 };
 
 const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
@@ -56,7 +59,48 @@ const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
   'correctedByName',
   'correctedAt',
   'correctionReason',
-  'accountCode'
+  'correctionType',
+  'correctionTargetId',
+  'accountCode',
+  'bankId',
+  'unitPrice',
+  'quantity',
+  'calculatedAmount',
+  'gasKg',
+  'cylinderQty',
+  'deliveryTrips',
+  'customerId',
+  'supplierId',
+  'counterpartyName',
+  'counterpartyTaxId',
+  'invoiceNo',
+  'invoiceDate',
+  'taxType',
+  'taxIncluded',
+  'vatAmount',
+  'employeeName',
+  'payrollMonth',
+  'laborInsurance',
+  'healthInsurance',
+  'pension',
+  'withholdingTax',
+  'isEffectiveForReport',
+  'reportEligibility',
+  'firstReviewedBy',
+  'firstReviewedByName',
+  'firstReviewedByRole',
+  'firstReviewedAt',
+  'adminReviewedBy',
+  'adminReviewedByName',
+  'adminReviewedAt',
+  'requiresDualApproval',
+  'secondAdminReviewedBy',
+  'secondAdminReviewedByName',
+  'secondAdminReviewedAt',
+  'createdAt',
+  'createdBy',
+  'updatedAt',
+  'updatedBy'
 ]);
 
 const APPROVED_TRANSACTION_VOID_KEYS = new Set([
