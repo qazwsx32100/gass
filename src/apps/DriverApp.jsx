@@ -7,14 +7,36 @@ import {
 } from '../utils/orderCentral';
 import { sendSystemNotification, requestNotificationPermission, getNotificationPermission, playNotificationChime } from '../utils/notificationService';
 
+const DRIVER_CODE_MAP = {
+  'D01': '阿強 (陳志強)',
+  'D02': '小林 (林志豪)',
+  'D03': '阿成 (王大成)',
+  'D04': '阿宏 (黃建宏)'
+};
+
 export default function DriverApp() {
-  const [drivers] = useState(() => getDriversList());
   const [currentDriver, setCurrentDriver] = useState(() => {
+    // 優先讀取 URL 參數 ?code=D01 或 ?name=阿強
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const name = params.get('name');
+      if (code && DRIVER_CODE_MAP[code.toUpperCase()]) {
+        const assigned = DRIVER_CODE_MAP[code.toUpperCase()];
+        localStorage.setItem('sl_current_driver', assigned);
+        return assigned;
+      }
+      if (name) {
+        const decoded = decodeURIComponent(name);
+        localStorage.setItem('sl_current_driver', decoded);
+        return decoded;
+      }
+    }
     return localStorage.getItem('sl_current_driver') || '阿強 (陳志強)';
   });
+
   const [orders, setOrders] = useState(() => getCentralOrders());
   const [filterTab, setFilterTab] = useState('active'); // active | completed
-  const [permission, setPermission] = useState(getNotificationPermission());
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => {
@@ -22,36 +44,22 @@ export default function DriverApp() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleSelectDriver = (name) => {
-    setCurrentDriver(name);
-    localStorage.setItem('sl_current_driver', name);
-    showToast(`切換司機為：${name}`);
-  };
-
   const refreshOrders = () => {
     setOrders(getCentralOrders());
   };
 
-  // 監聽即時派單與主機結帳事件
+  // 監聽即時派單與主機結帳事件 (純視覺靜音更新)
   useEffect(() => {
     const unsubscribe = subscribeOrderEvents((event) => {
       refreshOrders();
 
-      // 檢查是否是派給「當前司機」的新任務
       if (event.type === 'ORDER_ASSIGNED') {
         const order = event.payload;
         if (order && order.assignedDriver === currentDriver) {
-          playNotificationChime();
-          showToast(`🚨 主機派工新任務！客戶：${order.customerName}`, 'warning');
-          sendSystemNotification({
-            title: `🛵 收到新派送任務！$${order.total}`,
-            body: `客戶：${order.customerName}\n地址：${order.address}\n規格：${(order.items || []).map(i => `${i.name}×${i.quantity}`).join(', ')}`,
-            tag: `driver-assigned-${order.orderId}`
-          });
+          showToast(`📦 收到新任務！客戶：${order.customerName}`, 'warning');
         }
       }
 
-      // 主機結帳完成事件
       if (event.type === 'ORDER_SETTLED') {
         const order = event.payload;
         if (order && order.assignedDriver === currentDriver) {
@@ -62,21 +70,6 @@ export default function DriverApp() {
 
     return () => unsubscribe();
   }, [currentDriver]);
-
-  // 開啟通知授權
-  const handleEnableNotification = async () => {
-    const perm = await requestNotificationPermission();
-    setPermission(perm);
-    if (perm === 'granted') {
-      showToast('🎉 司機端推播通知已啟用！');
-      sendSystemNotification({
-        title: '🛵 盛隆派送 (Driver)',
-        body: `您好 ${currentDriver}！當主機派單給您時，手機將立即大聲響鈴通知！`
-      });
-    } else {
-      showToast(`通知權限狀態：${perm}`, 'warning');
-    }
-  };
 
   // 司機操作：出發配送
   const handleStartDelivering = (orderId) => {
@@ -148,7 +141,7 @@ export default function DriverApp() {
         top: 0,
         zIndex: 100
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '42px',
@@ -169,66 +162,24 @@ export default function DriverApp() {
             </div>
           </div>
 
-          {/* 通知權限開關 */}
-          {permission !== 'granted' ? (
-            <button
-              onClick={handleEnableNotification}
-              style={{
-                background: '#059669',
-                color: '#fff',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              🔔 啟用派單鈴聲
-            </button>
-          ) : (
-            <span style={{ fontSize: '12px', color: '#34d399', background: 'rgba(16,185,129,0.15)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)' }}>
-              🔔 鈴聲推播就緒
-            </span>
-          )}
-        </div>
-
-        {/* 司機身份切換器 */}
-        <div style={{
-          background: '#1f2937',
-          padding: '8px 12px',
-          borderRadius: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ fontSize: '13px', color: '#9ca3af' }}>當前司機身份：</div>
-          <select
-            value={currentDriver}
-            onChange={(e) => handleSelectDriver(e.target.value)}
-            style={{
-              background: '#374151',
-              color: '#f9fafb',
-              border: '1px solid #4b5563',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 700,
-              outline: 'none'
-            }}
-          >
-            {drivers.map((d) => (
-              <option key={d.id} value={d.name}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          {/* 司機身份純展示徽章 (防呆免登入，由管理者連結指派) */}
+          <div style={{
+            background: '#1f2937',
+            border: '1px solid #374151',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            color: '#34d399',
+            fontWeight: 800
+          }}>
+            👤 {currentDriver}
+          </div>
         </div>
       </header>
 
       {/* 主畫面內容 */}
       <main style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
-        {/* 任務分類切換 */}
+        {/* 任務分類切換：只留 待處理(數量) 和 已完成(數量) */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
@@ -249,26 +200,7 @@ export default function DriverApp() {
               position: 'relative'
             }}
           >
-            🚚 進行中任務 ({activeOrders.length})
-            {activeOrders.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                background: '#ef4444',
-                color: '#fff',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 900
-              }}>
-                {activeOrders.length}
-              </span>
-            )}
+            待處理 ({activeOrders.length})
           </button>
 
           <button
@@ -284,7 +216,7 @@ export default function DriverApp() {
               color: filterTab === 'completed' ? '#ffffff' : '#9ca3af'
             }}
           >
-            ✅ 今日已完成 ({completedOrders.length})
+            已完成 ({completedOrders.length})
           </button>
         </div>
 
@@ -375,6 +307,24 @@ export default function DriverApp() {
                       </div>
                     </div>
                   </div>
+
+                  {/* 挑桶提醒：只留 驚嘆號 [司機挑桶提醒] */}
+                  {(ord.needSelectBarrel || ord.selectBarrel || (ord.note && ord.note.includes('挑桶'))) && (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      color: '#f87171',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      ⚠️ [司機挑桶提醒]
+                    </div>
+                  )}
 
                   {/* 瓦斯規格標籤 (超大清晰字體) */}
                   <div style={{
