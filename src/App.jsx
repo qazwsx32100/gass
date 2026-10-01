@@ -903,7 +903,7 @@ function App() {
               companyId={currentCompanyId}
               triggerRefresh={dbVersion}
               onDataChange={handleDataChange}
-              operatorName={currentUser.name}
+              operatorName={currentUser?.name || '未知使用者'}
               currentUser={currentUser}
               userRole={userRole}
             />
