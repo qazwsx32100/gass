@@ -733,7 +733,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Load items based on active sub tab
   const items = useMemo(() => {
     void triggerRefresh;
-    if (activeSubTab === 'income') {
+  // IMPORTANT: Do NOT filter by isEffectiveForReport here.
+  // This is the *work/operations table* — it must show ALL statuses (pending_admin_review,
+  // draft, approved, void) so users can see, review, and approve newly created records.
+  // isEffectiveForReport is only for financial REPORTS (ReportsView) where only fully
+  // approved effective records should count toward totals.
+  // Using isEffectiveForReport here would hide newly created pending records immediately
+  // after save, making the user think the entry was lost and preventing approval.
+  // See: ERP-20261001-EXPENSE_VISIBILITY_AND_APPROVAL_FLOW01
+  if (activeSubTab === 'income') {
       const rows = getIncomes().filter(i => 
         i.companyId === companyId &&
         i.correctionStatus !== 'corrected' &&
