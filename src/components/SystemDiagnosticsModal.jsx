@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { sendSystemNotification, requestNotificationPermission, getNotificationPermission } from '../utils/notificationService';
-import DriverManagementPanel from './DriverManagementPanel';
 
 export default function SystemDiagnosticsModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('drivers'); // 'drivers' | 'diag'
+  const [activeTab, setActiveTab] = useState('diag');
   const [loadingAction, setLoadingAction] = useState('');
   const [diagLog, setDiagLog] = useState([]);
   const [permission, setPermission] = useState(getNotificationPermission());
@@ -157,59 +156,33 @@ export default function SystemDiagnosticsModal({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* 頁籤導航：司機後台設定 / 系統健檢與排錯 */}
+        {/* 司機專用後台跳轉橫幅 */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          padding: '12px 20px',
+          background: 'rgba(56, 189, 248, 0.08)',
           borderBottom: '1px solid #334155',
-          background: '#0f172a'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '13px'
         }}>
-          <button
-            onClick={() => setActiveTab('drivers')}
+          <span style={{ color: '#94a3b8' }}>🛵 盛隆外勤司機與後台監控已全面獨立運作</span>
+          <a
+            href="https://shenglong-next-phi.vercel.app/driver/admin"
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
-              padding: '14px',
-              border: 'none',
-              background: activeTab === 'drivers' ? '#1e293b' : 'transparent',
-              color: activeTab === 'drivers' ? '#38bdf8' : '#94a3b8',
+              color: '#38bdf8',
               fontWeight: 800,
-              fontSize: '15px',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'drivers' ? '3px solid #38bdf8' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
+              textDecoration: 'none'
             }}
           >
-            <span>🛵</span> 司機後台設定 (網址派發)
-          </button>
-          <button
-            onClick={() => setActiveTab('diag')}
-            style={{
-              padding: '14px',
-              border: 'none',
-              background: activeTab === 'diag' ? '#1e293b' : 'transparent',
-              color: activeTab === 'diag' ? '#38bdf8' : '#94a3b8',
-              fontWeight: 800,
-              fontSize: '15px',
-              cursor: 'pointer',
-              borderBottom: activeTab === 'diag' ? '3px solid #38bdf8' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            <span>🩺</span> 系統健康與排錯
-          </button>
+            前往司機後台監控中心 ↗
+          </a>
         </div>
 
-        {/* Body 內容切換 */}
+        {/* Body 內容 */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {activeTab === 'drivers' ? (
-            <DriverManagementPanel onShowToast={(type, msg) => addLog(msg, type)} />
-          ) : (
-            <>
               {/* 通知權限狀態區塊 */}
           <div style={{
             background: '#0f172a',
@@ -360,8 +333,6 @@ export default function SystemDiagnosticsModal({ isOpen, onClose }) {
               ))
             )}
           </div>
-            </>
-          )}
         </div>
 
         {/* Footer */}

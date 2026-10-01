@@ -12,9 +12,7 @@
     { "source": "/api/customer-history", "destination": "/api/telegram-webhook" },
     { "source": "/api/ecpay-checkout", "destination": "/api/ecpay" },
     { "source": "/api/ecpay-callback", "destination": "/api/ecpay" },
-    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" },
-    { "source": "/driver(.*)", "destination": "/index.html" },
-    { "source": "/boss(.*)", "destination": "/index.html" }
+    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" }
   ],
   "headers": [
     {

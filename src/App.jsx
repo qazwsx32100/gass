@@ -30,8 +30,6 @@ const FirebaseView = recoverablePage('firebase');
 const CylindersView = recoverablePage('cylinders');
 const ShareholderZoneView = recoverablePage('shareholderZone');
 const AuditZoneView = recoverablePage('auditZone');
-const DriverApp = lazy(() => import('./apps/DriverApp'));
-const BossApp = lazy(() => import('./apps/BossApp'));
 
 const currentTaiwanPeriod = (() => {
   const value = new Intl.DateTimeFormat('zh-TW', {
@@ -50,33 +48,6 @@ const PageLoading = () => (
 );
 
 function App() {
-  // 支援獨立 App 路由 (/driver, /boss 或 ?app=driver, ?app=boss)
-  const currentAppMode = useMemo(() => {
-    if (typeof window === 'undefined') return 'erp';
-    const path = window.location.pathname.toLowerCase();
-    const params = new URLSearchParams(window.location.search);
-    const appParam = params.get('app')?.toLowerCase();
-    if (path.startsWith('/driver') || appParam === 'driver') return 'driver';
-    if (path.startsWith('/boss') || appParam === 'boss') return 'boss';
-    return 'erp';
-  }, []);
-
-  if (currentAppMode === 'driver') {
-    return (
-      <Suspense fallback={<PageLoading />}>
-        <DriverApp />
-      </Suspense>
-    );
-  }
-
-  if (currentAppMode === 'boss') {
-    return (
-      <Suspense fallback={<PageLoading />}>
-        <BossApp />
-      </Suspense>
-    );
-  }
-
   const [dbVersion, setDbVersion] = useState(0);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [tabHistory, setTabHistory] = useState(['dashboard']);
