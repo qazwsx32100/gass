@@ -62,26 +62,34 @@ export const getCloudSessionToken = () => {
   const activeToken = sessionStore?.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
   if (activeToken) return activeToken;
 
-  const legacyToken = localStorage.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
-  if (legacyToken && sessionStore) {
-    sessionStore.setItem(CLOUD_SESSION_TOKEN_KEY, legacyToken);
-    localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
-  }
-  return legacyToken;
+  try {
+    const localToken = localStorage.getItem(CLOUD_SESSION_TOKEN_KEY) || '';
+    if (localToken) {
+      sessionStore?.setItem(CLOUD_SESSION_TOKEN_KEY, localToken);
+      return localToken;
+    }
+  } catch {}
+  return '';
 };
+
 export const setCloudSessionToken = (token) => {
   if (!token) return;
-  const sessionStore = getSessionTokenStorage();
-  if (sessionStore) {
-    sessionStore.setItem(CLOUD_SESSION_TOKEN_KEY, token);
-    localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
-    return;
-  }
-  localStorage.setItem(CLOUD_SESSION_TOKEN_KEY, token);
+  try {
+    localStorage.setItem(CLOUD_SESSION_TOKEN_KEY, token);
+  } catch {}
+  try {
+    const sessionStore = getSessionTokenStorage();
+    sessionStore?.setItem(CLOUD_SESSION_TOKEN_KEY, token);
+  } catch {}
 };
+
 export const clearCloudSessionToken = () => {
-  getSessionTokenStorage()?.removeItem(CLOUD_SESSION_TOKEN_KEY);
-  localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
+  try {
+    getSessionTokenStorage()?.removeItem(CLOUD_SESSION_TOKEN_KEY);
+  } catch {}
+  try {
+    localStorage.removeItem(CLOUD_SESSION_TOKEN_KEY);
+  } catch {}
 };
 
 const setLastCloudSyncError = ({ status = 0, error = '雲端同步失敗。' } = {}) => {

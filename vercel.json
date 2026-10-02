@@ -9,11 +9,10 @@
     }
   },
   "rewrites": [
-    { "source": "/api/customer-history", "destination": "https://erp-weld-three-96.vercel.app/api/telegram-webhook" },
-    { "source": "/api/ecpay-checkout", "destination": "https://erp-weld-three-96.vercel.app/api/ecpay" },
-    { "source": "/api/ecpay-callback", "destination": "https://erp-weld-three-96.vercel.app/api/ecpay" },
-    { "source": "/api/backup-status", "destination": "https://erp-weld-three-96.vercel.app/api/backups?type=backup" },
-    { "source": "/api/:path*", "destination": "https://erp-weld-three-96.vercel.app/api/:path*" }
+    { "source": "/api/customer-history", "destination": "/api/telegram-webhook" },
+    { "source": "/api/ecpay-checkout", "destination": "/api/ecpay" },
+    { "source": "/api/ecpay-callback", "destination": "/api/ecpay" },
+    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" }
   ],
   "headers": [
     {

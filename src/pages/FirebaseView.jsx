@@ -64,11 +64,11 @@ export default function FirebaseView({ showToast }) {
     showToast('✨ 成功模擬雲端連線！股東專屬分享連結已啟用。', 'success');
   };
 
-  const shareUrl = `${window.location.origin}/?share=true&project=${config.projectId || ''}&apiKey=${config.apiKey || ''}&role=viewer`;
+  const shareUrl = window.location.origin;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
-    showToast('📋 股東唯讀分享連結已複製！發送給股東即可使用。', 'success');
+    showToast('📋 系統官方登入連結已複製！發送給股東即可使用。', 'success');
   };
 
   return (

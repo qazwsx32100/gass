@@ -1,0 +1,25 @@
+{
+  "name": "盛隆調度管理 - Boss",
+  "short_name": "盛隆Boss",
+  "description": "盛隆瓦斯 主機調度台與全單管理系統",
+  "start_url": "/boss",
+  "id": "/boss",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#1d4ed8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

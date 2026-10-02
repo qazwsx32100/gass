@@ -1,9 +1,0 @@
-{
-  "name": "shenglong-driver",
-  "version": "1.0.0",
-  "private": true,
-  "description": "盛隆派送 - 司機專屬送貨工作台 (獨立網域)",
-  "scripts": {
-    "start": "serve public"
-  }
-}

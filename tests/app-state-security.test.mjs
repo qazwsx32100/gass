@@ -270,3 +270,48 @@ test('returns the administrator password-change requirement from cloud state', (
   assert.equal(session.role, 'admin');
   assert.equal(session.requiresPasswordChange, true);
 });
+
+test('allows schema normalization fields and adding new approved expenses without blocking write scope', () => {
+  const previousState = {
+    ...baseState,
+    expenses: [{
+      id: 'EXP-OLD-001',
+      companyId: 'COMP001',
+      date: '2026-07-01',
+      amount: 500,
+      status: 'approved',
+      remarks: 'old expense'
+    }]
+  };
+
+  const nextState = {
+    ...previousState,
+    expenses: [
+      {
+        ...previousState.expenses[0],
+        taxType: 'taxable',
+        taxIncluded: true,
+        vatAmount: null,
+        unitPrice: 0,
+        quantity: 0,
+        calculatedAmount: 0,
+        gasKg: 0,
+        isEffectiveForReport: true
+      },
+      {
+        id: 'EXP-NEW-002',
+        companyId: 'COMP001',
+        date: '2026-10-01',
+        accountCode: '5101',
+        amount: 1500,
+        status: 'approved',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid',
+        remarks: 'newly added approved expense'
+      }
+    ]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'admin', id: 'ADMIN' });
+  assert.equal(result.ok, true);
+});

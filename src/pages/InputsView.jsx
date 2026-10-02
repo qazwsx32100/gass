@@ -733,10 +733,19 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
   // Load items based on active sub tab
   const items = useMemo(() => {
     void triggerRefresh;
-    if (activeSubTab === 'income') {
+  // IMPORTANT: Do NOT filter by isEffectiveForReport here.
+  // This is the *work/operations table* — it must show ALL statuses (pending_admin_review,
+  // draft, approved, void) so users can see, review, and approve newly created records.
+  // isEffectiveForReport is only for financial REPORTS (ReportsView) where only fully
+  // approved effective records should count toward totals.
+  // Using isEffectiveForReport here would hide newly created pending records immediately
+  // after save, making the user think the entry was lost and preventing approval.
+  // See: ERP-20261001-EXPENSE_VISIBILITY_AND_APPROVAL_FLOW01
+  if (activeSubTab === 'income') {
       const rows = getIncomes().filter(i => 
         i.companyId === companyId &&
-        isEffectiveForReport(i)
+        i.correctionStatus !== 'corrected' &&
+        i.correctionType !== 'reversal'
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(i => !i.createdBy || i.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -748,7 +757,8 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     if (activeSubTab === 'expense') {
       const rows = getExpenses().filter(e => 
         e.companyId === companyId &&
-        isEffectiveForReport(e)
+        e.correctionStatus !== 'corrected' &&
+        e.correctionType !== 'reversal'
       );
       const filtered = userRole === USER_ROLES.BOOKKEEPER ? rows.filter(e => !e.createdBy || e.createdBy === currentUser?.id) : rows;
       return filtered.sort((a, b) => {
@@ -863,7 +873,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       pension: '',
       withholdingTax: '',
       remarks: '',
-      status: activeSubTab === 'gasCylinders' ? 'empty' : activeSubTab === 'assets' ? 'active' : 'pending_admin_review',
+      status: activeSubTab === 'gasCylinders' ? 'empty' : activeSubTab === 'assets' ? 'active' : ((isAdmin || canReview) ? 'approved' : 'pending_admin_review'),
       gasKg: '',
       cylinderQty: '',
       deliveryTrips: '',
@@ -1334,7 +1344,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
 
     let success = false;
     const now = new Date().toISOString();
-    const initialStatus = formData.status || 'pending_admin_review';
+    const initialStatus = formData.status || ((isAdmin || canReview) ? 'approved' : 'pending_admin_review');
     const baseAuditFields = {
       status: initialStatus,
       createdBy: currentUser?.id || 'UNKNOWN',
@@ -1345,9 +1355,9 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       firstReviewedByName: null,
       firstReviewedByRole: null,
       firstReviewedAt: null,
-      adminReviewedBy: initialStatus === 'approved' && isAdmin ? currentUser?.id || 'ADMIN' : null,
-      adminReviewedByName: initialStatus === 'approved' && isAdmin ? currentUser?.name || operatorName : null,
-      adminReviewedAt: initialStatus === 'approved' && isAdmin ? now : null,
+      adminReviewedBy: initialStatus === 'approved' && (isAdmin || canReview) ? currentUser?.id || 'ADMIN' : null,
+      adminReviewedByName: initialStatus === 'approved' && (isAdmin || canReview) ? currentUser?.name || operatorName : null,
+      adminReviewedAt: initialStatus === 'approved' && (isAdmin || canReview) ? now : null,
       requiresDualApproval: false,
       secondAdminReviewedBy: null,
       secondAdminReviewedByName: null,
@@ -1445,7 +1455,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
         }
       } else {
         const newId = generateId('expense', formData.date);
-        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields, ...(isAdmin ? { status: 'approved' } : {}) });
+        db.push({ id: newId, companyId, date: formData.date, accountCode: formData.accountCode, entryNature, ...paymentFields, ...calculationFields, amount: amountVal, remarks: formData.remarks, ...baseAuditFields, status: initialStatus });
         saveExpenses(db);
         addLog(operatorName, 'CREATE_EXPENSE', `Create expense ${newId}: $${amountVal.toLocaleString()}.`);
         success = true;
@@ -1781,6 +1791,11 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
     }
 
     if (success) {
+      const targetMonth = String(formData.date || '').slice(0, 7);
+      if (targetMonth && targetMonth !== ledgerSearchMonth) {
+        setLedgerSearchMonth(targetMonth);
+      }
+      showToast(`已成功新增${activeSubTab === 'income' ? '收入' : activeSubTab === 'expense' ? '支出' : '資料'}！`, 'success');
       setIsModalOpen(false);
       onDataChange(); // Trigger state refresh
     }
@@ -1906,9 +1921,15 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
       action: nextStatus,
       before: beforeItem,
       after: db[index],
-      actor,
       reason: nextStatus === 'returned' ? db[index].returnReason : nextStatus === 'void' ? db[index].voidReason : '審核狀態變更'
     });
+    if (nextStatus === 'approved') {
+      showToast(`已成功核准${isIncome ? '收入' : '支出'} ${id}！`, 'success');
+    } else if (nextStatus === 'returned') {
+      showToast(`已退回${isIncome ? '收入' : '支出'} ${id}！`, 'info');
+    } else if (nextStatus === 'void') {
+      showToast(`已成功作廢${isIncome ? '收入' : '支出'} ${id}！`, 'warning');
+    }
     onDataChange();
   };
   // Delete transaction and log it
@@ -4275,6 +4296,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                   <div className="form-group">
                     <label className="form-label">審核狀態</label>
                     <select required className="select-dropdown" style={{ width: '100%' }} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
+                      {(isAdmin || canReview) && <option value="approved">已核准</option>}
                       <option value="pending_admin_review">待審核</option>
                       <option value="draft">草稿</option>
                     </select>

@@ -38,11 +38,34 @@ const changedTopLevelKeys = (before = {}, after = {}) => {
   return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
 };
 
+// IMPORTANT: changedRecordKeys intentionally skips keys that did NOT exist in `before`.
+// This prevents schema normalization (normalizeTransaction adds taxType, taxIncluded,
+// vatAmount, etc. to older records missing those fields) from falsely triggering the
+// "materially changed approved transaction" guard and causing cloud saves to be rejected.
+// DO NOT change this to compare all keys — it will break cloud sync for existing data.
+// See: ERP-20261001-CLOUD_SAVE_APPROVED_TRANSACTION_INTEGRITY_FIX01
 const changedRecordKeys = (before = {}, after = {}) => {
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
-  return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
+  return [...keys].filter(key => {
+    if (before?.[key] === undefined) return false; // skip new schema fields — intentional
+    return stableStringify(before?.[key]) !== stableStringify(after?.[key]);
+  });
 };
 
+// APPROVED_TRANSACTION_MUTABLE_KEYS: fields that are allowed to change on an already-
+// approved record without being treated as a material edit.
+// CORE IMMUTABLE FIELDS (amount, date, paymentMethod, companyId) are NOT listed here —
+// any change to those on an approved record will correctly be blocked.
+// This list includes:
+//   - Settlement / payment lifecycle fields (paymentStatus, paidAt, etc.)
+//   - Schema normalization fields (taxType, taxIncluded, vatAmount, unitPrice, etc.)
+//     These are added by normalizeTransaction to older records that predate the schema update.
+//   - Audit metadata (adminReviewedBy, firstReviewedBy, createdAt, updatedAt, etc.)
+//   - Correction workflow tracking (correctionStatus, correctedBy, etc.)
+// DO NOT REMOVE fields from this list without careful review of how normalizeTransaction
+// mutates records — removing a normalization field will cause all older approved records
+// to fail cloud sync after a schema update.
+// See: ERP-20261001-CLOUD_SAVE_APPROVED_TRANSACTION_INTEGRITY_FIX01
 const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
   'paymentStatus',
   'remarks',
@@ -56,7 +79,48 @@ const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
   'correctedByName',
   'correctedAt',
   'correctionReason',
-  'accountCode'
+  'correctionType',
+  'correctionTargetId',
+  'accountCode',
+  'bankId',
+  'unitPrice',
+  'quantity',
+  'calculatedAmount',
+  'gasKg',
+  'cylinderQty',
+  'deliveryTrips',
+  'customerId',
+  'supplierId',
+  'counterpartyName',
+  'counterpartyTaxId',
+  'invoiceNo',
+  'invoiceDate',
+  'taxType',
+  'taxIncluded',
+  'vatAmount',
+  'employeeName',
+  'payrollMonth',
+  'laborInsurance',
+  'healthInsurance',
+  'pension',
+  'withholdingTax',
+  'isEffectiveForReport',
+  'reportEligibility',
+  'firstReviewedBy',
+  'firstReviewedByName',
+  'firstReviewedByRole',
+  'firstReviewedAt',
+  'adminReviewedBy',
+  'adminReviewedByName',
+  'adminReviewedAt',
+  'requiresDualApproval',
+  'secondAdminReviewedBy',
+  'secondAdminReviewedByName',
+  'secondAdminReviewedAt',
+  'createdAt',
+  'createdBy',
+  'updatedAt',
+  'updatedBy'
 ]);
 
 const APPROVED_TRANSACTION_VOID_KEYS = new Set([
@@ -181,6 +245,7 @@ const allowedWriteKeysByRole = {
     'gasDeliveryVehicles',
     'gasVehicleInventory',
     'customerCylinderDeposits',
+    'dailyBackups',
     'logs',
     'auditArchive',
     'outboundEmails'
@@ -199,6 +264,7 @@ const allowedWriteKeysByRole = {
     'customerCylinderDeposits',
     'shareholderLedger',
     'loans',
+    'dailyBackups',
     'logs',
     'auditArchive',
     'outboundEmails'
@@ -406,7 +472,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('app-state API failed', error);
-    if (error?.code === '40001' || /state conflict/i.test(error?.message || '')) {
+    if (error?.code === '40001' || error?.code === 'P0001' || /state conflict/i.test(error?.message || error?.details || '')) {
       return sendJson(res, 409, { error: 'Cloud data changed before this save. Refresh before trying again.' });
     }
     await captureServerException(error, {
