@@ -248,16 +248,16 @@ Python Daemon（inspect_backup.py）
 
 ## 🔗 快速連結索引
 
-| 系統 | 連結 |
-|------|------|
-| 📦 主 ERP 系統 | https://erp-weld-three-96.vercel.app |
-| 🛢️ 即時庫存看板 | https://shenglong-next.vercel.app/gas-stock |
-| 📋 今日叫貨看板 | https://shenglong-next.vercel.app/today-orders |
-| 💻 系統監控中心 | https://shenglong-next.vercel.app/system-status |
-| 👑 調度管理（Boss） | https://erp-weld-three-96.vercel.app/boss |
-| 🛵 司機 App | https://erp-weld-three-96.vercel.app/driver |
-| 🤖 Telegram 機器人 | https://t.me/shenglong_gas_bot |
-| 📁 GitHub 原始碼 | https://github.com/qazwsx32100/gass |
+| 系統 | 連結 | 職責 |
+|------|------|------|
+| 🖥️ **新 ERP 系統** | http://127.0.0.1:3000 | 店面主機本地進銷存（含來電顯示、排程備份） |
+| 📊 **新財報系統** | https://erp-weld-three-96.vercel.app | 雲端財務與股東報表（損益表、現金流、毛利） |
+| 🚀 **營運中心** | **https://shenglong-next-phi.vercel.app/operations** | **外送派工・庫存監控・司機管理・挑桶設定** |
+| 🛢️ 即時庫存看板 | https://shenglong-next-phi.vercel.app/gas-stock | 即時庫存監控 |
+| 📋 今日叫貨看板 | https://shenglong-next-phi.vercel.app/operations | 今日叫貨調度 |
+| 🤖 Telegram 機器人 | https://t.me/shenglong_gas_bot | Telegram 9 大快捷指令 |
+| 📁 GitHub 營運中心 | https://github.com/qazwsx32100/shenglong-next | 營運中心原始碼 |
+| 📁 GitHub 財報系統 | https://github.com/qazwsx32100/gass | 財報系統原始碼 |
 
 ---
 
