@@ -43,7 +43,7 @@ test('still blocks disabled or missing accounts after device approval is removed
   assert.equal(isAccountSessionAllowed(state, { id: 'SH999' }), false);
 });
 
-test('blocks material edits to approved income even for admin', () => {
+test('blocks material edits to approved income for non-admin', () => {
   const nextState = {
     ...baseState,
     incomes: [{ ...approvedIncome, amount: 999 }]
@@ -55,7 +55,7 @@ test('blocks material edits to approved income even for admin', () => {
   assert.match(result.error, /cannot be materially changed/i);
 });
 
-test('blocks deleting an approved income', () => {
+test('blocks deleting an approved income for non-admin', () => {
   const nextState = {
     ...baseState,
     incomes: []
@@ -98,7 +98,7 @@ test('allows settlement fields on approved income', () => {
   assert.equal(result.ok, true);
 });
 
-test('blocks changing the original payment method after approval', () => {
+test('blocks changing the original payment method after approval for non-admin', () => {
   const nextState = {
     ...baseState,
     incomes: [{ ...approvedIncome, paymentMethod: 'bank_transfer', bankId: 'BANK001' }]

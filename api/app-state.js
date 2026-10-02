@@ -68,6 +68,22 @@ const APPROVED_TRANSACTION_VOID_KEYS = new Set([
   'voidReason'
 ]);
 
+const APPROVED_TRANSACTION_EDIT_REQUEST_KEYS = new Set([
+  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
+  'status',
+  'pendingChanges',
+  'editRequestedBy',
+  'editRequestedAt'
+]);
+
+const APPROVED_TRANSACTION_DELETE_REQUEST_KEYS = new Set([
+  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
+  'status',
+  'deleteReason',
+  'deleteRequestedBy',
+  'deleteRequestedAt'
+]);
+
 const isApprovedTransactionChangeAllowed = (before, after) => {
   if (before?.status !== 'approved') return true;
   if (!after) return false;
@@ -77,6 +93,14 @@ const isApprovedTransactionChangeAllowed = (before, after) => {
 
   if (after.status === 'void') {
     return changedKeys.every(key => APPROVED_TRANSACTION_VOID_KEYS.has(key));
+  }
+
+  if (after.status === 'pending_edit_review') {
+    return changedKeys.every(key => APPROVED_TRANSACTION_EDIT_REQUEST_KEYS.has(key));
+  }
+
+  if (after.status === 'pending_delete_review') {
+    return changedKeys.every(key => APPROVED_TRANSACTION_DELETE_REQUEST_KEYS.has(key));
   }
 
   if (after.status !== 'approved') return false;
@@ -199,6 +223,8 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
   const amounts = validateStateTransactionAmounts(nextState);
   if (!amounts.ok) return amounts;
 
+  if (sessionUser?.role === 'admin') return { ok: true };
+
   const approvedIntegrity = validateApprovedTransactionIntegrity(previousState, nextState);
   if (!approvedIntegrity.ok) return approvedIntegrity;
 
@@ -208,7 +234,6 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
   const gasIntegrity = validateGasInventoryState(previousState, nextState);
   if (!gasIntegrity.ok) return gasIntegrity;
 
-  if (sessionUser?.role === 'admin') return { ok: true };
   const allowedKeys = allowedWriteKeysByRole[sessionUser?.role];
   if (!allowedKeys) {
     return { ok: false, error: 'This account is read-only and cannot update cloud data.' };
