@@ -279,30 +279,40 @@
       'D04': '阿宏 (黃建宏)'
     };
 
-    // 取得當前司機身分（優先順序：URL參數 > localStorage > 預設阿強）
-    function initDriver() {
+    // 取得當前司機身分（優先順序：URL參數 > localStorage）
+    function initDriverInfo() {
       const urlParams = new URLSearchParams(window.location.search);
       const codeParam = urlParams.get('code');
       const nameParam = urlParams.get('name');
 
+      let code = null;
       let driver = null;
+
       if (codeParam && DRIVER_MAP[codeParam.toUpperCase()]) {
-        driver = DRIVER_MAP[codeParam.toUpperCase()];
+        code = codeParam.toUpperCase();
+        driver = DRIVER_MAP[code];
       } else if (nameParam) {
         driver = decodeURIComponent(nameParam);
+        // 反查 code
+        const found = Object.entries(DRIVER_MAP).find(([c, n]) => n.includes(driver) || driver.includes(n));
+        code = found ? found[0] : 'D01';
       }
 
-      if (driver) {
+      // 如果有從 URL 帶入，永久記錄至手機本地
+      if (driver && code) {
+        localStorage.setItem('sl_driver_code', code);
         localStorage.setItem('sl_driver_name', driver);
       } else {
-        driver = localStorage.getItem('sl_driver_name') || '阿強 (陳志強)';
+        // 從手機本地快取中讀取（從桌面 App 點開時）
+        code = localStorage.getItem('sl_driver_code') || 'D01';
+        driver = localStorage.getItem('sl_driver_name') || DRIVER_MAP[code] || '阿強 (陳志強)';
       }
 
       document.getElementById('driver-name-display').textContent = `👤 ${driver}`;
-      return driver;
+      return { code, driver };
     }
 
-    const currentDriver = initDriver();
+    const { code: currentDriverCode, driver: currentDriver } = initDriverInfo();
     let currentTab = 'active';
 
     // 訂單本地快取
@@ -314,10 +324,9 @@
 
     // 從主系統 API 同步司機任務
     async function syncRemoteTasks() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code') || 'D01';
+      const activeCode = currentDriverCode || localStorage.getItem('sl_driver_code') || 'D01';
       try {
-        const res = await fetch(`https://erp-weld-three-96.vercel.app/api/driver-tasks?code=${code}`);
+        const res = await fetch(`https://erp-weld-three-96.vercel.app/api/driver-tasks?code=${activeCode}`);
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.tasks)) {

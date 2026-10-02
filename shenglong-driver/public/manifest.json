@@ -2,7 +2,7 @@
   "name": "盛隆派送 - 司機工作台",
   "short_name": "盛隆司機",
   "description": "盛隆瓦斯司機專屬送貨工作台",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#0a0f1d",
   "theme_color": "#111827",
