@@ -49,7 +49,7 @@ test('blocks material edits to approved income for non-admin', () => {
     incomes: [{ ...approvedIncome, amount: 999 }]
   };
 
-  const result = validateStateWriteScope(baseState, nextState, { role: 'admin', id: 'ADMIN' });
+  const result = validateStateWriteScope(baseState, nextState, { role: 'bookkeeper', id: 'BK001' });
 
   assert.equal(result.ok, false);
   assert.match(result.error, /cannot be materially changed/i);
@@ -61,7 +61,7 @@ test('blocks deleting an approved income for non-admin', () => {
     incomes: []
   };
 
-  const result = validateStateWriteScope(baseState, nextState, { role: 'admin', id: 'ADMIN' });
+  const result = validateStateWriteScope(baseState, nextState, { role: 'bookkeeper', id: 'BK001' });
 
   assert.equal(result.ok, false);
   assert.match(result.error, /cannot be deleted/i);
@@ -104,7 +104,7 @@ test('blocks changing the original payment method after approval for non-admin',
     incomes: [{ ...approvedIncome, paymentMethod: 'bank_transfer', bankId: 'BANK001' }]
   };
 
-  const result = validateStateWriteScope(baseState, nextState, { role: 'admin', id: 'ADMIN' });
+  const result = validateStateWriteScope(baseState, nextState, { role: 'bookkeeper', id: 'BK001' });
 
   assert.equal(result.ok, false);
   assert.match(result.error, /cannot be materially changed/i);
@@ -313,5 +313,47 @@ test('allows schema normalization fields and adding new approved expenses withou
   };
 
   const result = validateStateWriteScope(previousState, nextState, { role: 'admin', id: 'ADMIN' });
+  assert.equal(result.ok, true);
+});
+
+test('allows non-admin to register expense when prior periods are locked and historical schema fields are normalized', () => {
+  const previousState = {
+    ...baseState,
+    periodLocks: [{ yearMonth: '2026-07', locked: true }],
+    expenses: [{
+      id: 'EXP-OLD-001',
+      companyId: 'COMP001',
+      date: '2026-07-01',
+      amount: 500,
+      status: 'approved',
+      remarks: 'old expense'
+    }]
+  };
+
+  const nextState = {
+    ...previousState,
+    expenses: [
+      {
+        ...previousState.expenses[0],
+        taxType: 'taxable',
+        taxIncluded: true,
+        vatAmount: null,
+        effectiveForReport: true
+      },
+      {
+        id: 'EXP-NEW-002',
+        companyId: 'COMP001',
+        date: '2026-10-02',
+        accountCode: '6103',
+        amount: 800,
+        status: 'approved',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid',
+        remarks: 'new October expense'
+      }
+    ]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
   assert.equal(result.ok, true);
 });

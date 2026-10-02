@@ -105,6 +105,7 @@ const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
   'pension',
   'withholdingTax',
   'isEffectiveForReport',
+  'effectiveForReport',
   'reportEligibility',
   'firstReviewedBy',
   'firstReviewedByName',
@@ -327,6 +328,12 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
     const prevIncomesMap = new Map(prevIncomes.map(i => [i.id, i]));
     const nextIncomesMap = new Map(nextIncomes.map(i => [i.id, i]));
 
+    const LOCKED_PERIOD_IMMUTABLE_FIELDS = new Set(['amount', 'date', 'accountCode', 'companyId', 'paymentMethod', 'status']);
+    const hasMaterialChangesInLockedPeriod = (prev, item) => {
+      const changedKeys = changedRecordKeys(prev, item);
+      return changedKeys.some(key => LOCKED_PERIOD_IMMUTABLE_FIELDS.has(key));
+    };
+
     for (const item of nextIncomes) {
       const prev = prevIncomesMap.get(item.id);
       if (!prev) {
@@ -334,7 +341,7 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
           return { ok: false, error: `Cannot add transactions to a locked period (${getPeriod(item.date)}).` };
         }
       } else {
-        if (JSON.stringify(prev) !== JSON.stringify(item)) {
+        if (hasMaterialChangesInLockedPeriod(prev, item)) {
           if (isPeriodLocked(prev.date) || isPeriodLocked(item.date)) {
             return { ok: false, error: `Cannot modify transactions in a locked period (${getPeriod(prev.date)}).` };
           }
@@ -363,7 +370,7 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
           return { ok: false, error: `Cannot add transactions to a locked period (${getPeriod(item.date)}).` };
         }
       } else {
-        if (JSON.stringify(prev) !== JSON.stringify(item)) {
+        if (hasMaterialChangesInLockedPeriod(prev, item)) {
           if (isPeriodLocked(prev.date) || isPeriodLocked(item.date)) {
             return { ok: false, error: `Cannot modify transactions in a locked period (${getPeriod(prev.date)}).` };
           }
