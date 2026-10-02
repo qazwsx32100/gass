@@ -731,7 +731,7 @@ function App() {
 
           <span className="sidebar-nav-heading">📡 即時戰情與監控</span>
           <a
-            href="http://localhost:3000/operations"
+            href="https://shenglong-next-phi.vercel.app/operations"
             target="_blank"
             rel="noopener noreferrer"
             className="sidebar-link"
@@ -747,7 +747,7 @@ function App() {
             監控中心 (營運/健康)
           </a>
           <a
-            href="http://localhost:3000/gas-stock"
+            href="https://shenglong-next-phi.vercel.app/gas-stock"
             target="_blank"
             rel="noopener noreferrer"
             className="sidebar-link"

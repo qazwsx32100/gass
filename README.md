@@ -20,7 +20,7 @@
 │   ├── 主 ERP Web App（Vite + React）
 │   │   └── https://erp-weld-three-96.vercel.app
 │   └── 即時看板與監控（Next.js SSR）
-│       └── https://shenglong-next.vercel.app
+│       └── https://shenglong-next-phi.vercel.app
 │
 ├── 📱 LINE 叫瓦斯系統（Vercel LIFF）
 │   └── LIFF ID：2011207944-VaQEXeyi
@@ -73,7 +73,7 @@
 
 ## 📊 子系統 2：即時看板（shenglong-next）
 
-**網址**：`https://shenglong-next.vercel.app`  
+**網址**：`https://shenglong-next-phi.vercel.app`  
 **GitHub 路徑**：（獨立 Next.js 專案，部署在另一 Vercel 專案）  
 **技術**：Next.js 14 (App Router) + SSR + Supabase Realtime
 
