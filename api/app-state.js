@@ -31,145 +31,75 @@ export const getPublicSessionForClient = (state, session) => {
   };
 };
 
-const stableStringify = (value) => JSON.stringify(value ?? null);
+const canonicalJson = (val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== 'object') return val;
+  if (Array.isArray(val)) return val.map(canonicalJson);
+  const sorted = {};
+  Object.keys(val).sort().forEach(k => {
+    sorted[k] = canonicalJson(val[k]);
+  });
+  return sorted;
+};
+
+const stableStringify = (value) => JSON.stringify(canonicalJson(value));
+
+const isEffectivelyEmpty = (val) => {
+  if (val === null || val === undefined) return true;
+  if (Array.isArray(val) && val.length === 0) return true;
+  if (typeof val === 'object' && Object.keys(val).length === 0) return true;
+  return false;
+};
 
 const changedTopLevelKeys = (before = {}, after = {}) => {
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
-  return [...keys].filter(key => stableStringify(before?.[key]) !== stableStringify(after?.[key]));
-};
-
-// IMPORTANT: changedRecordKeys intentionally skips keys that did NOT exist in `before`.
-// This prevents schema normalization (normalizeTransaction adds taxType, taxIncluded,
-// vatAmount, etc. to older records missing those fields) from falsely triggering the
-// "materially changed approved transaction" guard and causing cloud saves to be rejected.
-// DO NOT change this to compare all keys — it will break cloud sync for existing data.
-// See: ERP-20261001-CLOUD_SAVE_APPROVED_TRANSACTION_INTEGRITY_FIX01
-const changedRecordKeys = (before = {}, after = {}) => {
-  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
   return [...keys].filter(key => {
-    if (before?.[key] === undefined) return false; // skip new schema fields — intentional
-    return stableStringify(before?.[key]) !== stableStringify(after?.[key]);
+    const valBefore = before?.[key];
+    const valAfter = after?.[key];
+    if (isEffectivelyEmpty(valBefore) && isEffectivelyEmpty(valAfter)) return false;
+    return stableStringify(valBefore) !== stableStringify(valAfter);
   });
 };
 
-// APPROVED_TRANSACTION_MUTABLE_KEYS: fields that are allowed to change on an already-
-// approved record without being treated as a material edit.
-// CORE IMMUTABLE FIELDS (amount, date, paymentMethod, companyId) are NOT listed here —
-// any change to those on an approved record will correctly be blocked.
-// This list includes:
-//   - Settlement / payment lifecycle fields (paymentStatus, paidAt, etc.)
-//   - Schema normalization fields (taxType, taxIncluded, vatAmount, unitPrice, etc.)
-//     These are added by normalizeTransaction to older records that predate the schema update.
-//   - Audit metadata (adminReviewedBy, firstReviewedBy, createdAt, updatedAt, etc.)
-//   - Correction workflow tracking (correctionStatus, correctedBy, etc.)
-// DO NOT REMOVE fields from this list without careful review of how normalizeTransaction
-// mutates records — removing a normalization field will cause all older approved records
-// to fail cloud sync after a schema update.
-// See: ERP-20261001-CLOUD_SAVE_APPROVED_TRANSACTION_INTEGRITY_FIX01
-const APPROVED_TRANSACTION_MUTABLE_KEYS = new Set([
-  'paymentStatus',
-  'remarks',
-  'receiptAttachment',
-  'paidAt',
-  'paidByMethod',
-  'paidBankId',
-  'settlementId',
-  'correctionStatus',
-  'correctedBy',
-  'correctedByName',
-  'correctedAt',
-  'correctionReason',
-  'correctionType',
-  'correctionTargetId',
-  'accountCode',
-  'bankId',
-  'unitPrice',
-  'quantity',
-  'calculatedAmount',
-  'gasKg',
-  'cylinderQty',
-  'deliveryTrips',
-  'customerId',
-  'supplierId',
-  'counterpartyName',
-  'counterpartyTaxId',
-  'invoiceNo',
-  'invoiceDate',
-  'taxType',
-  'taxIncluded',
-  'vatAmount',
-  'employeeName',
-  'payrollMonth',
-  'laborInsurance',
-  'healthInsurance',
-  'pension',
-  'withholdingTax',
-  'isEffectiveForReport',
-  'effectiveForReport',
-  'reportEligibility',
-  'firstReviewedBy',
-  'firstReviewedByName',
-  'firstReviewedByRole',
-  'firstReviewedAt',
-  'adminReviewedBy',
-  'adminReviewedByName',
-  'adminReviewedAt',
-  'requiresDualApproval',
-  'secondAdminReviewedBy',
-  'secondAdminReviewedByName',
-  'secondAdminReviewedAt',
-  'createdAt',
-  'createdBy',
-  'updatedAt',
-  'updatedBy'
-]);
+// CORE IMMUTABLE TRANSACTION FIELDS:
+// An approved transaction's financial integrity is defined by its core financial facts:
+// amount, date, companyId, and original paymentMethod.
+// Non-admins can NEVER directly tamper with these fields on an approved record.
+// All schema normalization, UI metadata, tax calculations, audit tags, and settlement tracking
+// are safe and will never be falsely rejected as "material edits".
+const CORE_IMMUTABLE_TRANSACTION_FIELDS = [
+  { field: 'amount', isChanged: (b, a) => Math.abs(Number(b.amount ?? 0) - Number(a.amount ?? 0)) > 0.001 },
+  { field: 'date', isChanged: (b, a) => String(b.date || '').slice(0, 10) !== String(a.date || '').slice(0, 10) },
+  { field: 'companyId', isChanged: (b, a) => String(b.companyId || '').trim() !== String(a.companyId || '').trim() },
+  { field: 'paymentMethod', isChanged: (b, a) => String(b.paymentMethod || '').trim() !== String(a.paymentMethod || '').trim() }
+];
 
-const APPROVED_TRANSACTION_VOID_KEYS = new Set([
-  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
-  'status',
-  'voidedBy',
-  'voidedByName',
-  'voidedAt',
-  'voidReason'
-]);
-
-const APPROVED_TRANSACTION_EDIT_REQUEST_KEYS = new Set([
-  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
-  'status',
-  'pendingChanges',
-  'editRequestedBy',
-  'editRequestedAt'
-]);
-
-const APPROVED_TRANSACTION_DELETE_REQUEST_KEYS = new Set([
-  ...APPROVED_TRANSACTION_MUTABLE_KEYS,
-  'status',
-  'deleteReason',
-  'deleteRequestedBy',
-  'deleteRequestedAt'
+const ALLOWED_APPROVED_TRANSITION_STATUSES = new Set([
+  'approved',
+  'void',
+  'pending_edit_review',
+  'pending_delete_review'
 ]);
 
 const isApprovedTransactionChangeAllowed = (before, after) => {
   if (before?.status !== 'approved') return true;
   if (!after) return false;
 
-  const changedKeys = changedRecordKeys(before, after);
-  if (changedKeys.length === 0) return true;
-
-  if (after.status === 'void') {
-    return changedKeys.every(key => APPROVED_TRANSACTION_VOID_KEYS.has(key));
+  // Status transitions must follow defined workflows
+  if (!ALLOWED_APPROVED_TRANSITION_STATUSES.has(after.status)) {
+    return false;
   }
 
-  if (after.status === 'pending_edit_review') {
-    return changedKeys.every(key => APPROVED_TRANSACTION_EDIT_REQUEST_KEYS.has(key));
+  // Core immutable financial facts (amount, date, companyId, paymentMethod)
+  // cannot be changed directly on an approved transaction.
+  // Any material change must go through the correction / void workflow.
+  for (const { isChanged } of CORE_IMMUTABLE_TRANSACTION_FIELDS) {
+    if (isChanged(before, after)) {
+      return false;
+    }
   }
 
-  if (after.status === 'pending_delete_review') {
-    return changedKeys.every(key => APPROVED_TRANSACTION_DELETE_REQUEST_KEYS.has(key));
-  }
-
-  if (after.status !== 'approved') return false;
-  return changedKeys.every(key => APPROVED_TRANSACTION_MUTABLE_KEYS.has(key));
+  return true;
 };
 
 const validateApprovedTransactionIntegrity = (previousState = {}, nextState = {}) => {
@@ -246,6 +176,8 @@ const allowedWriteKeysByRole = {
     'gasDeliveryVehicles',
     'gasVehicleInventory',
     'customerCylinderDeposits',
+    'journalEntries',
+    'journalLines',
     'dailyBackups',
     'logs',
     'auditArchive',
@@ -263,6 +195,8 @@ const allowedWriteKeysByRole = {
     'gasDeliveryVehicles',
     'gasVehicleInventory',
     'customerCylinderDeposits',
+    'journalEntries',
+    'journalLines',
     'shareholderLedger',
     'loans',
     'dailyBackups',
@@ -328,10 +262,15 @@ export const validateStateWriteScope = (previousState, nextState, sessionUser) =
     const prevIncomesMap = new Map(prevIncomes.map(i => [i.id, i]));
     const nextIncomesMap = new Map(nextIncomes.map(i => [i.id, i]));
 
-    const LOCKED_PERIOD_IMMUTABLE_FIELDS = new Set(['amount', 'date', 'accountCode', 'companyId', 'paymentMethod', 'status']);
     const hasMaterialChangesInLockedPeriod = (prev, item) => {
-      const changedKeys = changedRecordKeys(prev, item);
-      return changedKeys.some(key => LOCKED_PERIOD_IMMUTABLE_FIELDS.has(key));
+      if (!prev || !item) return true;
+      if (Math.abs(Number(prev.amount ?? 0) - Number(item.amount ?? 0)) > 0.001) return true;
+      if (String(prev.date || '').slice(0, 10) !== String(item.date || '').slice(0, 10)) return true;
+      if (String(prev.accountCode || '').trim() !== String(item.accountCode || '').trim()) return true;
+      if (String(prev.companyId || '').trim() !== String(item.companyId || '').trim()) return true;
+      if (String(prev.paymentMethod || '').trim() !== String(item.paymentMethod || '').trim()) return true;
+      if (String(prev.status || '').trim() !== String(item.status || '').trim()) return true;
+      return false;
     };
 
     for (const item of nextIncomes) {

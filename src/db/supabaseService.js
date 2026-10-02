@@ -219,19 +219,22 @@ export const fetchLegacyCylinderMovements = async ({
   return response.json();
 };
 
-const readLocalJson = (key) => {
+const OBJECT_KEYS = new Set(['adminSecurity', 'domainReadiness']);
+
+const readLocalJson = (key, fallback = []) => {
   try {
     const value = localStorage.getItem(key);
-    return value ? JSON.parse(value) : [];
+    return value ? JSON.parse(value) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 };
 
 const readLocalState = () => {
   const state = {};
   Object.entries(DATA_KEYS).forEach(([stateKey, storageKey]) => {
-    state[stateKey] = readLocalJson(storageKey);
+    const fallback = OBJECT_KEYS.has(stateKey) ? {} : [];
+    state[stateKey] = readLocalJson(storageKey, fallback);
   });
   return sanitizeInactiveCompanies(state);
 };
@@ -320,7 +323,7 @@ export const pullAndMergeCloudState = async () => {
 
       mergedState[key] = Array.from(mergedMap.values());
     } else {
-      mergedState[key] = localList || cloudList;
+      mergedState[key] = (cloudList !== undefined && cloudList !== null) ? cloudList : localList;
     }
   });
 
@@ -444,7 +447,19 @@ export const initSupabaseSync = async (onSync) => {
 
   const data = await response.json();
   if (data?.state) {
-    writeLocalState(data.state);
+    const localState = readLocalState();
+    const mergedState = { ...data.state };
+    // Preserve local unsaved transactions across refresh/re-login
+    ['incomes', 'expenses', 'bankTransactions'].forEach(col => {
+      if (Array.isArray(localState[col]) && Array.isArray(data.state[col])) {
+        const cloudIds = new Set(data.state[col].map(item => item?.id).filter(Boolean));
+        const unsynced = localState[col].filter(item => item?.id && !cloudIds.has(item.id));
+        if (unsynced.length > 0) {
+          mergedState[col] = [...data.state[col], ...unsynced];
+        }
+      }
+    });
+    writeLocalState(mergedState);
     rememberCloudUpdatedAt(data.updated_at);
   } else {
     // If cloud is empty, seed it with the current local state

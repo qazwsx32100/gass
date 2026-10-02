@@ -357,3 +357,112 @@ test('allows non-admin to register expense when prior periods are locked and his
   const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
   assert.equal(result.ok, true);
 });
+
+test('allows non-admin to register expense when arbitrary new/unlisted schema metadata fields exist on approved historical transactions', () => {
+  const previousState = {
+    ...baseState,
+    expenses: [{
+      id: 'EXP-OLD-001',
+      companyId: 'COMP001',
+      date: '2026-07-01',
+      amount: 500,
+      paymentMethod: 'cash',
+      status: 'approved',
+      remarks: 'old expense'
+    }]
+  };
+
+  const nextState = {
+    ...previousState,
+    expenses: [
+      {
+        ...previousState.expenses[0],
+        customerType: 'VIP',
+        checkNo: 'CK1234',
+        checkDueDate: '2026-08-01',
+        createdByName: '記帳員',
+        createdByRole: 'bookkeeper',
+        entryNature: 'operating',
+        futureCustomField2027: 'safe_metadata',
+        returnedBy: null,
+        returnedByName: null,
+        effectiveForReport: true
+      },
+      {
+        id: 'EXP-NEW-003',
+        companyId: 'COMP001',
+        date: '2026-10-02',
+        accountCode: '6101',
+        amount: 1200,
+        status: 'approved',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid',
+        remarks: 'new expense with arbitrary metadata on older items'
+      }
+    ]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
+  assert.equal(result.ok, true);
+});
+
+test('allows non-admin to sync when empty/null collections differ in serialization', () => {
+  const previousState = {
+    ...baseState,
+    loans: undefined,
+    adminSecurity: null,
+    domainReadiness: {}
+  };
+
+  const nextState = {
+    ...baseState,
+    loans: [],
+    adminSecurity: {},
+    domainReadiness: null,
+    expenses: [
+      {
+        id: 'EXP-NEW-004',
+        companyId: 'COMP001',
+        date: '2026-10-02',
+        accountCode: '6101',
+        amount: 300,
+        status: 'approved',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid'
+      }
+    ]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
+  assert.equal(result.ok, true);
+});
+
+test('allows non-admin to update when journal entries and lines are present in state', () => {
+  const previousState = {
+    ...baseState,
+    journalEntries: [{ id: 'J-001', amount: 500 }],
+    journalLines: [{ id: 'JL-001', lineNo: 1 }]
+  };
+
+  const nextState = {
+    ...previousState,
+    journalEntries: [{ id: 'J-001', amount: 500 }, { id: 'J-002', amount: 800 }],
+    journalLines: [{ id: 'JL-001', lineNo: 1 }, { id: 'JL-002', lineNo: 1 }],
+    expenses: [
+      {
+        id: 'EXP-NEW-005',
+        companyId: 'COMP001',
+        date: '2026-10-02',
+        accountCode: '6101',
+        amount: 800,
+        status: 'approved',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid'
+      }
+    ]
+  };
+
+  const result = validateStateWriteScope(previousState, nextState, { role: 'bookkeeper', id: 'BK001' });
+  assert.equal(result.ok, true);
+});
+
