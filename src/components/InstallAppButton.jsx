@@ -34,20 +34,26 @@ export default function InstallAppButton({
     }
   }, []);
 
-  const handleInstallClick = async () => {
+  const [feedback, setFeedback] = useState('');
+
+  const triggerNativePrompt = async () => {
     if (deferredPrompt) {
       try {
-        deferredPrompt.prompt();
+        setFeedback('⏳ 正在喚醒安裝視窗，請在彈窗中點擊「安裝」...');
+        await deferredPrompt.prompt();
         const choice = await deferredPrompt.userChoice;
         if (choice && choice.outcome === 'accepted') {
+          setFeedback('✅ 已成功接受安裝至桌面！');
           setDeferredPrompt(null);
+        } else {
+          setFeedback('ℹ️ 安裝提示已關閉。若需安裝可隨時再點此按鈕。');
         }
       } catch {
-        setShowModal(true);
+        setFeedback('💡 提示：若瀏覽器未跳出彈窗，請點選網址列右側的【安裝圖示 ⊕】或【選單 ➔ 加到主畫面】。');
       }
-      return;
+    } else {
+      setFeedback('💡 提示：若瀏覽器未跳出彈窗，請點選網址列右側的【安裝圖示 ⊕】或【選單 ➔ 加到主畫面】即可！');
     }
-    setShowModal(true);
   };
 
   const copyUrl = () => {
@@ -62,7 +68,10 @@ export default function InstallAppButton({
     <>
       <button
         type="button"
-        onClick={handleInstallClick}
+        onClick={() => {
+          setFeedback('');
+          setShowModal(true);
+        }}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -155,7 +164,7 @@ export default function InstallAppButton({
               {/* 方案 2: Android / Chrome 原生一鍵彈窗 */}
               <button
                 type="button"
-                onClick={handleInstallClick}
+                onClick={triggerNativePrompt}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -173,8 +182,25 @@ export default function InstallAppButton({
                 }}
               >
                 <span>🤖</span>
-                <span>【方案 2】Android / Chrome 點此一鍵安裝</span>
+                <span>【方案 2】Android / 電腦 點此一鍵安裝</span>
               </button>
+
+              {feedback && (
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    padding: '10px 14px',
+                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                    color: '#4ade80',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  {feedback}
+                </div>
+              )}
 
               {/* 方案 3: iPhone 一鍵下載描述檔 */}
               {profileHref && (
