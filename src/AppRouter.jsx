@@ -64,59 +64,6 @@ export default function AppRouter() {
     return <DriverApp />;
   }
 
-  // 預設主系統 (帶有頂部雙 App 快捷入口)
-  return (
-    <>
-      <div style={{
-        background: '#1e293b',
-        borderBottom: '1px solid #334155',
-        padding: '8px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        fontSize: '13px',
-        color: '#94a3b8'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>🚀</span>
-          <span>獨立 App 快速入口：</span>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <a
-            href="/boss"
-            style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              padding: '4px 12px',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            👑 開啟「盛隆調度管理 (Boss)」
-          </a>
-          <a
-            href="/driver"
-            style={{
-              background: '#059669',
-              color: '#ffffff',
-              padding: '4px 12px',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            🛵 開啟「盛隆派送 (Driver)」
-          </a>
-        </div>
-      </div>
-      <App />
-    </>
-  );
+  // 預設主系統：純淨獨立財報與雲端管理 ERP
+  return <App />;
 }

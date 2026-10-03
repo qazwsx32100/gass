@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>FullScreen</key>
+            <true/>
+            <key>IsRemovable</key>
+            <true/>
+            <key>Label</key>
+            <string>盛隆派送</string>
+            <key>PayloadDescription</key>
+            <string>盛隆派送</string>
+            <key>PayloadDisplayName</key>
+            <string>盛隆派送</string>
+            <key>PayloadIdentifier</key>
+            <string>com.shenglong.driver</string>
+            <key>PayloadType</key>
+            <string>com.apple.webClip.managed</string>
+            <key>PayloadUUID</key>
+            <string>9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>URL</key>
+            <string>https://shenglong-next-phi.vercel.app/driver</string>
+            <key>IgnoreManifestScope</key>
+            <true/>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>盛隆派送 安裝檔</string>
+    <key>PayloadIdentifier</key>
+    <string>com.shenglong.driver.profile</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>8a2ceb3c-2a6c-3aac-8acc-1a9c6a2cba5c</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>

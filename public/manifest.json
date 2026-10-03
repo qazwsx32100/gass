@@ -1,7 +1,7 @@
 {
-  "name": "盛隆瓦斯 - 創業三巨頭管理系統",
-  "short_name": "盛隆系統",
-  "description": "盛隆瓦斯 財務記帳、即時訂單調度與股東管理系統",
+  "name": "盛隆雲端財報系統",
+  "short_name": "盛隆財報",
+  "description": "盛隆瓦斯 雲端財務損益表、現金流、毛利與股東管理系統",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

@@ -6,6 +6,7 @@ import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
 import WeatherHeaderBadge from './components/WeatherHeaderBadge';
+import InstallAppButton from './components/InstallAppButton';
 import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
 import { INITIAL_CHART_OF_ACCOUNTS } from './db/mockData';
 
@@ -615,6 +616,15 @@ function App() {
             <button type="submit" className="btn btn-primary" style={{ padding: '12px', borderRadius: '12px', fontSize: '1rem', marginTop: '12px' }}>
               驗證身分並登入 ERP
             </button>
+
+            <div style={{ marginTop: '8px' }}>
+              <InstallAppButton
+                buttonText="📲 一鍵安裝財報 App 至手機桌面"
+                appName="盛隆雲端財報系統"
+                profileHref="/profiles/finance.mobileconfig"
+                style={{ width: '100%', padding: '11px', fontSize: '13px', justifyContent: 'center' }}
+              />
+            </div>
           </form>
 
         </div>
@@ -728,38 +738,6 @@ function App() {
               </button>
             </>
           )}
-
-          <span className="sidebar-nav-heading">📡 即時戰情與監控</span>
-          <a
-            href="https://shenglong-next-phi.vercel.app/operations"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="sidebar-link"
-            style={{
-              textDecoration: 'none',
-              color: 'var(--accent-blue)',
-              fontWeight: '700',
-              background: 'rgba(59, 130, 246, 0.08)',
-              border: '1px solid rgba(59, 130, 246, 0.2)'
-            }}
-          >
-            <span className="sidebar-link-icon">📡</span>
-            監控中心 (營運/健康)
-          </a>
-          <a
-            href="https://shenglong-next-phi.vercel.app/gas-stock"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="sidebar-link"
-            style={{
-              textDecoration: 'none',
-              color: 'var(--text-muted)',
-              fontSize: '0.82rem'
-            }}
-          >
-            <span className="sidebar-link-icon">🌐</span>
-            即時庫存 (公開頁)
-          </a>
         </div>
 
         {/* Sidebar Footer */}
@@ -830,6 +808,13 @@ function App() {
           <div className="header-controls">
             {/* Real-time Weather Status Pill */}
             <WeatherHeaderBadge />
+
+            {/* 📲 方案2/3 一鍵安裝 App 按鈕 */}
+            <InstallAppButton
+              buttonText="📲 一鍵安裝 App"
+              appName="盛隆雲端財報系統"
+              profileHref="/profiles/finance.mobileconfig"
+            />
 
             {/* 1. Period selects */}
             <div className="header-period-control">

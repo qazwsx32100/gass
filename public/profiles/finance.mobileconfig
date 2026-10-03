@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>FullScreen</key>
+            <true/>
+            <key>IsRemovable</key>
+            <true/>
+            <key>Label</key>
+            <string>盛隆雲端財報</string>
+            <key>PayloadDescription</key>
+            <string>盛隆雲端財報</string>
+            <key>PayloadDisplayName</key>
+            <string>盛隆雲端財報</string>
+            <key>PayloadIdentifier</key>
+            <string>com.shenglong.finance</string>
+            <key>PayloadType</key>
+            <string>com.apple.webClip.managed</string>
+            <key>PayloadUUID</key>
+            <string>3679b987-d617-e567-3577-654715d76507</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>URL</key>
+            <string>https://erp-weld-three-96.vercel.app</string>
+            <key>IgnoreManifestScope</key>
+            <true/>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>盛隆雲端財報 安裝檔</string>
+    <key>PayloadIdentifier</key>
+    <string>com.shenglong.finance.profile</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>2588a876-c506-d456-2466-543604c65496</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>
