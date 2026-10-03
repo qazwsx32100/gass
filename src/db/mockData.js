@@ -7,36 +7,36 @@ export const INITIAL_COMPANIES = [
 export const INITIAL_SHAREHOLDERS = [
   {
     id: 'SH001',
-    name: '張順安',
+    name: '楊孟龍',
     email: 'qazwsx32100@gmail.com',
     idCard: 'A123456789',
     phone: '0912-345-678',
     password: 'windsboy123',
-    role: 'business_reviewer',
+    role: 'admin',
     allowedCompanies: ['COMP001'],
-    allowedTabs: ['dashboard', 'reports', 'inputs']
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
   },
   {
     id: 'SH002',
-    name: '李美玲',
-    email: 'meiling@example.com',
-    idCard: 'B234567890',
-    phone: '0923-456-789',
-    password: '7890', // Last 4 digits of ID card B234567890
-    role: 'readonly_shareholder',
+    name: '周子傑',
+    email: 'zijie@shenglonggas.com',
+    idCard: 'A123456780',
+    phone: '0912-000-001',
+    password: '1234',
+    role: 'admin',
     allowedCompanies: ['COMP001'],
-    allowedTabs: ['dashboard'] // Can only see Dashboard!
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
   },
   {
     id: 'SH003',
-    name: '陳志強',
-    email: 'zhiqiang@example.com',
-    idCard: 'C345678901',
-    phone: '0934-567-890',
-    password: '8901', // Last 4 digits of ID card C345678901
-    role: 'bookkeeper',
+    name: '林曄鏵',
+    email: 'yehua@shenglonggas.com',
+    idCard: 'A123456781',
+    phone: '0912-000-002',
+    password: '1234',
+    role: 'admin',
     allowedCompanies: ['COMP001'],
-    allowedTabs: ['dashboard', 'reports', 'inputs']
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
   }
 ];
 
