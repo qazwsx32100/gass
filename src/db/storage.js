@@ -174,7 +174,7 @@ const normalizeShareholder = (item) => ({
     : item.email,
   emailVerified: item.emailVerified ?? false,
   emailVerificationSentAt: item.emailVerificationSentAt || null,
-  requiresPasswordChange: item.requiresPasswordChange ?? true,
+  requiresPasswordChange: item.requiresPasswordChange ?? false,
   disabled: item.disabled ?? false,
   disabledAt: item.disabledAt || null,
   disabledReason: item.disabledReason || '',

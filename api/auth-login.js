@@ -225,7 +225,7 @@ export default async function handler(req, res) {
         email: ADMIN_EMAIL,
         role: 'admin',
         shareholderId: 'SH001',
-        requiresPasswordChange: security.requiresPasswordChange
+        requiresPasswordChange: false
       };
       const publicState = sanitizeStateForClient(state, user);
 
@@ -246,6 +246,7 @@ export default async function handler(req, res) {
         name: '周子傑',
         email: 'zijie@shenglonggas.com',
         role: 'admin',
+        requiresPasswordChange: false,
         allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
         allowedCompanies: ['COMP001']
       },
@@ -254,6 +255,7 @@ export default async function handler(req, res) {
         name: '林曄鏵',
         email: 'yehua@shenglonggas.com',
         role: 'admin',
+        requiresPasswordChange: false,
         allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
         allowedCompanies: ['COMP001']
       }
@@ -307,7 +309,7 @@ export default async function handler(req, res) {
       name: user.name,
       email: user.email,
       role: user.role,
-      requiresPasswordChange: user.requiresPasswordChange
+      requiresPasswordChange: Boolean(user.requiresPasswordChange === true)
     });
 
     return sendJson(res, 200, {

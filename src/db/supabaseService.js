@@ -41,7 +41,8 @@ const DATA_KEYS = {
   gasInventoryModulePlan: 'bp_gas_inventory_module_plan',
   databaseTablePlan: 'bp_database_table_plan',
   domainReadiness: 'bp_domain_readiness',
-  adminSecurity: 'bp_admin_security'
+  adminSecurity: 'bp_admin_security',
+  shareholders: 'bp_shareholders'
 };
 
 let pollTimer = null;

@@ -238,10 +238,6 @@ function App() {
           setIsLoggedIn(true);
           setUserRole(restoredSession.role);
           setCurrentUser(restoredSession.user);
-          if (restoredSession.user.requiresPasswordChange) {
-            setIsForcePasswordChange(true);
-            setIsChangePwdOpen(true);
-          }
         }
         const { initFirebase } = await import('./db/firebaseService');
         if (cancelled) return;
@@ -291,10 +287,6 @@ function App() {
       setCurrentUser(verifiedUser);
       setIsDataReady(true);
       localStorage.setItem('bp_login_session', JSON.stringify({ role: verifiedRole, user: verifiedUser }));
-      if (verifiedUser.requiresPasswordChange) {
-        setIsForcePasswordChange(true);
-        setIsChangePwdOpen(true);
-      }
 
       const needsMaintenanceSync = [
         clearLegacyIncome(),
@@ -458,7 +450,7 @@ function App() {
       setLoginPassword('');
       localStorage.setItem('bp_last_login_email', result.user.email || loginEmail);
       localStorage.setItem('bp_login_session', JSON.stringify({ role: result.role, user: result.user }));
-      if (result.user.requiresPasswordChange) {
+      if (result.user.requiresPasswordChange === true) {
         setIsForcePasswordChange(true);
         setIsChangePwdOpen(true);
       }
@@ -994,11 +986,16 @@ function App() {
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                {!isForcePasswordChange && (
-                  <button type="button" className="btn btn-secondary" onClick={() => setIsChangePwdOpen(false)}>
-                    取消
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setIsChangePwdOpen(false);
+                    setIsForcePasswordChange(false);
+                  }}
+                >
+                  {isForcePasswordChange ? '稍後再說' : '取消'}
+                </button>
                 <button type="submit" className="btn btn-primary">
                   確認變更密碼
                 </button>
