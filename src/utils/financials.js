@@ -1705,3 +1705,69 @@ export const getPartsGrossProfitReport = (companyId, periodType, periodVal) => {
 
   return rows;
 };
+
+/**
+ * Company petty cash reserve standard amount (TWD)
+ */
+export const COMPANY_RESERVE_CASH = 4500;
+
+/**
+ * 6. Cumulative Dividend Reserve Calculator
+ * Calculates cumulative retained reserve amount from 2026-07 up to targetYearMonth.
+ */
+export const getCumulativeDividendReserve = (companyId, targetYearMonth) => {
+  if (!targetYearMonth) {
+    return { accumulatedReserve: 0, currentMonthReserve: 0, months: [] };
+  }
+
+  const startYear = 2026;
+  const startMonth = 7;
+  const parts = String(targetYearMonth).split('-');
+  const endYear = parseInt(parts[0], 10);
+  const endMonth = parseInt(parts[1], 10);
+
+  if (isNaN(endYear) || isNaN(endMonth)) {
+    return { accumulatedReserve: 0, currentMonthReserve: 0, months: [] };
+  }
+
+  // If before 2026-07, just return the target month's calculation
+  if (endYear < startYear || (endYear === startYear && endMonth < startMonth)) {
+    const div = getDividendsForMonth(companyId, targetYearMonth, 0.1);
+    const amt = Number(div?.reserveAmount || 0);
+    return {
+      accumulatedReserve: amt,
+      currentMonthReserve: amt,
+      months: [targetYearMonth]
+    };
+  }
+
+  let accumulatedReserve = 0;
+  let currentMonthReserve = 0;
+  const months = [];
+
+  let curY = startYear;
+  let curM = startMonth;
+
+  while (curY < endYear || (curY === endYear && curM <= endMonth)) {
+    const ym = `${curY}-${String(curM).padStart(2, '0')}`;
+    months.push(ym);
+    const div = getDividendsForMonth(companyId, ym, 0.1);
+    const amt = Number(div?.reserveAmount || 0);
+    accumulatedReserve += amt;
+    if (ym === targetYearMonth) {
+      currentMonthReserve = amt;
+    }
+
+    curM++;
+    if (curM > 12) {
+      curY++;
+      curM = 1;
+    }
+  }
+
+  return {
+    accumulatedReserve,
+    currentMonthReserve,
+    months
+  };
+};

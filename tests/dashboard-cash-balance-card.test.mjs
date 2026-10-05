@@ -34,11 +34,16 @@ test('UI card: DashboardView renders clean card title, tooltip, and interactive 
 
   // Verify modal table uses 合作金庫
   assert.ok(source.includes('🏦 合作金庫｜公司可動用資金'), 'Modal bank account label must display 合作金庫');
+  assert.ok(source.includes('🏛️ 合作金庫｜保留公積金專款'), 'Modal must display 合作金庫保留公積金專款');
   assert.ok(!source.includes('🏦 第一銀行'), 'Modal must not contain 第一銀行');
   assert.ok(!source.includes('🏦 玉山銀行'), 'Modal must not contain 玉山銀行');
 
-  // Verify availableFunds calculation includes shareholder capital (totalFunds - initialBalance)
-  assert.ok(source.includes('const availableFunds = totalFunds - initialBalance;'), 'availableFunds must equal totalFunds - initialBalance');
+  // Verify 3-column breakdown and formula (totalFunds = reserveCash + availableFunds + accumulatedReserve)
+  assert.ok(source.includes('const availableFunds = totalFunds - reserveCash - accumulatedReserve;'), 'availableFunds must equal totalFunds - reserveCash - accumulatedReserve');
+  assert.ok(source.includes('COMPANY_RESERVE_CASH'), 'Must use COMPANY_RESERVE_CASH for reserveCash');
+  assert.ok(source.includes('getCumulativeDividendReserve'), 'Must call getCumulativeDividendReserve');
+  assert.ok(source.includes('保留公積金 (累計)'), 'Must render 保留公積金 (累計)');
+  assert.ok(source.includes('(含本月提撥：'), 'Must show monthly reserve hint in card');
 
   // Verify cumulative revenue and expense end at selected period with Option A dynamic labels
   assert.ok(source.includes('cumulativePeriodSummary'), 'Must calculate cumulativePeriodSummary based on periodVal');
@@ -48,7 +53,16 @@ test('UI card: DashboardView renders clean card title, tooltip, and interactive 
   assert.ok(source.includes('expense: Number(cashBalanceBreakdown?.cashExpense || 0)'), 'Expense must tie to cashBalanceBreakdown ending at selected month');
 });
 
-test('data layer: initial bank configuration uses 合作金庫', () => {
+test('data layer: initial bank configuration uses 合作金庫 and petty cash 4500', () => {
   assert.ok(INITIAL_BANKS.some(b => b.name && b.name.includes('合作金庫')), 'INITIAL_BANKS must contain 合作金庫');
   assert.ok(!INITIAL_BANKS.some(b => b.name && (b.name.includes('第一銀行') || b.name.includes('玉山銀行'))), 'INITIAL_BANKS must not contain 第一銀行 or 玉山銀行');
+  const petty = INITIAL_BANKS.find(b => b.id === 'BANK_PETTY');
+  assert.equal(petty?.initialBalance, 4500, 'BANK_PETTY initialBalance must be 4500');
+});
+
+test('financials: COMPANY_RESERVE_CASH is defined as 4500 and getCumulativeDividendReserve is exported', () => {
+  const finSource = readFileSync(new URL('../src/utils/financials.js', import.meta.url), 'utf8');
+  assert.ok(finSource.includes('export const COMPANY_RESERVE_CASH = 4500;'), 'COMPANY_RESERVE_CASH must be exported as 4500');
+  assert.ok(finSource.includes('export const getCumulativeDividendReserve = (companyId, targetYearMonth) => {'), 'getCumulativeDividendReserve must be exported');
+  assert.ok(finSource.includes('while (curY < endYear || (curY === endYear && curM <= endMonth))'), 'Must iterate months from 2026-07 to targetYearMonth');
 });

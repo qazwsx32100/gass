@@ -1187,7 +1187,7 @@ export const getBanks = () => {
       companyId: 'COMP001',
       name: '零用金 / 現金',
       accountNo: 'CASH-BOX-01',
-      initialBalance: 10000
+      initialBalance: 4500
     });
     changed = true;
   }

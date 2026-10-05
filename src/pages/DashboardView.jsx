@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashExpenseSummary, getCashNetProfitSummary, getMonthlyOperatingSummary } from '../utils/financials';
+import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashExpenseSummary, getCashNetProfitSummary, getMonthlyOperatingSummary, getCumulativeDividendReserve, COMPANY_RESERVE_CASH } from '../utils/financials';
 import { getIncomes, getExpenses, getBankTransactions, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers, getShareholderLedger } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
 import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
@@ -107,9 +107,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       startDate: '2026-07-01',
       endDate
     });
-    const initialBalance = (getBanks() || [])
-      .filter(item => item?.companyId === companyId)
-      .reduce((sum, item) => sum + Number(item.initialBalance || 0), 0);
+    const reserveCash = COMPANY_RESERVE_CASH;
     const shareholderNet = (getShareholderLedger() || [])
       .filter(item => item?.companyId === companyId && item?.date <= endDate)
       .reduce((sum, item) => {
@@ -120,9 +118,13 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       }, 0);
     const surplusFunds = Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0);
     const totalFunds = shareholderNet + surplusFunds;
-    const availableFunds = totalFunds - initialBalance;
+    const { accumulatedReserve, currentMonthReserve } = getCumulativeDividendReserve(companyId, periodVal);
+    const availableFunds = totalFunds - reserveCash - accumulatedReserve;
     return {
-      initialBalance,
+      initialBalance: reserveCash,
+      reserveCash,
+      accumulatedReserve,
+      currentMonthReserve,
       shareholderNet,
       cashIncome: Number(cashFlow?.totalRevenue || 0),
       cashExpense: Number(cashOutflow?.totalExpenses || 0),
@@ -232,16 +234,42 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     };
   }, [year, month, cashBalanceBreakdown]);
 
-  // 顯示用資金分類：公司預留現金與可動用銀行資金分開，兩者合計才是總額。
+  // 顯示用資金分類：公司預留現金、可動用資金與保留公積金，三者合計即為總額。
   const classifiedBankRows = useMemo(() => {
-    const reserve = Number(cashBalanceBreakdown.initialBalance || 0);
-    const total = Number(cashBalanceBreakdown.totalFunds || 0);
-    const available = total - reserve;
+    const reserveCash = Number(cashBalanceBreakdown.reserveCash ?? cashBalanceBreakdown.initialBalance ?? COMPANY_RESERVE_CASH);
+    const accumulatedReserve = Number(cashBalanceBreakdown.accumulatedReserve || 0);
+    const available = Number(cashBalanceBreakdown.availableFunds || 0);
+
     const petty = (bankBalancesList || []).find(b => b.id === 'BANK_PETTY' || b.bankId === 'BANK_PETTY');
     const banks = (bankBalancesList || []).filter(b => b.id !== 'BANK_PETTY' && b.bankId !== 'BANK_PETTY');
-    const reserveRow = petty ? [{ ...petty, id: 'BANK_RESERVE_DISPLAY', displayCategory: '公司預留現金', initialBalance: reserve, currentBalance: reserve }] : [];
-    const availableRow = [{ ...(banks[0] || petty || { id: 'BANK_AVAILABLE_DISPLAY', accountNo: '-' }), id: 'BANK_AVAILABLE_DISPLAY', displayCategory: '銀行資金', initialBalance: Number(cashBalanceBreakdown.shareholderNet || 0), currentBalance: available }];
-    return [...reserveRow, ...availableRow, ...banks.slice(1).map(b => ({ ...b, displayCategory: '銀行資金' }))];
+    const mainBank = banks[0] || petty || { id: 'BANK001', accountNo: '006-12-34567-8' };
+
+    const reserveRow = [{
+      ...(petty || { id: 'BANK_PETTY', accountNo: 'CASH-BOX-01' }),
+      id: 'BANK_RESERVE_DISPLAY',
+      displayCategory: '公司預留現金',
+      initialBalance: reserveCash,
+      currentBalance: reserveCash
+    }];
+
+    const availableRow = [{
+      ...mainBank,
+      id: 'BANK_AVAILABLE_DISPLAY',
+      displayCategory: '可動用資金',
+      initialBalance: Number(cashBalanceBreakdown.shareholderNet || 0),
+      currentBalance: available
+    }];
+
+    const reserveFundRow = [{
+      ...mainBank,
+      id: 'BANK_DIVIDEND_RESERVE_DISPLAY',
+      displayCategory: '保留公積金',
+      accountNo: `${mainBank.accountNo || '-'}（專款）`,
+      initialBalance: 0,
+      currentBalance: accumulatedReserve
+    }];
+
+    return [...reserveRow, ...availableRow, ...reserveFundRow, ...banks.slice(1).map(b => ({ ...b, displayCategory: '銀行資金' }))];
   }, [bankBalancesList, cashBalanceBreakdown]);
 
   // Budgets & Actual Expenditures
@@ -1220,15 +1248,24 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>🏦 資金分佈與運用</div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>全公司總資金之配置（預留款＋可動用款）</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                      <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>全公司總資金之配置（預留款＋可動用款＋保留公積金）</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
+                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>公司預留現金</div>
-                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.initialBalance || 0).toLocaleString()}</strong>
+                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.reserveCash || COMPANY_RESERVE_CASH).toLocaleString()}</strong>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>現金專款</div>
                       </div>
-                      <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可動用資金</div>
-                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.availableFunds || 0).toLocaleString()}</strong>
+                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.availableFunds || 0).toLocaleString()}</strong>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>合作金庫可動用</div>
+                      </div>
+                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>保留公積金 (累計)</div>
+                        <strong style={{ fontFamily: 'var(--font-mono)', color: '#0d9488', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.accumulatedReserve || 0).toLocaleString()}</strong>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                          (含本月提撥：${Number(cashBalanceBreakdown.currentMonthReserve || 0).toLocaleString()})
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1273,20 +1310,35 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     <tbody>
                       {classifiedBankRows.map(b => {
                         const isPetty = b.displayCategory === '公司預留現金';
+                        const isReserveFund = b.displayCategory === '保留公積金';
                         const isLowPetty = isPetty && (b.currentBalance || 0) < 2000;
+                        const rowName = isPetty
+                          ? '💵 公司預留現金'
+                          : isReserveFund
+                            ? '🏛️ 合作金庫｜保留公積金專款'
+                            : '🏦 合作金庫｜公司可動用資金';
+
                         return (
-                          <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
+                          <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : isReserveFund ? 'rgba(13, 148, 136, 0.04)' : 'transparent' }}>
                             <td style={{ fontWeight: '700' }}>
-                              {isPetty ? '💵 公司預留現金' : '🏦 合作金庫｜公司可動用資金'}
+                              {rowName}
                             </td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>{b.accountNo || '-'}</td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>${(b.initialBalance || 0).toLocaleString()}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', fontSize: '1.05rem', color: isLowPetty ? 'var(--accent-red)' : 'var(--accent-blue)' }}>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', fontSize: '1.05rem', color: isLowPetty ? 'var(--accent-red)' : isReserveFund ? '#0d9488' : 'var(--accent-blue)' }}>
                               ${(b.currentBalance || 0).toLocaleString()} 元
                             </td>
                             <td>
-                              {isLowPetty ? (
-                                <span className="badge void">⚠️ 餘額低於安全限額 ($2,000)！請撥補</span>
+                              {isPetty ? (
+                                isLowPetty ? (
+                                  <span className="badge void">⚠️ 餘額低於安全限額 ($2,000)！請撥補</span>
+                                ) : (
+                                  <span className="badge approved">水位正常</span>
+                                )
+                              ) : isReserveFund ? (
+                                <span className="badge approved" style={{ backgroundColor: 'rgba(13, 148, 136, 0.1)', color: '#0d9488', border: '1px solid rgba(13, 148, 136, 0.3)' }}>
+                                  專款備用 (累計)
+                                </span>
                               ) : (
                                 <span className="badge approved">水位正常</span>
                               )}

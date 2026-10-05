@@ -42,7 +42,7 @@ export const INITIAL_SHAREHOLDERS = [
 
 export const INITIAL_BANKS = [
   { id: 'BANK001', companyId: 'COMP001', name: '合作金庫 - 盛隆活存', accountNo: '006-12-34567-8', initialBalance: 400000 },
-  { id: 'BANK_PETTY', companyId: 'COMP001', name: '店內零用金 (現金)', accountNo: 'CASH-BOX-01', initialBalance: 10000 }
+  { id: 'BANK_PETTY', companyId: 'COMP001', name: '店內零用金 (現金)', accountNo: 'CASH-BOX-01', initialBalance: 4500 }
 ];
 
 export const INITIAL_CHART_OF_ACCOUNTS = [
