@@ -1172,6 +1172,15 @@ export const getAdminDisplayName = () => {
 // Banks API
 export const getBanks = () => {
   const list = read(KEYS.BANKS);
+  let changed = false;
+  if (Array.isArray(list)) {
+    list.forEach(b => {
+      if (b && b.name && (b.name.includes('第一銀行') || b.name.includes('玉山銀行'))) {
+        b.name = b.name.replace(/第一銀行|玉山銀行/g, '合作金庫');
+        changed = true;
+      }
+    });
+  }
   if (list && list.length > 0 && !list.some(b => b.id === 'BANK_PETTY')) {
     list.push({
       id: 'BANK_PETTY',
@@ -1180,6 +1189,9 @@ export const getBanks = () => {
       accountNo: 'CASH-BOX-01',
       initialBalance: 10000
     });
+    changed = true;
+  }
+  if (changed) {
     write(KEYS.BANKS, list);
   }
   return list;

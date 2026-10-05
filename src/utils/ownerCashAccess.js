@@ -1,5 +1,7 @@
-export const canViewOwnerCashBalance = (userRole, user) => (
-  userRole === 'admin' &&
-  user?.id === 'ADMIN' &&
-  String(user?.email || '').trim().toLowerCase() === 'qazwsx32100@gmail.com'
+export const canViewOwnerCashBalance = (userRole) => (
+  userRole === 'admin' ||
+  userRole === 'business_reviewer' ||
+  userRole === 'readonly_shareholder'
 );
+
+

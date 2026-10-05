@@ -72,6 +72,19 @@ export default async function handler(req, res) {
       } : null;
 
       await editTelegramMessage(chatId, messageId, updatedText, { replyMarkup });
+
+      // 同步回寫 LINE 系統 Google Sheets 狀態為「已接單」
+      try {
+        const lineSyncUrl = process.env.LINE_SYNC_BASE_URL || 'https://shenglong-line-sync.vercel.app';
+        await fetchWithTimeout(`${lineSyncUrl}/api?action=ack-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, driver: user }),
+        }, 4000);
+      } catch (syncErr) {
+        console.warn('[Telegram Webhook] Sync ack-order to sheets warning:', syncErr.message);
+      }
+
       return sendJson(res, 200, { ok: true, action: 'order_acknowledged' });
     }
 

@@ -380,7 +380,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       {/* Petty Cash Threshold Warning */}
       {showOwnerBalance && pettyCashBalance < 2000 && (
         <div className="alert-box warning" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '10px' }}>
-          ⚠️ <strong>營運警訊：</strong> 店內零用金 (現金) 餘額過低！目前水位僅為 <strong>${pettyCashBalance.toLocaleString()} 元</strong>，低於安全限額 $2,000 元，請管理員儘速提現撥補！
+          ⚠️ <strong>營運警訊：</strong> 店內零用金 (現金) 餘額過低！目前水位僅為 <strong>${pettyCashBalance.toLocaleString()} 元</strong>，低於安全限額 $2,000 元，請儘速提現撥補！
         </div>
       )}
 
@@ -623,16 +623,16 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
 
-        {/* Owner-only card: current cash and bank balance */}
+        {/* Cash and bank balance card */}
         {showOwnerBalance && (
           <div
             className="metric-card accent-blue"
             style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
             onClick={() => openDetailModal('cash')}
-            title="僅楊孟龍管理員可查看；點擊查看資金結餘計算明細"
+            title="點擊查看公司資金結餘與銀行帳戶分佈"
           >
             <div className="metric-card-header">
-              <span className="metric-label">目前資金結餘（管理人專用）</span>
+              <span className="metric-label">目前資金結餘</span>
               <div className="metric-icon-wrapper blue">🏦</div>
             </div>
             <span className={`metric-value ${(cashBalanceBreakdown.totalFunds || 0) < 0 ? 'text-danger' : ''}`}>
@@ -640,7 +640,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             </span>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="metric-change neutral">現金＋銀行存款</span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>🔒 楊孟龍專用・查看明細 ➔</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-blue)', fontWeight: 700 }}>點擊查看分佈 ➔</span>
             </div>
           </div>
         )}
@@ -1266,7 +1266,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         return (
                           <tr key={b.id} style={{ backgroundColor: isPetty ? 'rgba(245, 158, 11, 0.05)' : 'transparent' }}>
                             <td style={{ fontWeight: '700' }}>
-                              {isPetty ? '💵 公司預留現金' : '🏦 銀行資金｜公司可動用資金'}
+                              {isPetty ? '💵 公司預留現金' : '🏦 合作金庫｜公司可動用資金'}
                             </td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>{b.accountNo || '-'}</td>
                             <td style={{ fontFamily: 'var(--font-mono)' }}>${(b.initialBalance || 0).toLocaleString()}</td>

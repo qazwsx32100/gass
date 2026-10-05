@@ -1877,7 +1877,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
                     </div>
                     <div className="form-group">
                       <label className="form-label">銀行名稱</label>
-                      <input type="text" required placeholder="例如：第一銀行 - 活存" className="form-control" value={formData.bankName} onChange={e => setFormData({ ...formData, bankName: e.target.value })} />
+                      <input type="text" required placeholder="例如：合作金庫 - 盛隆活存" className="form-control" value={formData.bankName} onChange={e => setFormData({ ...formData, bankName: e.target.value })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">銀行帳號</label>

@@ -41,8 +41,7 @@ export const INITIAL_SHAREHOLDERS = [
 ];
 
 export const INITIAL_BANKS = [
-  { id: 'BANK001', companyId: 'COMP001', name: '第一銀行 - 盛隆活存', accountNo: '123-45-67890-1', initialBalance: 250000 },
-  { id: 'BANK002', companyId: 'COMP001', name: '玉山銀行 - 盛隆週轉金', accountNo: '808-12-34567-8', initialBalance: 150000 },
+  { id: 'BANK001', companyId: 'COMP001', name: '合作金庫 - 盛隆活存', accountNo: '006-12-34567-8', initialBalance: 400000 },
   { id: 'BANK_PETTY', companyId: 'COMP001', name: '店內零用金 (現金)', accountNo: 'CASH-BOX-01', initialBalance: 10000 }
 ];
 
@@ -164,7 +163,7 @@ export const INITIAL_LOANS = [
     id: 'LOAN001',
     companyId: 'COMP001',
     bankId: 'BANK001',
-    name: '第一銀行 青年創業貸款',
+    name: '合作金庫 青年創業貸款',
     principal: 500000,
     interestRate: 2.1,
     months: 36,
