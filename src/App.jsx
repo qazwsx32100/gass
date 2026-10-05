@@ -203,6 +203,15 @@ function App() {
           const session = JSON.parse(savedSession);
           if (session?.user?.id && session?.role) {
             restoredSession = session;
+            if (session.user.id !== 'ADMIN' && session.user.id !== 'SH001') {
+              const currentShareholders = getShareholders();
+              const matchedSh = currentShareholders.find(s => s.id === session.user.id || (s.email && s.email.toLowerCase() === (session.user.email || '').toLowerCase()));
+              if (matchedSh) {
+                restoredSession.user.name = matchedSh.name;
+                restoredSession.user.role = matchedSh.role || restoredSession.user.role;
+                restoredSession.role = matchedSh.role || restoredSession.role;
+              }
+            }
           }
         } catch {
           localStorage.removeItem('bp_login_session');
@@ -276,10 +285,15 @@ function App() {
         return;
       }
 
-      const verifiedRole = validatedSession.role || restoredSession.role;
+      const currentShareholders = getShareholders();
+      const matchedSh = (restoredSession.user.id !== 'ADMIN' && restoredSession.user.id !== 'SH001')
+        ? currentShareholders.find(s => s.id === restoredSession.user.id || (s.email && s.email.toLowerCase() === (restoredSession.user.email || '').toLowerCase()))
+        : null;
+      const verifiedRole = matchedSh?.role || validatedSession.role || restoredSession.role;
       const verifiedUser = {
         ...restoredSession.user,
         ...(validatedSession === true ? {} : validatedSession),
+        name: matchedSh?.name || restoredSession.user.name,
         role: verifiedRole
       };
       setIsLoggedIn(true);
@@ -380,7 +394,9 @@ function App() {
   }, [isLoggedIn, allowedTabs]);
 
   useEffect(() => {
-    if (!isLoggedIn || !currentUser || userRole !== USER_ROLES.ADMIN) return;
+    if (!isLoggedIn || !currentUser) return;
+    const isMainAdmin = currentUser.id === 'ADMIN' || currentUser.id === 'SH001' || currentUser.email === 'qazwsx32100@gmail.com';
+    if (!isMainAdmin) return;
     const adminName = getAdminDisplayName();
     if (!adminName || currentUser.name === adminName) return;
 

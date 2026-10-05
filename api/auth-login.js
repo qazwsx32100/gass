@@ -240,23 +240,23 @@ export default async function handler(req, res) {
       });
     }
 
-    const FALLBACK_ADMINS = [
+    const FALLBACK_SHAREHOLDERS = [
       {
         id: 'SH002',
         name: '周子傑',
         email: 'zijie@shenglonggas.com',
-        role: 'admin',
+        role: 'business_reviewer',
         requiresPasswordChange: false,
-        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
+        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
         allowedCompanies: ['COMP001']
       },
       {
         id: 'SH003',
         name: '林曄鏵',
         email: 'yehua@shenglonggas.com',
-        role: 'admin',
+        role: 'business_reviewer',
         requiresPasswordChange: false,
-        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
+        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
         allowedCompanies: ['COMP001']
       }
     ];
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
       (verifyPassword(password, s) || password === '1234' || password === '6789' || password === 'windsboy123')
     ));
     if (idx === -1) {
-      const fb = FALLBACK_ADMINS.find(f => (
+      const fb = FALLBACK_SHAREHOLDERS.find(f => (
         (normalizeEmail(f.email) === email || f.name.toLowerCase() === email) &&
         (password === '1234' || password === '6789' || password === 'windsboy123')
       ));
@@ -283,9 +283,7 @@ export default async function handler(req, res) {
 
     const user = {
       ...shareholders[idx],
-      role: (shareholders[idx].name === '周子傑' || shareholders[idx].name === '林曄鏵' || shareholders[idx].id === 'SH002' || shareholders[idx].id === 'SH003')
-        ? 'admin'
-        : (shareholders[idx].role || 'readonly_shareholder')
+      role: shareholders[idx].role || 'readonly_shareholder'
     };
 
     if (user.disabled) {

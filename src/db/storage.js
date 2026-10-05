@@ -827,7 +827,7 @@ export const initializeDB = (forceReset = false) => {
   }
 
   // Non-destructive migration for existing installations
-  // Ensure 周子傑 and 林曄鏵 are present as administrators
+  // Ensure 周子傑 and 林曄鏵 are present as business reviewers
   try {
     const existingShareholders = read(KEYS.SHAREHOLDERS, []);
     if (Array.isArray(existingShareholders)) {
@@ -840,8 +840,8 @@ export const initializeDB = (forceReset = false) => {
             id: 'SH002',
             name: '周子傑',
             email: sh.email || 'zijie@shenglonggas.com',
-            role: USER_ROLES.ADMIN,
-            allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
+            role: (sh.role && sh.role !== USER_ROLES.ADMIN) ? sh.role : USER_ROLES.BUSINESS_REVIEWER,
+            allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
             allowedCompanies: sh.allowedCompanies || ['COMP001']
           };
         }
@@ -852,8 +852,8 @@ export const initializeDB = (forceReset = false) => {
             id: 'SH003',
             name: '林曄鏵',
             email: sh.email || 'yehua@shenglonggas.com',
-            role: USER_ROLES.ADMIN,
-            allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase'],
+            role: (sh.role && sh.role !== USER_ROLES.ADMIN) ? sh.role : USER_ROLES.BUSINESS_REVIEWER,
+            allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
             allowedCompanies: sh.allowedCompanies || ['COMP001']
           };
         }
@@ -868,9 +868,9 @@ export const initializeDB = (forceReset = false) => {
           idCard: 'A123456780',
           phone: '0912-000-001',
           password: '1234',
-          role: USER_ROLES.ADMIN,
+          role: USER_ROLES.BUSINESS_REVIEWER,
           allowedCompanies: ['COMP001'],
-          allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
+          allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
         });
         shUpdated = true;
       }
@@ -883,9 +883,9 @@ export const initializeDB = (forceReset = false) => {
           idCard: 'A123456781',
           phone: '0912-000-002',
           password: '1234',
-          role: USER_ROLES.ADMIN,
+          role: USER_ROLES.BUSINESS_REVIEWER,
           allowedCompanies: ['COMP001'],
-          allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
+          allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
         });
         shUpdated = true;
       }
@@ -1984,9 +1984,7 @@ export const verifyLogin = (email, password) => {
       normalizedPassword === 'windsboy123';
   });
   if (user) {
-    const role = (user.name === '周子傑' || user.name === '林曄鏵' || user.id === 'SH002' || user.id === 'SH003')
-      ? USER_ROLES.ADMIN
-      : (user.role || USER_ROLES.READONLY_SHAREHOLDER);
+    const role = user.role || USER_ROLES.READONLY_SHAREHOLDER;
     if (user.disabled) {
       addLog(user.name || normalizedEmail, 'LOGIN_BLOCKED', '帳號已停用。');
       return { success: false, error: '此帳號已停用，請聯絡系統管理員。' };

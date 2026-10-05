@@ -23,9 +23,9 @@ export const INITIAL_SHAREHOLDERS = [
     idCard: 'A123456780',
     phone: '0912-000-001',
     password: '1234',
-    role: 'admin',
+    role: 'business_reviewer',
     allowedCompanies: ['COMP001'],
-    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
   },
   {
     id: 'SH003',
@@ -34,9 +34,9 @@ export const INITIAL_SHAREHOLDERS = [
     idCard: 'A123456781',
     phone: '0912-000-002',
     password: '1234',
-    role: 'admin',
+    role: 'business_reviewer',
     allowedCompanies: ['COMP001'],
-    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
   }
 ];
 
