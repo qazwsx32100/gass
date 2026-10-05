@@ -577,60 +577,13 @@ function App() {
             朝有錢人邁進
           </h2>
 
-          {/* 管理員專屬快速切換卡片 */}
-          <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>👑</span> 管理員帳號快速選取 (點擊直接填入)：
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { name: '楊孟龍', roleDesc: '主管理員', email: 'qazwsx32100@gmail.com', pw: 'windsboy123' },
-                { name: '周子傑', roleDesc: '系統管理員', email: 'zijie@shenglonggas.com', pw: '1234' },
-                { name: '林曄鏵', roleDesc: '系統管理員', email: 'yehua@shenglonggas.com', pw: '1234' }
-              ].map(adminUser => {
-                const isSelected = loginEmail === adminUser.email || loginEmail === adminUser.name;
-                return (
-                  <button
-                    key={adminUser.email}
-                    type="button"
-                    onClick={() => {
-                      setLoginEmail(adminUser.email);
-                      setLoginPassword(adminUser.pw);
-                      setLoginError('');
-                    }}
-                    style={{
-                      padding: '10px 4px',
-                      borderRadius: '12px',
-                      border: isSelected ? '2px solid #05b2a5' : '1px solid #cbd5e1',
-                      backgroundColor: isSelected ? '#e6fffa' : '#f8fafc',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      boxShadow: isSelected ? '0 0 0 2px rgba(5, 178, 165, 0.2)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ fontWeight: '800', fontSize: '0.88rem', color: isSelected ? '#05b2a5' : '#1e293b' }}>
-                      {adminUser.name}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: '#0d9488', fontWeight: '600', marginTop: '2px' }}>
-                      {adminUser.roleDesc}
-                    </div>
-                    <div style={{ fontSize: '0.62rem', color: '#64748b', marginTop: '3px' }}>
-                      密碼: {adminUser.pw}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
             <div className="form-group">
               <label className="form-label" style={{ color: '#05b2a5' }}>登入帳號 (可輸入信箱或管理員姓名)</label>
               <input
                 type="text"
                 required
-                placeholder="請輸入姓名或信箱 (例如: 周子傑 / 林曄鏵 / email)"
+                placeholder="請輸入姓名或信箱"
                 className="form-control"
                 style={{ borderRadius: '12px' }}
                 value={loginEmail}
@@ -649,9 +602,6 @@ function App() {
                 value={loginPassword}
                 onChange={e => setLoginPassword(e.target.value)}
               />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                * 點選上方管理員卡片可自動帶入帳號與密碼，亦可直接自訂修改。
-              </span>
             </div>
 
             {loginError && (
