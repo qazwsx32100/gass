@@ -2891,7 +2891,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                     <th>異動類型</th>
                     <th>異動金額</th>
                     <th>備註</th>
-                    {showActionColumn && <th style={{ textAlign: 'right' }}>操作</th>}
+                    {(isAdmin || manageShareholderLedger) && <th style={{ textAlign: 'right' }}>操作</th>}
                   </tr>
                 )}
                 {activeSubTab === 'loan' && (
@@ -3243,7 +3243,7 @@ export default function InputsView({ companyId, triggerRefresh, onDataChange, op
                       );
                     })()}
 
-                    {showActionColumn && activeSubTab !== 'gasMovements' && (
+                    {showActionColumn && activeSubTab !== 'gasMovements' && (activeSubTab !== 'shareholder' || isAdmin || manageShareholderLedger) && (
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                           {activeSubTab === 'dailySummary' && (

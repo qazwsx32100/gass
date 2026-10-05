@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getSupplierPayableSummary, getAggregateReceivableSummary, getMonthlyOperatingSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
-import { getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getSuppliers, getCustomers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
+import { USER_ROLES, getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getSuppliers, getCustomers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
 import PieChart from '../components/PieChart';
 import { getCloudAttachmentUrl, revokeCloudAttachmentUrl, uploadCloudAttachment } from '../db/attachmentService';
@@ -16,6 +16,7 @@ import { getTaiwanDateString } from '../utils/taiwanDate';
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 
 export default function ReportsView({ companyId, year, month, triggerRefresh, showToast, userRole, restrictToShareholder = false, restrictToAudit = false }) {
+  const isAdmin = userRole === USER_ROLES.ADMIN;
   const [reportType, setReportType] = useState(() => {
     if (restrictToShareholder) return 'dividend';
     if (restrictToAudit) return 'auditReady';
@@ -2413,7 +2414,14 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                 {/* Interactive Reserve Input & Slider */}
                 {!dividends.isLoss && (
                   <div className="form-group" style={{ marginBottom: '24px', backgroundColor: 'var(--bg-tertiary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <label className="form-label" style={{ fontWeight: 'bold', marginBottom: '12px', display: 'block' }}>調整保留公積金</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <label className="form-label" style={{ fontWeight: 'bold', margin: 0 }}>調整保留公積金</label>
+                      {!isAdmin && (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: '4px' }}>
+                          🔒 唯讀模式（僅系統管理員可調整）
+                        </span>
+                      )}
+                    </div>
                     
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                       {/* TWD Amount Input */}
@@ -2424,12 +2432,16 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                           className="form-control" 
                           placeholder="例如：20000" 
                           value={customAmountText} 
-                          onFocus={() => setIsAmountFocused(true)}
+                          disabled={!isAdmin}
+                          readOnly={!isAdmin}
+                          onFocus={() => { if (isAdmin) setIsAmountFocused(true); }}
                           onBlur={() => {
+                            if (!isAdmin) return;
                             setIsAmountFocused(false);
                             setCustomAmountText(String(Math.round(dividends.reserveAmount || 0)));
                           }}
                           onChange={e => {
+                            if (!isAdmin) return;
                             const valText = e.target.value;
                             setCustomAmountText(valText);
                             if (valText === '') {
@@ -2457,12 +2469,16 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                             className="form-control" 
                             style={{ width: '80px' }}
                             value={reservePercentText} 
-                            onFocus={() => setIsPercentFocused(true)}
+                            disabled={!isAdmin}
+                            readOnly={!isAdmin}
+                            onFocus={() => { if (isAdmin) setIsPercentFocused(true); }}
                             onBlur={() => {
+                              if (!isAdmin) return;
                               setIsPercentFocused(false);
                               setReservePercentText(String(Math.round(reserveRatio * 100)));
                             }}
                             onChange={e => {
+                              if (!isAdmin) return;
                               const valText = e.target.value;
                               setReservePercentText(valText);
                               const valNum = Number(valText || 0);
@@ -2485,9 +2501,11 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                         max="1" 
                         step="0.01" 
                         className="form-control" 
-                        style={{ padding: '0', cursor: 'pointer', height: '6px' }} 
+                        style={{ padding: '0', cursor: isAdmin ? 'pointer' : 'default', height: '6px' }} 
                         value={reserveRatio} 
+                        disabled={!isAdmin}
                         onChange={e => {
+                          if (!isAdmin) return;
                           setReserveMode('ratio');
                           setCustomReserveAmount(null);
                           setReserveRatio(parseFloat(e.target.value));
@@ -2499,43 +2517,45 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
                         * 公積金將保留在公司銀行存款中做為營運週轉金，不予發放分紅。
                       </span>
-                      <button 
-                        type="button" 
-                        className="btn btn-primary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
-                        onClick={async () => {
-                          const locks = getPeriodLocks();
-                          const idx = locks.findIndex(item => item.companyId === companyId && item.yearMonth === activePeriodVal);
-                          if (idx !== -1) {
-                            locks[idx] = {
-                              ...locks[idx],
-                              reserveRatio: dividends.reserveRatio,
-                              reserveMode,
-                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
-                            };
-                          } else {
-                            locks.push({
-                              companyId,
-                              yearMonth: activePeriodVal,
-                              locked: false,
-                              reserveRatio: dividends.reserveRatio,
-                              reserveMode,
-                              reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
-                            });
-                          }
-                          savePeriodLocks(locks);
+                      {isAdmin && (
+                        <button 
+                          type="button" 
+                          className="btn btn-primary btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
+                          onClick={async () => {
+                            const locks = getPeriodLocks();
+                            const idx = locks.findIndex(item => item.companyId === companyId && item.yearMonth === activePeriodVal);
+                            if (idx !== -1) {
+                              locks[idx] = {
+                                ...locks[idx],
+                                reserveRatio: dividends.reserveRatio,
+                                reserveMode,
+                                reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
+                              };
+                            } else {
+                              locks.push({
+                                companyId,
+                                yearMonth: activePeriodVal,
+                                locked: false,
+                                reserveRatio: dividends.reserveRatio,
+                                reserveMode,
+                                reserveAmount: reserveMode === 'amount' ? dividends.reserveAmount : null
+                              });
+                            }
+                            savePeriodLocks(locks);
 
-                          window.dispatchEvent(new Event('bp_data_changed'));
-                          const synced = await syncLocalToSupabase('股東分紅公積金設定');
-                          if (synced) {
-                            showToast(`💾 公積金設定已依${reserveMode === 'amount' ? '金額' : '比例'}儲存並同步！`, 'success');
-                          } else {
-                            showToast('❌ 公積金設定已暫存於本機，但雲端同步失敗，請稍後再試。', 'error');
-                          }
-                        }}
-                      >
-                        💾 儲存設定
-                      </button>
+                            window.dispatchEvent(new Event('bp_data_changed'));
+                            const synced = await syncLocalToSupabase('股東分紅公積金設定');
+                            if (synced) {
+                              showToast(`💾 公積金設定已依${reserveMode === 'amount' ? '金額' : '比例'}儲存並同步！`, 'success');
+                            } else {
+                              showToast('❌ 公積金設定已暫存於本機，但雲端同步失敗，請稍後再試。', 'error');
+                            }
+                          }}
+                        >
+                          💾 儲存設定
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
