@@ -6,7 +6,6 @@ import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
 import WeatherHeaderBadge from './components/WeatherHeaderBadge';
-import InstallAppButton from './components/InstallAppButton';
 import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
 import { INITIAL_CHART_OF_ACCOUNTS } from './db/mockData';
 
@@ -493,6 +492,7 @@ function App() {
     setIsLoggedIn(false);
     setUserRole('');
     setCurrentUser(null);
+    setIsMobileNavOpen(false);
     setIsForcePasswordChange(false);
     setIsChangePwdOpen(false);
     setActiveTab('dashboard');
@@ -619,17 +619,8 @@ function App() {
             )}
 
             <button type="submit" className="btn btn-primary" style={{ padding: '12px', borderRadius: '12px', fontSize: '1rem', marginTop: '12px' }}>
-              驗證身分並登入 ERP
+              驗證身分並登入財報
             </button>
-
-            <div style={{ marginTop: '8px' }}>
-              <InstallAppButton
-                buttonText="📲 一鍵安裝財報 App 至手機桌面"
-                appName="盛隆雲端財報系統"
-                profileHref="/profiles/finance.mobileconfig"
-                style={{ width: '100%', padding: '11px', fontSize: '13px', justifyContent: 'center' }}
-              />
-            </div>
           </form>
 
         </div>
@@ -747,16 +738,28 @@ function App() {
 
         {/* Sidebar Footer */}
         <div className="sidebar-footer">
-          <div className="user-badge" onClick={() => setIsChangePwdOpen(true)} style={{ cursor: 'pointer' }} title="點擊修改密碼">
-            <div className="user-avatar">
-              {currentUser.name.substring(0, 1)}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+            <div className="user-badge" onClick={() => setIsChangePwdOpen(true)} style={{ cursor: 'pointer', flex: 1, minWidth: 0 }} title="點擊修改密碼">
+              <div className="user-avatar">
+                {currentUser.name.substring(0, 1)}
+              </div>
+              <div className="user-info" style={{ minWidth: 0 }}>
+                <span className="user-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUser.name}</span>
+                <span className="user-role" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.7rem' }}>
+                  ✏️ 修改密碼
+                </span>
+              </div>
             </div>
-            <div className="user-info">
-              <span className="user-name">{currentUser.name}</span>
-              <span className="user-role" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.7rem' }}>
-                ✏️ 修改密碼
-              </span>
-            </div>
+
+            <button 
+              type="button"
+              onClick={handleLogout} 
+              className="btn btn-secondary btn-sm sidebar-logout-button"
+              title="登出"
+            >
+              <LogOut size={16} aria-hidden="true" />
+              <span>登出</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -813,13 +816,6 @@ function App() {
           <div className="header-controls">
             {/* Real-time Weather Status Pill */}
             <WeatherHeaderBadge />
-
-            {/* 📲 方案2/3 一鍵安裝 App 按鈕 */}
-            <InstallAppButton
-              buttonText="📲 一鍵安裝 App"
-              appName="盛隆雲端財報系統"
-              profileHref="/profiles/finance.mobileconfig"
-            />
 
             {/* 1. Period selects */}
             <div className="header-period-control">
