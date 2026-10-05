@@ -36,6 +36,9 @@ test('UI card: DashboardView renders clean card title, tooltip, and interactive 
   assert.ok(source.includes('🏦 合作金庫｜公司可動用資金'), 'Modal bank account label must display 合作金庫');
   assert.ok(!source.includes('🏦 第一銀行'), 'Modal must not contain 第一銀行');
   assert.ok(!source.includes('🏦 玉山銀行'), 'Modal must not contain 玉山銀行');
+
+  // Verify availableFunds calculation includes shareholder capital (totalFunds - initialBalance)
+  assert.ok(source.includes('const availableFunds = totalFunds - initialBalance;'), 'availableFunds must equal totalFunds - initialBalance');
 });
 
 test('data layer: initial bank configuration uses 合作金庫', () => {

@@ -118,14 +118,17 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
         if (item.type === 'decrease') return sum - amount;
         return sum;
       }, 0);
+    const surplusFunds = Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0);
+    const totalFunds = shareholderNet + surplusFunds;
+    const availableFunds = totalFunds - initialBalance;
     return {
       initialBalance,
       shareholderNet,
       cashIncome: Number(cashFlow?.totalRevenue || 0),
       cashExpense: Number(cashOutflow?.totalExpenses || 0),
-      surplusFunds: Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0),
-      availableFunds: (Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0)) - initialBalance,
-      totalFunds: shareholderNet + (Number(cashFlow?.totalRevenue || 0) - Number(cashOutflow?.totalExpenses || 0))
+      surplusFunds,
+      availableFunds,
+      totalFunds
     };
   }, [companyId, periodVal, triggerRefresh]);
 
@@ -1208,8 +1211,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
                   <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>🪙 盈餘資金</div>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>來自營運產生之可運用資金</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>🏦 資金分佈與運用</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>全公司總資金之配置（預留款＋可動用款）</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                       <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>公司預留現金</div>
@@ -1231,7 +1234,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   </div>
                 </div>
                 <div style={{ padding: '14px 16px', backgroundColor: 'rgba(0, 180, 170, 0.08)', borderRadius: '10px', border: '1px solid rgba(0, 180, 170, 0.2)', marginBottom: '20px' }}>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>總額（股東投入＋盈餘資金）</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>總額（股東投入＋營運現金淨額）</div>
                   <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>
                     ${(Number(cashBalanceBreakdown.shareholderNet || 0) + Number(cashBalanceBreakdown.surplusFunds || 0)).toLocaleString()} 元
                   </strong>
