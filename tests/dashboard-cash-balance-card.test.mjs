@@ -39,6 +39,13 @@ test('UI card: DashboardView renders clean card title, tooltip, and interactive 
 
   // Verify availableFunds calculation includes shareholder capital (totalFunds - initialBalance)
   assert.ok(source.includes('const availableFunds = totalFunds - initialBalance;'), 'availableFunds must equal totalFunds - initialBalance');
+
+  // Verify cumulative revenue and expense end at selected period with Option A dynamic labels
+  assert.ok(source.includes('cumulativePeriodSummary'), 'Must calculate cumulativePeriodSummary based on periodVal');
+  assert.ok(source.includes('115 年 7 月～${m} 月 累計總收入'), 'Label must dynamically show 115 年 7 月～${m} 月 累計總收入');
+  assert.ok(source.includes('115 年 7 月 當期總收入'), 'Label must show 115 年 7 月 當期總收入 for start month');
+  assert.ok(source.includes('income: Number(cashBalanceBreakdown?.cashIncome || 0)'), 'Income must tie to cashBalanceBreakdown ending at selected month');
+  assert.ok(source.includes('expense: Number(cashBalanceBreakdown?.cashExpense || 0)'), 'Expense must tie to cashBalanceBreakdown ending at selected month');
 });
 
 test('data layer: initial bank configuration uses 合作金庫', () => {

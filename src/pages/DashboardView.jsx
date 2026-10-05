@@ -207,22 +207,30 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
     return getBankBalancesAtDate(companyId, lastDayStr) || [];
   }, [companyId, periodVal, triggerRefresh]);
 
-  const julyCashSummary = useMemo(() => {
-    void triggerRefresh;
-    const dates = [
-      ...(getIncomes() || []).filter(item => item?.companyId === companyId).map(item => item.date),
-      ...(getExpenses() || []).filter(item => item?.companyId === companyId).map(item => item.date),
-      ...(getBankTransactions() || []).filter(item => item?.companyId === companyId).map(item => item.date || item.transactionDate)
-    ].filter(Boolean).sort();
-    const endDate = dates[dates.length - 1] || new Date().toISOString().slice(0, 10);
-    const income = getCashNetProfitSummary(companyId, 'range', { startDate: '2026-07-01', endDate });
-    const expense = getCashExpenseSummary(companyId, 'range', { startDate: '2026-07-01', endDate });
+  const cumulativePeriodSummary = useMemo(() => {
+    const rocY = Number(year) > 1911 ? Number(year) - 1911 : Number(year);
+    const m = Number(month);
+    let incomeTitle = `115 年 7 月～${m} 月 累計總收入`;
+    let expenseTitle = `115 年 7 月～${m} 月 累計總支出`;
+
+    if (rocY === 115 && m === 7) {
+      incomeTitle = '115 年 7 月 當期總收入';
+      expenseTitle = '115 年 7 月 當期總支出';
+    } else if (rocY === 115 && m < 7) {
+      incomeTitle = `115 年 ${m} 月 總收入`;
+      expenseTitle = `115 年 ${m} 月 總支出`;
+    } else if (rocY > 115) {
+      incomeTitle = `115 年 7 月～${rocY} 年 ${m} 月 累計總收入`;
+      expenseTitle = `115 年 7 月～${rocY} 年 ${m} 月 累計總支出`;
+    }
+
     return {
-      income: Number(income?.totalRevenue || 0),
-      expense: Number(expense?.totalExpenses || 0),
-      endDate
+      incomeTitle,
+      expenseTitle,
+      income: Number(cashBalanceBreakdown?.cashIncome || 0),
+      expense: Number(cashBalanceBreakdown?.cashExpense || 0)
     };
-  }, [companyId, triggerRefresh]);
+  }, [year, month, cashBalanceBreakdown]);
 
   // 顯示用資金分類：公司預留現金與可動用銀行資金分開，兩者合計才是總額。
   const classifiedBankRows = useMemo(() => {
@@ -1241,12 +1249,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' }}>
                   <div style={{ padding: '14px 16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '10px' }}>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>115 年 7 月起總收入</div>
-                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.1rem' }}>${julyCashSummary.income.toLocaleString()} 元</strong>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{cumulativePeriodSummary.incomeTitle}</div>
+                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.1rem' }}>${cumulativePeriodSummary.income.toLocaleString()} 元</strong>
                   </div>
                   <div style={{ padding: '14px 16px', backgroundColor: 'rgba(239, 68, 68, 0.06)', borderRadius: '10px' }}>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>115 年 7 月起總支出</div>
-                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '1.1rem' }}>−${julyCashSummary.expense.toLocaleString()} 元</strong>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{cumulativePeriodSummary.expenseTitle}</div>
+                    <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '1.1rem' }}>−${cumulativePeriodSummary.expense.toLocaleString()} 元</strong>
                   </div>
                 </div>
 
