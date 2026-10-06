@@ -849,23 +849,7 @@ function App() {
               </select>
             </div>
 
-            <div className="header-divider" />
 
-            {/* 2. User info & Logout button */}
-            <div className="header-user-actions">
-              <span className="header-user-name">
-                {currentUser.name}
-              </span>
-              
-              <button 
-                onClick={handleLogout} 
-                className="btn btn-secondary btn-sm header-logout-button"
-                title="登出"
-              >
-                <LogOut size={17} aria-hidden="true" />
-                <span>登出</span>
-              </button>
-            </div>
           </div>
         </header>
 
