@@ -812,7 +812,11 @@ function App() {
             )}
 
             {/* 瓦斯營收關聯智能分析膠囊鈕 (與公司名稱/Logo 同行) */}
-            <WeatherRevenueWidget />
+            <WeatherRevenueWidget
+              companyId={currentCompanyId}
+              year={currentYear}
+              month={currentMonth}
+            />
           </div>
 
           {/* Period selector & Login badge at right end */}
