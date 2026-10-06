@@ -1,4 +1,4 @@
-const RECOVERY_WINDOW_MS = 60_000;
+const RECOVERY_WINDOW_MS = 10_000;
 
 export const isLazyImportLoadError = (error) => {
   const message = String(error?.message || error || '').toLowerCase();
