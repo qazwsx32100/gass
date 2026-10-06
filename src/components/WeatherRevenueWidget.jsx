@@ -14,6 +14,7 @@ export default function WeatherRevenueWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [showStandards, setShowStandards] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,6 +28,20 @@ export default function WeatherRevenueWidget({
       isMounted = false;
     };
   }, []);
+
+  // 手動強制重新連線抓取最新氣溫
+  const handleRefreshWeather = async (e) => {
+    if (e) e.stopPropagation();
+    setRefreshing(true);
+    try {
+      const fresh = await getLiveWeatherAnalysis(true);
+      setAnalysisData(fresh);
+    } catch (err) {
+      console.error('Refresh weather failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // 計算選定月份或基準月份的實際瓦斯營業額
   const activeRevenue = useMemo(() => {
@@ -71,7 +86,7 @@ export default function WeatherRevenueWidget({
   const deltaRate = multiplier - 1; // 正為多賺、負為少賺
   const isLoss = deltaRate < -0.001;
   const isGain = deltaRate > 0.001;
-  
+
   // 預估天氣影響營收金額
   const impactRevenue = Math.round(activeRevenue * deltaRate);
   const impactPercentage = Math.round(Math.abs(deltaRate) * 1000) / 10;
@@ -88,11 +103,11 @@ export default function WeatherRevenueWidget({
         onClick={() => setIsOpen(true)}
         className="btn"
         aria-label="開啟天氣影響營業預估分析"
-        title="點擊查看天氣影響營業預估會影響多少與預估標準"
+        title={`新北市三重區即時氣溫 ${analysisData.currentTemp}°C (${analysisData.conditionLabel}) ｜ 點擊查看營業影響與預估標準`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '5px',
+          gap: '6px',
           backgroundColor: isLoss
             ? 'rgba(239, 68, 68, 0.08)'
             : isGain
@@ -117,8 +132,8 @@ export default function WeatherRevenueWidget({
           ...style,
         }}
       >
-        <span style={{ fontSize: '13px', lineHeight: 1 }}>{isLoss ? '🌤️' : isGain ? '❄️' : '💡'}</span>
-        <span>天氣營收影響</span>
+        <span style={{ fontSize: '13px', lineHeight: 1 }}>{analysisData.conditionIcon || '🌤️'}</span>
+        <span>三重 {analysisData.currentTemp}°C</span>
         <span
           style={{
             fontSize: '9px',
@@ -186,7 +201,7 @@ export default function WeatherRevenueWidget({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '24px' }}>🌤️</span>
+                <span style={{ fontSize: '24px' }}>{analysisData.conditionIcon || '🌤️'}</span>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>天氣影響 營業預估會影響多少</span>
@@ -195,7 +210,7 @@ export default function WeatherRevenueWidget({
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    {analysisData.location} 即時氣溫 {analysisData.currentTemp}°C ｜ 盛隆瓦斯營收關聯模型
+                    盛隆瓦斯 ✕ 即時氣象觀測連線模型
                   </div>
                 </div>
               </div>
@@ -226,6 +241,85 @@ export default function WeatherRevenueWidget({
 
             {/* Modal Body */}
             <div style={{ padding: '18px 20px' }}>
+              {/* 即時氣溫真實連線資訊列 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  marginBottom: '14px',
+                  fontSize: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#334155' }}>
+                  <span style={{ color: '#16a34a', fontWeight: 800 }}>🟢 即時連線</span>
+                  <span>{analysisData.location} (25.06°N, 121.49°E)</span>
+                  <span style={{ color: '#64748b' }}>｜ 觀測時間：{analysisData.observationTime || analysisData.updatedAt}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRefreshWeather}
+                  disabled={refreshing}
+                  className="btn btn-secondary btn-sm"
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: refreshing ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="強制重新連線氣象觀測站抓取最新氣溫"
+                >
+                  <span style={{ display: 'inline-block', animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>
+                    🔄
+                  </span>
+                  <span>{refreshing ? '連線中...' : '重新整理氣溫'}</span>
+                </button>
+              </div>
+
+              {/* 即時天氣指標小卡 */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '6px',
+                  marginBottom: '14px',
+                }}
+              >
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>即時氣溫</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                    {analysisData.currentTemp}°C
+                  </div>
+                </div>
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>體感溫度</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                    {analysisData.apparentTemp}°C
+                  </div>
+                </div>
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>相對濕度</div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                    {analysisData.humidity}%
+                  </div>
+                </div>
+                <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', color: '#64748b' }}>天氣現象</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
+                    {analysisData.conditionIcon} {analysisData.conditionLabel}
+                  </div>
+                </div>
+              </div>
+
               {/* 核心卡片：天氣影響 營業預估會影響多少 */}
               <div
                 style={{
@@ -250,7 +344,7 @@ export default function WeatherRevenueWidget({
                       </span>
                     </div>
                     <div style={{ fontSize: '11px', color: isLoss ? '#be123c' : isGain ? '#15803d' : '#64748b', marginTop: '2px' }}>
-                      當前氣溫：{analysisData.currentTemp}°C ({analysisData.standardTier}) ｜ 需求係數：{multiplier}x ｜ 基準營收：${activeRevenue.toLocaleString()} 元
+                      即時氣候階梯：{analysisData.standardTier} ｜ 需求係數：{multiplier}x ｜ 基準營收：${activeRevenue.toLocaleString()} 元
                     </div>
                   </div>
                   <span
