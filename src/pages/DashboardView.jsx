@@ -859,28 +859,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       {/* DETAILED INTERACTIVE BREAKDOWN MODALS FOR ALL 8 METRIC CARDS */}
       {/* ========================================================================= */}
       {activeDetailModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '20px'
-        }} onClick={() => setActiveDetailModal(null)}>
+        <div 
+          className="dashboard-modal-overlay"
+          onClick={() => setActiveDetailModal(null)}
+        >
           <div 
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '920px',
-              width: '100%',
-              maxHeight: '85vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '2px solid rgba(5, 178, 165, 0.25)',
-              padding: '28px',
-              position: 'relative'
-            }} 
+            className="dashboard-modal-container"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1241,25 +1225,31 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div className="dashboard-cash-grid">
                   <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>🏦 資金分佈與運用</div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>全公司總資金之配置（預留款＋可動用款＋保留公積金）</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '10px' }}>
-                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>公司預留現金</div>
-                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.reserveCash || COMPANY_RESERVE_CASH).toLocaleString()}</strong>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>現金專款</div>
+                    <div className="dashboard-cash-subcards">
+                      <div className="dashboard-cash-subcard">
+                        <div className="dashboard-cash-subcard-header">
+                          <span className="dashboard-cash-subcard-title">公司預留現金</span>
+                          <strong className="dashboard-cash-subcard-value" style={{ color: 'var(--accent-blue)' }}>${Number(cashBalanceBreakdown.reserveCash || COMPANY_RESERVE_CASH).toLocaleString()}</strong>
+                        </div>
+                        <div className="dashboard-cash-subcard-subtitle">現金專款</div>
                       </div>
-                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>可動用資金</div>
-                        <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.availableFunds || 0).toLocaleString()}</strong>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>合作金庫可動用</div>
+                      <div className="dashboard-cash-subcard">
+                        <div className="dashboard-cash-subcard-header">
+                          <span className="dashboard-cash-subcard-title">可動用資金</span>
+                          <strong className="dashboard-cash-subcard-value" style={{ color: 'var(--accent-blue)' }}>${Number(cashBalanceBreakdown.availableFunds || 0).toLocaleString()}</strong>
+                        </div>
+                        <div className="dashboard-cash-subcard-subtitle">合作金庫可動用</div>
                       </div>
-                      <div style={{ padding: '12px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>保留公積金 (累計)</div>
-                        <strong style={{ fontFamily: 'var(--font-mono)', color: '#0d9488', fontSize: '1.15rem' }}>${Number(cashBalanceBreakdown.accumulatedReserve || 0).toLocaleString()}</strong>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      <div className="dashboard-cash-subcard">
+                        <div className="dashboard-cash-subcard-header">
+                          <span className="dashboard-cash-subcard-title">保留公積金 (累計)</span>
+                          <strong className="dashboard-cash-subcard-value" style={{ color: '#0d9488' }}>${Number(cashBalanceBreakdown.accumulatedReserve || 0).toLocaleString()}</strong>
+                        </div>
+                        <div className="dashboard-cash-subcard-subtitle">
                           (含本月提撥：${Number(cashBalanceBreakdown.currentMonthReserve || 0).toLocaleString()})
                         </div>
                       </div>
@@ -1268,9 +1258,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <div style={{ padding: '16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '12px' }}>
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '3px' }}>👥 股東投入</div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginBottom: '12px' }}>股東投入之資金</div>
-                    <div style={{ padding: '14px', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>股東投入</div>
-                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.2rem' }}>${Number(cashBalanceBreakdown.shareholderNet || 0).toLocaleString()}</strong>
+                    <div className="dashboard-cash-subcard">
+                      <div className="dashboard-cash-subcard-header">
+                        <span className="dashboard-cash-subcard-title">股東投入</span>
+                        <strong className="dashboard-cash-subcard-value" style={{ color: 'var(--accent-blue)' }}>${Number(cashBalanceBreakdown.shareholderNet || 0).toLocaleString()}</strong>
+                      </div>
+                      <div className="dashboard-cash-subcard-subtitle">股東資本總額</div>
                     </div>
                   </div>
                 </div>
@@ -1280,7 +1273,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                     ${(Number(cashBalanceBreakdown.shareholderNet || 0) + Number(cashBalanceBreakdown.surplusFunds || 0)).toLocaleString()} 元
                   </strong>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                <div className="dashboard-cash-cumul-grid">
                   <div style={{ padding: '14px 16px', backgroundColor: 'rgba(0, 180, 170, 0.06)', borderRadius: '10px' }}>
                     <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{cumulativePeriodSummary.incomeTitle}</div>
                     <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.1rem' }}>${cumulativePeriodSummary.income.toLocaleString()} 元</strong>

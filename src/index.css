@@ -2278,3 +2278,214 @@ __vercel_toolbar,
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* ========================================================================= */
+/* Cash Breakdown Modal & Shareholder Dividend Layout Improvements           */
+/* ========================================================================= */
+
+/* Dashboard Modal Dialog Responsiveness */
+.dashboard-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dashboard-modal-container {
+  background-color: #ffffff;
+  border-radius: 20px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(5, 178, 165, 0.25);
+  padding: 28px;
+  position: relative;
+}
+
+/* Dashboard Cash Modal Breakdown Grid */
+.dashboard-cash-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.dashboard-cash-subcards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-cash-subcard {
+  padding: 12px 14px;
+  background-color: rgba(255, 255, 255, 0.88);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 180, 170, 0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-cash-subcard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-cash-subcard-title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dashboard-cash-subcard-value {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dashboard-cash-subcard-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.dashboard-cash-cumul-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+/* Shareholder Dividend Report Layout & Metrics */
+.dividend-report-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 960px) {
+  .dividend-report-grid {
+    grid-template-columns: 3fr 2fr;
+    gap: 24px;
+  }
+}
+
+.dividend-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dividend-metric-card {
+  padding: 14px 16px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.dividend-metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dividend-metric-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dividend-metric-subtext {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.dividend-metric-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Mobile Responsive Breakpoints */
+@media (max-width: 768px) {
+  .dashboard-modal-overlay {
+    padding: 10px;
+  }
+  .dashboard-modal-container {
+    padding: 16px 14px;
+    border-radius: 16px;
+    max-height: 90vh;
+  }
+  .dashboard-cash-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .dashboard-cash-subcards {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .dashboard-cash-subcard {
+    padding: 12px 14px;
+  }
+  .dashboard-cash-subcard-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .dashboard-cash-subcard-title {
+    font-size: 0.85rem;
+  }
+  .dashboard-cash-subcard-value {
+    font-size: 1.25rem;
+  }
+  .dashboard-cash-cumul-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dividend-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .dividend-metric-card {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+  }
+  .dividend-metric-value {
+    font-size: 1.3rem;
+    text-align: right;
+  }
+}
+

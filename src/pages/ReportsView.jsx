@@ -2375,7 +2375,7 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
         {/* 3. Shareholder Dividends and LINE export */}
         {reportType === 'dividend' && (
-          <div className="grid-2col" style={{ gridTemplateColumns: '3fr 2fr' }}>
+          <div className="dividend-report-grid">
             {/* Left Side: Dividends details */}
             <div className="card">
               <div className="card-header">
@@ -2386,22 +2386,35 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
               </div>
               <div className="card-body">
                 {/* Profit Metrics */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px', padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 'var(--border-radius-sm)' }}>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>本月會計淨利</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: dividends.isLoss ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+                <div className="dividend-metrics-grid">
+                  <div className="dividend-metric-card" style={{ borderLeft: '4px solid var(--accent-blue)' }}>
+                    <div className="dividend-metric-info">
+                      <span className="dividend-metric-label">本月會計淨利</span>
+                      <span className="dividend-metric-subtext">營運稅後淨額</span>
+                    </div>
+                    <div className="dividend-metric-value" style={{ color: dividends.isLoss ? 'var(--accent-red)' : 'var(--accent-green)' }}>
                       ${dividends.netProfit.toLocaleString()}
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>保留公積金 ({(dividends.reserveRatio * 100).toFixed(2)}%，依{reserveMode === 'amount' ? '金額' : '比例'})</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>
+
+                  <div className="dividend-metric-card" style={{ borderLeft: '4px solid #0d9488' }}>
+                    <div className="dividend-metric-info">
+                      <span className="dividend-metric-label">保留公積金</span>
+                      <span className="dividend-metric-subtext">
+                        提撥 {(dividends.reserveRatio * 100).toFixed(2)}%（依{reserveMode === 'amount' ? '金額' : '比例'}）
+                      </span>
+                    </div>
+                    <div className="dividend-metric-value" style={{ color: 'var(--text-primary)' }}>
                       -${dividends.reserveAmount.toLocaleString()}
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>本月可發放紅利</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
+
+                  <div className="dividend-metric-card" style={{ borderLeft: '4px solid var(--accent-gold)' }}>
+                    <div className="dividend-metric-info">
+                      <span className="dividend-metric-label">本月可發放紅利</span>
+                      <span className="dividend-metric-subtext">股東分配總額</span>
+                    </div>
+                    <div className="dividend-metric-value" style={{ color: 'var(--accent-gold)' }}>
                       ${dividends.totalDividends.toLocaleString()}
                     </div>
                   </div>
