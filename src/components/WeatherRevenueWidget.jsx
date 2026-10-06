@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getLiveWeatherAnalysis, WEATHER_FEATURE_VERSION } from '../utils/weatherService';
+import { getLiveWeatherAnalysis, WEATHER_FEATURE_VERSION, WEATHER_REVENUE_STANDARDS } from '../utils/weatherService';
 import { getMonthlyOperatingSummary } from '../utils/financials';
 import { getIncomes } from '../db/storage';
 
@@ -12,6 +12,7 @@ export default function WeatherRevenueWidget({
 }) {
   const [analysisData, setAnalysisData] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [showStandards, setShowStandards] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,16 +66,19 @@ export default function WeatherRevenueWidget({
     return null;
   }
 
-  // 需求係數與少賺金額核心計算
+  // 需求係數與天氣影響計算
   const multiplier = Number(analysisData.demandMultiplier ?? 1.0);
-  const isLossSeason = multiplier < 1.0;
-  // 預估少賺金額：常態基準 * (1 - multiplier)
-  const lostRevenueAmount = Math.round(activeRevenue * Math.abs(1 - multiplier));
-  const lostPercentage = Math.round(Math.abs(1 - multiplier) * 1000) / 10;
-  // 瓦斯平均毛利率約 28%，估算毛利減少
-  const lostGrossProfit = Math.round(lostRevenueAmount * 0.28);
-  // 每日平均少賺額
-  const dailyLostAmount = Math.round(lostRevenueAmount / 30);
+  const deltaRate = multiplier - 1; // 正為多賺、負為少賺
+  const isLoss = deltaRate < -0.001;
+  const isGain = deltaRate > 0.001;
+  
+  // 預估天氣影響營收金額
+  const impactRevenue = Math.round(activeRevenue * deltaRate);
+  const impactPercentage = Math.round(Math.abs(deltaRate) * 1000) / 10;
+  // 瓦斯平均毛利率約 28%，估算毛利連帶影響
+  const impactGrossProfit = Math.round(impactRevenue * 0.28);
+  // 每日平均影響額
+  const dailyImpact = Math.round(impactRevenue / 30);
 
   return (
     <>
@@ -83,15 +87,25 @@ export default function WeatherRevenueWidget({
         type="button"
         onClick={() => setIsOpen(true)}
         className="btn"
-        aria-label="開啟瓦斯營收關聯智能分析"
-        title="點擊查看瓦斯營收關聯智能分析與預估少賺金額"
+        aria-label="開啟天氣影響營業預估分析"
+        title="點擊查看天氣影響營業預估會影響多少與預估標準"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '5px',
-          backgroundColor: isLossSeason ? 'rgba(239, 68, 68, 0.08)' : 'rgba(5, 178, 165, 0.08)',
-          border: `1px solid ${isLossSeason ? 'rgba(239, 68, 68, 0.35)' : 'rgba(5, 178, 165, 0.35)'}`,
-          color: isLossSeason ? '#dc2626' : 'var(--primary-color, #05b2a5)',
+          backgroundColor: isLoss
+            ? 'rgba(239, 68, 68, 0.08)'
+            : isGain
+            ? 'rgba(22, 163, 74, 0.08)'
+            : 'rgba(5, 178, 165, 0.08)',
+          border: `1px solid ${
+            isLoss
+              ? 'rgba(239, 68, 68, 0.35)'
+              : isGain
+              ? 'rgba(22, 163, 74, 0.35)'
+              : 'rgba(5, 178, 165, 0.35)'
+          }`,
+          color: isLoss ? '#dc2626' : isGain ? '#15803d' : 'var(--primary-color, #05b2a5)',
           padding: '3px 10px',
           borderRadius: '16px',
           fontSize: '0.8rem',
@@ -103,37 +117,25 @@ export default function WeatherRevenueWidget({
           ...style,
         }}
       >
-        <span style={{ fontSize: '13px', lineHeight: 1 }}>{isLossSeason ? '📉' : '💡'}</span>
-        <span>智能分析</span>
-        {isLossSeason ? (
-          <span
-            style={{
-              fontSize: '9px',
-              backgroundColor: '#fee2e2',
-              color: '#b91c1c',
-              padding: '1px 5px',
-              borderRadius: '4px',
-              fontWeight: 800,
-              lineHeight: 1.2,
-            }}
-          >
-            少賺 -{lostPercentage}%
-          </span>
-        ) : (
-          <span
-            style={{
-              fontSize: '9px',
-              backgroundColor: 'rgba(5, 178, 165, 0.2)',
-              color: 'var(--primary-color, #05b2a5)',
-              padding: '1px 5px',
-              borderRadius: '4px',
-              fontWeight: 800,
-              lineHeight: 1.2,
-            }}
-          >
-            BI
-          </span>
-        )}
+        <span style={{ fontSize: '13px', lineHeight: 1 }}>{isLoss ? '🌤️' : isGain ? '❄️' : '💡'}</span>
+        <span>天氣營收影響</span>
+        <span
+          style={{
+            fontSize: '9px',
+            backgroundColor: isLoss
+              ? '#fee2e2'
+              : isGain
+              ? '#dcfce7'
+              : 'rgba(5, 178, 165, 0.2)',
+            color: isLoss ? '#b91c1c' : isGain ? '#166534' : 'var(--primary-color, #05b2a5)',
+            padding: '1px 5px',
+            borderRadius: '4px',
+            fontWeight: 800,
+            lineHeight: 1.2,
+          }}
+        >
+          {isLoss ? `少賺 -${impactPercentage}%` : isGain ? `多賺 +${impactPercentage}%` : '持平 0%'}
+        </span>
       </button>
 
       {/* 展開詳情彈窗 (Modal Dialog) */}
@@ -161,7 +163,7 @@ export default function WeatherRevenueWidget({
             style={{
               backgroundColor: '#ffffff',
               borderRadius: '14px',
-              maxWidth: '620px',
+              maxWidth: '640px',
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
@@ -184,16 +186,16 @@ export default function WeatherRevenueWidget({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '22px' }}>{isLossSeason ? '📉' : '💡'}</span>
+                <span style={{ fontSize: '24px' }}>🌤️</span>
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>瓦斯營收關聯智能分析</span>
+                    <span>天氣影響 營業預估會影響多少</span>
                     <span style={{ fontSize: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                       {WEATHER_FEATURE_VERSION}
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    盛隆營運大數據 ✕ 營業時段叫貨趨勢洞察
+                    {analysisData.location} 即時氣溫 {analysisData.currentTemp}°C ｜ 盛隆瓦斯營收關聯模型
                   </div>
                 </div>
               </div>
@@ -224,11 +226,11 @@ export default function WeatherRevenueWidget({
 
             {/* Modal Body */}
             <div style={{ padding: '18px 20px' }}>
-              {/* 核心損益警示：會少賺多少錢專屬卡片 */}
+              {/* 核心卡片：天氣影響 營業預估會影響多少 */}
               <div
                 style={{
-                  backgroundColor: isLossSeason ? '#fff1f2' : '#f0fdf4',
-                  border: `1.5px solid ${isLossSeason ? '#fecdd3' : '#bbf7d0'}`,
+                  backgroundColor: isLoss ? '#fff1f2' : isGain ? '#f0fdf4' : '#f8fafc',
+                  border: `1.5px solid ${isLoss ? '#fecdd3' : isGain ? '#bbf7d0' : '#cbd5e1'}`,
                   borderRadius: '12px',
                   padding: '16px',
                   marginBottom: '16px',
@@ -237,25 +239,31 @@ export default function WeatherRevenueWidget({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: isLossSeason ? '#9f1239' : '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{isLossSeason ? '📉' : '📈'}</span>
-                      <span>{isLossSeason ? '週期性營收預警：預估本月會少賺多少錢' : '營收動態表現：用氣週期平穩'}</span>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: isLoss ? '#9f1239' : isGain ? '#166534' : '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{isLoss ? '📉' : isGain ? '📈' : '⚖️'}</span>
+                      <span>
+                        {isLoss
+                          ? '炎夏高溫淡季：營業預估少賺'
+                          : isGain
+                          ? '低溫旺季拉動：營業預估增長'
+                          : '氣候舒適平穩：營業額維持常態'}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '11px', color: isLossSeason ? '#be123c' : '#15803d', marginTop: '2px' }}>
-                      基準營收：${activeRevenue.toLocaleString()} 元 ｜ 動態需求係數：{multiplier}x
+                    <div style={{ fontSize: '11px', color: isLoss ? '#be123c' : isGain ? '#15803d' : '#64748b', marginTop: '2px' }}>
+                      當前氣溫：{analysisData.currentTemp}°C ({analysisData.standardTier}) ｜ 需求係數：{multiplier}x ｜ 基準營收：${activeRevenue.toLocaleString()} 元
                     </div>
                   </div>
                   <span
                     style={{
                       fontSize: '11px',
                       fontWeight: 800,
-                      backgroundColor: isLossSeason ? '#fda4af' : '#86efac',
-                      color: isLossSeason ? '#881337' : '#14532d',
-                      padding: '3px 9px',
+                      backgroundColor: isLoss ? '#fda4af' : isGain ? '#86efac' : '#e2e8f0',
+                      color: isLoss ? '#881337' : isGain ? '#14532d' : '#334155',
+                      padding: '3px 10px',
                       borderRadius: '20px',
                     }}
                   >
-                    {isLossSeason ? `預估減幅 -${lostPercentage}%` : '需求平穩正常'}
+                    {isLoss ? `預估少賺 -${impactPercentage}%` : isGain ? `預估多賺 +${impactPercentage}%` : '持平 0%'}
                   </span>
                 </div>
 
@@ -268,60 +276,149 @@ export default function WeatherRevenueWidget({
                     backgroundColor: '#ffffff',
                     borderRadius: '8px',
                     padding: '12px',
-                    border: `1px solid ${isLossSeason ? '#fecdd3' : '#dcfce7'}`,
+                    border: `1px solid ${isLoss ? '#fecdd3' : isGain ? '#dcfce7' : '#e2e8f0'}`,
                   }}
                 >
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>預估會少賺營收</div>
-                    <div style={{ fontSize: '17px', fontWeight: 900, color: isLossSeason ? '#e11d48' : '#16a34a', marginTop: '2px' }}>
-                      {isLossSeason ? `-$${lostRevenueAmount.toLocaleString()}` : '無減損'}
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>預估營業額影響</div>
+                    <div
+                      style={{
+                        fontSize: '17px',
+                        fontWeight: 900,
+                        color: isLoss ? '#e11d48' : isGain ? '#16a34a' : '#0f172a',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {impactRevenue >= 0 ? `+$${impactRevenue.toLocaleString()}` : `-$${Math.abs(impactRevenue).toLocaleString()}`} 元
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', borderLeft: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>預估毛利減少</div>
-                    <div style={{ fontSize: '17px', fontWeight: 900, color: isLossSeason ? '#be123c' : '#16a34a', marginTop: '2px' }}>
-                      {isLossSeason ? `-$${lostGrossProfit.toLocaleString()}` : '$0'}
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>連帶毛利影響 (28%)</div>
+                    <div
+                      style={{
+                        fontSize: '17px',
+                        fontWeight: 900,
+                        color: isLoss ? '#be123c' : isGain ? '#16a34a' : '#0f172a',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {impactGrossProfit >= 0 ? `+$${impactGrossProfit.toLocaleString()}` : `-$${Math.abs(impactGrossProfit).toLocaleString()}`} 元
                     </div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>平均每日少賺</div>
-                    <div style={{ fontSize: '17px', fontWeight: 900, color: isLossSeason ? '#e11d48' : '#16a34a', marginTop: '2px' }}>
-                      {isLossSeason ? `-$${dailyLostAmount.toLocaleString()}` : '$0'}
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>平均每日影響</div>
+                    <div
+                      style={{
+                        fontSize: '17px',
+                        fontWeight: 900,
+                        color: isLoss ? '#e11d48' : isGain ? '#16a34a' : '#0f172a',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {dailyImpact >= 0 ? `+$${dailyImpact.toLocaleString()}` : `-$${Math.abs(dailyImpact).toLocaleString()}`} 元/日
                     </div>
                   </div>
                 </div>
 
-                {/* 成因與應對建議 */}
-                <div style={{ marginTop: '10px', fontSize: '12px', color: isLossSeason ? '#9f1239' : '#166534', lineHeight: 1.5 }}>
-                  <strong>💡 為什麼會少賺？</strong>
-                  {isLossSeason ? (
-                    <span>
-                      目前處於換桶淡季，用戶洗澡水溫需求低、家庭與餐飲用氣頻率放緩，換桶週期平均延長 7～10 天。
-                      建議<strong>搭配定期安檢、促銷高熱效爐具／安全閥管線</strong>或<strong>爭取長期合約商用客戶</strong>，補足淡季營收缺口。
-                    </span>
-                  ) : (
-                    <span>目前各用戶用氣週期正常，建議確保配送車次充足以滿足高峰叫貨。</span>
-                  )}
+                {/* 說明與建議 */}
+                <div style={{ marginTop: '10px', fontSize: '12px', color: isLoss ? '#9f1239' : isGain ? '#166534' : '#334155', lineHeight: 1.5 }}>
+                  <strong>💡 影響原因：</strong>{analysisData.elasticityText}
                 </div>
               </div>
 
-              {/* 營收指引洞察卡片 */}
+              {/* 預估標準與計算依據折疊面板 */}
               <div
                 style={{
                   backgroundColor: '#f8fafc',
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: '12px 14px',
-                  fontSize: '13px',
-                  color: '#334155',
                   marginBottom: '16px',
-                  lineHeight: 1.6,
                 }}
               >
-                <div style={{ fontWeight: 800, marginBottom: '4px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>💡 財報與營收洞察</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  onClick={() => setShowStandards(!showStandards)}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📋 氣候影響瓦斯營業預估標準（對照表）</span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontSize: '12px',
+                      color: 'var(--primary-color, #05b2a5)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showStandards ? '收起標準 ▲' : '查看完整標準 ▼'}
+                  </button>
                 </div>
-                <div>{analysisData.elasticityText}</div>
+
+                {/* 展開之標準明細 */}
+                {showStandards && (
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>
+                      瓦斯行業營運基準：以台灣北部春秋季 <strong>25°C</strong> 為常態月基準線（係數 1.00x）。隨氣溫升降，家庭洗澡水溫、煮湯與火鍋頻率產生週期彈性變化：
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {WEATHER_REVENUE_STANDARDS.map((std) => {
+                        const isCurrent = analysisData.standardTier === std.tier;
+                        return (
+                          <div
+                            key={std.tier}
+                            style={{
+                              backgroundColor: isCurrent ? '#fef3c7' : '#ffffff',
+                              border: `1px solid ${isCurrent ? '#f59e0b' : '#e2e8f0'}`,
+                              borderRadius: '8px',
+                              padding: '8px 10px',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                              <div style={{ fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{std.icon}</span>
+                                <span>{std.tier}（{std.range}）</span>
+                                {isCurrent && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#f59e0b', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                    當前氣候
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontWeight: 800,
+                                  color: std.impactType === 'decrease' ? '#dc2626' : std.impactType === 'increase' ? '#16a34a' : '#64748b',
+                                }}
+                              >
+                                營收 {std.impactLabel} (係數 {std.multiplier}x)
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#475569', lineHeight: 1.4 }}>
+                              🔄 {std.cycleChange} ｜ 📝 {std.description}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ marginTop: '10px', padding: '8px 10px', backgroundColor: '#f1f5f9', borderRadius: '6px', fontSize: '11px', color: '#334155' }}>
+                      <div><strong>📐 計算公式標準：</strong></div>
+                      <div>• 營業額預估影響額 = 當月基準營收 × (氣候需求係數 - 1)</div>
+                      <div>• 毛利連帶影響額 = 營業額預估影響額 × 28% (瓦斯業平均毛利率)</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 今日營業時段出貨量走勢圖 */}

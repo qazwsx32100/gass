@@ -22,6 +22,49 @@ export function getWeatherCondition(code) {
   return { label: '多雲', icon: '🌤️' };
 }
 
+export const WEATHER_REVENUE_STANDARDS = [
+  {
+    tier: '寒流低溫',
+    range: '氣溫 ≤ 15°C',
+    multiplier: 1.38,
+    impactLabel: '+38%',
+    impactType: 'increase',
+    cycleChange: '換桶間隔縮短 5～8 天',
+    description: '熱水洗澡與火鍋燉煮用氣需求暴增，營業額大幅攀升，需提早叫車備妥安全庫存。',
+    icon: '❄️'
+  },
+  {
+    tier: '涼爽秋冬',
+    range: '16°C ～ 20°C',
+    multiplier: 1.18,
+    impactLabel: '+18%',
+    impactType: 'increase',
+    cycleChange: '換桶間隔縮短 3～5 天',
+    description: '秋冬氣候轉涼，家庭保溫與熱水消耗加速，進入常態用氣旺季。',
+    icon: '🍂'
+  },
+  {
+    tier: '常態舒適',
+    range: '21°C ～ 31°C',
+    multiplier: 1.00,
+    impactLabel: '0% (持平)',
+    impactType: 'neutral',
+    cycleChange: '換桶間隔正常 (約 30～45 天)',
+    description: '氣溫穩定舒適，家戶熱水用量適中，營業額維持常態月基準。',
+    icon: '⛅'
+  },
+  {
+    tier: '炎夏高溫',
+    range: '氣溫 ≥ 32°C',
+    multiplier: 0.88,
+    impactLabel: '-12% (少賺)',
+    impactType: 'decrease',
+    cycleChange: '換桶間隔平均延長 7～10 天',
+    description: '高溫洗澡水溫低、火鍋餐飲減量，家戶瓦斯消耗變慢，營業額預估減少（少賺）。',
+    icon: '☀️'
+  }
+];
+
 // 取得最新氣候與瓦斯營收影響分析
 export async function getLiveWeatherAnalysis() {
   try {
@@ -70,31 +113,34 @@ export async function getLiveWeatherAnalysis() {
       };
     });
 
-    // 瓦斯營收動態彈性試算 (Gas Revenue Elasticity)
-    const isColdSeason = currentTemp < 20;
-    const isHeatWave = currentTemp >= 32;
-    let elasticityText = '營運需求平穩，目前為正常用氣週期。';
+    // 天氣影響營業額彈性試算 (Weather-Revenue Elasticity Standard)
+    let elasticityText = '氣溫舒適平穩，目前為正常用氣週期。';
     let demandMultiplier = 1.0;
+    let standardTier = '常態舒適';
 
     if (currentTemp <= 15) {
-      elasticityText = '用氣需求高峰！熱水與火鍋用氣需求激增約 +35%～45%，建議提前拉高叫車安全存量。';
+      elasticityText = '寒流低溫強襲！熱水與火鍋用氣需求激增約 +35%～45%，營業額預估顯著成長，建議提前拉高叫車安全存量。';
       demandMultiplier = 1.38;
+      standardTier = '寒流低溫';
     } else if (currentTemp <= 20) {
-      elasticityText = '進入用氣旺季，瓦斯消耗速率提升約 +18%，家庭換桶週期縮短 3～5 天。';
+      elasticityText = '氣候涼爽轉冷，瓦斯消耗速率提升約 +18%，家庭換桶週期縮短 3～5 天，進入用氣旺季。';
       demandMultiplier = 1.18;
-    } else if (isHeatWave) {
-      elasticityText = '目前處於年度換桶淡季，熱水用量較少，家庭換桶週期平均延長 7～10 天。';
+      standardTier = '涼爽秋冬';
+    } else if (currentTemp >= 32) {
+      elasticityText = '炎夏高溫，洗澡水溫低、用氣為年度淡季，家庭換桶週期平均延長 7～10 天，預估營業額少賺約 -12%。';
       demandMultiplier = 0.88;
+      standardTier = '炎夏高溫';
     }
 
     const payload = {
       location: '新北市三重區',
       currentTemp,
-      apparentTemp: Math.round((currentTemp + (isHeatWave ? 5.6 : -1.2)) * 10) / 10,
+      apparentTemp: Math.round((currentTemp + (currentTemp >= 32 ? 5.6 : -1.2)) * 10) / 10,
       conditionLabel: condition.label,
       conditionIcon: condition.icon,
       isColdAlert: currentTemp <= 15,
       demandMultiplier,
+      standardTier,
       elasticityText,
       hourly,
       updatedAt: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
@@ -117,8 +163,9 @@ export async function getLiveWeatherAnalysis() {
       conditionLabel: '多雲時晴',
       conditionIcon: '⛅',
       isColdAlert: false,
-      demandMultiplier: 0.9,
-      elasticityText: '目前處於年度換桶淡季，熱水用量較少，家庭換桶週期平均延長 7～10 天。',
+      demandMultiplier: 0.88,
+      standardTier: '炎夏高溫',
+      elasticityText: '炎夏高溫，洗澡水溫低、用氣為年度淡季，家庭換桶週期平均延長 7～10 天，預估營業額少賺約 -12%。',
       hourly: [
         { hour: '08:00', hourNum: 8, temp: 29.4, gasVolume: 4, condition: { label: '晴', icon: '☀️' } },
         { hour: '11:00', hourNum: 11, temp: 32.7, gasVolume: 4, condition: { label: '晴', icon: '☀️' } },
