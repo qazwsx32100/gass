@@ -5,7 +5,7 @@ import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, in
 import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
-import WeatherHeaderBadge from './components/WeatherHeaderBadge';
+import WeatherRevenueWidget from './components/WeatherRevenueWidget';
 import { lazyImportWithRecovery } from './utils/lazyImportRecovery';
 import { INITIAL_CHART_OF_ACCOUNTS } from './db/mockData';
 
@@ -810,13 +810,13 @@ function App() {
                 ))}
               </select>
             )}
+
+            {/* 瓦斯營收關聯智能分析膠囊鈕 (與公司名稱/Logo 同行) */}
+            <WeatherRevenueWidget />
           </div>
 
           {/* Period selector & Login badge at right end */}
           <div className="header-controls">
-            {/* Real-time Weather Status Pill */}
-            <WeatherHeaderBadge />
-
             {/* 1. Period selects */}
             <div className="header-period-control">
               <span className="header-period-label">會計期間：</span>

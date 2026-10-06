@@ -70,21 +70,20 @@ export async function getLiveWeatherAnalysis() {
       };
     });
 
-    // 氣候加權營收彈性試算 (Weather-Revenue Elasticity)
-    // 基準溫 25°C：每降 1°C，家庭熱水與餐飲火鍋用氣量約增加 +4.8%
+    // 瓦斯營收動態彈性試算 (Gas Revenue Elasticity)
     const isColdSeason = currentTemp < 20;
     const isHeatWave = currentTemp >= 32;
-    let elasticityText = '氣候平穩，目前為正常用氣週期。';
+    let elasticityText = '營運需求平穩，目前為正常用氣週期。';
     let demandMultiplier = 1.0;
 
     if (currentTemp <= 15) {
-      elasticityText = '寒流強襲！熱水與火鍋用氣需求激增約 +35%～45%，建議提前拉高叫車安全存量。';
+      elasticityText = '用氣需求高峰！熱水與火鍋用氣需求激增約 +35%～45%，建議提前拉高叫車安全存量。';
       demandMultiplier = 1.38;
     } else if (currentTemp <= 20) {
-      elasticityText = '氣候涼爽轉冷，瓦斯消耗速率提升約 +18%，家庭換桶週期縮短 3～5 天。';
+      elasticityText = '進入用氣旺季，瓦斯消耗速率提升約 +18%，家庭換桶週期縮短 3～5 天。';
       demandMultiplier = 1.18;
     } else if (isHeatWave) {
-      elasticityText = '高溫炎夏，洗澡水溫低、用氣為年度淡季，家庭換桶週期平均延長 7～10 天。';
+      elasticityText = '目前處於年度換桶淡季，熱水用量較少，家庭換桶週期平均延長 7～10 天。';
       demandMultiplier = 0.88;
     }
 
@@ -119,7 +118,7 @@ export async function getLiveWeatherAnalysis() {
       conditionIcon: '⛅',
       isColdAlert: false,
       demandMultiplier: 0.9,
-      elasticityText: '高溫炎夏，洗澡水溫低、用氣為年度淡季，家庭換桶週期平均延長 7～10 天。',
+      elasticityText: '目前處於年度換桶淡季，熱水用量較少，家庭換桶週期平均延長 7～10 天。',
       hourly: [
         { hour: '08:00', hourNum: 8, temp: 29.4, gasVolume: 4, condition: { label: '晴', icon: '☀️' } },
         { hour: '11:00', hourNum: 11, temp: 32.7, gasVolume: 4, condition: { label: '晴', icon: '☀️' } },

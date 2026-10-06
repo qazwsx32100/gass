@@ -6,7 +6,6 @@ import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
 import LedgerCategoryBreakdown from '../components/LedgerCategoryBreakdown';
-import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import { entriesForCategory, groupLedgerEntriesByCategory } from '../utils/ledgerCategories';
 import { isEffectiveForReport } from '../utils/reportEligibility';
 
@@ -466,9 +465,6 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
       )}
-
-      {/* Weather Revenue Intelligence Widget */}
-      <WeatherRevenueWidget monthlyRevenue={monthlyOperating?.totalRevenue || pnl?.totalRevenue || 0} />
 
       {/* Metrics Row - Interactive Metric Cards */}
       <div className="metrics-grid">

@@ -8,7 +8,6 @@ import { syncLocalToSupabase } from '../db/supabaseService';
 import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlementType, RECEIVABLE_TYPES } from '../utils/receivables';
 import { calculateOperatingProfit } from '../utils/operatingProfit';
 import { isEffectiveForReport } from '../utils/reportEligibility';
-import WeatherRevenueWidget from '../components/WeatherRevenueWidget';
 import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
 import GasCustomerMapPanel from '../components/GasCustomerMapPanel';
 import { getTaiwanDateString } from '../utils/taiwanDate';
@@ -901,9 +900,6 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Weather Revenue Correlation BI Module */}
-      <WeatherRevenueWidget />
-
       {/* Selector Header */}
       <div className="card no-print" style={{ marginBottom: 0 }}>
         <div className="card-header report-toolbar" style={{ borderBottom: 'none' }}>
