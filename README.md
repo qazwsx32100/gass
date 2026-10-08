@@ -255,7 +255,8 @@ Python Daemon（inspect_backup.py）
 | 🚀 **營運中心** | **https://shenglong-next-phi.vercel.app/operations** | **外送派工・庫存監控・司機管理・挑桶設定** |
 | 🛢️ 即時庫存看板 | https://shenglong-next-phi.vercel.app/gas-stock | 即時庫存監控 |
 | 📋 今日叫貨看板 | https://shenglong-next-phi.vercel.app/operations | 今日叫貨調度 |
-| 🤖 Telegram 機器人 | https://t.me/shenglong_gas_bot | Telegram 9 大快捷指令 |
+| 🤖 Telegram 機器人 | https://t.me/shenlong_gas_bot | Telegram 9 大快捷指令（營運與告警） |
+| 👑 **商業軍師機器人** | **https://t.me/shenlong_advisor_bot** | **老闆專屬 24H 數位特助（產業情報、拓客行銷、進貨調價）** |
 | 📁 GitHub 營運中心 | https://github.com/qazwsx32100/shenglong-next | 營運中心原始碼 |
 | 📁 GitHub 財報系統 | https://github.com/qazwsx32100/gass | 財報系統原始碼 |
 
@@ -273,3 +274,4 @@ Python Daemon（inspect_backup.py）
 | 2026-10 | 🛵 獨立外送司機 App（實體網域隔離、免登入專屬連結、一鍵加桌面、無語音、純淨標籤、挑桶提醒） |
 | 2026-10 | 🖥️ 監控中心升級：加入「外送司機管理中心」（司機名冊、新司機自動配發代碼、一鍵複製 App 網址） |
 | 2026-10 | 📝 全系統架構與 Google 雲端更新紀錄同步 |
+| 2026-10-08 | 👑 老闆專屬 24H 數位商業軍師機器人 (@shenlong_advisor_bot) 獨立上線，整合產業情報、實戰拓客、雙守護進程與 SuperAdmin 鎖定 |
