@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { canViewOwnerCashBalance } from '../src/utils/ownerCashAccess.js';
+import { canViewOwnerCashBalance, canViewCapitalDifference } from '../src/utils/ownerCashAccess.js';
 import { INITIAL_BANKS } from '../src/db/mockData.js';
 
 test('permissions: cash balance card is accessible to admin and shareholders, but blocked for bookkeeper', () => {
@@ -11,6 +11,17 @@ test('permissions: cash balance card is accessible to admin and shareholders, bu
   assert.equal(canViewOwnerCashBalance('bookkeeper'), false);
   assert.equal(canViewOwnerCashBalance(null), false);
   assert.equal(canViewOwnerCashBalance(''), false);
+});
+
+test('permissions: capital difference card (資差) is accessible only to Yang Meng-Long admin', () => {
+  assert.equal(canViewCapitalDifference('admin', { name: '楊孟龍' }), true);
+  assert.equal(canViewCapitalDifference('admin', { email: 'qazwsx32100@gmail.com' }), true);
+  assert.equal(canViewCapitalDifference('admin', { id: 'SH001' }), true);
+  assert.equal(canViewCapitalDifference('admin', { name: '周子傑' }), false);
+  assert.equal(canViewCapitalDifference('business_reviewer', { name: '周子傑' }), false);
+  assert.equal(canViewCapitalDifference('business_reviewer', { name: '林曄鏵' }), false);
+  assert.equal(canViewCapitalDifference('bookkeeper', { name: '會計' }), false);
+  assert.equal(canViewCapitalDifference(null, null), false);
 });
 
 test('UI card: DashboardView renders clean card title, tooltip, and interactive link without owner personal names', () => {
@@ -51,6 +62,12 @@ test('UI card: DashboardView renders clean card title, tooltip, and interactive 
   assert.ok(source.includes('115 年 7 月 當期總收入'), 'Label must show 115 年 7 月 當期總收入 for start month');
   assert.ok(source.includes('income: Number(cashBalanceBreakdown?.cashIncome || 0)'), 'Income must tie to cashBalanceBreakdown ending at selected month');
   assert.ok(source.includes('expense: Number(cashBalanceBreakdown?.cashExpense || 0)'), 'Expense must tie to cashBalanceBreakdown ending at selected month');
+
+  // Verify 資差 card and formula (全部營收 - 全部支出 - 公設基金 - 635000)
+  assert.ok(source.includes('<span className="metric-label">資差</span>'), 'Card must have label 資差');
+  assert.ok(source.includes("openDetailModal('capitalDiff')"), 'Card must open capitalDiff modal on click');
+  assert.ok(source.includes('activeDetailModal === \'capitalDiff\''), 'Modal must support capitalDiff view');
+  assert.ok(source.includes('635000'), 'Formula must subtract 635,000 shareholder equity');
 });
 
 test('data layer: initial bank configuration uses 合作金庫 and petty cash 4500', () => {

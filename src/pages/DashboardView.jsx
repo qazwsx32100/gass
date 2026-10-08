@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { getIncomeStatement, getBankBalancesAtDate, getDividendsForMonth, getPeriodEndDate, getGasGrossProfitForPeriod, getGasInventoryForMonth, getCashExpenseSummary, getCashNetProfitSummary, getMonthlyOperatingSummary, getCumulativeDividendReserve, COMPANY_RESERVE_CASH } from '../utils/financials';
 import { getIncomes, getExpenses, getBankTransactions, getBudgets, getSystemConfig, getBanks, getChartOfAccounts, getCustomers, getShareholderLedger } from '../db/storage';
 import { canViewShareholderReports } from '../utils/permissions';
-import { canViewOwnerCashBalance } from '../utils/ownerCashAccess';
+import { canViewOwnerCashBalance, canViewCapitalDifference } from '../utils/ownerCashAccess';
 import PieChart from '../components/PieChart';
 import TrendChart from '../components/TrendChart';
 import LedgerCategoryBreakdown from '../components/LedgerCategoryBreakdown';
@@ -13,6 +13,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const periodVal = `${year}-${month}`;
   const showShareholderReports = canViewShareholderReports(userRole);
   const showOwnerBalance = canViewOwnerCashBalance(userRole, currentUser);
+  const showCapitalDiff = canViewCapitalDifference(userRole, currentUser);
   const [activeDetailModal, setActiveDetailModal] = useState(null);
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('');
 
@@ -132,6 +133,15 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
       totalFunds
     };
   }, [companyId, periodVal, triggerRefresh]);
+
+  // 資差：全部營收 - 全部支出 - 公設基金(累計保留公積金) - 635,000元 (股東原始投入資本)
+  const capitalDiff = useMemo(() => {
+    const totalRev = Number(cashBalanceBreakdown?.cashIncome || 0);
+    const totalExp = Number(cashBalanceBreakdown?.cashExpense || 0);
+    const reserve = Number(cashBalanceBreakdown?.accumulatedReserve || 0);
+    const capital = 635000;
+    return totalRev - totalExp - reserve - capital;
+  }, [cashBalanceBreakdown]);
 
   // Dividends for the month
   const dividendData = useMemo(() => {
@@ -679,6 +689,28 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             </div>
           </div>
         )}
+
+        {/* Card: 資差 (楊孟龍 主管理者專用) */}
+        {showCapitalDiff && (
+          <div
+            className="metric-card accent-gold"
+            style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            onClick={() => openDetailModal('capitalDiff')}
+            title="點擊查看資差明細計算"
+          >
+            <div className="metric-card-header">
+              <span className="metric-label">資差</span>
+              <div className="metric-icon-wrapper gold">⚖️</div>
+            </div>
+            <span className={`metric-value ${capitalDiff < 0 ? 'text-danger' : ''}`} style={{ color: capitalDiff >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+              ${capitalDiff.toLocaleString()}
+            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="metric-change neutral">主管理者專用</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>點擊查看明細 ➔</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Charts & Shareholder Split */}
@@ -877,6 +909,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                 {activeDetailModal === 'cashProfit' && '💵 本月實收制結餘'}
                 {activeDetailModal === 'profit' && '💰 本月會計淨利（股東分紅基礎）'}
                 {activeDetailModal === 'cash' && '🏦 資金與銀行帳戶/零用金水位'}
+                {activeDetailModal === 'capitalDiff' && '⚖️ 資差明細計算'}
                 {activeDetailModal === 'gasKg' && '🛢️ 本月瓦斯銷售公斤與進貨成本'}
                 {activeDetailModal === 'gasProfit' && '📊 本月瓦斯銷貨毛利詳細分析'}
                 {activeDetailModal === 'gasStock' && '📦 期末瓦斯庫存與全區鋼瓶分佈'}
@@ -1212,6 +1245,50 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                       ))
                     ) : <div style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>尚無支出資料</div>}
                   </div>
+                </div>
+              </div>
+            {showCapitalDiff && activeDetailModal === 'capitalDiff' && (
+              <div>
+                <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '16px', color: 'var(--accent-gold)' }}>
+                    ⚖️ 截至 {periodVal} 底 資差公式計算：
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.95rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>➕ 全部營業收入（累計）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-blue)', fontSize: '1.05rem' }}>
+                        ${Number(cashBalanceBreakdown.cashIncome || 0).toLocaleString()} 元
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>➖ 全部營業支出（累計）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '1.05rem' }}>
+                        -${Number(cashBalanceBreakdown.cashExpense || 0).toLocaleString()} 元
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>➖ 公設基金（累計保留公積金）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: '#0d9488', fontSize: '1.05rem' }}>
+                        -${Number(cashBalanceBreakdown.accumulatedReserve || 0).toLocaleString()} 元
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>➖ 股東原始投入資本</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)', fontSize: '1.05rem' }}>
+                        -$635,000 元
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--accent-gold)', paddingTop: '12px', fontSize: '1.15rem', fontWeight: '800' }}>
+                      <span>⚖️ 資差（全部營收 − 全部支出 − 公設基金 − 635,000）</span>
+                      <strong style={{ fontFamily: 'var(--font-mono)', color: capitalDiff >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
+                        ${capitalDiff.toLocaleString()} 元
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, padding: '12px 16px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                  💡 <strong>說明：</strong> 此指標為主管理者（楊孟龍）專屬指標。代表公司自 115 年 7 月開帳起，在全額扣除累計成本支出、公設基金（保留公積金）以及股東初始出資本金（$635,000）之後，截至目前月份所實現的實質差額結餘。
                 </div>
               </div>
             )}
