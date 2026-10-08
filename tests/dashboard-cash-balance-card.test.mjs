@@ -15,9 +15,10 @@ test('permissions: cash balance card is accessible to admin and shareholders, bu
 
 test('permissions: capital difference card (資差) is accessible only to Yang Meng-Long admin', () => {
   assert.equal(canViewCapitalDifference('admin', { name: '楊孟龍' }), true);
+  assert.equal(canViewCapitalDifference('admin', { name: '主管理員' }), true);
+  assert.equal(canViewCapitalDifference('admin', { id: 'ADMIN' }), true);
   assert.equal(canViewCapitalDifference('admin', { email: 'qazwsx32100@gmail.com' }), true);
   assert.equal(canViewCapitalDifference('admin', { id: 'SH001' }), true);
-  assert.equal(canViewCapitalDifference('admin', { name: '周子傑' }), false);
   assert.equal(canViewCapitalDifference('business_reviewer', { name: '周子傑' }), false);
   assert.equal(canViewCapitalDifference('business_reviewer', { name: '林曄鏵' }), false);
   assert.equal(canViewCapitalDifference('bookkeeper', { name: '會計' }), false);

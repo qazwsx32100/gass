@@ -5,13 +5,19 @@ export const canViewOwnerCashBalance = (userRole) => (
 );
 
 export const canViewCapitalDifference = (userRole, currentUser) => {
-  if (userRole !== 'admin') return false;
-  if (!currentUser) return true;
+  if (userRole === 'admin') return true;
+  if (!currentUser) return false;
   const name = currentUser.name || '';
-  const email = currentUser.email || '';
+  const email = (currentUser.email || '').toLowerCase();
   const id = currentUser.id || '';
-  const username = currentUser.username || '';
-  return name.includes('楊孟') || email === 'qazwsx32100@gmail.com' || id === 'SH001' || username === 'yang';
+  const username = (currentUser.username || '').toLowerCase();
+  return (
+    name.includes('楊孟') ||
+    email === 'qazwsx32100@gmail.com' ||
+    id === 'ADMIN' ||
+    id === 'SH001' ||
+    username === 'yang'
+  );
 };
 
 

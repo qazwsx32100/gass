@@ -705,8 +705,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
             <span className={`metric-value ${capitalDiff < 0 ? 'text-danger' : ''}`} style={{ color: capitalDiff >= 0 ? 'var(--accent-gold)' : 'var(--accent-red)' }}>
               ${capitalDiff.toLocaleString()}
             </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="metric-change neutral">主管理者專用</span>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
               <span style={{ fontSize: '0.72rem', color: 'var(--accent-gold)', fontWeight: 700 }}>點擊查看明細 ➔</span>
             </div>
           </div>
@@ -1247,6 +1246,8 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   </div>
                 </div>
               </div>
+            )}
+
             {showCapitalDiff && activeDetailModal === 'capitalDiff' && (
               <div>
                 <div style={{ padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '16px', marginBottom: '24px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
