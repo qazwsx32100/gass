@@ -1,0 +1,10 @@
+{
+  "name": "gemini-rotator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Gemini Multi-Account Rotation Proxy & Real-time Dashboard",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

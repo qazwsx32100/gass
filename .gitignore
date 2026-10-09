@@ -35,3 +35,4 @@ backups/
 artifacts/
 dist-*/
 shenglong-line-sync/
+tools/gemini-rotator/config.json

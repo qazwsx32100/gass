@@ -1,0 +1,35 @@
+{
+  "port": 3333,
+  "strategy": "round-robin",
+  "cooldownSeconds": 60,
+  "accounts": [
+    {
+      "id": "acc-1",
+      "name": "Gemini 帳號 1",
+      "provider": "gemini",
+      "apiKey": "YOUR_GEMINI_API_KEY_1",
+      "enabled": true
+    },
+    {
+      "id": "acc-2",
+      "name": "Gemini 帳號 2",
+      "provider": "gemini",
+      "apiKey": "YOUR_GEMINI_API_KEY_2",
+      "enabled": true
+    },
+    {
+      "id": "acc-3",
+      "name": "Gemini 帳號 3",
+      "provider": "gemini",
+      "apiKey": "YOUR_GEMINI_API_KEY_3",
+      "enabled": true
+    },
+    {
+      "id": "acc-4",
+      "name": "OpenAI (備援防線)",
+      "provider": "openai",
+      "apiKey": "YOUR_OPENAI_API_KEY",
+      "enabled": true
+    }
+  ]
+}

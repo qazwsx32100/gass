@@ -7,6 +7,39 @@
 
 ---
 
+## 📅 2026/10/09 (下午) - 🤖 盛隆 AI 客服與四重備援自動輪調系統（Gemini 1→2→3→OpenAI）全架構整合上線
+
+### 一、 核心維護更新成果
+1. **雲端與本機共用 AI 輪調引擎 (`api/_ai-rotator.js`)**
+   - **四重防線自動故障轉移 (Failover)**：依序輪調 3 組 Gemini 付費帳號 (`qaz` → `無名` → `神燈`)，並以 `OpenAI` 作為最後備援防線。
+   - **智能容錯轉移**：遇到 `429 Too Many Requests` 限流或 `503 High Demand` 繁忙時，0.1 秒內自動切換下一組帳號，徹底杜絕客戶斷線。
+   - **極速模型升級**：採用 Google 最新極速模型 `gemini-3.8-flash`，大幅縮短問答生成延遲。
+   - **Serverless 記憶體快取 (10s TTL)**：在雲端無狀態函數中提供毫秒級帳號候選清單，避免反覆查詢資料庫造成延遲。
+
+2. **盛隆瓦斯專屬 LINE 智能客服 Webhook (`api/line-webhook.js`)**
+   - **數位簽章驗證**：支援 `x-line-signature` HMAC-SHA256 防偽驗證。
+   - **瓦斯專業問答 Prompt**：包含地址、樓層、桶數、規格 (20kg/16kg/4kg) 引導，以及核心瓦斯漏氣緊急處置通報。
+   - **訂單智慧聯動 Telegram**：當 LINE 客戶提到「叫瓦斯、送瓦斯、換瓦斯」時，Webhook 自動同步推播警報至師傅訂單群組 (`TELEGRAM_ORDER_CHAT_ID`)。
+
+3. **雲端問答 API 端點 (`api/ai-chat.js`)**
+   - 提供標準 HTTP POST `/api/ai-chat` 端點，支援前端、App、後台呼叫，統一享用四重 AI 備援。
+
+4. **Supabase 集中式狀態庫遷移腳本 (`supabase/migrations/20261009160000_add_ai_rotation_system.sql`)**
+   - 建立 `ai_accounts` 與 `ai_logs` 資料表，預填 4 組金鑰，提供原子級 RPC 函數維護冷卻狀態。
+
+5. **本機監控儀表板同步升級 (`tools/gemini-rotator/`)**
+   - 修復彈出視窗滾動條無法往下滑動問題，固定標題與底部按鈕，彈性高度自適應。
+   - 區分 Gemini (每日次數估計) 與 OpenAI (美金儲值/按 Token 計費) 顯示指標。
+   - 支援 Supabase 同步整合。
+
+### 二、 同步狀態確認
+- [x] **GitHub**：已同步封裝與推播
+- [x] **Google 雲端**：已同步更新維護日誌
+- [x] **自動測試**：全套 147 項測試 100% 通過 (node --test 0 fail)
+- [x] **最高權限**：Telegram ID `8862712587` (SuperAdmin 永久鎖定)
+
+---
+
 ## 📅 2026/10/09 (下午) - 🛡️ 盛隆 JM489 電話來電守護系統架構大改版、誤報洗版死循環徹底根除 ＆ Web 雲端看板即時硬體狀態條上線
 
 ### 一、 核心維護更新成果

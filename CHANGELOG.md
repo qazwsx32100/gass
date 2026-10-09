@@ -7,6 +7,35 @@
 
 ---
 
+## 📅 2026/10/09 (下午) - 盛隆 AI 客服與四重備援自動輪調系統（Gemini 1→2→3→OpenAI）全架構整合上線
+
+### 1. 雲端與本機共用 AI 輪調引擎 (`api/_ai-rotator.js`)
+* **變更類型**：核心架構升級 (core-architecture) / 故障轉移 (failover-recovery)
+* **影響模組**：
+  * `api/_ai-rotator.js`
+  * `api/ai-chat.js`
+  * `api/line-webhook.js`
+  * `tests/ai-rotator.test.mjs`
+* **需求與背景**：
+  * LINE 客服若只綁定單一 AI 帳號容易觸發 429 限流或 503 斷線；且本機寫程式與雲端客服需要共用同一套輪調冷卻狀態。
+* **實作內容**：
+  * 四重容錯順序：`qaz` (Gemini) → `無名` (Gemini) → `神燈` (Gemini) → `OpenAI (備援防線)`。
+  * 遇到 429/503 自動秒級切換下一組帳號。
+  * 升級 Google 最新極速模型 `gemini-3.8-flash`。
+  * 支援與 Supabase 資料庫集中同步狀態與冷卻標記。
+
+### 2. 盛隆瓦斯專屬 LINE 智能客服 Webhook (`api/line-webhook.js`)
+* **變更類型**：新功能上線 (feat-line-bot) / 業務整合 (business-integration)
+* **影響模組**：
+  * `api/line-webhook.js`
+* **實作內容**：
+  * 支援 LINE Messaging API Webhook，具備 HMAC-SHA256 數位簽章防偽。
+  * 內建在地化親切客服 System Prompt，引導叫桶瓦斯規格（20kg、16kg、4kg、防爆瓶）與地址確認。
+  * 內建瓦斯漏氣緊急處置警示提示。
+  * 自動辨識叫瓦斯關鍵字，同步推送訂單警報至師傅 Telegram 群組。
+
+---
+
 ## 📅 2026/10/09 (下午) - 盛隆 JM489 電話來電守護系統架構大改版、誤報洗版死循環徹底根除 ＆ Web 雲端看板即時硬體狀態條上線
 
 ### 1. JM489 來電顯示器守護進程（`callerid-daemon.cjs`）全面重構與誤報根除
