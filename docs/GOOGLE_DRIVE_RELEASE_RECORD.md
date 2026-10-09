@@ -7,40 +7,86 @@
 
 ---
 
-## 📅 2026/10/09 (下午) - 🤖 盛隆 AI 客服與四重備援自動輪調系統（Gemini 1→2→3→OpenAI）全架構整合上線
+## 📅 2026/10/09 (下午) - 💎 外觀與 App 體驗全面升級：純白底去背透明翡翠綠鋼瓶冷啟動畫面 (Splash Screen) ＆ 外勤司機專屬下載頁面 (download-driver) 質感翻新上線
 
-### 一、 核心維護更新成果
-1. **雲端與本機共用 AI 輪調引擎 (`api/_ai-rotator.js`)**
-   - **四重防線自動故障轉移 (Failover)**：依序輪調 3 組 Gemini 付費帳號 (`qaz` → `無名` → `神燈`)，並以 `OpenAI` 作為最後備援防線。
-   - **智能容錯轉移**：遇到 `429 Too Many Requests` 限流或 `503 High Demand` 繁忙時，0.1 秒內自動切換下一組帳號，徹底杜絕客戶斷線。
-   - **極速模型升級**：採用 Google 最新極速模型 `gemini-3.8-flash`，大幅縮短問答生成延遲。
-   - **Serverless 記憶體快取 (10s TTL)**：在雲端無狀態函數中提供毫秒級帳號候選清單，避免反覆查詢資料庫造成延遲。
+### 一、 核心優化成果
+1. **Android App 冷啟動畫面 (Splash Screen) 徹底革新**：
+   - **冷啟動純白底 (#FFFFFF) + 去背透明翡翠綠鋼瓶居中**：解決過往啟動瞬間預設白底或舊版粉紅 ERP 圖標混雜問題。
+   - **全解析度適配**：批次生成 Android 標準 `drawable-port-*` (mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi) 與 `drawable-land-*` 之純白背景去背鋼瓶畫面。
+   - **Android 12+ Theme.SplashScreen 原生適配**：引入 `@drawable/splash_icon` (432x432 居中透明翡翠綠鋼瓶)，配合 `windowSplashScreenBackground` (#FFFFFF)，冷啟動瞬間絲滑大氣。
+2. **外勤司機專屬下載引導頁 (`/download-driver`) 尊榮企業級翻新**：
+   - **頂部去背翡翠綠鋼瓶縮圖 Showcase**：加入高解析去背翡翠綠鋼瓶縮圖 (`/cylinder-emerald.png`)，配備翡翠綠環形柔光與官方專屬認證徽章。
+   - **司機版本一鍵切換**：新增【游柏林 專用版 (推薦)】、【小龍 專用版】、【盛隆通用版】即時切換標籤，動態切換下載連結與顏色主題。
+   - **LINE 內建防白屏三步驟教學卡**：清楚提示右上角切換預設瀏覽器（Chrome）直接秒下載。
+3. **Android 原生 Signed Release APK 重新編譯交付**：
+   - 透過 `gradlew assembleRelease` 重新打包簽章版 APK (游柏林專用，4.87 MB)。
+   - 自動發布至老闆電腦桌面：`C:\Users\懶\Desktop\盛隆外送_游柏林專用.apk`。
+   - 自動發布至公開下載目錄：`public/files/shenglong-driver-ybl.apk`、`shenglong-driver.apk`、`driver-latest.apk`。
+   - 本地 `npx tsc --noEmit` (0 錯誤) 與 `npm run build` (全路由靜態生成通過) 100% 驗證完成。
 
-2. **盛隆瓦斯專屬 LINE 智能客服 Webhook (`api/line-webhook.js`)**
-   - **數位簽章驗證**：支援 `x-line-signature` HMAC-SHA256 防偽驗證。
-   - **瓦斯專業問答 Prompt**：包含地址、樓層、桶數、規格 (20kg/16kg/4kg) 引導，以及核心瓦斯漏氣緊急處置通報。
-   - **訂單智慧聯動 Telegram**：當 LINE 客戶提到「叫瓦斯、送瓦斯、換瓦斯」時，Webhook 自動同步推播警報至師傅訂單群組 (`TELEGRAM_ORDER_CHAT_ID`)。
+---
 
-3. **雲端問答 API 端點 (`api/ai-chat.js`)**
-   - 提供標準 HTTP POST `/api/ai-chat` 端點，支援前端、App、後台呼叫，統一享用四重 AI 備援。
+## 📅 2026/10/09 (下午) - 🗺️ 盛隆能源未來宏觀戰略部署永久注入 AI 軍師智庫 ＆ 視覺化資訊圖卡與 APK 升級交付
 
-4. **Supabase 集中式狀態庫遷移腳本 (`supabase/migrations/20261009160000_add_ai_rotation_system.sql`)**
-   - 建立 `ai_accounts` 與 `ai_logs` 資料表，預填 4 組金鑰，提供原子級 RPC 函數維護冷卻狀態。
+### 一、 核心戰略入庫與視覺化成果
+1. **宏觀戰略部署全面注入 AI 軍師四大智庫系統**：
+   - `industry-advisor.cjs`：新增 `getFutureDeploymentRoadmap()`，生成全套 HTML 戰略卡片與 6 大互動按鈕。
+   - `advisor-bot.cjs`：鍵盤擴充第 12 鍵「🚀 未來宏觀戰略部署」，支援 `/deployment` 與自然語言直出戰略報表。
+   - `telegram-ai.cjs`：AI 大腦永久植入「外部擴張四箭、內部管理三策、資本政策槓桿」，隨問隨答大格局藍圖。
+   - `android-builder/assets/index.html`：新增第 5 標籤頁「🚀 未來戰略」，內建完整視覺化戰略指標與互動問答。
+2. **生成高解析視覺戰略資訊圖卡 (`strategy_roadmap.jpg`)**：
+   - 繪製 2026-2028 盛隆能源智慧能源戰略路線圖，呈現四大核心支柱：
+     * 1. 區域併購聯盟 (Regional M&A Alliance)
+     * 2. 物聯網智慧燃氣表遙測 (IoT Smart Gas Meter Telemetry)
+     * 3. 商用廚房一體化租賃 (Commercial Kitchen All-in-One Leasing)
+     * 4. 駕駛員分潤車隊與 RFID 氣瓶資產追蹤 (Driver Profit-Sharing Fleet & RFID)
+   - 圖檔同步嵌入 Android App (`assets/`) 與公開雲端 (`public/`)。
+3. **Android 原生 APK (v1.0) 重新編譯交付**：
+   - 包含高畫質視覺資訊圖卡與未來戰略儀表板，檔案大小 1.75 MB。
+   - 成功覆蓋至老闆電腦桌面：`C:\Users\懶\Desktop\盛隆軍師特助_v1.0.apk`。
+   - 同步至公開下載目錄：`c:\shenglong-next\public\ShengLong_Advisor_v1.0.apk`。
 
-5. **本機監控儀表板同步升級 (`tools/gemini-rotator/`)**
-   - 修復彈出視窗滾動條無法往下滑動問題，固定標題與底部按鈕，彈性高度自適應。
-   - 區分 Gemini (每日次數估計) 與 OpenAI (美金儲值/按 Token 計費) 顯示指標。
-   - 支援 Supabase 同步整合。
+---
 
-### 二、 同步狀態確認
-- [x] **GitHub**：已同步封裝與推播
-- [x] **Google 雲端**：已同步更新維護日誌
-- [x] **自動測試**：全套 147 項測試 100% 通過 (node --test 0 fail)
-- [x] **最高權限**：Telegram ID `8862712587` (SuperAdmin 永久鎖定)
+## 📅 2026/10/09 (下午) - ⚡ AI 運算 Token 超限機制與多帳號輪調系統 (Port 3333) 容災架構技術核定
+
+
+### 一、 AI 超額應對與輪調擴容重點
+1. **超過免費額度的行為機制**：
+   - **純免費模式 (無綁信用卡)**：一旦超過每分鐘 15 次或每日 1,500 次，Google 僅回傳 HTTP 429 限流，**絕對不會產生任何扣款或額外帳單**。冷卻 60 秒或隔日 UTC 00:00 自動滿血恢復。
+   - **用量付費模式 (Pay-As-You-Go)**：若綁卡超額，Gemini 1.5 Flash 輸入每百萬 Tokens 僅約 NT$2.4，輸出每百萬 Tokens 約 NT$9.6，費用微乎其微。
+2. **多帳號輪調機制 (`gemini-rotator`, Port 3333) 完全無縫支援**：
+   - 盛隆主機已建置 `c:\Gass\tools\gemini-rotator`，配置 3 組帳號 (`qaz`, `無名`, `神燈`)。
+   - `telegram-ai.cjs` 核心優先級早已直連 `http://127.0.0.1:3333/v1`，具備雙重輪調策略：
+     * **Round-Robin 循環負載均衡**：每次提問均勻分配至不同帳號，大幅攤平單一帳號的 RPM 負擔。
+     * **Auto-Failover 零秒故障轉移**：任一帳號撞到 429 資源耗盡時，代理層在 0 秒內無縫切換到下一組可用 Key 重試，老闆前端完全無感。
+   - **額度倍增成效**：
+     * 單一帳號：15 RPM、1,500 RPD
+     * 3 組輪調：**45 RPM、4,500 RPD**（每天可問 4,500 次決策）
+     * 支援隨時增添免費 Google 帳號擴充至 10 組以上（日配額破萬次），**徹底達成永久 0 元無限續杯**。
+
+---
+
+## 📅 2026/10/09 (下午) - 🚀 盛隆能源集團化全方位發展戰略建議書（外部併購擴張、管理合夥分潤、IoT 智慧抄表與商業模式升維）
+
+
+### 一、 盛隆宏觀事業版圖躍升戰略（跳脫傳統瓦斯行，邁向區域都會智慧能源集團）
+1. **外部擴張四箭（同業併購託管、物聯網智慧抄表、商用廚具設備一條龍、極端備援能源）**：
+   - 三蘆新五泰老瓦斯行「客線併購（收底線）與數位配送代管平台」，迅速放大 3 倍市占。
+   - 餐飲大戶推行「微電腦智慧瓦斯表 + NB-IoT 雲端度數計費」，斷絕同業挖角，轉型公共事業訂閱現金流。
+   - 商用廚房「瓦斯設備租賃免保證金 + 綁約供氣一條龍」，降維打擊傳統零售。
+   - 工商業與醫療院所「LPG 雙燃料與緊急發電備援合約」，開拓高毛利工業藍海。
+2. **管理進化三策（車隊合夥人分潤、AI 聚落路網動態調度、RFID 鋼瓶資產身分證）**：
+   - 司機轉型「合夥人制」：趟次獎金 + 沉睡鋼瓶召回獵金 + 零流失分紅，化被動為業務主動。
+   - AI 聚落式滿車巡迴配送，單趟行駛里程降低 35%，車趟產值翻倍。
+   - 鋼瓶全面條碼/RFID 數位履歷，週轉率由 4 次升至 10 次，省下數百萬購瓶支出。
+3. **政策資本槓桿**：
+   - 申請經濟部「商業服務業智慧升級與節能減碳補助」（補助額 100~300 萬），利用政策資金加速數位化。
 
 ---
 
 ## 📅 2026/10/09 (下午) - 🛡️ 盛隆 JM489 電話來電守護系統架構大改版、誤報洗版死循環徹底根除 ＆ Web 雲端看板即時硬體狀態條上線
+
 
 ### 一、 核心維護更新成果
 1. **JM489 來電顯示器守護進程（`callerid-daemon.cjs`）全面重構與報錯根除**

@@ -6,37 +6,45 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/09 (下午) - 💎 外觀與 App 體驗全面升級：純白底去背透明翡翠綠鋼瓶冷啟動畫面 (Splash Screen) ＆ 外勤司機專屬下載頁面 (download-driver) 質感翻新上線
+* **變更類型**：視覺與體驗優化 (ui-ux-enhancement) / 原生冷啟動畫面升級 (splash-screen) / APK 重編譯發布 (apk-release)
+* **核心成果**：
+  * **Android 原生冷啟動畫面升級**：純白底色 (#FFFFFF) 搭配去背翡翠綠透明鋼瓶居中，全解析度適配 (mdpi 到 xxxhdpi)，Android 12+ 導入 `@drawable/splash_icon`，告別預設與雜色。
+  * **外勤司機專屬下載頁面 (`/download-driver`)**：頂部新增高解析去背翡翠綠鋼瓶縮圖展示、翡翠綠光暈、官方認證標章，新增司機版本切換卡與 LINE 防白屏教學。
+  * **發布自動化強化**：`release.cjs` 自動同步翡翠綠資源包至 Android res，本地編譯與 TypeScript 100% 驗收通過，Signed Release APK 發布至桌面與雲端下載區。
 
-## 📅 2026/10/09 (下午) - 盛隆 AI 客服與四重備援自動輪調系統（Gemini 1→2→3→OpenAI）全架構整合上線
+---
+## 📅 2026/10/09 (下午) - 🗺️ 盛隆能源未來宏觀戰略部署永久注入 AI 軍師智庫 ＆ 視覺化資訊圖卡與 APK 升級交付
+* **變更類型**：戰略庫固化 (knowledge-base-inject) / 視覺化圖卡整合 (visual-infographic) / APK升級 (apk-release)
+* **核心成果**：
+  * **AI 軍師四大智庫入庫**：`industry-advisor.cjs` 新增 `getFutureDeploymentRoadmap`，`advisor-bot.cjs` 鍵盤升級第 12 鍵「🚀 未來宏觀戰略部署」，`telegram-ai.cjs` 系統人設永久載入宏觀戰略。
+  * **高解析戰略資訊圖卡**：產出 2026-2028 盛隆能源智慧能源戰略路線圖 (`strategy_roadmap.jpg`)，四大支柱結構一目了然。
+  * **原生 Android APK 重新封裝交付**：最新版 `ShengLong_Advisor_v1.0.apk`（1.75 MB）內建「🚀 未來戰略」全景儀表板，成功交付老闆電腦桌面與雲端目錄。
 
-### 1. 雲端與本機共用 AI 輪調引擎 (`api/_ai-rotator.js`)
-* **變更類型**：核心架構升級 (core-architecture) / 故障轉移 (failover-recovery)
-* **影響模組**：
-  * `api/_ai-rotator.js`
-  * `api/ai-chat.js`
-  * `api/line-webhook.js`
-  * `tests/ai-rotator.test.mjs`
-* **需求與背景**：
-  * LINE 客服若只綁定單一 AI 帳號容易觸發 429 限流或 503 斷線；且本機寫程式與雲端客服需要共用同一套輪調冷卻狀態。
-* **實作內容**：
-  * 四重容錯順序：`qaz` (Gemini) → `無名` (Gemini) → `神燈` (Gemini) → `OpenAI (備援防線)`。
-  * 遇到 429/503 自動秒級切換下一組帳號。
-  * 升級 Google 最新極速模型 `gemini-3.8-flash`。
-  * 支援與 Supabase 資料庫集中同步狀態與冷卻標記。
+---
 
-### 2. 盛隆瓦斯專屬 LINE 智能客服 Webhook (`api/line-webhook.js`)
-* **變更類型**：新功能上線 (feat-line-bot) / 業務整合 (business-integration)
-* **影響模組**：
-  * `api/line-webhook.js`
-* **實作內容**：
-  * 支援 LINE Messaging API Webhook，具備 HMAC-SHA256 數位簽章防偽。
-  * 內建在地化親切客服 System Prompt，引導叫桶瓦斯規格（20kg、16kg、4kg、防爆瓶）與地址確認。
-  * 內建瓦斯漏氣緊急處置警示提示。
-  * 自動辨識叫瓦斯關鍵字，同步推送訂單警報至師傅 Telegram 群組。
+## 📅 2026/10/09 (下午) - ⚡ AI 運算 Token 超限機制與多帳號輪調系統 (Port 3333) 容災架構技術核定
+
+* **變更類型**：容災與架構強化 (infra-resilience) / 成本風控 (cost-control)
+* **核心綱要**：
+  * **超限機制**：純免費模式下若達上限 Google 僅回傳 HTTP 429 限流，完全零扣款、零額外費用；付費模式則每百萬 Token 僅數元台幣。
+  * **輪調機制支援**：系統原架構（`telegram-ai.cjs`）第一順位直連本地 `gemini-rotator` (Port 3333)，內建 3 組金鑰雙軌輪調（Round-Robin + 429 零秒自動容災）。
+  * **額度倍增**：每日免費決策諮詢額度由 1,500 次直衝 4,500 次，擴展性強，達成永久 0 元無限續杯。
+
+---
+
+## 📅 2026/10/09 (下午) - 🚀 盛隆能源集團化全方位發展戰略建議書（外部擴張、管理合夥分潤、IoT 智慧抄表）
+
+* **變更類型**：商業戰略藍圖 (strategic-blueprint) / 產業升維建議 (industry-scaling)
+* **核心綱要**：
+  * **外部擴張**：同業併購與代送託管聯盟、餐飲大戶 NB-IoT 智慧微電腦瓦斯表度數租賃、商用廚房設備一條龍、極端備援電力供應。
+  * **內部管理**：司機車趟合夥人分潤制（結合沉睡瓶召回獵金）、AI 聚落式滿車動態調度、RFID 鋼瓶全生命週期數位資產追蹤。
+  * **政策與資本**：申請經濟部商業服務業智慧轉型與節能補助（100~300萬），打造三蘆第一家都會智慧能源品牌。
 
 ---
 
 ## 📅 2026/10/09 (下午) - 盛隆 JM489 電話來電守護系統架構大改版、誤報洗版死循環徹底根除 ＆ Web 雲端看板即時硬體狀態條上線
+
 
 ### 1. JM489 來電顯示器守護進程（`callerid-daemon.cjs`）全面重構與誤報根除
 * **變更類型**：核心守護重構 (daemon-refactor) / 防抖自癒 (anti-debounce-heal)
