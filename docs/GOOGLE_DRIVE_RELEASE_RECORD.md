@@ -13,15 +13,19 @@
    - 遷移腳本：`supabase/migrations/20261011113000_add_line_ai_chat_logs.sql`。
    - 欄位涵蓋：`line_user_id`（客戶 LINE 識別碼）、`user_message`（客戶發問內容）、`ai_reply`（AI 完整回覆）、`model`、`account_name`、`tokens`、`latency_ms`、`is_order_intent`（叫瓦斯意圖標記）、`raw_event`。
    - 配備 RLS 安全防護策略與專屬高效 RPC 函式 `erp_record_line_ai_log`。
-2. **LINE Webhook 自動異步存庫 (`api/line-webhook.js`)**：
+2. **消費者常見問題 300 題完整知識庫與 20 大分類官方文件建立 (`docs/GAS_CONSUMER_FAQ_300.md`)**：
+   - 專案路徑：`docs/GAS_CONSUMER_FAQ_300.md`。
+   - 桌面備份：`C:\Users\懶\Desktop\盛隆瓦斯_消費者常見問題300題知識庫.md`。
+   - 內容收錄：20 大分類、300 題結構化問題、盛隆專屬營運政策（電話 02-2972-5559、現金、手寫發票、08:00~21:00、樓層費、無秤重退殘氣等）與 AI 專業回答應急準則（漏氣SOP、爐具/熱水器故障、鋼瓶規格）。
+3. **LINE Webhook 自動異步存庫 (`api/line-webhook.js`)**：
    - 客戶傳訊觸發 AI 智慧客服回覆後，系統立即在背景非阻塞將完整問答、耗時、Token 及意圖存入資料庫。
    - 遭遇異常或限流時，同步記錄錯誤狀態與系統回退提示，確保無遺漏。
-3. **專屬對話歷程查詢端點與視覺化看板 (`/api/line-ai-logs`)**：
+4. **專屬對話歷程查詢端點與視覺化看板 (`/api/line-ai-logs`)**：
    - 瀏覽器直接開啟：提供美觀的 LINE 綠色風格對話泡泡卡片、對話總數統計、叫瓦斯意圖篩選及全文搜尋。
    - API 格式：支援 `?format=json` 快速取得 JSON 結構化對話紀錄。
-4. **Telegram 群組快速調閱指令 (`api/telegram-webhook.js`)**：
+5. **Telegram 群組快速調閱指令 (`api/telegram-webhook.js`)**：
    - 管理員或老闆在 Telegram 發送 `/line`、`/line紀錄` 或 `/line對話`，機器人即時推播最新 5 筆客戶問答卡片與看板連結。
-5. **全端測試通過**：
+6. **全端測試通過**：
    - 149 項單元測試 100% 通過（含 `tests/line-ai-logs.test.mjs`）。
 
 ---

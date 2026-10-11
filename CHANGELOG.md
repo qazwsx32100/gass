@@ -10,6 +10,7 @@
 * **變更類型**：新功能建置 (feature) / 資料庫持久化 (persistence) / 視覺化看板 (dashboard) / 指令整合 (bot-command)
 * **核心成果**：
   * **資料庫對話表 (`public.line_ai_logs`)**：建置完整客戶發問、AI 完整回覆、使用模型、Token 數、延遲與叫瓦斯意圖記錄表與專用 RPC。
+  * **消費者常見問題 300 題知識庫文件 (`docs/GAS_CONSUMER_FAQ_300.md`)**：建立完整 20 大分類、300 題問答、盛隆營運政策與 AI 緊急安全指南，並同步放於桌面。
   * **LINE Webhook 自動異步存庫 (`api/line-webhook.js`)**：非阻塞非同步保存所有客戶問答，含降級與異常紀錄。
   * **對話紀錄查詢與視覺化看板 (`api/line-ai-logs.js`)**：支援直接在瀏覽器查看 LINE 風格對話泡泡卡片、篩選叫瓦斯意圖、關鍵字搜尋，以及 `?format=json` 結構化資料匯出。
   * **Telegram 機器人指令擴充 (`api/telegram-webhook.js`)**：支援 `/line`、`/line紀錄` 指令即時調閱最新客戶對話。
