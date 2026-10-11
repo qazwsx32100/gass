@@ -156,9 +156,13 @@ export async function callAiWithFailover({
       ? 'https://api.openai.com/v1/chat/completions'
       : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
-    const targetModel = isOpenAi
+    let targetModel = isOpenAi
       ? 'gpt-4o-mini'
       : (preferredModel || 'gemini-3.8-flash');
+
+    if (!isOpenAi && (targetModel.includes('2.5') || targetModel.includes('2.0') || targetModel.includes('1.5') || targetModel.includes('1.0'))) {
+      targetModel = 'gemini-3.8-flash';
+    }
 
     try {
       const res = await fetchWithTimeout(targetUrl, {

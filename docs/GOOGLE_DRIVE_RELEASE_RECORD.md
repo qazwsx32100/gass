@@ -6,7 +6,25 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/11 - ⚡ 全端 AI 自動輪調系統與 LINE 智慧客服多帳號容災監控中心一體化整合
 
+### 一、 核心整合與技術成果
+1. **本機輪調與監控中心 (`http://localhost:3333`)**：
+   - 納入 3 組付費 Google Gemini 帳號 (`qaz`, `無名`, `神燈`) + 1 組 OpenAI 備援防線 (`sk-proj...`)。
+   - 策略支援「故障自動轉移 (Failover)」與「循環負載均衡 (Round-Robin)」，實測驗證 3 組帳號自動輪流分攤。
+   - 全新升級「☁️ 盛隆瓦斯 雲端 LINE AI 客服即時狀態」分頁，可同步監控 Vercel 雲端服務與資料庫連線，並內建實機模擬互動問答。
+2. **Google 官方模型規格升級與防禦**：
+   - 全面替換為 Google 官方最新 `gemini-3.8-flash` 模型，避免 Google 官方棄用 `gemini-2.5-flash` 產生之 HTTP 404 阻斷。
+   - 於底層輪調器注入防禦性自動別名映射，自動將歷史呼叫導向穩定運行的 `gemini-3.8-flash`。
+3. **雲端 LINE 客服 AI Webhook (`/api/line-webhook`) ＆ 狀態 API (`/api/ai-status`)**：
+   - 線上端點具備完整的 HMAC-SHA256 LINE 數位簽章驗證與雙向訊息回覆機制。
+   - 具備叫瓦斯需求辨識、疑似瓦斯漏氣緊急安全指引（嚴禁電器開關、通風逃生）、自動推播至 Telegram 師傅群組。
+   - 支援將 AI 調用與 429 冷卻狀態同步至 Supabase 資料表。
+4. **全端測試與驗證**：
+   - 147 項核心單元測試 100% 通過（0 失敗）。
+   - 本地端與雲端端點實測 200 OK 正常回應。
+
+---
 ## 📅 2026/10/09 (下午) - 💎 外觀與 App 體驗全面升級：純白底去背透明翡翠綠鋼瓶冷啟動畫面 (Splash Screen) ＆ 外勤司機專屬下載頁面 (download-driver) 質感翻新上線
 
 ### 一、 核心優化成果

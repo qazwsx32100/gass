@@ -551,9 +551,10 @@
     <!-- Populated dynamically via JS -->
   </div>
 
-  <!-- Tabs for Logs and Setup Guide -->
+  <!-- Tabs for Logs, Cloud LINE Monitor, and Setup Guide -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('logs')">📋 即時請求與輪調日誌</button>
+    <button class="tab-btn active" onclick="switchTab('logs')">📋 本機請求與輪調日誌</button>
+    <button class="tab-btn" onclick="switchTab('cloud')">☁️ 雲端 LINE AI 客服即時狀態</button>
     <button class="tab-btn" onclick="switchTab('guide')">🛠️ AI 寫程式工具快速串接指南 (Cline / Continue / Cursor / Aider)</button>
   </div>
 
@@ -581,7 +582,83 @@
     </div>
   </div>
 
-  <!-- Tab 2: Setup Guide -->
+  <!-- Tab 2: Cloud LINE AI Monitor -->
+  <div id="tab-cloud" class="tab-pane">
+    <div class="guide-card" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <h3 style="margin: 0; color: #34d399;">☁️ 盛隆瓦斯 雲端 LINE AI 客服連線狀態</h3>
+        <button class="btn btn-outline btn-sm" onclick="fetchCloudStatus()"><span>🔄</span> 刷新雲端狀態</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px;">
+        <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e293b;">
+          <div style="font-size: 11px; color: var(--text-muted);">雲端伺服器 (Vercel)</div>
+          <div style="font-size: 15px; font-weight: 700; color: #34d399;" id="cloud-status-text">🟢 正常運作</div>
+          <div style="font-size: 11px; color: #64748b; font-family: var(--font-mono); margin-top: 4px;">https://erp-weld-three-96.vercel.app</div>
+        </div>
+        <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e293b;">
+          <div style="font-size: 11px; color: var(--text-muted);">LINE Webhook 端點</div>
+          <div style="font-size: 15px; font-weight: 700; color: #60a5fa;">🟢 支援雙向對話</div>
+          <div style="font-size: 11px; color: #64748b; font-family: var(--font-mono); margin-top: 4px;">/api/line-webhook</div>
+        </div>
+        <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e293b;">
+          <div style="font-size: 11px; color: var(--text-muted);">Supabase 雲端資料庫</div>
+          <div style="font-size: 15px; font-weight: 700;" id="cloud-db-status">連線中...</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px;" id="cloud-db-sub">同步 AI 統計與日誌</div>
+        </div>
+        <div style="background: #0f172a; padding: 12px 16px; border-radius: 8px; border: 1px solid #1e293b;">
+          <div style="font-size: 11px; color: var(--text-muted);">雲端可用帳號池</div>
+          <div style="font-size: 15px; font-weight: 700; color: #fbbf24;" id="cloud-active-accs">4 組已就緒</div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Gemini x3 + OpenAI x1</div>
+        </div>
+      </div>
+
+      <!-- Cloud Interactive Tester -->
+      <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+        <h4 style="font-size: 14px; color: #cbd5e1; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>💬</span> 雲端 LINE 客服 AI 互動即時測試 (實機模擬)
+        </h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+          直接向正式部署在 Vercel 上的盛隆瓦斯客服 AI 發送測試訊息，驗證雲端輪調與回答效果：
+        </p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <input type="text" id="cloud-test-input" class="form-input" style="flex: 1; min-width: 260px;" value="我要叫一桶 20 公斤瓦斯送五樓有電梯" placeholder="輸入顧客可能詢問的訊息...">
+          <button class="btn btn-primary" onclick="testCloudAiChat()" id="btn-cloud-test">
+            <span>⚡</span> 發送測試
+          </button>
+        </div>
+        <div id="cloud-test-result" style="display: none; margin-top: 14px; background: #0f172a; border: 1px solid #223249; border-radius: 8px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+            <span style="color: #34d399; font-weight: 600;" id="cloud-result-acc">🤖 盛隆瓦斯 AI 客服回覆：</span>
+            <span style="color: var(--text-muted);" id="cloud-result-meta"></span>
+          </div>
+          <div id="cloud-result-text" style="font-size: 13px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap;"></div>
+        </div>
+      </div>
+
+      <!-- Cloud Accounts Table -->
+      <h4 style="font-size: 14px; color: #cbd5e1; margin-bottom: 10px;">雲端輪調池帳號狀態清單</h4>
+      <div class="log-container">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>帳號名稱</th>
+              <th>提供者</th>
+              <th>金鑰狀態</th>
+              <th>目前狀態</th>
+              <th>今日調用</th>
+              <th>累計消耗</th>
+            </tr>
+          </thead>
+          <tbody id="cloud-accounts-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">載入雲端帳號狀態中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Setup Guide -->
   <div id="tab-guide" class="tab-pane">
     <div class="guide-card">
       <h3>🚀 如何串接至您的 AI 寫程式工具？</h3>
@@ -932,6 +1009,121 @@ aider --openai-api-base http://localhost:3333/v1 --openai-api-key dummy --model 
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById(`tab-${tabId}`).classList.add('active');
     event.currentTarget.classList.add('active');
+    if (tabId === 'cloud') {
+      fetchCloudStatus();
+    }
+  }
+
+  // Cloud LINE AI Status & Interactive Tester
+  let cloudData = null;
+  async function fetchCloudStatus() {
+    try {
+      const res = await fetch('/api/cloud-status');
+      if (!res.ok) throw new Error('雲端狀態未正常回應');
+      cloudData = await res.json();
+      renderCloudUI(cloudData);
+    } catch (err) {
+      const statusText = document.getElementById('cloud-status-text');
+      if (statusText) {
+        statusText.innerText = '🔴 連線中斷';
+        statusText.style.color = '#ef4444';
+      }
+      const dbStatus = document.getElementById('cloud-db-status');
+      if (dbStatus) {
+        dbStatus.innerText = '無法連線';
+        dbStatus.style.color = '#ef4444';
+      }
+    }
+  }
+
+  function renderCloudUI(data) {
+    const statusText = document.getElementById('cloud-status-text');
+    if (statusText) {
+      statusText.innerText = '🟢 正常運作';
+      statusText.style.color = '#34d399';
+    }
+
+    const dbStatusEl = document.getElementById('cloud-db-status');
+    const dbSubEl = document.getElementById('cloud-db-sub');
+    if (dbStatusEl && dbSubEl) {
+      if (data.supabaseConnected) {
+        dbStatusEl.innerText = '🟢 已連線同步';
+        dbStatusEl.style.color = '#34d399';
+        dbSubEl.innerText = '即時記錄呼叫與 429 狀態';
+      } else {
+        dbStatusEl.innerText = '🟡 環境變數模式';
+        dbStatusEl.style.color = '#fbbf24';
+        dbSubEl.innerText = '已載入 4 組金鑰，運作正常';
+      }
+    }
+
+    const activeAccsEl = document.getElementById('cloud-active-accs');
+    if (activeAccsEl && data.summary) {
+      activeAccsEl.innerText = `${data.summary.activeCount} 組可用 / 共 ${data.summary.totalCount} 組`;
+    }
+
+    const tbody = document.getElementById('cloud-accounts-body');
+    if (tbody && data.accounts && data.accounts.length > 0) {
+      tbody.innerHTML = '';
+      data.accounts.forEach(acc => {
+        const tr = document.createElement('tr');
+        const isCooldown = acc.status === 'cooldown';
+        const statusBadge = isCooldown 
+          ? '<span class="badge badge-danger">429 冷卻中</span>'
+          : (acc.enabled ? '<span class="badge badge-success">正常就緒</span>' : '<span class="badge badge-secondary">已停用</span>');
+        
+        tr.innerHTML = `
+          <td><strong>${acc.name}</strong></td>
+          <td><span class="badge" style="background: rgba(59,130,246,0.15); color: #60a5fa;">${acc.provider === 'openai' ? 'OpenAI' : 'Gemini'}</span></td>
+          <td style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">${acc.apiKeyMasked}</td>
+          <td>${statusBadge}</td>
+          <td>${acc.todayRequests || 0} 次</td>
+          <td style="font-family: var(--font-mono);">${(acc.totalTokens || 0).toLocaleString()} tok</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  async function testCloudAiChat() {
+    const inputEl = document.getElementById('cloud-test-input');
+    const btn = document.getElementById('btn-cloud-test');
+    const resBox = document.getElementById('cloud-test-result');
+    const resText = document.getElementById('cloud-result-text');
+    const resAcc = document.getElementById('cloud-result-acc');
+    const resMeta = document.getElementById('cloud-result-meta');
+
+    const prompt = (inputEl.value || '').trim();
+    if (!prompt) return alert('請輸入測試訊息');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> 雲端思考中...';
+    resBox.style.display = 'block';
+    resText.innerText = '正在呼叫 Vercel 雲端輪調中心處理中...';
+    resMeta.innerText = '';
+
+    try {
+      const res = await fetch('/api/test-cloud-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      if (data.ok && data.reply) {
+        resAcc.innerText = `🤖 盛隆瓦斯 AI 客服 (${data.meta?.accountName || '自動輪調'}):`;
+        resMeta.innerText = `延遲: ${data.meta?.latencyMs || '-'}ms | Tokens: ${data.meta?.tokens || '-'} | 模型: ${data.meta?.model || '-'}`;
+        resText.innerText = data.reply;
+        showToast('✅ 雲端 AI 測試成功！');
+      } else {
+        resText.innerText = '❌ 錯誤: ' + (data.error || '未知錯誤');
+      }
+    } catch (err) {
+      resText.innerText = '❌ 連線失敗: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⚡</span> 發送測試';
+      fetchCloudStatus();
+    }
   }
 
   // Modal

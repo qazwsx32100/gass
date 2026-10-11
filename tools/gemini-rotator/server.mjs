@@ -395,17 +395,48 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 7. OpenAI Compatible Models Endpoint
+  // 7. Cloud Vercel AI Status Proxy API
+  if (req.method === 'GET' && pathname === '/api/cloud-status') {
+    try {
+      const cloudRes = await fetch('https://erp-weld-three-96.vercel.app/api/ai-status', {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000)
+      });
+      const data = await cloudRes.json();
+      return sendJson(res, cloudRes.status, data);
+    } catch (err) {
+      return sendJson(res, 502, { ok: false, error: '無法連線至雲端 Vercel AI 服務: ' + err.message });
+    }
+  }
+
+  // 8. Test Cloud AI Chat API
+  if (req.method === 'POST' && pathname === '/api/test-cloud-chat') {
+    try {
+      const raw = await readBody(req);
+      const payload = JSON.parse(raw || '{}');
+      const cloudRes = await fetch('https://erp-weld-three-96.vercel.app/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: payload.prompt || '測試盛隆瓦斯客服' }),
+        signal: AbortSignal.timeout(20000)
+      });
+      const data = await cloudRes.json();
+      return sendJson(res, cloudRes.status, data);
+    } catch (err) {
+      return sendJson(res, 502, { ok: false, error: '雲端 AI 呼叫失敗: ' + err.message });
+    }
+  }
+
+  // 9. OpenAI Compatible Models Endpoint
   if (req.method === 'GET' && pathname === '/v1/models') {
     return sendJson(res, 200, {
       object: 'list',
       data: [
+        { id: 'gemini-3.8-flash', object: 'model', created: 1740000000, owned_by: 'google' },
+        { id: 'gpt-4o-mini', object: 'model', created: 1730000000, owned_by: 'openai' },
+        { id: 'gpt-4o', object: 'model', created: 1730000000, owned_by: 'openai' },
         { id: 'gemini-2.5-pro', object: 'model', created: 1730000000, owned_by: 'google' },
-        { id: 'gemini-2.5-flash', object: 'model', created: 1730000000, owned_by: 'google' },
-        { id: 'gemini-2.0-flash', object: 'model', created: 1730000000, owned_by: 'google' },
-        { id: 'gemini-2.0-flash-exp', object: 'model', created: 1730000000, owned_by: 'google' },
-        { id: 'gemini-1.5-pro', object: 'model', created: 1720000000, owned_by: 'google' },
-        { id: 'gemini-1.5-flash', object: 'model', created: 1720000000, owned_by: 'google' }
+        { id: 'gemini-2.5-flash', object: 'model', created: 1730000000, owned_by: 'google' }
       ]
     });
   }

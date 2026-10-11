@@ -110,7 +110,7 @@ export default async function handler(req, res) {
           prompt: userText,
           systemInstruction: SYSTEM_PROMPT,
           temperature: 0.6,
-          preferredModel: 'gemini-2.5-flash'
+          preferredModel: 'gemini-3.8-flash'
         });
 
         // 回覆給 LINE 使用者

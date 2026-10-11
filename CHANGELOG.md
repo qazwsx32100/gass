@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/11 - ⚡ 全端 AI 自動輪調系統與 LINE 智慧客服多帳號容災監控中心一體化整合
+* **變更類型**：系統整合 (integration) / 雲端監控 (cloud-monitoring) / 容錯輪調升級 (rotator-upgrade)
+* **核心成果**：
+  * **本機輪調與監控中心 (`http://localhost:3333`)**：納入 3 組 Google Gemini 帳號 (`qaz`, `無名`, `神燈`) 與 1 組 OpenAI 備援防線。新增「☁️ 雲端 LINE AI 客服即時狀態」監控分頁與互動測試器，支援實機模擬問答與狀態讀取。
+  * **模型升級防禦**：全面採用 Google 最新 `gemini-3.8-flash` 官方相容端點，修復 `models/gemini-2.5-flash` 官方廢棄回傳 404 問題，並在底層輪調器加入防禦性模型別名自動映射。
+  * **雲端 LINE Webhook (`api/line-webhook.js`) ＆ 狀態 API (`api/ai-status.js`)**：支援 LINE 客戶端雙向對話、漏氣防護警告、訂單語意辨識與自動轉發 Telegram，並將調用數據提供給監控中心即時讀取。
+  * **全系統測試驗證**：147 項單元測試 100% 通過，實測 3 組 Gemini 帳號連續切換與雲端 API 正常運行。
+
+---
 ## 📅 2026/10/09 (下午) - 💎 外觀與 App 體驗全面升級：純白底去背透明翡翠綠鋼瓶冷啟動畫面 (Splash Screen) ＆ 外勤司機專屬下載頁面 (download-driver) 質感翻新上線
 * **變更類型**：視覺與體驗優化 (ui-ux-enhancement) / 原生冷啟動畫面升級 (splash-screen) / APK 重編譯發布 (apk-release)
 * **核心成果**：

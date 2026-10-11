@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>盛隆瓦斯：LINE 叫瓦斯自動匯入舊進銷存系統專案計畫報告書</title>
+  <style>
+    :root {
+      --primary: #075e33;
+      --primary-light: #e8f5e9;
+      --secondary: #1a73e8;
+      --text: #2c3e50;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --success: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 30px 15px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--card);
+      padding: 48px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+    h1 {
+      color: var(--primary);
+      font-size: 28px;
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      color: var(--primary);
+      font-size: 21px;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      border-left: 5px solid var(--primary);
+      padding-left: 12px;
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 22px;
+      margin-bottom: 10px;
+      color: #1e293b;
+    }
+    p { margin-bottom: 14px; }
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #f1f5f9;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 28px;
+      font-size: 14px;
+    }
+    .badge-bar span {
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 26px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      text-align: left;
+    }
+    th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+    }
+    tr:nth-child(even) { background: #fafafa; }
+    .highlight-box {
+      background: var(--primary-light);
+      border-left: 5px solid var(--primary);
+      padding: 18px 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .highlight-box strong { color: var(--primary); font-size: 16px; }
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 20px 0;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      background: #fff;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card.current { border-top: 4px solid var(--success); }
+    .card.future { border-top: 4px solid var(--secondary); }
+    .flow-diagram {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 22px;
+      border-radius: 10px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    ul, ol {
+      margin-left: 24px;
+      margin-bottom: 16px;
+    }
+    li { margin-bottom: 6px; }
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(7, 94, 51, 0.4);
+      transition: all 0.2s;
+    }
+    .print-btn:hover { background: #054827; }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; border: none; padding: 0; }
+      .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="print-btn" onclick="window.print()">🖨️ 列印 / 匯出 PDF</button>
+
+  <div class="container">
+    <h1>盛隆瓦斯：LINE 叫瓦斯自動匯入舊進銷存系統專案計畫報告書</h1>
+
+    <div class="badge-bar">
+      <div><strong>專案代號：</strong>SL-AUTO-INGEST-2026</div>
+      <div><strong>編撰日期：</strong>2026 年 10 月</div>
+      <div><strong>系統範圍：</strong>LINE LIFF ⇄ 雲端 API ⇄ 店面 Windows 主機 (SQL Server 127.0.0.1:1000)</div>
+      <div><strong>狀態：</strong>v1.0 正式版</div>
+    </div>
+
+    <h2>1. 專案摘要（Executive Summary）</h2>
+    <h3>1.1 核心目標</h3>
+    <p>打通「線上叫瓦斯」到「店面舊進銷存系統」的最後一哩路，實現<strong>客戶在 LINE 送出訂單後，3～10 秒內全自動於店面舊進銷存系統建立正式叫貨單/出貨單並完成庫存扣減</strong>，徹底取代現行「人工看 Telegram 訊息、手動在電腦打單」的作業模式。</p>
+    
+    <h3>1.2 預期效益</h3>
+    <ul>
+      <li><strong>人工鍵單時間降為 0</strong>：節省每日早/晚叫氣尖峰 1.5 ~ 2.5 小時的人工作業時間。</li>
+      <li><strong>抄單錯誤率降為 0</strong>：杜絕人工打錯電話、地址、單價、折抵金額與鋼瓶規格的客訴。</li>
+      <li><strong>即時庫存與帳目同步</strong>：出貨紀錄秒級入帳，鋼瓶動態與每日營收帳目零延遲。</li>
+    </ul>
+
+    <h2>2. 現有資源 vs 未來需求全盤比對</h2>
+    
+    <div class="card-grid">
+      <div class="card current">
+        <div class="card-title" style="color: var(--success);">✅ 目前我們有的（85% 核心基底）</div>
+        <ul>
+          <li>🖥️ <strong>店面主力主機</strong>：Windows PC，運行 SQL Server (127.0.0.1:1000)。</li>
+          <li>🐍 <strong>Python 環境</strong>：已裝 ODBC Driver 18，備份腳本已正常運行。</li>
+          <li>📱 <strong>LINE LIFF 系統</strong>：支援規格計數、優惠折抵、取消訂單。</li>
+          <li>☁️ <strong>Google Sheets 佇列</strong>：訂單與明細表已完整結構化儲存。</li>
+          <li>🤖 <strong>Telegram 機器人</strong>：派工群、一鍵導航與一鍵撥號體系。</li>
+        </ul>
+      </div>
+
+      <div class="card future">
+        <div class="card-title" style="color: var(--secondary);">🚀 未來需要的（15% 開發與設定）</div>
+        <ul>
+          <li>🖥️ <strong>硬體設備</strong>：<strong>$0 元（沿用現有店面電腦，免買主機）</strong>。</li>
+          <li>🌐 <strong>網路需求</strong>：<strong>無需固定 IP，免開防火牆 Port</strong>（採主動拉取）。</li>
+          <li>🐍 <strong>本地 Ingest Daemon</strong>：Python 背景常駐程式，每 5 秒拉單寫入 SQL。</li>
+          <li>☁️ <strong>雲端佇列 API</strong>：提供待匯入取單與匯入成功標記端點。</li>
+          <li>🗄️ <strong>舊系統欄位對照</strong>：執行一次 SQL 檢測確認訂單表名與商品品號。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>詳細資源比對清單</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>項目類別</th>
+          <th>項目名稱</th>
+          <th>現有狀態 / 規格需求</th>
+          <th>成本與行動說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>硬體主機</strong></td>
+          <td>店面電腦</td>
+          <td>Windows PC (SQL Server 運行中)</td>
+          <td><strong>$0 元</strong>，效能充足，無需採購新電腦</td>
+        </tr>
+        <tr>
+          <td><strong>網路環境</strong></td>
+          <td>網際網路連線</td>
+          <td>店面一般網路 (有線/Wi-Fi 皆可)</td>
+          <td><strong>$0 元</strong>，免固定 IP，免開分享器 Port</td>
+        </tr>
+        <tr>
+          <td><strong>輔助硬體</strong></td>
+          <td>不斷電系統 UPS</td>
+          <td>約 500VA~1000VA (選配)</td>
+          <td>約 NT$ 1,500 ~ 2,500，預防跳電中斷入單</td>
+        </tr>
+        <tr>
+          <td><strong>軟體開發</strong></td>
+          <td>店面 Ingest Daemon</td>
+          <td>Python 3.10+ 常駐 Service</td>
+          <td>自行開發，每 5 秒安全向雲端拉取新訂單並寫入 SQL</td>
+        </tr>
+        <tr>
+          <td><strong>雲端端點</strong></td>
+          <td>佇列 API</td>
+          <td>Vercel Serverless Function</td>
+          <td>擴充 pending-ingest-orders 與 mark-ingest-success</td>
+        </tr>
+        <tr>
+          <td><strong>資料庫逆向</strong></td>
+          <td>舊系統訂單表定義</td>
+          <td>SQL Server 訂單主檔與明細檔結構</td>
+          <td>店面主機執行一次分析腳本，確認表名與品號代碼</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. 系統整體架構與運作流程</h2>
+    <div class="highlight-box">
+      <strong>🔒 金融級資安設計：主動輪詢拉取模式（Pull-Agent）</strong><br>
+      店面主機由內向外單向連線雲端領取訂單，店面電腦不向公網開放任何通訊埠（Port），杜絕任何被駭客或蠕蟲掃描攻擊的風險！
+    </div>
+
+    <div class="flow-diagram">
+【客戶端 LINE】 
+    │ (1) 客戶選規格數量送出訂單
+    ▼
+【雲端中樞 (Vercel + Google Sheets)】
+    │ (2) 訂單暫存待匯佇列 (狀態: 待確認 / imported: 否)
+    │
+    │ (3) 店面主機每 5 秒主動安全向雲端拉單 (免固定 IP、免開 Port)
+    ▼
+【店面主機本地 Ingest Daemon (Python)】
+    │ (4) 比對客戶編號 (舊客戶直接取 ID，新客戶自動建檔)
+    │ (5) 本地 Transaction 寫入 SQL Server 訂單主檔與明細檔
+    ▼
+【店面舊系統 (127.0.0.1:1000)】✅ 自動入單、庫存扣減、列印出車單
+    │ 
+    │ (6) 回寫雲端狀態:「已匯入舊系統 (舊系統單號: ORD-XXXX)」
+    ▼
+【Telegram 派工群】&【客戶 LINE】收到入單確認推播
+    </div>
+
+    <h2>4. 核心模組技術規格</h2>
+    <h3>4.1 模組 A：店面本地「自動入單守護程式」（Ingest Daemon）</h3>
+    <ul>
+      <li><strong>程式檔案</strong>：<code>shenglong_order_ingest_daemon.py</code></li>
+      <li><strong>取單循環</strong>：每 5 秒透過 HTTPS 安全呼叫雲端端點取得未入庫之訂單清單。</li>
+      <li><strong>防重檢驗（Idempotency）</strong>：以 <code>orderId</code> 作為防重唯一鍵，若資料庫已存在則略過，絕不重複扣庫存。</li>
+      <li><strong>新客自動補建</strong>：若電話未命中 <code>dbo.customers</code>，先自動配發客號並寫入客戶檔，再建立訂單。</li>
+      <li><strong>資料庫交易（Transaction）</strong>：主檔與明細檔包裹於同一 Transaction 內，確保資料一致性，寫入失敗自動 Rollback。</li>
+    </ul>
+
+    <h3>4.2 模組 B：雲端中樞佇列端點（Cloud Ingest API）</h3>
+    <ul>
+      <li><code>GET /api?action=pending-ingest-orders</code>：供店面 Daemon 查詢未入庫訂單清單。</li>
+      <li><code>POST /api?action=mark-ingest-success</code>：供店面 Daemon 回填舊系統單號與入庫時間。</li>
+    </ul>
+
+    <h3>4.3 模組 C：舊系統資料庫欄位對齊</h3>
+    <ul>
+      <li>確認訂單主檔與明細檔表名（例：<code>dbo.orders</code>、<code>dbo.order_details</code>）。</li>
+      <li>建立商品代碼對照表（50kg ➜ 舊品號、20kg ➜ 舊品號、16kg ➜ 舊品號、4kg ➜ 舊品號）。</li>
+      <li>優惠折抵轉換為折讓項目或折讓欄位。</li>
+    </ul>
+
+    <h2>5. 例外情況與安全防呆機制</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>異常情境</th>
+          <th>潛在風險</th>
+          <th>系統防呆與容錯處置</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>店面主機斷網 / 關機</strong></td>
+          <td>客人下單但電腦無法即時收到</td>
+          <td>雲端佇列持久化保存。主機開機恢復連網後，Daemon <strong>自動依序批次補建</strong>，一筆不漏。</td>
+        </tr>
+        <tr>
+          <td><strong>網路瞬斷重試</strong></td>
+          <td>可能重複寫入兩張相同單據</td>
+          <td>以 <code>orderId</code> 進行唯一性比對，已存在直接略過，<strong>防重複扣庫存</strong>。</td>
+        </tr>
+        <tr>
+          <td><strong>新客戶電話無客號</strong></td>
+          <td>舊系統外鍵約束拒絕入單</td>
+          <td>Daemon 自動先行在 <code>dbo.customers</code> 建立新客資料並配發客號。</td>
+        </tr>
+        <tr>
+          <td><strong>客戶線上取消訂單</strong></td>
+          <td>客戶在 LINE 撤單，但舊系統已排單</td>
+          <td>即時推播 Telegram 派工警報；若舊系統已入單，自動標記為「作廢/取消」。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. 三階段實施期程（Roadmap）</h2>
+    <ol>
+      <li><strong>【第 1 階段：資料庫逆向與欄位對照】（1 個工作天）</strong>
+        <p>店面主機執行 SQL 結構分析腳本，確認訂單主檔名、明細檔名與瓦斯品號代碼。</p>
+      </li>
+      <li><strong>【第 2 階段：程式開發與雲端端點擴充】（2 個工作天）</strong>
+        <p>開發雲端取單端點與店面 Python Ingest Daemon 常駐程式，串接 Telegram 入單成功通知。</p>
+      </li>
+      <li><strong>【第 3 階段：沙盒測試與雙軌驗收】（2 個工作天）</strong>
+        <p>以測試單驗證舊進銷存畫面能否看見單據，進行 48 小時雙軌運行核對，正式啟用全自動化入單。</p>
+      </li>
+    </ol>
+
+    <h2>7. 結論與建議行動</h2>
+    <p>本計畫最大特色為<strong>「零硬體成本、零網路月租成本、最高資安等級」</strong>。確認計畫後即可啟動第 1 階段的資料表結構檢驗！</p>
+  </div>
+
+</body>
+</html>
