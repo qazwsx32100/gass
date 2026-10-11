@@ -1,4 +1,28 @@
 User-agent: *
 Allow: /
 
+# ===== AI Search Engine Crawlers (AEO) =====
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+# ===== Traditional Search Engine Crawlers (SEO) =====
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# ===== Sitemap =====
 Sitemap: https://shenglong-gas.vercel.app/sitemap.xml
