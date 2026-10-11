@@ -1,0 +1,258 @@
+import { fetchLineAiLogs } from './_line-ai-logger.js';
+import { sendJson } from './_auth.js';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatTaipeiTime(isoString) {
+  if (!isoString) return '--';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
+  } catch {
+    return isoString;
+  }
+}
+
+function renderHtmlDashboard(result, queryParams) {
+  const { logs = [], total = 0, source = 'supabase' } = result;
+  const orderCount = logs.filter(l => l.is_order_intent).length;
+  const geminiCount = logs.filter(l => l.provider === 'gemini' || (l.model && l.model.includes('gemini'))).length;
+  const openaiCount = logs.filter(l => l.provider === 'openai' || (l.model && l.model.includes('gpt'))).length;
+
+  const currentSearch = escapeHtml(queryParams.search || '');
+  const isOrderOnly = queryParams.orderIntent === 'true';
+
+  const cardsHtml = logs.length === 0
+    ? `<div class="empty-state">
+        <div class="empty-icon">💬</div>
+        <h3>目前尚無 LINE AI 對話紀錄</h3>
+        <p>當有客戶在 LINE 官方帳號發送訊息時，系統將自動在此顯示即時問答紀錄。</p>
+       </div>`
+    : logs.map((item, idx) => {
+        const timeStr = formatTaipeiTime(item.created_at);
+        const isOrder = item.is_order_intent;
+        const providerName = item.provider === 'openai' ? 'OpenAI' : 'Google Gemini';
+        const modelName = item.model || 'gemini-3.8-flash';
+        const tokens = item.tokens ? `${item.tokens} tokens` : '';
+        const latency = item.latency_ms ? `${item.latency_ms}ms` : '';
+        const metaInfo = [providerName, modelName, tokens, latency].filter(Boolean).join(' · ');
+
+        return `
+        <div class="chat-card ${isOrder ? 'order-highlight' : ''}">
+          <div class="card-header">
+            <div class="header-left">
+              <span class="user-badge">👤 客戶 [${escapeHtml(item.line_user_id || '未知')}]</span>
+              ${isOrder ? '<span class="tag tag-order">🔥 疑似叫瓦斯訂單</span>' : '<span class="tag tag-chat">💬 一般諮詢</span>'}
+            </div>
+            <div class="header-right">
+              <span class="timestamp">⏰ ${timeStr}</span>
+            </div>
+          </div>
+          
+          <div class="dialogue-body">
+            <!-- 客戶訊息 -->
+            <div class="msg-bubble user-bubble">
+              <div class="bubble-sender">客戶發問</div>
+              <div class="bubble-content">${escapeHtml(item.user_message)}</div>
+            </div>
+
+            <!-- AI 回覆 -->
+            <div class="msg-bubble ai-bubble">
+              <div class="bubble-sender">🤖 盛隆 AI 智慧客服回覆</div>
+              <div class="bubble-content">${escapeHtml(item.ai_reply).replace(/\n/g, '<br/>')}</div>
+              <div class="bubble-meta">
+                <span>⚡ ${escapeHtml(metaInfo)}</span>
+                ${item.account_name ? `<span>🔑 帳號: ${escapeHtml(item.account_name)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        `;
+      }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>盛隆瓦斯 - LINE AI 客服對話歷史紀錄中心</title>
+  <style>
+    :root {
+      --primary: #059669;
+      --primary-dark: #047857;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --user-bg: #e0f2fe;
+      --user-border: #bae6fd;
+      --ai-bg: #ecfdf5;
+      --ai-border: #a7f3d0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    header { background: #fff; padding: 20px 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.4rem; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+    .badge-src { font-size: 0.75rem; background: #e2e8f0; color: #475569; padding: 4px 8px; border-radius: 20px; font-weight: normal; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+    .stat-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-val { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+    .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    
+    .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-box { flex: 1; min-width: 240px; display: flex; }
+    .search-box input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px 0 0 8px; font-size: 0.95rem; outline: none; }
+    .search-box button { padding: 10px 16px; background: var(--primary); color: #fff; border: none; border-radius: 0 8px 8px 0; cursor: pointer; font-weight: 500; }
+    .filter-btn { padding: 10px 14px; background: #fff; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer; text-decoration: none; color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+    .filter-btn.active { background: #059669; color: #fff; border-color: #059669; font-weight: bold; }
+    
+    .chat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.1s ease; }
+    .chat-card:hover { border-color: #cbd5e1; }
+    .chat-card.order-highlight { border-left: 4px solid #f97316; }
+    
+    .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; font-size: 0.85rem; flex-wrap: wrap; gap: 8px; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .user-badge { font-weight: 600; color: #334155; }
+    .timestamp { color: var(--text-muted); }
+    
+    .tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .tag-order { background: #ffedd5; color: #c2410c; }
+    .tag-chat { background: #e2e8f0; color: #475569; }
+    
+    .dialogue-body { display: flex; flex-direction: column; gap: 12px; }
+    .msg-bubble { padding: 12px 14px; border-radius: 10px; max-width: 95%; position: relative; font-size: 0.95rem; line-height: 1.5; }
+    .bubble-sender { font-size: 0.75rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    .user-bubble { background: var(--user-bg); border: 1px solid var(--user-border); align-self: flex-start; }
+    .ai-bubble { background: var(--ai-bg); border: 1px solid var(--ai-border); align-self: flex-end; width: 95%; }
+    .bubble-meta { margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(5,150,105,0.2); font-size: 0.75rem; color: #065f46; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    
+    .empty-state { text-align: center; padding: 48px 20px; background: #fff; border-radius: 12px; border: 1px solid var(--border); color: var(--text-muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    
+    .footer-actions { text-align: center; margin-top: 24px; padding-bottom: 30px; font-size: 0.85rem; color: var(--text-muted); }
+    .footer-actions a { color: var(--primary); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-row">
+        <h1>🔥 盛隆瓦斯 ｜ LINE AI 客服對話歷史紀錄 <span class="badge-src">${escapeHtml(source)}</span></h1>
+        <a href="?format=json" target="_blank" class="filter-btn">📥 匯出 JSON 資料</a>
+      </div>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val">${total}</div>
+          <div class="stat-label">顯示對話筆數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #ea580c;">${orderCount}</div>
+          <div class="stat-label">叫瓦斯意圖</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #2563eb;">${geminiCount}</div>
+          <div class="stat-label">Gemini 模型處理</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #16a34a;">${openaiCount}</div>
+          <div class="stat-label">OpenAI 備援處理</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <form class="search-box" method="GET" action="">
+        <input type="hidden" name="format" value="html" />
+        ${isOrderOnly ? '<input type="hidden" name="orderIntent" value="true" />' : ''}
+        <input type="text" name="search" placeholder="搜尋客戶發問或 AI 回答內容..." value="${currentSearch}" />
+        <button type="submit">🔍 搜尋</button>
+      </form>
+      
+      <a href="?format=html" class="filter-btn ${!isOrderOnly && !currentSearch ? 'active' : ''}">全部對話</a>
+      <a href="?format=html&orderIntent=true" class="filter-btn ${isOrderOnly ? 'active' : ''}">🔥 只看叫瓦斯</a>
+      <a href="javascript:location.reload()" class="filter-btn">🔄 重新整理</a>
+    </div>
+
+    <div class="chat-list">
+      ${cardsHtml}
+    </div>
+
+    <div class="footer-actions">
+      盛隆瓦斯 24H 智慧營運中心 · 雙向容災自動輪調系統 · <a href="/">回 ERP 首頁</a>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * LINE AI 客服歷史紀錄 API 端點 (Vercel Serverless Function)
+ * 支援:
+ * 1. 瀏覽器直接開啟: 渲染視覺化美觀對話卡與統計
+ * 2. 外部 API 呼叫: ?format=json 取得結構化 JSON 陣列
+ */
+export default async function handler(req, res) {
+  // CORS 設定
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+  }
+
+  try {
+    const {
+      limit = 50,
+      offset = 0,
+      orderIntent,
+      userId,
+      search,
+      format
+    } = req.query || {};
+
+    const result = await fetchLineAiLogs({
+      limit,
+      offset,
+      isOrderIntent: orderIntent,
+      userId,
+      search
+    });
+
+    // 判斷是否回傳 HTML 頁面 (若請求含 format=html 或瀏覽器預設存取)
+    const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+    const isExplicitJson = format === 'json';
+    const shouldRenderHtml = (format === 'html' || acceptsHtml) && !isExplicitJson;
+
+    if (shouldRenderHtml) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(renderHtmlDashboard(result, req.query || {}));
+    }
+
+    return sendJson(res, 200, result);
+  } catch (err) {
+    console.error('[API /api/line-ai-logs Error]:', err);
+    return sendJson(res, 500, {
+      ok: false,
+      error: err.message || '查詢對話紀錄時發生未預期錯誤'
+    });
+  }
+}

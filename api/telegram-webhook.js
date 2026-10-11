@@ -13,6 +13,7 @@ import {
 } from './_telegram.js';
 import { fetchWithTimeout } from './_fetch.js';
 import handleCustomerHistory from './_customer-history.js';
+import { fetchLineAiLogs } from './_line-ai-logger.js';
 
 /**
  * 回應 Telegram Callback Query (消除使用者端按鈕轉圈狀態)
@@ -189,6 +190,31 @@ export default async function handler(req, res) {
         await sendTelegramMessage(chatId, reply);
       } catch (e) {
         await sendTelegramMessage(chatId, `🔴 *【系統異常】*：${e.message}`);
+      }
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (text.startsWith('/line') || text.startsWith('/line紀錄') || text.startsWith('/line對話')) {
+      try {
+        const { logs = [] } = await fetchLineAiLogs({ limit: 5 });
+        if (logs.length === 0) {
+          await sendTelegramMessage(chatId, `💬 *【盛隆 LINE AI 客服對話紀錄】*\n────────────────────────\n目前尚無對話紀錄，當有客戶發送訊息時將即時顯示於此。`);
+        } else {
+          let msg = `💬 *【盛隆 LINE AI 最近對話紀錄】* (最新 ${logs.length} 筆)\n────────────────────────\n`;
+          for (const l of logs) {
+            const time = new Date(l.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
+            const isOrder = l.is_order_intent ? '🔥 [叫瓦斯]' : '💬';
+            const user = l.line_user_id ? String(l.line_user_id).slice(-6) : '未知';
+            const q = String(l.user_message || '').slice(0, 80);
+            const a = String(l.ai_reply || '').slice(0, 100);
+            msg += `\n${isOrder} *客戶 (*...${user})*（${time}）：\n「${q}」\n🤖 *AI 回覆* [${l.model || 'Gemini'}]：\n「${a}」\n────────────────────────`;
+          }
+          const erpDomain = process.env.ERP_BASE_URL || 'https://erp-weld-three-96.vercel.app';
+          msg += `\n🌐 [點此開啟完整 LINE AI 對話視覺看板](${erpDomain}/api/line-ai-logs?format=html)`;
+          await sendTelegramMessage(chatId, msg);
+        }
+      } catch (e) {
+        await sendTelegramMessage(chatId, `🔴 *【查詢 LINE 紀錄失敗】*：${e.message}`);
       }
       return sendJson(res, 200, { ok: true });
     }

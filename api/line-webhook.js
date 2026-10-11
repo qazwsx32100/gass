@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { callAiWithFailover } from './_ai-rotator.js';
 import { sendJson } from './_auth.js';
 import { fetchWithTimeout } from './_fetch.js';
+import { recordLineAiChat } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
 
 const SYSTEM_PROMPT = `您是「盛隆瓦斯」的專屬 AI 智能客服小助手。
@@ -105,6 +106,8 @@ export default async function handler(req, res) {
       try {
         console.log(`[LINE Webhook] 收到來自使用者 [${userId || '未知'}] 的訊息: "${userText}"`);
 
+        const isOrderIntent = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText);
+
         // 呼叫雲端 AI 輪調中心 (Gemini 1 -> 2 -> 3 -> OpenAI 備援)
         const aiResult = await callAiWithFailover({
           prompt: userText,
@@ -123,8 +126,21 @@ export default async function handler(req, res) {
           console.log('[LINE Webhook (Dry Run)]: LINE_CHANNEL_ACCESS_TOKEN 未設定，AI 回覆文字為:\n', aiResult.text);
         }
 
+        // 自動持久化儲存 LINE AI 對話歷程 (非阻塞)
+        recordLineAiChat({
+          lineUserId: userId,
+          userMessage: userText,
+          aiReply: aiResult.text,
+          aiResult,
+          isOrderIntent,
+          status: 'success',
+          rawEvent: event
+        }).catch(saveErr => {
+          console.warn('[LINE Webhook] 儲存對話紀錄失敗 (非致命):', saveErr.message);
+        });
+
         // 若訊息疑似叫瓦斯訂單，同步發送 Telegram 通知給師傅群組
-        if (/叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText)) {
+        if (isOrderIntent) {
           const { orderChatId, isConfigured } = getTelegramConfig();
           if (isConfigured && orderChatId) {
             const tgMsg = `🔔 *【LINE 客服 - 叫瓦斯訊息提示】*\n\n👤 *客戶內容*：\n${userText}\n\n🤖 *AI 已自動回覆*：\n${aiResult.text.slice(0, 150)}...\n\n_請值班同仁注意是否有地址與訂購需求！_`;
@@ -133,10 +149,23 @@ export default async function handler(req, res) {
         }
       } catch (err) {
         console.error('[LINE Webhook AI 處理失敗]:', err);
+        const fallbackText = '您好，目前系統忙碌中，您的訊息已送達，專人將盡速為您服務！如需緊急送氣歡迎直接來電，謝謝您！';
+        
+        // 記錄異常與回退訊息
+        recordLineAiChat({
+          lineUserId: userId,
+          userMessage: userText,
+          aiReply: fallbackText,
+          isOrderIntent: /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText),
+          status: 'error',
+          errorMessage: err.message,
+          rawEvent: event
+        }).catch(() => {});
+
         if (channelAccessToken) {
           await replyLineMessage(replyToken, [{
             type: 'text',
-            text: '您好，目前系統忙碌中，您的訊息已送達，專人將盡速為您服務！如需緊急送氣歡迎直接來電，謝謝您！'
+            text: fallbackText
           }], channelAccessToken).catch(() => {});
         }
       }

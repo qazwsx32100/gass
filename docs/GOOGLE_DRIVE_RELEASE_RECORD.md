@@ -6,6 +6,25 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/11 - 💬 LINE AI 客服對話歷程自動持久化儲存、視覺化看板與多端抓取系統全線建立
+
+### 一、 核心成果與功能整合
+1. **Supabase 對話歷史紀錄持久化表 (`public.line_ai_logs`)**：
+   - 遷移腳本：`supabase/migrations/20261011113000_add_line_ai_chat_logs.sql`。
+   - 欄位涵蓋：`line_user_id`（客戶 LINE 識別碼）、`user_message`（客戶發問內容）、`ai_reply`（AI 完整回覆）、`model`、`account_name`、`tokens`、`latency_ms`、`is_order_intent`（叫瓦斯意圖標記）、`raw_event`。
+   - 配備 RLS 安全防護策略與專屬高效 RPC 函式 `erp_record_line_ai_log`。
+2. **LINE Webhook 自動異步存庫 (`api/line-webhook.js`)**：
+   - 客戶傳訊觸發 AI 智慧客服回覆後，系統立即在背景非阻塞將完整問答、耗時、Token 及意圖存入資料庫。
+   - 遭遇異常或限流時，同步記錄錯誤狀態與系統回退提示，確保無遺漏。
+3. **專屬對話歷程查詢端點與視覺化看板 (`/api/line-ai-logs`)**：
+   - 瀏覽器直接開啟：提供美觀的 LINE 綠色風格對話泡泡卡片、對話總數統計、叫瓦斯意圖篩選及全文搜尋。
+   - API 格式：支援 `?format=json` 快速取得 JSON 結構化對話紀錄。
+4. **Telegram 群組快速調閱指令 (`api/telegram-webhook.js`)**：
+   - 管理員或老闆在 Telegram 發送 `/line`、`/line紀錄` 或 `/line對話`，機器人即時推播最新 5 筆客戶問答卡片與看板連結。
+5. **全端測試通過**：
+   - 149 項單元測試 100% 通過（含 `tests/line-ai-logs.test.mjs`）。
+
+---
 ## 📅 2026/10/11 - ⚡ 全端 AI 自動輪調系統與 LINE 智慧客服多帳號容災監控中心一體化整合
 
 ### 一、 核心整合與技術成果

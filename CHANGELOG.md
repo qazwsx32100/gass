@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/11 - 💬 LINE AI 客服對話歷程自動持久化儲存、視覺化看板與多端抓取系統全線建立
+* **變更類型**：新功能建置 (feature) / 資料庫持久化 (persistence) / 視覺化看板 (dashboard) / 指令整合 (bot-command)
+* **核心成果**：
+  * **資料庫對話表 (`public.line_ai_logs`)**：建置完整客戶發問、AI 完整回覆、使用模型、Token 數、延遲與叫瓦斯意圖記錄表與專用 RPC。
+  * **LINE Webhook 自動異步存庫 (`api/line-webhook.js`)**：非阻塞非同步保存所有客戶問答，含降級與異常紀錄。
+  * **對話紀錄查詢與視覺化看板 (`api/line-ai-logs.js`)**：支援直接在瀏覽器查看 LINE 風格對話泡泡卡片、篩選叫瓦斯意圖、關鍵字搜尋，以及 `?format=json` 結構化資料匯出。
+  * **Telegram 機器人指令擴充 (`api/telegram-webhook.js`)**：支援 `/line`、`/line紀錄` 指令即時調閱最新客戶對話。
+  * **單元測試驗收**：新增 `tests/line-ai-logs.test.mjs`，全系統 149 項測試 100% 通過。
+
+---
 ## 📅 2026/10/11 - ⚡ 全端 AI 自動輪調系統與 LINE 智慧客服多帳號容災監控中心一體化整合
 * **變更類型**：系統整合 (integration) / 雲端監控 (cloud-monitoring) / 容錯輪調升級 (rotator-upgrade)
 * **核心成果**：
