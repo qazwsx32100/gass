@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/11 - 📌 全局任務看板 (TODO.md) 建立、桌面鏡像同步與開發 SOP 規範制度化
+* **變更類型**：工程治理 (governance) / 專案管理 (project-management) / SOP升級 (core-rules)
+* **核心成果**：
+  * **全局任務看板建立 (`docs/TODO.md`)**：建立四象限任務看板（進行中、近期高優先待辦、中長期願景庫、近期已驗收完成），每項明確標註優先級、估計花費時間、負責設備/端點、老闆指示備註與關聯文件。
+  * **老闆桌面即時鏡像 (`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`)**：每次任務變更自動同步更新老闆桌面副本，開機即查。
+  * **核心開發準則 SOP 正式寫入 (`PROJECT_RULES.md`)**：規定未來任何任務啟動必登載於 `TODO.md`，完工必勾選 `[x]` 並同步記錄至 Google 雲端維護日誌與 GitHub。
+  * **整合 GitHub Actions 遠端觸發端點與單元測試 (`api/trigger-github-workflow.js`)**：安全 session 驗證與 10 項單元測試 100% 通過 (總測試數達到 159 項)。
+
+---
 ## 📅 2026/10/11 - 💬 LINE AI 客服對話歷程自動持久化儲存、視覺化看板與多端抓取系統全線建立
 * **變更類型**：新功能建置 (feature) / 資料庫持久化 (persistence) / 視覺化看板 (dashboard) / 指令整合 (bot-command)
 * **核心成果**：
