@@ -1,0 +1,36 @@
+{
+  "name": "shenglong-gas",
+  "version": "1.0.0",
+  "description": "盛隆瓦斯品牌形象官網 - GEO / AEO / SEO 極致優化版",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "functions": {},
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/(logo.jpg|favicon.ico)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
