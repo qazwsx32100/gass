@@ -50,6 +50,16 @@ website/
 
 ## 📝 三、 版本更新與維護紀錄（Changelog）
 
+### [v1.5.3] - 2026-10-11
+#### 修復雲端線上站點排版格式（CSP 限制放行與靜態 CSS 雙軌保障）
+1. **排版格式跑版根本原因定位**：
+   * 由於根目錄 ERP 專案的 `vercel.json` 預設嚴格安全標頭 `Content-Security-Policy (CSP)` 未放行 `cdn.tailwindcss.com` 與 `fonts.googleapis.com`，導致線上正式瀏覽器在安全性檢查時阻擋外部樣式腳本，引發格式全無（純文字無樣式）之嚴重跑版現象。
+2. **CSP 政策放寬與雙重防護設定**：
+   * 於 `website/vercel.json` 與根目錄 `vercel.json` 明確放行 `https://cdn.tailwindcss.com`、`https://fonts.googleapis.com`、`https://fonts.gstatic.com` 及 `unsafe-eval`。
+   * 新增獨立編譯之靜態 CSS 檔案 `website/style.css`，並於 `index.html` 之 `<head>` 優先引入，達成「靜態極速載入＋JIT 動態擴充」雙軌防護，即便使用者網路受阻或啟用嚴格阻擋擴充功能，排版亦保證 100% 絕對完整。
+3. **雲端站點驗證與截圖核實**：
+   * 正式重新發布至 Vercel 生產環境，並透過 Headless Edge 實測遠端渲染，確認排版格式完全復原為 TASKAMIGO 藍綠風格。
+
 ### [v1.5.2] - 2026-10-11
 #### TASKAMIGO 藍色與綠色雙色體系全面統一
 1. **全面清查並替換殘留暖色系（Orange / Amber）**：
