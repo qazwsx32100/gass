@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-# ===== AI Search Engine Crawlers (AEO) =====
+# ===== AI Search & Answer Engine Crawlers (AEO) =====
 User-agent: GPTBot
 Allow: /
 
@@ -17,12 +17,42 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-# ===== Traditional Search Engine Crawlers (SEO) =====
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# ===== Traditional Search Engine Crawlers (SEO / GEO) =====
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-# ===== Sitemap =====
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# ===== XML Sitemap =====
 Sitemap: https://shenglong-gas.vercel.app/sitemap.xml

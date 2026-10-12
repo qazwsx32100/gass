@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
   <url>
     <loc>https://shenglong-gas.vercel.app/</loc>
-    <lastmod>2026-10-11</lastmod>
+    <lastmod>2026-10-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/logo.jpg</image:loc>
+      <image:title>盛隆瓦斯 - 新北三重在地合法桶裝瓦斯行標誌</image:title>
+      <image:caption>盛隆瓦斯提供 4kg、10kg、16kg、20kg、50kg 桶裝瓦斯配送與免費安全檢驗</image:caption>
+    </image:image>
   </url>
 </urlset>
