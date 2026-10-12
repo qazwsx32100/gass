@@ -658,89 +658,105 @@
           </div>
         </div>
 
-        <!-- 右側：TaskAmigo 經典即時線上預約卡片 (佔 5 欄) -->
+        <!-- 右側：盛隆瓦斯 店面介紹與在地職人人設卡片 (佔 5 欄) -->
         <div class="lg:col-span-5 flex justify-center lg:justify-end w-full">
-          <div class="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xl shadow-blue-500/5 relative overflow-hidden">
-            <!-- 頂部即時營運狀態與 Logo -->
-            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-              <div class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 shadow-2xs">
-                  <img src="./logo.jpg" alt="盛隆瓦斯行 - 合法定期檢驗合格鋼瓶" width="40" height="40" class="w-full h-full object-cover" loading="eager" decoding="async" />
+          <div class="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xl shadow-blue-500/5 relative overflow-hidden">
+            <!-- 裝飾背景柔光 -->
+            <div class="absolute -top-16 -right-16 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <!-- 頂部：職人名片頭像與店家身份 -->
+            <div class="relative z-10 flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-100 shadow-sm flex-shrink-0 bg-blue-50">
+                  <img src="./logo.jpg" alt="盛隆瓦斯行 - 新北在地瓦斯職人" width="48" height="48" class="w-full h-full object-cover" loading="eager" decoding="async" />
                 </div>
                 <div>
-                  <div class="font-black text-slate-900 text-sm leading-tight flex items-center gap-1.5">
-                    盛隆瓦斯直營
-                    <span class="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded">合法送檢</span>
+                  <div class="font-black text-slate-900 text-base leading-tight flex items-center gap-1.5">
+                    盛隆瓦斯行
+                    <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-1.5 py-0.5 rounded-full">新北合法登記</span>
                   </div>
-                  <div class="text-[11px] text-slate-400 font-medium">LINE 智慧 30 秒下單</div>
+                  <div class="text-xs text-blue-600 font-bold mt-0.5">三重的用氣管家 · 專注安全的瓦斯職人</div>
                 </div>
               </div>
-              <div class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>今日正常供氣</span>
+              <div class="text-right">
+                <div class="text-xs font-black text-amber-500 flex items-center justify-end gap-1">
+                  <span>★</span><span>4.9</span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-medium">街坊好評推薦</div>
               </div>
             </div>
 
-            <!-- 互動步驟 1: 選擇常用規格 -->
-            <div class="mb-4">
-              <label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wider">
-                1. 選擇預約瓦斯規格
-              </label>
-              <div class="grid grid-cols-3 gap-2" id="heroSpecSelector">
-                <button type="button" onclick="selectHeroSpec('16kg')" id="spec-btn-16kg"
-                  class="p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 text-blue-900 font-bold text-center transition-all shadow-2xs text-xs relative">
-                  <span class="absolute -top-2 right-1 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">推薦</span>
-                  <div class="text-sm font-black">16 kg</div>
-                  <div class="text-[10px] text-blue-700 font-medium">標準家庭</div>
-                </button>
-                <button type="button" onclick="selectHeroSpec('20kg')" id="spec-btn-20kg"
-                  class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs">
-                  <div class="text-sm font-black">20 kg</div>
-                  <div class="text-[10px] text-slate-500 font-medium">大用量/商用</div>
-                </button>
-                <button type="button" onclick="selectHeroSpec('10kg')" id="spec-btn-10kg"
-                  class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs">
-                  <div class="text-sm font-black">10 kg</div>
-                  <div class="text-[10px] text-slate-500 font-medium">小家庭/外宿</div>
-                </button>
+            <!-- 店面介紹與人設理念 -->
+            <div class="relative z-10 space-y-3 mb-5">
+              <!-- 人設理念 1: 把顧客當自家人 -->
+              <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-blue-50/40">
+                <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">
+                  🤝
+                </div>
+                <div class="flex-1">
+                  <h4 class="text-xs font-black text-slate-800 leading-snug">把街坊鄰居當自家人，安全絕不馬虎</h4>
+                  <p class="text-[11px] text-slate-600 leading-relaxed mt-0.5">
+                    瓦斯關乎全家老小平安。每次送達必主動<strong class="text-slate-800 font-bold">免費防漏檢測、更換安全墊圈</strong>，不偷工減料，讓長輩小孩安心用氣。
+                  </p>
+                </div>
+              </div>
+
+              <!-- 人設理念 2: 懂老舊公寓的辛苦 -->
+              <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-emerald-50/40">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">
+                  🪜
+                </div>
+                <div class="flex-1">
+                  <h4 class="text-xs font-black text-slate-800 leading-snug">深知老舊公寓辛苦，爬高樓急單不推託</h4>
+                  <p class="text-[11px] text-slate-600 leading-relaxed mt-0.5">
+                    走遍三重老街巷弄，我們深懂寒冬洗澡突斷氣的焦急與扛重爬梯的無奈。重活粗活盛隆師傅來扛，使命必達送熱水上樓！
+                  </p>
+                </div>
+              </div>
+
+              <!-- 人設理念 3: 誠信足重・老派踏實 -->
+              <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-amber-50/40">
+                <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">
+                  ⚖️
+                </div>
+                <div class="flex-1">
+                  <h4 class="text-xs font-black text-slate-800 leading-snug">堅持定期合格檢驗，足重不偷斤減兩</h4>
+                  <p class="text-[11px] text-slate-600 leading-relaxed mt-0.5">
+                    每桶鋼瓶均經合格送檢、鋁牌絕不過期。依中油牌價誠信計價、合法開立發票，三重老鄰居與在地小吃最信賴的供氣夥伴。
+                  </p>
+                </div>
               </div>
             </div>
 
-            <!-- 互動步驟 2: 配送區域快速確認 -->
-            <div class="mb-5">
-              <label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wider">
-                2. 選擇配送區域
-              </label>
-              <div class="grid grid-cols-2 gap-2" id="heroAreaSelector">
-                <button type="button" onclick="selectHeroArea('三重全區')" id="area-btn-sanchong"
-                  class="py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between">
-                  <span>📍 三重全區直達</span>
-                  <span class="text-[10px] text-emerald-700 font-black">最快30分</span>
-                </button>
-                <button type="button" onclick="selectHeroArea('蘆洲/五股/台北鄰近')" id="area-btn-other"
-                  class="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white">
-                  <span>🚚 蘆洲·五股·北市</span>
-                  <span class="text-[10px] text-slate-500">專車配送</span>
-                </button>
+            <!-- 職人承諾卡片底部 -->
+            <div class="relative z-10 pt-3 border-t border-slate-100">
+              <div class="bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl p-3 border border-slate-200/80 mb-3">
+                <div class="text-[11px] text-slate-700 font-bold italic leading-relaxed">
+                  「每一次扛瓦斯跨進家門，都是一份沉甸甸的信任與守護。」
+                </div>
+                <div class="text-[10px] text-slate-400 font-medium text-right mt-1">
+                  —— 盛隆瓦斯 全體外勤配送技師團隊 敬上
+                </div>
               </div>
-            </div>
 
-            <!-- 一鍵跳轉 LINE 下單按鈕 -->
-            <a id="heroLineActionBtn" href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
-               class="w-full flex items-center justify-center gap-2.5 bg-line hover:bg-green-600 text-white font-black text-base py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all hover:scale-[1.02] active:scale-[0.99] pulse-btn">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.63 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.105.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
-              <span>立即啟動 LINE 預約</span>
-              <span class="text-xs font-normal opacity-90">（免打電話）</span>
-            </a>
-
-            <!-- 承諾條列微標籤 -->
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-              <span class="flex items-center gap-1">🛡️ 中油牌價公開計價</span>
-              <span class="flex items-center gap-1">⚡ 假日夜間不加價</span>
-              <span class="flex items-center gap-1">📋 可開立發票</span>
+              <!-- 4 大誠信保證標籤 -->
+              <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 font-semibold">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-blue-600 text-xs">✓</span> 合格定期檢驗鋼瓶
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-blue-600 text-xs">✓</span> 新北消防法規標準
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-blue-600 text-xs">✓</span> 投保公共意外責任險
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-blue-600 text-xs">✓</span> 實體門市誠信服務
+                </div>
+              </div>
             </div>
           </div>
-        </div></div>
         </div>
       </div>
     </div>
@@ -1208,8 +1224,9 @@
           </div>
 
           <!-- 20 大分類標籤 -->
-          <div class="mb-5">
-            <div class="flex flex-wrap gap-1.5 justify-center max-h-36 overflow-y-auto p-1" id="faqCategoryTabs">
+          <div class="mb-6">
+            <div class="text-center text-xs font-bold text-slate-500 mb-2">📁 點選主題分類快速瀏覽：</div>
+            <div class="flex flex-wrap gap-2 justify-center p-1" id="faqCategoryTabs">
               <!-- 由 JS 動態生成 20 大分類按鈕 -->
             </div>
           </div>
@@ -1308,10 +1325,8 @@
   <!-- ========== 載入題庫資料 ========== -->
   <script src="./faqs-data.js"></script>
   <script>
-    // 若本機 file:/// 協定未能順利載入外部腳本，使用內建備份資料確保 100% 正常運作
-    if (typeof allFaqs === "undefined") {
-      // 盛隆瓦斯 20 大分類消費者常見問題完整知識庫 (78 題完整收錄)
-      const faqCategories = [
+    // 盛隆瓦斯 20 大分類定義（全域保證可用）
+    var faqCategories = (typeof faqCategories !== "undefined") ? faqCategories : [
         {
           "id": "all",
           "name": "📋 全部問答",
@@ -1419,7 +1434,8 @@
         }
       ];
       
-      const allFaqs = [
+      if (typeof allFaqs === "undefined") {
+        var allFaqs = [
         {
           "cat": "price",
           "q": "現在一桶瓦斯多少錢？",
@@ -2144,47 +2160,7 @@
   </script>
 
 
-  <script>
-    let currentHeroSpec = '16kg';
-    let currentHeroArea = '三重全區';
 
-    function selectHeroSpec(spec) {
-      currentHeroSpec = spec;
-      const specs = ['16kg', '20kg', '10kg'];
-      specs.forEach(s => {
-        const btn = document.getElementById('spec-btn-' + s);
-        if (!btn) return;
-        if (s === spec) {
-          btn.className = 'p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 text-blue-900 font-bold text-center transition-all shadow-2xs text-xs relative';
-        } else {
-          btn.className = 'p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs';
-        }
-      });
-      updateHeroLineBtn();
-    }
-
-    function selectHeroArea(area) {
-      currentHeroArea = area;
-      const btnSan = document.getElementById('area-btn-sanchong');
-      const btnOth = document.getElementById('area-btn-other');
-      if (area === '三重全區') {
-        if (btnSan) btnSan.className = 'py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between';
-        if (btnOth) btnOth.className = 'py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white';
-      } else {
-        if (btnSan) btnSan.className = 'py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white';
-        if (btnOth) btnOth.className = 'py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between';
-      }
-      updateHeroLineBtn();
-    }
-
-    function updateHeroLineBtn() {
-      const btn = document.getElementById('heroLineActionBtn');
-      if (btn) {
-        // 自動帶入預選規格文字
-        btn.href = 'https://line.me/R/ti/p/@350MZOGG';
-      }
-    }
-  </script>
 
   <!-- ========== 後台 CMS 動態連動與匿名點擊統計 Script ========== -->
   <script>
