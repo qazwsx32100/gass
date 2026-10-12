@@ -2,25 +2,9 @@ import crypto from 'node:crypto';
 import { callAiWithFailover } from './_ai-rotator.js';
 import { sendJson } from './_auth.js';
 import { fetchWithTimeout } from './_fetch.js';
+import { getOptimizedSystemPrompt } from './_knowledge-base.js';
 import { recordLineAiChat } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
-
-const SYSTEM_PROMPT = `您是「盛隆瓦斯」的專屬 AI 智能客服小助手。
-【基本資訊】
-- 店名：盛隆瓦斯行
-- 營業項目：家用與商用液化石油氣配送（傳統 20kg、16kg、4kg，以及新型安全防爆複合鋼瓶）
-- 服務宗旨：準時配送、安全安檢、親切服務
-
-【回覆準則】
-1. 語氣：親切、熱心、專業、帶有台灣在地服務人情味。
-2. 客戶想「叫瓦斯 / 訂瓦斯」時：
-   - 請禮貌詢問「配送地址、樓層（是否有電梯）、所需公斤數（如 20kg / 16kg）與桶數」。
-   - 告知師傅將盡速安排配送，並提醒可準備空桶交換。
-3. 安全警示（重要）：
-   - 若客戶提及「聞到瓦斯味」、「懷疑漏氣」，必須第一時間嚴肅提醒：
-     「⚠️ 請立即關閉瓦斯鋼瓶開關、輕輕打開窗戶保持通風，切勿開關任何電燈與電器開關，並迅速移至戶外安全處！」
-4. 複雜業務或人工客服：
-   - 若客戶有特殊問題或查詢歷史帳款，請告知可於上班時間由專人為您服務。`;
 
 /**
  * 驗證 LINE 數位簽章
@@ -111,7 +95,7 @@ export default async function handler(req, res) {
         // 呼叫雲端 AI 輪調中心 (Gemini 1 -> 2 -> 3 -> OpenAI 備援)
         const aiResult = await callAiWithFailover({
           prompt: userText,
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: getOptimizedSystemPrompt(userText),
           temperature: 0.6,
           preferredModel: 'gemini-3.8-flash'
         });

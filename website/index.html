@@ -294,7 +294,7 @@
     <div class="max-w-6xl mx-auto px-4 py-14 md:py-20">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         <!-- 左側主標題與按鈕 (佔 8 欄) -->
-        <div class="lg:col-span-8">
+        <div class="lg:col-span-7">
           <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3.5 py-1 mb-5 text-xs sm:text-sm font-semibold text-blue-800">
             <span>📍</span>
             <span>新北三重 · 蘆洲 · 五股 · 台北市鄰近區域 · 在地合法瓦斯行</span>
@@ -334,16 +334,89 @@
           </div>
         </div>
 
-        <!-- 右側：盛隆品牌 Logo 視覺亮點 (佔 4 欄) -->
-        <div class="lg:col-span-4 flex justify-center lg:justify-end">
-          <div class="relative group">
-            <div class="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl overflow-hidden bg-white p-3 border-2 border-slate-200/90 shadow-sm transition-all group-hover:shadow-md">
-              <img src="./logo.jpg" alt="盛隆瓦斯官方品牌標誌" class="w-full h-full object-contain rounded-2xl" />
+        <!-- 右側：TaskAmigo 經典即時線上預約卡片 (佔 5 欄) -->
+        <div class="lg:col-span-5 flex justify-center lg:justify-end w-full">
+          <div class="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xl shadow-blue-500/5 relative overflow-hidden">
+            <!-- 頂部即時營運狀態與 Logo -->
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 shadow-2xs">
+                  <img src="./logo.jpg" alt="盛隆瓦斯" class="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div class="font-black text-slate-900 text-sm leading-tight flex items-center gap-1.5">
+                    盛隆瓦斯直營
+                    <span class="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded">合法送檢</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">LINE 智慧 30 秒下單</div>
+                </div>
+              </div>
+              <div class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>今日正常供氣</span>
+              </div>
             </div>
-            <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-xs border border-slate-700">
-              盛隆瓦斯 · 新北合法經營
+
+            <!-- 互動步驟 1: 選擇常用規格 -->
+            <div class="mb-4">
+              <label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wider">
+                1. 選擇預約瓦斯規格
+              </label>
+              <div class="grid grid-cols-3 gap-2" id="heroSpecSelector">
+                <button type="button" onclick="selectHeroSpec('16kg')" id="spec-btn-16kg"
+                  class="p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 text-blue-900 font-bold text-center transition-all shadow-2xs text-xs relative">
+                  <span class="absolute -top-2 right-1 bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">推薦</span>
+                  <div class="text-sm font-black">16 kg</div>
+                  <div class="text-[10px] text-blue-700 font-medium">標準家庭</div>
+                </button>
+                <button type="button" onclick="selectHeroSpec('20kg')" id="spec-btn-20kg"
+                  class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs">
+                  <div class="text-sm font-black">20 kg</div>
+                  <div class="text-[10px] text-slate-500 font-medium">大用量/商用</div>
+                </button>
+                <button type="button" onclick="selectHeroSpec('10kg')" id="spec-btn-10kg"
+                  class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs">
+                  <div class="text-sm font-black">10 kg</div>
+                  <div class="text-[10px] text-slate-500 font-medium">小家庭/外宿</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- 互動步驟 2: 配送區域快速確認 -->
+            <div class="mb-5">
+              <label class="block text-xs font-black text-slate-700 mb-2 uppercase tracking-wider">
+                2. 選擇配送區域
+              </label>
+              <div class="grid grid-cols-2 gap-2" id="heroAreaSelector">
+                <button type="button" onclick="selectHeroArea('三重全區')" id="area-btn-sanchong"
+                  class="py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between">
+                  <span>📍 三重全區直達</span>
+                  <span class="text-[10px] text-emerald-700 font-black">最快30分</span>
+                </button>
+                <button type="button" onclick="selectHeroArea('蘆洲/五股/台北鄰近')" id="area-btn-other"
+                  class="py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white">
+                  <span>🚚 蘆洲·五股·北市</span>
+                  <span class="text-[10px] text-slate-500">專車配送</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 一鍵跳轉 LINE 下單按鈕 -->
+            <a id="heroLineActionBtn" href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
+               class="w-full flex items-center justify-center gap-2.5 bg-line hover:bg-green-600 text-white font-black text-base py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all hover:scale-[1.02] active:scale-[0.99] pulse-btn">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.63 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.105.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+              <span>立即啟動 LINE 預約</span>
+              <span class="text-xs font-normal opacity-90">（免打電話）</span>
+            </a>
+
+            <!-- 承諾條列微標籤 -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span class="flex items-center gap-1">🛡️ 中油牌價公開計價</span>
+              <span class="flex items-center gap-1">⚡ 假日夜間不加價</span>
+              <span class="flex items-center gap-1">📋 可開立發票</span>
             </div>
           </div>
+        </div></div>
         </div>
       </div>
     </div>
@@ -480,74 +553,111 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- 4kg -->
-        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 hover:border-slate-400 transition-all flex flex-col justify-between">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between group">
           <div>
-            <div class="text-2xl font-black text-slate-900 mb-0.5">4 <span class="text-sm font-bold text-slate-500">公斤</span></div>
-            <div class="text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider">小型輕便裝</div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">小型輕便裝</span>
+              <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">露營 / 泡茶</span>
+            </div>
+            <div class="text-3xl font-black text-slate-900 mb-1">4 <span class="text-sm font-bold text-slate-500">公斤</span></div>
+            <!-- 高度與尺寸標籤 -->
+            <div class="bg-blue-50/80 text-blue-800 text-[11px] font-bold px-2.5 py-1 rounded-lg mb-3 flex items-center gap-1 border border-blue-100">
+              <span>📏 高約 42 cm ｜ 直徑約 25 cm</span>
+            </div>
             <ul class="text-xs text-slate-600 space-y-1.5">
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 露營外出用爐</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 泡茶小爐</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 極低用量獨居</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 露營休閒外出小爐</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 泡茶專用迷你鋼瓶</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 極低用量單身獨居</li>
             </ul>
           </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">體積小巧，後車廂好收納</div>
         </div>
 
         <!-- 10kg -->
-        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 hover:border-slate-400 transition-all flex flex-col justify-between">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between group">
           <div>
-            <div class="text-2xl font-black text-slate-900 mb-0.5">10 <span class="text-sm font-bold text-slate-500">公斤</span></div>
-            <div class="text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider">小家庭標準裝</div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">小家庭標準裝</span>
+              <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">流理台窄空間</span>
+            </div>
+            <div class="text-3xl font-black text-slate-900 mb-1">10 <span class="text-sm font-bold text-slate-500">公斤</span></div>
+            <!-- 高度與尺寸標籤 -->
+            <div class="bg-blue-50/80 text-blue-800 text-[11px] font-bold px-2.5 py-1 rounded-lg mb-3 flex items-center gap-1 border border-blue-100">
+              <span>📏 高約 55 cm ｜ 直徑約 30 cm</span>
+            </div>
             <ul class="text-xs text-slate-600 space-y-1.5">
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 1-2人小家庭</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 瓦斯爐烹飪</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 低用量熱水器</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 1~2 人租屋小家庭</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 瓦斯爐日常烹飪</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 窄小流理台下專用</li>
             </ul>
           </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">矮空間推薦尺寸</div>
         </div>
 
-        <!-- 16kg (最熱門) -->
-        <div class="bg-blue-600 rounded-2xl p-5 text-white shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <div class="absolute top-3 right-3 bg-white text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full">最熱門</div>
+        <!-- 16kg (最熱門高光旗艦) -->
+        <div class="bg-blue-600 rounded-2xl p-5 text-white shadow-md relative overflow-hidden flex flex-col justify-between transform hover:-translate-y-0.5 transition-all">
+          <div class="absolute top-3 right-3 bg-white text-blue-700 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-2xs">
+            ★ 最熱門首選
+          </div>
           <div>
-            <div class="text-2xl font-black mb-0.5">16 <span class="text-sm font-bold text-blue-200">公斤</span></div>
-            <div class="text-[11px] font-bold text-blue-200 mb-3 uppercase tracking-wider">標準家庭首選</div>
+            <div class="text-xs font-bold text-blue-200 uppercase tracking-wider mb-2">家庭主力推薦</div>
+            <div class="text-3xl font-black mb-1">16 <span class="text-sm font-bold text-blue-100">公斤</span></div>
+            <!-- 高度與尺寸標籤 -->
+            <div class="bg-white/20 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg mb-3 flex items-center gap-1 backdrop-blur-xs">
+              <span>📏 高約 68 cm ｜ 直徑約 31 cm</span>
+            </div>
             <ul class="text-xs text-white/95 space-y-1.5">
-              <li class="flex items-center gap-1.5"><span class="font-bold">✓</span> 1-3 人標準家庭</li>
-              <li class="flex items-center gap-1.5"><span class="font-bold">✓</span> 瓦斯熱水器</li>
-              <li class="flex items-center gap-1.5"><span class="font-bold">✓</span> 日常烹飪主力</li>
+              <li class="flex items-center gap-1.5"><span class="font-bold text-emerald-300">✓</span> 1~3 人標準家庭規格</li>
+              <li class="flex items-center gap-1.5"><span class="font-bold text-emerald-300">✓</span> 瓦斯熱水器主流配置</li>
+              <li class="flex items-center gap-1.5"><span class="font-bold text-emerald-300">✓</span> 家用瓦斯爐日常主力</li>
             </ul>
           </div>
+          <div class="mt-4 pt-3 border-t border-blue-500/60 text-[11px] text-blue-100">多數公寓陽台首選尺寸</div>
         </div>
 
         <!-- 20kg -->
-        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 hover:border-slate-400 transition-all flex flex-col justify-between">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between group">
           <div>
-            <div class="text-2xl font-black text-slate-900 mb-0.5">20 <span class="text-sm font-bold text-slate-500">公斤</span></div>
-            <div class="text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider">大用量 / 商用</div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">大容量 / 商用</span>
+              <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded">小吃 / 大家庭</span>
+            </div>
+            <div class="text-3xl font-black text-slate-900 mb-1">20 <span class="text-sm font-bold text-slate-500">公斤</span></div>
+            <!-- 高度與尺寸標籤 -->
+            <div class="bg-blue-50/80 text-blue-800 text-[11px] font-bold px-2.5 py-1 rounded-lg mb-3 flex items-center gap-1 border border-blue-100">
+              <span>📏 高約 75 cm ｜ 直徑約 31 cm</span>
+            </div>
             <ul class="text-xs text-slate-600 space-y-1.5">
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 高用量大家庭</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 餐廳 / 小吃店</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 快速爐大火力</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 高用量人口大家庭</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 餐廳、便當小吃店</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-600 font-bold">✓</span> 快速爐大火快炒</li>
             </ul>
           </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">大容量續航力更持久</div>
         </div>
 
         <!-- 50kg -->
         <div class="bg-slate-900 rounded-2xl p-5 text-white border border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
-            <div class="text-2xl font-black text-emerald-400 mb-0.5">50 <span class="text-sm font-bold text-slate-400">公斤</span></div>
-            <div class="text-[11px] font-bold text-slate-400 mb-3 uppercase tracking-wider">工廠 / 餐飲大戶</div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">工業 / 中央廚房</span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/30">餐飲大戶</span>
+            </div>
+            <div class="text-3xl font-black text-emerald-400 mb-1">50 <span class="text-sm font-bold text-slate-400">公斤</span></div>
+            <!-- 高度與尺寸標籤 -->
+            <div class="bg-slate-800 text-emerald-300 text-[11px] font-bold px-2.5 py-1 rounded-lg mb-3 flex items-center gap-1 border border-slate-700">
+              <span>📏 高約 125 cm ｜ 直徑約 37 cm</span>
+            </div>
             <ul class="text-xs text-slate-300 space-y-1.5">
-              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 工廠大量供氣</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 餐飲中央廚房</li>
-              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 集合管線系統</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 工廠大量供氣系統</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 連鎖餐飲中央廚房</li>
+              <li class="flex items-center gap-1.5"><span class="text-emerald-400 font-bold">✓</span> 集合式管線並聯系統</li>
             </ul>
           </div>
-          <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-emerald-300 font-medium">
-            💡 安裝環境需現場確認
+          <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-emerald-300 font-medium">
+            💡 安裝環境需專人現場評估
           </div>
-        </div>
-      </div>
+        </div></div>
     </div>
   </section>
 
@@ -1554,5 +1664,47 @@
     }
   </script>
 
+
+  <script>
+    let currentHeroSpec = '16kg';
+    let currentHeroArea = '三重全區';
+
+    function selectHeroSpec(spec) {
+      currentHeroSpec = spec;
+      const specs = ['16kg', '20kg', '10kg'];
+      specs.forEach(s => {
+        const btn = document.getElementById('spec-btn-' + s);
+        if (!btn) return;
+        if (s === spec) {
+          btn.className = 'p-2.5 rounded-xl border-2 border-blue-600 bg-blue-50/70 text-blue-900 font-bold text-center transition-all shadow-2xs text-xs relative';
+        } else {
+          btn.className = 'p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-center transition-all text-xs';
+        }
+      });
+      updateHeroLineBtn();
+    }
+
+    function selectHeroArea(area) {
+      currentHeroArea = area;
+      const btnSan = document.getElementById('area-btn-sanchong');
+      const btnOth = document.getElementById('area-btn-other');
+      if (area === '三重全區') {
+        if (btnSan) btnSan.className = 'py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between';
+        if (btnOth) btnOth.className = 'py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white';
+      } else {
+        if (btnSan) btnSan.className = 'py-2.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center justify-between hover:bg-white';
+        if (btnOth) btnOth.className = 'py-2.5 px-3 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-900 font-bold text-xs text-left flex items-center justify-between';
+      }
+      updateHeroLineBtn();
+    }
+
+    function updateHeroLineBtn() {
+      const btn = document.getElementById('heroLineActionBtn');
+      if (btn) {
+        // 自動帶入預選規格文字
+        btn.href = 'https://line.me/R/ti/p/@350MZOGG';
+      }
+    }
+  </script>
 </body>
 </html>
