@@ -24,8 +24,11 @@ function formatTaipeiTime(isoString) {
 function renderHtmlDashboard(result, queryParams) {
   const { logs = [], total = 0, source = 'supabase' } = result;
   const orderCount = logs.filter(l => l.is_order_intent).length;
-  const geminiCount = logs.filter(l => l.provider === 'gemini' || (l.model && l.model.includes('gemini'))).length;
+  const qazCount = logs.filter(l => (l.account_name || '').includes('qaz')).length;
+  const wumingCount = logs.filter(l => (l.account_name || '').includes('無名')).length;
+  const shendengCount = logs.filter(l => (l.account_name || '').includes('神燈')).length;
   const openaiCount = logs.filter(l => l.provider === 'openai' || (l.model && l.model.includes('gpt'))).length;
+  const expertCount = logs.filter(l => l.mode === 'expert' || l.raw_event?.aiResult?.mode === 'expert' || (l.user_message && /點不著|打不著|熄火|忽冷忽熱|漏氣|結霜/i.test(l.user_message))).length;
 
   const currentSearch = escapeHtml(queryParams.search || '');
   const isOrderOnly = queryParams.orderIntent === 'true';
@@ -43,6 +46,9 @@ function renderHtmlDashboard(result, queryParams) {
         const modelName = item.model || 'gemini-3.8-flash';
         const tokens = item.tokens ? `${item.tokens} tokens` : '';
         const latency = item.latency_ms ? `${item.latency_ms}ms` : '';
+        const isExpert = item.mode === 'expert' || item.raw_event?.aiResult?.mode === 'expert' || (item.user_message && /點不著|打不著|熄火|忽冷忽熱|漏氣|結霜/i.test(item.user_message));
+        const modeLabel = isExpert ? '🔍 深度專家推理 (Expert)' : '⚡ 輕量秒回 (Fast)';
+        const modeStyle = isExpert ? 'background:#fef3c7;color:#92400e;' : 'background:#e0f2fe;color:#0369a1;';
         const metaInfo = [providerName, modelName, tokens, latency].filter(Boolean).join(' · ');
 
         return `
@@ -51,6 +57,8 @@ function renderHtmlDashboard(result, queryParams) {
             <div class="header-left">
               <span class="user-badge">👤 客戶 [${escapeHtml(item.line_user_id || '未知')}]</span>
               ${isOrder ? '<span class="tag tag-order">🔥 疑似叫瓦斯訂單</span>' : '<span class="tag tag-chat">💬 一般諮詢</span>'}
+              <span class="tag" style="${modeStyle}">${modeLabel}</span>
+              ${item.account_name ? `<span class="tag" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">🔄 輪調帳號: ${escapeHtml(item.account_name)}</span>` : ''}
             </div>
             <div class="header-right">
               <span class="timestamp">⏰ ${timeStr}</span>
@@ -70,7 +78,7 @@ function renderHtmlDashboard(result, queryParams) {
               <div class="bubble-content">${escapeHtml(item.ai_reply).replace(/\n/g, '<br/>')}</div>
               <div class="bubble-meta">
                 <span>⚡ ${escapeHtml(metaInfo)}</span>
-                ${item.account_name ? `<span>🔑 帳號: ${escapeHtml(item.account_name)}</span>` : ''}
+                ${item.account_name ? `<span>🔑 輪調帳號: <b>${escapeHtml(item.account_name)}</b></span>` : ''}
               </div>
             </div>
           </div>
@@ -157,19 +165,27 @@ function renderHtmlDashboard(result, queryParams) {
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-val">${total}</div>
-          <div class="stat-label">顯示對話筆數</div>
+          <div class="stat-label">累積對話總數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #2563eb;">${qazCount}</div>
+          <div class="stat-label">🔄 帳號: qaz</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #0284c7;">${wumingCount}</div>
+          <div class="stat-label">🔄 帳號: 無名</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #7c3aed;">${shendengCount}</div>
+          <div class="stat-label">🔄 帳號: 神燈</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color: #d97706;">${expertCount}</div>
+          <div class="stat-label">🔍 專家推理模式</div>
         </div>
         <div class="stat-card">
           <div class="stat-val" style="color: #ea580c;">${orderCount}</div>
-          <div class="stat-label">叫瓦斯意圖</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color: #2563eb;">${geminiCount}</div>
-          <div class="stat-label">Gemini 模型處理</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" style="color: #16a34a;">${openaiCount}</div>
-          <div class="stat-label">OpenAI 備援處理</div>
+          <div class="stat-label">🔥 叫瓦斯意圖</div>
         </div>
       </div>
     </header>
