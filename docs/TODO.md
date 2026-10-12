@@ -27,7 +27,18 @@
 ## ⏳ 二、 近期高優先待辦 (High Priority / Next Sprint)
 > 已明確排定、準備啟動的核心重要工程
 
-### 1. LINE 訂單自動匯入舊進銷存系統 - 階段 1：資料庫結構逆向分析
+### 1. Google Search Console 索引與 Sitemap 提交 (明日額度重置後執行)
+- **狀態**：`[ ]` 待辦 (今日 GSC 額度已達上限，預計明天重試)
+- **優先級**：`P0` (SEO 排行榜衝刺關鍵)
+- **負責帳號**：`shenglonggas@gmail.com`
+- **目標網址**：`https://shenglong-gas.vercel.app/`
+- **具體任務**：
+  - [ ] 進入 Google Search Console，在最上方搜尋框輸入 `https://shenglong-gas.vercel.app/`
+  - [ ] 點擊「要求建立索引 (Request Indexing)」，強制 Googlebot 抓取最新「三重瓦斯」Title 與在地 Schema
+  - [ ] 左側選單進入「Sitemaps」，提交 `sitemap.xml`
+- **備註**：所有權已 100% 驗證完成，目前已開啟「Google 搜尋生成式 AI (SGE)」納入權限。
+
+### 2. LINE 訂單自動匯入舊進銷存系統 - 階段 1：資料庫結構逆向分析
 - **狀態**：`[ ]` 待辦 (等待排定執行)
 - **優先級**：`P0` (核心營運自動化)
 - **負責設備/端點**：`店面主力 Windows 主機 (SQL Server 127.0.0.1:1000)`

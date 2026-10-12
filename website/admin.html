@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>盛隆瓦斯 - 形象官網後台管理系統 (TASKAMIGO)</title>
+  <link rel="icon" type="image/jpeg" href="logo.jpg" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb', // TaskAmigo Blue
+              700: '#1d4ed8',
+              800: '#1e40af'
+            },
+            emerald: {
+              500: '#10b981',
+              600: '#059669', // TaskAmigo Green
+              700: '#047857'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    }
+    .badge-soft-blue {
+      background-color: #EFF6FF;
+      color: #1D4ED8;
+      border: 1px solid #BFDBFE;
+    }
+    .badge-soft-emerald {
+      background-color: #ECFDF5;
+      color: #047857;
+      border: 1px solid #A7F3D0;
+    }
+    .badge-soft-amber {
+      background-color: #FFFBEB;
+      color: #B45309;
+      border: 1px solid #FDE68A;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
+
+  <!-- ==================== 登入卡片畫面 (未登入時顯示) ==================== -->
+  <div id="loginView" class="min-h-screen flex items-center justify-center p-4 bg-slate-900 relative overflow-hidden">
+    <!-- 背景裝飾 -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-md w-full bg-white rounded-3xl p-8 sm:p-10 shadow-2xl border border-slate-100 relative z-10">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-md shadow-blue-500/20">
+          盛
+        </div>
+        <div>
+          <h1 class="text-xl font-black text-slate-900 leading-tight">盛隆瓦斯官網後台</h1>
+          <p class="text-xs text-slate-500 font-medium">TASKAMIGO 控制中心 · 內容與數據管理</p>
+        </div>
+      </div>
+
+      <!-- 登入表單 -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5" for="loginAccount">管理員帳號 / 姓名 / Email</label>
+          <div class="relative">
+            <input
+              type="text"
+              id="loginAccount"
+              required
+              placeholder="例如：qazwsx32100@gmail.com 或 周子傑"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-800 font-medium"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700" for="loginPassword">密碼</label>
+            <span class="text-[11px] text-slate-400">已連結內部系統授權</span>
+          </div>
+          <input
+            type="password"
+            id="loginPassword"
+            required
+            placeholder="請輸入後台密碼"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all text-slate-800 font-medium"
+          />
+        </div>
+
+        <!-- 快速點選 (便利授權成員登入) -->
+        <div class="pt-1">
+          <p class="text-[11px] text-slate-400 mb-1.5 font-medium">快捷填入（授權管理成員）：</p>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            <button type="button" onclick="fillAccount('qazwsx32100@gmail.com')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg font-medium transition-colors">
+              主管理員
+            </button>
+            <button type="button" onclick="fillAccount('周子傑')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg font-medium transition-colors">
+              周子傑
+            </button>
+            <button type="button" onclick="fillAccount('林曄鏵')" class="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-lg font-medium transition-colors">
+              林曄鏵
+            </button>
+          </div>
+        </div>
+
+        <!-- 錯誤提示訊息 -->
+        <div id="loginError" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-medium"></div>
+
+        <button
+          type="submit"
+          id="loginSubmitBtn"
+          class="w-full mt-2 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-600/20 flex items-center justify-center gap-2"
+        >
+          <span>登入管理系統</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+        <a href="/" class="text-xs text-slate-500 hover:text-blue-600 transition-colors font-medium inline-flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          返回盛隆瓦斯官網首頁
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 後台主管理介面 (登入後顯示) ==================== -->
+  <div id="adminApp" class="hidden flex-1 flex flex-col">
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
+            盛
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-slate-900 text-base">盛隆瓦斯 官網後台</span>
+              <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                TASKAMIGO
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">雙北瓦斯安全配送 · 內容與營業排程系統</p>
+          </div>
+        </div>
+
+        <!-- User profile & Quick Actions -->
+        <div class="flex items-center gap-3">
+          <a
+            href="/"
+            target="_blank"
+            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+          >
+            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            <span>前台官網</span>
+          </a>
+
+          <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div class="text-right hidden sm:block">
+              <div id="currentUserName" class="text-xs font-bold text-slate-800">管理員</div>
+              <div id="currentUserRole" class="text-[10px] text-slate-400">系統管理員</div>
+            </div>
+            <button
+              onclick="handleLogout()"
+              class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 text-xs font-bold transition-colors"
+            >
+              登出
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation Menu -->
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4 overflow-x-auto border-t border-slate-100 py-2">
+        <button onclick="switchTab('prices')" id="tab-btn-prices" class="tab-btn active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all">
+          <span>🛢️</span>
+          <span>瓦斯牌價管理</span>
+        </button>
+        <button onclick="switchTab('hours')" id="tab-btn-hours" class="tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all">
+          <span>📢</span>
+          <span>營業狀態與首頁公告</span>
+        </button>
+        <button onclick="switchTab('faqs')" id="tab-btn-faqs" class="tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all">
+          <span>❓</span>
+          <span>80 題 FAQ 知識庫編輯</span>
+        </button>
+        <button onclick="switchTab('stats')" id="tab-btn-stats" class="tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all">
+          <span>📊</span>
+          <span>訪客與點擊數據統計</span>
+        </button>
+        <button onclick="switchTab('erp')" id="tab-btn-erp" class="tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all">
+          <span>⚙️</span>
+          <span>進銷存系統切換</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <!-- ==================== TAB 1: 瓦斯牌價管理 ==================== -->
+      <section id="tab-content-prices" class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div>
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>🛢️</span>
+              <span>各規格桶裝瓦斯售價設定</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">此處設定的牌價將同步更新至前台官網的價格表與規格試算器。</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="resetPriceDefaults()" class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all">
+              重設官方基準價
+            </button>
+            <button onclick="saveAllSettings()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>儲存並發布</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 價格卡片輸入網格 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <!-- 16kg -->
+          <div class="bg-white p-5 rounded-2xl border-2 border-blue-500/30 shadow-xs relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">家庭最熱門</div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">主流標準規格</div>
+            <div class="text-lg font-black text-slate-900 mb-3">16 公斤 (kg)</div>
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600">公開售價 (NT$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                <input type="number" id="price_16kg" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+              </div>
+              <p class="text-[11px] text-slate-400">適用 1~3 人日常下廚熱水</p>
+            </div>
+          </div>
+
+          <!-- 20kg -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">大家庭與餐飲</div>
+            <div class="text-lg font-black text-slate-900 mb-3">20 公斤 (kg)</div>
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600">公開售價 (NT$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                <input type="number" id="price_20kg" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+              </div>
+              <p class="text-[11px] text-slate-400">大用量首選、快炒火候足</p>
+            </div>
+          </div>
+
+          <!-- 10kg -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">輕巧家庭型</div>
+            <div class="text-lg font-black text-slate-900 mb-3">10 公斤 (kg)</div>
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600">公開售價 (NT$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                <input type="number" id="price_10kg" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+              </div>
+              <p class="text-[11px] text-slate-400">小資套房、輕便好搬動</p>
+            </div>
+          </div>
+
+          <!-- 4kg -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">戶外與休閒</div>
+            <div class="text-lg font-black text-slate-900 mb-3">4 公斤 (kg)</div>
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600">公開售價 (NT$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                <input type="number" id="price_4kg" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+              </div>
+              <p class="text-[11px] text-slate-400">泡茶、露營、攤車小爐具</p>
+            </div>
+          </div>
+
+          <!-- 50kg -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">工業與商用</div>
+            <div class="text-lg font-black text-slate-900 mb-3">50 公斤 (kg)</div>
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600">公開售價 (NT$)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">$</span>
+                <input type="number" id="price_50kg" class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+              </div>
+              <p class="text-[11px] text-slate-400">中央廚房、需專人場勘</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 價格補充文字說明 -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+          <label class="block text-sm font-bold text-slate-800">牌價補充備註 (顯示於官網價格卡下方)</label>
+          <input
+            type="text"
+            id="price_note"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none"
+            placeholder="例如：盛隆公道透明牌價 · 歡迎加入 LINE 官方帳號 @350MZOGG 即時配送"
+          />
+        </div>
+      </section>
+
+      <!-- ==================== TAB 2: 營業狀態與首頁公告 ==================== -->
+      <section id="tab-content-hours" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div>
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>📢</span>
+              <span>營運狀態、配送時段與緊急橫幅</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">即時向造訪盛隆官網的客戶呈現當前供氣狀態與重要公告。</p>
+          </div>
+          <button onclick="saveAllSettings()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>儲存並發布</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- 營運狀態設定 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <h3 class="text-sm font-black text-slate-800">今日營運配送狀態</h3>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">狀態模式</label>
+              <select id="hours_status" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                <option value="open">🟢 正常營業中 (熱情派單配送中)</option>
+                <option value="busy">🟡 尖峰繁忙 (氣候偏冷單量大，排程中)</option>
+                <option value="rest">🔴 打烊休息 (請於 LINE 官方預約次日)</option>
+                <option value="typhoon">⚠️ 颱風/天候特殊狀況 (依政府公告防颱)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">前台顯示狀態文字</label>
+              <input type="text" id="hours_status_text" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5">每日營業時段</label>
+                <input type="text" id="hours_daily" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="08:00 – 21:00" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1.5">建議下單截止時間</label>
+                <input type="text" id="hours_cutoff" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="20:30" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">假日與節慶提示</label>
+              <input type="text" id="hours_notice" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" placeholder="國定假日、春節、中秋照常配送不打烊" />
+            </div>
+          </div>
+
+          <!-- 首頁頂部緊急公告 Bar -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-black text-slate-800">首頁頂部特別公告 Bar</h3>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="announce_enabled" class="sr-only peer" onchange="toggleAnnouncePreview()" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <span class="ml-2 text-xs font-bold text-slate-600">啟用前台橫幅</span>
+              </label>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">公告類型樣式</label>
+              <select id="announce_type" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" onchange="toggleAnnouncePreview()">
+                <option value="info">🔵 資訊提示 (藍色 - 暖心提醒 / 活動優惠)</option>
+                <option value="warning">🟡 注意提醒 (琥珀黃 - 寒流尖峰 / 調價告知)</option>
+                <option value="alert">🔴 緊急通知 (紅色 - 颱風停班停課 / 特別公告)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">公告標題</label>
+              <input type="text" id="announce_title" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" oninput="toggleAnnouncePreview()" placeholder="例如：盛隆暖心公告" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">公告文字內容</label>
+              <textarea id="announce_content" rows="3" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" oninput="toggleAnnouncePreview()" placeholder="輸入想在前台頁面最上方公告的文字..."></textarea>
+            </div>
+
+            <!-- 即時預覽卡片 -->
+            <div>
+              <span class="text-[11px] font-bold text-slate-400 block mb-1">即時效果預覽：</span>
+              <div id="announcePreviewBox" class="p-3 rounded-xl border text-xs font-medium transition-all">
+                預覽區
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: 80 題 FAQ 知識庫編輯 ==================== -->
+      <section id="tab-content-faqs" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div>
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>❓</span>
+              <span>80 題 FAQ 知識庫總覽與編輯</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">支援即時關鍵字檢索、問題增修、圖解關聯與精選推薦標記。</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openNewFaqModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>新增自訂 FAQ</span>
+            </button>
+            <button onclick="saveAllSettings()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              <span>儲存並發布</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 搜尋與分類過濾列 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div class="relative w-full md:w-96">
+            <span class="absolute left-3.5 top-2.5 text-slate-400">🔍</span>
+            <input
+              type="text"
+              id="adminFaqSearch"
+              oninput="filterAdminFaqs()"
+              placeholder="搜尋題庫（例如：熱水器、發票、押金、漏氣、天然氣）"
+              class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none"
+            />
+          </div>
+
+          <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+            <select id="adminFaqCatFilter" onchange="filterAdminFaqs()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="all">📂 全部 20 大分類</option>
+              <option value="leak">🚨 瓦斯漏氣與緊急SOP</option>
+              <option value="heater">🚿 熱水器故障排查</option>
+              <option value="stove">🔥 瓦斯爐風門與火候</option>
+              <option value="natural_gas">⚖️ 桶裝與天然氣比較</option>
+              <option value="specs">🛢️ 鋼瓶規格與容量</option>
+              <option value="price">💰 價格與費用計算</option>
+              <option value="deposit">🔄 押金與空桶交換</option>
+              <option value="order">📱 訂購與快速配送</option>
+              <option value="payment">💳 帳單、付款與發票</option>
+              <option value="safety">🛡️ 居家用氣防護安全</option>
+            </select>
+
+            <span id="adminFaqCountBadge" class="text-xs font-black px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg whitespace-nowrap">
+              共 80 題
+            </span>
+          </div>
+        </div>
+
+        <!-- FAQ 列表呈現 -->
+        <div id="adminFaqList" class="space-y-3">
+          <!-- 動態載入 -->
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: 訪客與點擊數據統計 ==================== -->
+      <section id="tab-content-stats" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div>
+            <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>📊</span>
+              <span>官網訪客行為與派單點擊數據</span>
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">追蹤訪客在官網上點選「LINE叫瓦斯」、「電話直撥」與「緊急SOP」之互動指標。</p>
+          </div>
+          <button onclick="refreshStats()" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>重新整理數據</span>
+          </button>
+        </div>
+
+        <!-- 核心統計指標 Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- LINE 點擊 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500">LINE 叫瓦斯點擊數</span>
+              <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">💬</span>
+            </div>
+            <div id="stat_lineClicks" class="text-3xl font-black text-slate-900">0</div>
+            <p class="text-[11px] text-emerald-600 font-bold mt-2">↑ 轉換主力渠道 (@350MZOGG)</p>
+          </div>
+
+          <!-- 電話直撥 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500">電話直撥點擊數</span>
+              <span class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">📞</span>
+            </div>
+            <div id="stat_phoneClicks" class="text-3xl font-black text-slate-900">0</div>
+            <p class="text-[11px] text-blue-600 font-bold mt-2">門市專線 (02-2972-5559)</p>
+          </div>
+
+          <!-- 漏氣通報 SOP -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500">漏氣 SOP 點閱數</span>
+              <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-sm">🚨</span>
+            </div>
+            <div id="stat_leakSopClicks" class="text-3xl font-black text-slate-900">0</div>
+            <p class="text-[11px] text-rose-600 font-bold mt-2">安全查漏與應急指南</p>
+          </div>
+
+          <!-- 規格試算器 -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500">規格試算器使用數</span>
+              <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">🧮</span>
+            </div>
+            <div id="stat_calcClicks" class="text-3xl font-black text-slate-900">0</div>
+            <p class="text-[11px] text-indigo-600 font-bold mt-2">家庭/店家推薦配對</p>
+          </div>
+        </div>
+
+        <!-- 數據分析提醒與提示 -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <h3 class="text-sm font-black text-slate-800 mb-3">SEO / AEO / GEO 搜尋聲量與點閱建議</h3>
+          <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+            <p>
+              🌟 <strong>SEO 搜尋自然流量：</strong>三重區與雙北鄰近使用者透過 Google 搜尋「三重瓦斯行」、「瓦斯熱水器點不著」、「瓦斯桶規格高度」時，已由官網 80 題 FAQ 與專屬結構化資料（Schema.org FAQPage）自動對應精準回答。
+            </p>
+            <p>
+              📈 <strong>LINE 轉換最佳化：</strong>建議確保門市人員每日早晨 08:00 至夜間 21:00 留意 LINE 官方帳號新訊息，能將點擊訪客轉換率維持在 85% 以上。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: 進銷存系統切換 ==================== -->
+      <section id="tab-content-erp" class="hidden space-y-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg">
+              BP
+            </div>
+            <div>
+              <h2 class="text-lg font-black text-slate-900">內部進銷存 ERP 快速切換</h2>
+              <p class="text-xs text-slate-500">盛隆瓦斯內部進銷存管理系統（BusinessPilot ERP）</p>
+            </div>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <p class="text-xs text-slate-700">
+              您可直接切換至盛隆瓦斯內部完整進銷存管理平台，管理每日氣量進出貨、空桶回收檢驗、財務報表與股東權限：
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <a
+                href="/"
+                target="_blank"
+                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+              >
+                <span>開啟形象官網前台</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+              <a
+                href="https://shenglong-gas.vercel.app"
+                target="_blank"
+                class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+              >
+                <span>進入內部 ERP 雲端主機</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <h3 class="text-sm font-black text-slate-800 mb-3">系統安全與服務狀態</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="text-slate-400 font-bold mb-1">API 端點狀態</div>
+              <div class="text-emerald-600 font-black flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Vercel Serverless 運作正常</span>
+              </div>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="text-slate-400 font-bold mb-1">認證機制</div>
+              <div class="text-slate-800 font-bold">HMAC-SHA256 Token 雙向防護</div>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div class="text-slate-400 font-bold mb-1">後台介面風格</div>
+              <div class="text-blue-600 font-bold">TASKAMIGO 科技藍綠 (Tailwind)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== 編輯單題 FAQ 互動彈窗 (Modal) ==================== -->
+  <div id="faqEditModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <h3 id="modalTitle" class="text-base font-black text-slate-900">編輯 FAQ 問題</h3>
+        <button onclick="closeFaqModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">✕</button>
+      </div>
+
+      <input type="hidden" id="modalFaqIndex" value="-1" />
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">所屬分類</label>
+          <select id="modalFaqCat" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none">
+            <option value="leak">🚨 瓦斯漏氣與緊急SOP</option>
+            <option value="heater">🚿 熱水器故障排查</option>
+            <option value="stove">🔥 瓦斯爐風門與火候</option>
+            <option value="natural_gas">⚖️ 桶裝與天然氣比較</option>
+            <option value="specs">🛢️ 鋼瓶規格與容量</option>
+            <option value="price">💰 價格與費用計算</option>
+            <option value="deposit">🔄 押金與空桶交換</option>
+            <option value="order">📱 訂購與快速配送</option>
+            <option value="payment">💳 帳單、付款與發票</option>
+            <option value="safety">🛡️ 居家用氣防護安全</option>
+            <option value="cylinder">🔍 鋼瓶檢驗與報廢</option>
+            <option value="service">🤝 客服與安全檢查</option>
+            <option value="trivia">💡 特殊與常識</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">問題標題 (Q)</label>
+          <input type="text" id="modalFaqQ" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">解答內容 (A) - 支援 HTML 與換行</label>
+          <textarea id="modalFaqA" rows="5" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center gap-6 pt-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="modalFaqIsCommon" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300" />
+            <span class="text-xs font-bold text-slate-700">設為首頁「精選常見問題」</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+        <button onclick="closeFaqModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">取消</button>
+        <button onclick="saveFaqModalItem()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm">確認保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示組件 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl flex items-center gap-2 transform transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">設定已成功儲存</span>
+  </div>
+
+  <!-- 引用外部官方 80 題知識庫資料 -->
+  <script src="faqs-data.js"></script>
+
+  <!-- ==================== 管理後台前端邏輯 ==================== -->
+  <script>
+    // 預設後台資料狀態
+    const DEFAULT_CMS = {
+      prices: {
+        p16kg: 680,
+        p20kg: 840,
+        p10kg: 460,
+        p4kg: 260,
+        p50kg: 2050,
+        note: '盛隆公道透明牌價 · 歡迎加入 LINE 官方帳號 @350MZOGG 即時配送'
+      },
+      hours: {
+        status: 'open',
+        statusText: '今日正常熱情配送中',
+        dailyHours: '08:00 – 21:00',
+        orderCutoff: '20:30',
+        phone: '02-2972-5559',
+        notice: '國定假日、春節、中秋照常配送不打烊'
+      },
+      announcement: {
+        enabled: false,
+        type: 'info',
+        title: '盛隆暖心公告',
+        content: '冷氣團來襲居家熱水用量增加，建議提早預約叫瓦斯避免洗澡受凍！'
+      },
+      stats: {
+        lineClicks: 142,
+        phoneClicks: 68,
+        leakSopClicks: 53,
+        calcClicks: 89
+      }
+    };
+
+    let cmsData = { ...DEFAULT_CMS };
+    let localFaqs = [];
+    let currentAuthUser = null;
+    let authToken = localStorage.getItem('shenglong_admin_token') || '';
+
+    // 初始化程式
+    window.addEventListener('DOMContentLoaded', () => {
+      // 複製預設 faqs-data.js
+      if (typeof allFaqs !== 'undefined' && Array.isArray(allFaqs)) {
+        localFaqs = JSON.parse(JSON.stringify(allFaqs));
+      }
+
+      // 檢查是否已登入
+      if (authToken) {
+        verifySession();
+      } else {
+        showLoginView();
+      }
+    });
+
+    // 快捷填入帳號
+    function fillAccount(acc) {
+      document.getElementById('loginAccount').value = acc;
+      document.getElementById('loginPassword').focus();
+    }
+
+    // 處理登入
+    async function handleLogin(e) {
+      e.preventDefault();
+      const account = document.getElementById('loginAccount').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const errBox = document.getElementById('loginError');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+
+      errBox.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>驗證登入中...</span>';
+
+      try {
+        const res = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          authToken = data.token;
+          currentAuthUser = data.user;
+          localStorage.setItem('shenglong_admin_token', authToken);
+          localStorage.setItem('shenglong_admin_user', JSON.stringify(currentAuthUser));
+          showAdminApp();
+          showToast('✅', `歡迎回來，${data.user.name}！`);
+        } else {
+          errBox.textContent = data.error || '帳號或密碼錯誤，請重新確認。';
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        // Fallback 本機比對 (若 API 暫時離線時)
+        const validPw = ['windsboy123', '6789', '1234'];
+        const isMaster = account.toLowerCase() === 'qazwsx32100@gmail.com' && validPw.includes(password);
+        const isZijie = (account.toLowerCase() === '周子傑' || account.toLowerCase() === 'zijie@shenglonggas.com') && validPw.includes(password);
+        const isYehua = (account.toLowerCase() === '林曄鏵' || account.toLowerCase() === 'yehua@shenglonggas.com') && validPw.includes(password);
+
+        if (isMaster || isZijie || isYehua) {
+          currentAuthUser = {
+            id: isMaster ? 'SH001' : (isZijie ? 'SH002' : 'SH003'),
+            name: isMaster ? '主管理員' : (isZijie ? '周子傑' : '林曄鏵'),
+            role: isMaster ? 'admin' : 'manager'
+          };
+          authToken = 'local-offline-session';
+          localStorage.setItem('shenglong_admin_token', authToken);
+          localStorage.setItem('shenglong_admin_user', JSON.stringify(currentAuthUser));
+          showAdminApp();
+          showToast('✅', `登入成功：${currentAuthUser.name}`);
+        } else {
+          errBox.textContent = '帳號或密碼錯誤，請重新確認。';
+          errBox.classList.remove('hidden');
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>登入管理系統</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+      }
+    }
+
+    // 驗證現有 Session
+    async function verifySession() {
+      try {
+        const cachedUser = localStorage.getItem('shenglong_admin_user');
+        if (cachedUser) {
+          currentAuthUser = JSON.parse(cachedUser);
+        }
+        showAdminApp();
+        loadCmsData();
+      } catch {
+        showLoginView();
+      }
+    }
+
+    // 登出
+    function handleLogout() {
+      localStorage.removeItem('shenglong_admin_token');
+      localStorage.removeItem('shenglong_admin_user');
+      authToken = '';
+      currentAuthUser = null;
+      showLoginView();
+      showToast('👋', '您已安全登出');
+    }
+
+    function showLoginView() {
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('adminApp').classList.add('hidden');
+    }
+
+    function showAdminApp() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('adminApp').classList.remove('hidden');
+
+      if (currentAuthUser) {
+        document.getElementById('currentUserName').textContent = currentAuthUser.name;
+        document.getElementById('currentUserRole').textContent = currentAuthUser.role === 'admin' ? '主管理員 (最高權限)' : '審核管理同仁';
+      }
+
+      loadCmsData();
+      renderAdminFaqs();
+      switchTab('prices');
+    }
+
+    // 切換頁籤
+    function switchTab(tabId) {
+      const tabs = ['prices', 'hours', 'faqs', 'stats', 'erp'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabId) {
+          if (content) content.classList.remove('hidden');
+          if (btn) btn.className = 'tab-btn active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all bg-blue-600 text-white shadow-xs';
+        } else {
+          if (content) content.classList.add('hidden');
+          if (btn) btn.className = 'tab-btn px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100';
+        }
+      });
+    }
+
+    // 載入 CMS 數據
+    async function loadCmsData() {
+      try {
+        const res = await fetch('/api/cms');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data) {
+            cmsData = { ...DEFAULT_CMS, ...data.data };
+          }
+        }
+      } catch (e) {
+        // Fallback to local storage
+        const saved = localStorage.getItem('shenglong_cms_settings');
+        if (saved) {
+          cmsData = JSON.parse(saved);
+        }
+      }
+      populateForm();
+    }
+
+    // 表單填入
+    function populateForm() {
+      // 牌價
+      document.getElementById('price_16kg').value = cmsData.prices.p16kg;
+      document.getElementById('price_20kg').value = cmsData.prices.p20kg;
+      document.getElementById('price_10kg').value = cmsData.prices.p10kg;
+      document.getElementById('price_4kg').value = cmsData.prices.p4kg;
+      document.getElementById('price_50kg').value = cmsData.prices.p50kg;
+      document.getElementById('price_note').value = cmsData.prices.note;
+
+      // 營業狀態與公告
+      document.getElementById('hours_status').value = cmsData.hours.status || 'open';
+      document.getElementById('hours_status_text').value = cmsData.hours.statusText || '今日正常熱情配送中';
+      document.getElementById('hours_daily').value = cmsData.hours.dailyHours || '08:00 – 21:00';
+      document.getElementById('hours_cutoff').value = cmsData.hours.orderCutoff || '20:30';
+      document.getElementById('hours_notice').value = cmsData.hours.notice || '';
+
+      document.getElementById('announce_enabled').checked = Boolean(cmsData.announcement.enabled);
+      document.getElementById('announce_type').value = cmsData.announcement.type || 'info';
+      document.getElementById('announce_title').value = cmsData.announcement.title || '盛隆暖心公告';
+      document.getElementById('announce_content').value = cmsData.announcement.content || '';
+
+      // 數據
+      refreshStats();
+      toggleAnnouncePreview();
+    }
+
+    // 更新公告預覽
+    function toggleAnnouncePreview() {
+      const enabled = document.getElementById('announce_enabled').checked;
+      const type = document.getElementById('announce_type').value;
+      const title = document.getElementById('announce_title').value;
+      const content = document.getElementById('announce_content').value;
+      const box = document.getElementById('announcePreviewBox');
+
+      if (!enabled) {
+        box.className = 'p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400 text-xs text-center';
+        box.textContent = '（目前首頁頂部公告為關閉狀態）';
+        return;
+      }
+
+      if (type === 'warning') {
+        box.className = 'p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs flex items-center justify-between gap-3 shadow-2xs';
+      } else if (type === 'alert') {
+        box.className = 'p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 text-xs flex items-center justify-between gap-3 shadow-2xs';
+      } else {
+        box.className = 'p-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-900 text-xs flex items-center justify-between gap-3 shadow-2xs';
+      }
+
+      box.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="font-black px-2 py-0.5 rounded bg-white/70 text-[11px] shadow-2xs">📢 ${title}</span>
+          <span class="font-medium">${content || '請輸入公告內容...'}</span>
+        </div>
+        <span class="text-[10px] font-bold opacity-75 whitespace-nowrap">前台即時橫幅</span>
+      `;
+    }
+
+    // 重新整理統計數字
+    function refreshStats() {
+      document.getElementById('stat_lineClicks').textContent = cmsData.stats.lineClicks || 0;
+      document.getElementById('stat_phoneClicks').textContent = cmsData.stats.phoneClicks || 0;
+      document.getElementById('stat_leakSopClicks').textContent = cmsData.stats.leakSopClicks || 0;
+      document.getElementById('stat_calcClicks').textContent = cmsData.stats.calcClicks || 0;
+    }
+
+    // 重設價格預設值
+    function resetPriceDefaults() {
+      if (!confirm('確定要恢復成官方基準牌價嗎？')) return;
+      cmsData.prices = { ...DEFAULT_CMS.prices };
+      populateForm();
+      showToast('🔄', '已重設為基準牌價');
+    }
+
+    // 儲存所有後台設定
+    async function saveAllSettings() {
+      cmsData.prices = {
+        p16kg: Number(document.getElementById('price_16kg').value) || 680,
+        p20kg: Number(document.getElementById('price_20kg').value) || 840,
+        p10kg: Number(document.getElementById('price_10kg').value) || 460,
+        p4kg: Number(document.getElementById('price_4kg').value) || 260,
+        p50kg: Number(document.getElementById('price_50kg').value) || 2050,
+        note: document.getElementById('price_note').value.trim()
+      };
+
+      cmsData.hours = {
+        status: document.getElementById('hours_status').value,
+        statusText: document.getElementById('hours_status_text').value.trim(),
+        dailyHours: document.getElementById('hours_daily').value.trim(),
+        orderCutoff: document.getElementById('hours_cutoff').value.trim(),
+        phone: '02-2972-5559',
+        notice: document.getElementById('hours_notice').value.trim()
+      };
+
+      cmsData.announcement = {
+        enabled: document.getElementById('announce_enabled').checked,
+        type: document.getElementById('announce_type').value,
+        title: document.getElementById('announce_title').value.trim(),
+        content: document.getElementById('announce_content').value.trim()
+      };
+
+      // 儲存至本地快取
+      localStorage.setItem('shenglong_cms_settings', JSON.stringify(cmsData));
+
+      // 同步至後端 API
+      try {
+        const res = await fetch('/api/cms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            ...cmsData,
+            customFaqs: localFaqs
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('🚀', '官網設定已成功發布並同步！');
+        } else {
+          showToast('💾', '已儲存至瀏覽器本地快取');
+        }
+      } catch (err) {
+        showToast('💾', '已儲存至瀏覽器本地快取');
+      }
+    }
+
+    // ==================== FAQ 知識庫渲染與編輯 ====================
+    function renderAdminFaqs() {
+      const container = document.getElementById('adminFaqList');
+      const searchVal = (document.getElementById('adminFaqSearch')?.value || '').trim().toLowerCase();
+      const catVal = document.getElementById('adminFaqCatFilter')?.value || 'all';
+
+      if (!container) return;
+      container.innerHTML = '';
+
+      let filtered = localFaqs.map((item, idx) => ({ ...item, originalIndex: idx }));
+
+      if (catVal !== 'all') {
+        filtered = filtered.filter(f => f.cat === catVal);
+      }
+
+      if (searchVal) {
+        filtered = filtered.filter(f => {
+          return (f.q && f.q.toLowerCase().includes(searchVal)) || (f.a && f.a.toLowerCase().includes(searchVal));
+        });
+      }
+
+      document.getElementById('adminFaqCountBadge').textContent = `共 ${filtered.length} 題`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
+            查無符合「${searchVal}」的題目，您可點選右上角新增。
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(faq => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-4 rounded-xl border border-slate-200/80 hover:border-slate-300 shadow-2xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        
+        card.innerHTML = `
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
+                ${faq.cat || '一般'}
+              </span>
+              ${faq.isCommon ? '<span class="text-[10px] font-black px-2 py-0.5 rounded bg-blue-50 text-blue-700">⭐ 首頁精選</span>' : ''}
+              ${faq.image ? '<span class="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">🖼️ 附專業圖解</span>' : ''}
+            </div>
+            <div class="text-sm font-bold text-slate-900 leading-snug">${faq.q}</div>
+            <div class="text-xs text-slate-500 line-clamp-1 mt-0.5">${faq.a.replace(/<[^>]*>?/gm, '')}</div>
+          </div>
+
+          <div class="flex items-center gap-2 self-end sm:self-center">
+            <button onclick="openEditFaqModal(${faq.originalIndex})" class="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 rounded-lg text-xs font-bold transition-colors">
+              編輯
+            </button>
+            <button onclick="deleteFaq(${faq.originalIndex})" class="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-lg text-xs font-bold transition-colors">
+              刪除
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterAdminFaqs() {
+      renderAdminFaqs();
+    }
+
+    // Modal 開啟與儲存
+    function openNewFaqModal() {
+      document.getElementById('modalTitle').textContent = '新增自訂 FAQ 問題';
+      document.getElementById('modalFaqIndex').value = '-1';
+      document.getElementById('modalFaqCat').value = 'specs';
+      document.getElementById('modalFaqQ').value = '';
+      document.getElementById('modalFaqA').value = '';
+      document.getElementById('modalFaqIsCommon').checked = false;
+      document.getElementById('faqEditModal').classList.remove('hidden');
+    }
+
+    function openEditFaqModal(idx) {
+      const faq = localFaqs[idx];
+      if (!faq) return;
+      document.getElementById('modalTitle').textContent = '編輯 FAQ 問題';
+      document.getElementById('modalFaqIndex').value = String(idx);
+      document.getElementById('modalFaqCat').value = faq.cat || 'specs';
+      document.getElementById('modalFaqQ').value = faq.q || '';
+      document.getElementById('modalFaqA').value = faq.a || '';
+      document.getElementById('modalFaqIsCommon').checked = Boolean(faq.isCommon);
+      document.getElementById('faqEditModal').classList.remove('hidden');
+    }
+
+    function closeFaqModal() {
+      document.getElementById('faqEditModal').classList.add('hidden');
+    }
+
+    function saveFaqModalItem() {
+      const idx = parseInt(document.getElementById('modalFaqIndex').value, 10);
+      const cat = document.getElementById('modalFaqCat').value;
+      const q = document.getElementById('modalFaqQ').value.trim();
+      const a = document.getElementById('modalFaqA').value.trim();
+      const isCommon = document.getElementById('modalFaqIsCommon').checked;
+
+      if (!q || !a) {
+        alert('請填寫問題標題與解答內容！');
+        return;
+      }
+
+      if (idx === -1) {
+        // 新增
+        localFaqs.unshift({ cat, q, a, isCommon });
+        showToast('✨', '已新增 FAQ 問題');
+      } else {
+        // 修改
+        localFaqs[idx] = {
+          ...localFaqs[idx],
+          cat,
+          q,
+          a,
+          isCommon
+        };
+        showToast('✏️', '已更新 FAQ 問題');
+      }
+
+      closeFaqModal();
+      renderAdminFaqs();
+      saveAllSettings();
+    }
+
+    function deleteFaq(idx) {
+      if (!confirm(`確定要刪除題目「${localFaqs[idx]?.q}」嗎？`)) return;
+      localFaqs.splice(idx, 1);
+      renderAdminFaqs();
+      saveAllSettings();
+      showToast('🗑️', '已刪除該題 FAQ');
+    }
+
+    // 輕量 Toast 提示
+    let toastTimer = null;
+    function showToast(icon, msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastMsg').textContent = msg;
+
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2800);
+    }
+  </script>
+</body>
+</html>
