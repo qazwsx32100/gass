@@ -1,7 +1,5 @@
 {
   "name": "shenglong-gas",
-  "version": "1.0.0",
-  "description": "盛隆瓦斯品牌形象官網 - GEO / AEO / SEO 極致優化版",
   "cleanUrls": true,
   "trailingSlash": false,
   "functions": {},
