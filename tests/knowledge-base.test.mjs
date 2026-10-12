@@ -4,6 +4,7 @@ import {
   SHENGLONG_STORE_RULES,
   KNOWLEDGE_BASE_ENTRIES,
   matchBestFaq,
+  classifyQueryComplexity,
   getOptimizedSystemPrompt
 } from '../api/_knowledge-base.js';
 
@@ -56,4 +57,25 @@ test('KnowledgeBase: getOptimizedSystemPrompt generates comprehensive prompt', (
   assert.ok(leakPrompt.includes('⚠️ 最高安全防線'));
   assert.ok(leakPrompt.includes('關閉瓦斯角閥') || leakPrompt.includes('關閉鋼瓶角閥'));
   assert.ok(leakPrompt.includes('免費前往查漏') || leakPrompt.includes('免費派師傅前往'));
+});
+
+test('KnowledgeBase: classifyQueryComplexity correctly separates fast and expert modes', () => {
+  // Fast mode queries
+  assert.equal(classifyQueryComplexity('請問一桶瓦斯多少錢？'), 'fast');
+  assert.equal(classifyQueryComplexity('我想叫一桶20公斤瓦斯'), 'fast');
+  assert.equal(classifyQueryComplexity('請問營業時間到幾點？'), 'fast');
+  assert.equal(classifyQueryComplexity('可以開三聯式發票報帳嗎？'), 'fast');
+  assert.equal(classifyQueryComplexity('放門口可以嗎？'), 'fast');
+
+  // Expert mode queries
+  assert.equal(classifyQueryComplexity('瓦斯爐一直打不著沒有火花'), 'expert');
+  assert.equal(classifyQueryComplexity('瓦斯爐一放手就熄火怎麼辦'), 'expert');
+  assert.equal(classifyQueryComplexity('熱水器忽冷忽熱洗到一半變冷水'), 'expert');
+  assert.equal(classifyQueryComplexity('好像聞到很濃的瓦斯味有嘶嘶聲'), 'expert');
+  assert.equal(classifyQueryComplexity('為什麼這個月瓦斯用這麼快是不是偷斤減兩'), 'expert');
+
+  // Expert mode prompt includes expert diagnostic instructions
+  const expertPrompt = getOptimizedSystemPrompt('瓦斯爐一放手就熄火', 'expert');
+  assert.ok(expertPrompt.includes('深度專家診斷與邏輯推理指導'));
+  assert.ok(expertPrompt.includes('條理化步驟排除'));
 });

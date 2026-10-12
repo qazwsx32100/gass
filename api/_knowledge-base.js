@@ -165,14 +165,52 @@ export function matchBestFaq(queryText = '') {
 }
 
 /**
- * 構建全面優化後的 LINE AI 客服系統提示詞
+ * 判斷客戶發問複雜度，實施智慧雙模分流 (Hybrid Dual-Model Router)
+ * @param {string} userQuery
+ * @returns {'fast' | 'expert'}
+ * - 'fast': 簡單直覺問答 (價格試算、叫瓦斯下單、配送時間、發票統編、樓層費、放門口等)，以精簡流暢秒回為核心
+ * - 'expert': 複雜深度推理 (爐具熱水器故障排查、漏氣排險應急、用量結霜原理、客訴糾紛)，以條理化專家診斷為核心
  */
-export function getOptimizedSystemPrompt(userText = '') {
+export function classifyQueryComplexity(userQuery = '') {
+  if (!userQuery || typeof userQuery !== 'string') return 'fast';
+  const lower = userQuery.toLowerCase();
+
+  // 1. 疑似漏氣與安全緊急問題 -> 深度專家診斷 (最嚴謹)
+  if (/漏氣|瓦斯味|臭味|嘶嘶|漏氣聲|爆炸|中毒|警報器/i.test(lower)) {
+    return 'expert';
+  }
+
+  // 2. 設備故障與專業技術排查 -> 深度專家診斷
+  if (/點不著|打不著|沒有火花|放手就熄火|火焰變|黃火|紅火|鍋底|發黑|黑煙|風門|忽冷忽熱|水壓太低|水不熱|洗到一半|變冷水|變冰水|調整器|爆管|r280/i.test(lower)) {
+    return 'expert';
+  }
+
+  // 3. 異常耗速、疑慮與客訴爭議 -> 深度專家診斷
+  if (/用這麼快|偷斤減兩|少灌|摻水|結霜|結冰|用很兇|用很快|客訴|投訴|爭議|不合理/i.test(lower)) {
+    return 'expert';
+  }
+
+  return 'fast';
+}
+
+/**
+ * 構建全面優化後的 LINE AI 客服系統提示詞 (支援雙模分流)
+ */
+export function getOptimizedSystemPrompt(userText = '', mode = 'fast') {
   const matched = matchBestFaq(userText);
   let injectedKnowledge = '';
 
   if (matched) {
     injectedKnowledge = `\n【系統檢索到與顧客問題最相符的官方標準知識】\n分類：${matched.category}\n標準答覆指南：${matched.standardAnswer}\n請參考上述官方標準，以親切、專業、流暢的在地口吻為客戶解答！`;
+  }
+
+  let expertInstruction = '';
+  if (mode === 'expert') {
+    expertInstruction = `\n【🔍 深度專家診斷與邏輯推理指導】
+您當前獲授權進入「盛隆瓦斯資深技術技師／客服主管」深度思考模式：
+1. 【條理化步驟排除】：針對爐具故障、熱水器異常或設備疑難，請依「1. 檢查電池 ➔ 2. 感應針/噴嘴清潔 ➔ 3. 風門空氣調節 ➔ 4. 水壓/安全閥」提供清晰編號的排除步驟。
+2. 【科學原理通俗化】：針對氣候冬天耗量快或鋼瓶結霜，以親切通俗口吻解釋物理吸熱與自來水溫客觀原理，耐心化解疑慮。
+3. 【安全最高防線】：如疑似漏氣，首段必須嚴格提示避險四步驟與 02-2972-5559 免費到府排查。\n`;
   }
 
   return `您是新北市三重區老字號優質名店「盛隆瓦斯（盛隆煤氣）」的專屬 AI 智能客服小助手。
@@ -210,5 +248,5 @@ export function getOptimizedSystemPrompt(userText = '') {
 - 親切、熱情、專業、有禮貌、充滿台灣人情味。
 - 適度使用 Emoji 讓排版清爽易讀。
 - 回答簡潔有力，重點明確，不拖泥帶水。
-${injectedKnowledge}`;
+${expertInstruction}${injectedKnowledge}`;
 }

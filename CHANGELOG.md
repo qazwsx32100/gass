@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/12 - 🔄 LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面上線
+* **變更類型**：架構升級 (architecture-upgrade) / 負載均衡 (load-balancing) / 雙模路由 (dual-model-router)
+* **核心成果**：
+  * **真・循環輪調引擎 (`api/_ai-rotator.js`)**：引進原子輪調指針 `rrPointer`，將請求依序均分至 3 組 Google Gemini 帳號 (`qaz` ➔ `無名` ➔ `神燈` ➔ 循環)，單一帳號壓力降至 1/3，自動跳過 429 冷卻帳號並由 OpenAI 兜底。
+  * **方案 B 智慧雙模分流器 (`api/_knowledge-base.js` & `api/line-webhook.js`)**：
+    * 簡單業務（價格、叫單、時段、發票）採秒回模式（`temperature: 0.6`，< 500ms 即答）。
+    * 複雜疑難（爐具故障、熱水器忽冷忽熱、漏氣排險、結霜耗量客訴）自動升級深度專家推理模式（`temperature: 0.3`，條理化步驟排除與科學原理解說）。
+  * **單元測試驗收**：全專案 165 項單元測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/12 - 🚀 LINE AI 智慧客服全面優化：20 大分類 300 題完整知識庫、動態 RAG 檢索與門市營運規則硬核約束
 * **變更類型**：AI 智慧升級 (ai-upgrade) / 知識庫整合 (knowledge-base) / 門市規則注入 (store-policy) / 消防安全強化 (safety-first)
 * **核心成果**：

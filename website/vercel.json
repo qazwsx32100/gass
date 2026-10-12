@@ -1,8 +1,6 @@
 {
-  "name": "shenglong-gas",
   "cleanUrls": true,
   "trailingSlash": false,
-  "functions": {},
   "headers": [
     {
       "source": "/(.*)",

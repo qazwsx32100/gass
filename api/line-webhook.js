@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { callAiWithFailover } from './_ai-rotator.js';
 import { sendJson } from './_auth.js';
 import { fetchWithTimeout } from './_fetch.js';
-import { getOptimizedSystemPrompt } from './_knowledge-base.js';
+import { getOptimizedSystemPrompt, classifyQueryComplexity } from './_knowledge-base.js';
 import { recordLineAiChat } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
 
@@ -91,13 +91,17 @@ export default async function handler(req, res) {
         console.log(`[LINE Webhook] 收到來自使用者 [${userId || '未知'}] 的訊息: "${userText}"`);
 
         const isOrderIntent = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText);
+        const complexityMode = classifyQueryComplexity(userText);
+        const isExpert = complexityMode === 'expert';
 
-        // 呼叫雲端 AI 輪調中心 (Gemini 1 -> 2 -> 3 -> OpenAI 備援)
+        // 呼叫雲端 AI 輪調中心 (方案 B 智慧雙模分流 + 真・循環輪調 Round-Robin)
         const aiResult = await callAiWithFailover({
           prompt: userText,
-          systemInstruction: getOptimizedSystemPrompt(userText),
-          temperature: 0.6,
-          preferredModel: 'gemini-3.8-flash'
+          systemInstruction: getOptimizedSystemPrompt(userText, complexityMode),
+          temperature: isExpert ? 0.3 : 0.6,
+          preferredModel: 'gemini-3.8-flash',
+          strategy: 'round-robin',
+          mode: complexityMode
         });
 
         // 回覆給 LINE 使用者

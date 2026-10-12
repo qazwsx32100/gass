@@ -110,20 +110,61 @@ async function reportSuccess(accountId, tokens = 0, latencyMs = 0, model = '') {
   }
 }
 
+// 全域原子輪調指針 (支援真・循環輪調 Round-Robin)
+let rrPointer = 0;
+
+export function getRotationPointer() {
+  return rrPointer;
+}
+
+export function resetRotationPointer(val = 0) {
+  rrPointer = val;
+}
+
 /**
- * 核心自動輪調呼叫方法 (自動處理 429 限流與容錯轉移)
- * 流程：Gemini 1 -> Gemini 2 -> Gemini 3 -> OpenAI 備援防線
+ * 依輪調策略建構候選帳號調用順序
+ * - 'round-robin' (真輪調): 3 組 Google 帳號 (qaz, 無名, 神燈) 輪替作為優先發話者，均分負擔，遇 429 容錯，OpenAI 兜底
+ * - 'failover' (優先容錯): 永遠優先以 priority 順序嘗試
+ */
+export function buildAccountQueue(candidates, strategy = 'round-robin') {
+  const now = Date.now();
+  const enabled = candidates.filter(c => c.enabled);
+  if (enabled.length === 0) return [];
+
+  // 過濾冷卻狀態
+  const active = enabled.filter(c => c.status !== 'cooldown' || (c.cooldownUntil && c.cooldownUntil <= now));
+  const pool = active.length > 0 ? active : enabled;
+
+  const geminiPool = pool.filter(c => c.provider === 'gemini').sort((a, b) => (a.priority || 1) - (b.priority || 1));
+  const fallbackPool = pool.filter(c => c.provider !== 'gemini').sort((a, b) => (a.priority || 99) - (b.priority || 99));
+
+  if (strategy === 'round-robin' && geminiPool.length > 0) {
+    const startIndex = (rrPointer++) % geminiPool.length;
+    const rotatedGemini = [
+      ...geminiPool.slice(startIndex),
+      ...geminiPool.slice(0, startIndex)
+    ];
+    return [...rotatedGemini, ...fallbackPool];
+  }
+
+  return [...geminiPool, ...fallbackPool];
+}
+
+/**
+ * 核心自動輪調呼叫方法 (支援真・循環輪調 Round-Robin 與容錯轉移)
+ * 流程：Gemini 帳號輪替 (qaz / 無名 / 神燈) -> OpenAI 備援防線
  */
 export async function callAiWithFailover({
   prompt = '',
   messages = [],
   systemInstruction = '',
   temperature = 0.7,
-  preferredModel = 'gemini-3.8-flash'
+  preferredModel = 'gemini-3.8-flash',
+  strategy = 'round-robin',
+  mode = 'fast'
 }) {
   const startTime = Date.now();
   const candidates = await getAiCandidates();
-  const now = Date.now();
 
   // 整理輸入為標準 messages 陣列
   const fullMessages = [];
@@ -137,9 +178,8 @@ export async function callAiWithFailover({
     fullMessages.push({ role: 'user', content: prompt });
   }
 
-  // 優先使用未冷卻的帳號
-  const activeCandidates = candidates.filter(c => c.enabled && (c.status !== 'cooldown' || c.cooldownUntil <= now));
-  const queue = activeCandidates.length > 0 ? activeCandidates : candidates.filter(c => c.enabled);
+  // 依「真・循環輪調」建置調用隊列
+  const queue = buildAccountQueue(candidates, strategy);
 
   if (queue.length === 0) {
     throw new Error('目前沒有任何啟用的 AI 帳號金鑰可用');
@@ -218,6 +258,8 @@ export async function callAiWithFailover({
         tokens: totalTokens,
         latencyMs,
         failoverCount: i,
+        strategy,
+        mode,
         totalDurationMs: Date.now() - startTime
       };
     } catch (err) {

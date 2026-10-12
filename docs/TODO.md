@@ -82,7 +82,13 @@
 ## ✅ 四、 近期已驗收完成 (Recently Completed)
 > 近期完成之重要項目，標註完成時間、負責設備與詳細發布紀錄
 
-### 1. LINE AI 智慧客服全面優化與 20 大分類 300 題知識庫動態檢索系統
+### 1. LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面實作
+- **完成日期**：2026/10/12
+- **負責設備/端點**：`Vercel (/api/_ai-rotator.js, /api/line-webhook.js, /api/_knowledge-base.js)` ＆ `單元測試 (tests/ai-rotator.test.mjs)`
+- **老闆指示備註**：老闆親自裁定採用「方案 B 智慧雙模分流」+「真輪調」。簡單問題（查價、叫單、營業時間）以 Flash 輕量秒回（0.5s）；複雜疑難（爐具故障、熱水器忽冷忽熱、漏氣排險、異常耗量）自動升級條理化專家推理模式（Temperature 0.3 診斷指導）。3 組 Google 帳號（qaz、無名、神燈）以原子指標循環輪替（Round-Robin），徹底均分請求壓力，遇 429 容錯並由 OpenAI 兜底。
+- **關聯詳細記錄**：[`docs/GOOGLE_DRIVE_RELEASE_RECORD.md#20261012---line-ai-真輪調與雙模分流`](file:///c:/Gass/docs/GOOGLE_DRIVE_RELEASE_RECORD.md)
+
+### 2. LINE AI 智慧客服全面優化與 20 大分類 300 題知識庫動態檢索系統
 - **完成日期**：2026/10/12
 - **負責設備/端點**：`Vercel (/api/line-webhook.js)` ＆ `知識庫模組 (api/_knowledge-base.js)` ＆ `單元測試 (tests/knowledge-base.test.mjs)`
 - **老闆指示備註**：300 題官方知識庫深度注入 AI Prompt，盛隆營業政策（電話 02-2972-5559、現金手寫發票、08:00~21:00、無退殘氣等）硬核約束，漏氣最高安全指引第一優先。
