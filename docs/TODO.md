@@ -54,19 +54,6 @@
 - **關聯文件**：
   - 專案報告書：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
 
-### 3. FAQ 300 題知識庫深度注入 LINE Webhook AI 回覆引擎
-- **狀態**：`[ ]` 待辦
-- **優先級**：`P1`
-- **負責設備/端點**：`Vercel 雲端 API (/api/line-webhook.js)` ＆ `AI Prompt / RAG`
-- **估計花費時間**：2 ~ 3 小時
-- **老闆指示備註**：300 題官方知識庫已完成，需將盛隆營業政策（無退殘氣、無電梯樓層費、手寫發票等）與安全緊急指引完全融入 AI，避免模型脫稿幻覺。
-- **具體任務**：
-  - [ ] 建立知識庫快選檢索機制或 System Prompt 模組化切片
-  - [ ] 實測漏氣緊急問答、各規格瓦斯用途與計費方式比對
-- **關聯文件**：
-  - 知識庫文件：[`docs/GAS_CONSUMER_FAQ_300.md`](file:///c:/Gass/docs/GAS_CONSUMER_FAQ_300.md)
-  - Webhook 程式：[`api/line-webhook.js`](file:///c:/Gass/api/line-webhook.js)
-
 ---
 
 ## 📋 三、 中長期優化與願景庫 (Backlog)
@@ -95,7 +82,13 @@
 ## ✅ 四、 近期已驗收完成 (Recently Completed)
 > 近期完成之重要項目，標註完成時間、負責設備與詳細發布紀錄
 
-### 1. LINE AI 客服對話歷程自動持久化儲存、視覺化看板與多端調閱系統
+### 1. LINE AI 智慧客服全面優化與 20 大分類 300 題知識庫動態檢索系統
+- **完成日期**：2026/10/12
+- **負責設備/端點**：`Vercel (/api/line-webhook.js)` ＆ `知識庫模組 (api/_knowledge-base.js)` ＆ `單元測試 (tests/knowledge-base.test.mjs)`
+- **老闆指示備註**：300 題官方知識庫深度注入 AI Prompt，盛隆營業政策（電話 02-2972-5559、現金手寫發票、08:00~21:00、無退殘氣等）硬核約束，漏氣最高安全指引第一優先。
+- **關聯詳細記錄**：[`docs/GOOGLE_DRIVE_RELEASE_RECORD.md#20261012---line-ai-智慧客服全面升級`](file:///c:/Gass/docs/GOOGLE_DRIVE_RELEASE_RECORD.md)
+
+### 2. LINE AI 客服對話歷程自動持久化儲存、視覺化看板與多端調閱系統
 - **完成日期**：2026/10/11
 - **負責設備/端點**：`Supabase (public.line_ai_logs)` ＆ `Vercel (/api/line-ai-logs)` ＆ `Telegram (@shenlong_advisor_bot)`
 - **老闆指示備註**：所有客戶與 AI 客服的對話完整留存、統計 token/耗時與叫瓦斯意圖，支援瀏覽器綠色氣泡看板與 Telegram `/line` 查閱。

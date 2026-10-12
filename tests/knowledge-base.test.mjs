@@ -1,0 +1,59 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  SHENGLONG_STORE_RULES,
+  KNOWLEDGE_BASE_ENTRIES,
+  matchBestFaq,
+  getOptimizedSystemPrompt
+} from '../api/_knowledge-base.js';
+
+test('KnowledgeBase: Store rules metadata integrity', () => {
+  assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-5559');
+  assert.ok(SHENGLONG_STORE_RULES.businessHours.includes('08:00 ~ 21:00'));
+  assert.ok(SHENGLONG_STORE_RULES.paymentMethod.includes('現金'));
+  assert.ok(SHENGLONG_STORE_RULES.emergencyLeakSteps.length >= 4);
+  assert.ok(SHENGLONG_STORE_RULES.residualGasPolicy.includes('不退殘氣費'));
+  assert.ok(SHENGLONG_STORE_RULES.safetyInspection.includes('300 元'));
+});
+
+test('KnowledgeBase: matchBestFaq accurately matches relevant queries', () => {
+  // 1. Price query
+  const priceMatch = matchBestFaq('請問20公斤瓦斯現在多少錢？');
+  assert.ok(priceMatch, 'Should find price match');
+  assert.ok(priceMatch.category.includes('價格'));
+
+  // 2. Leak emergency
+  const leakMatch = matchBestFaq('聞到好濃的瓦斯味，好像漏氣了！');
+  assert.ok(leakMatch, 'Should find leak match');
+  assert.ok(leakMatch.category.includes('漏氣'));
+
+  // 3. Delivery / hours
+  const deliveryMatch = matchBestFaq('請問晚上幾點還可以送瓦斯？');
+  assert.ok(deliveryMatch, 'Should find delivery match');
+  assert.ok(deliveryMatch.category.includes('配送'));
+
+  // 4. Deposit
+  const depositMatch = matchBestFaq('請問第一次叫瓦斯需要押金嗎？');
+  assert.ok(depositMatch, 'Should find deposit match');
+  assert.ok(depositMatch.category.includes('押金'));
+
+  // 5. Water heater / yellow flame
+  const burnerMatch = matchBestFaq('家裡瓦斯爐火變紅黃色鍋底都變黑了');
+  assert.ok(burnerMatch, 'Should find burner/flame match');
+  assert.ok(burnerMatch.category.includes('瓦斯爐'));
+});
+
+test('KnowledgeBase: getOptimizedSystemPrompt generates comprehensive prompt', () => {
+  // Test regular inquiry
+  const prompt = getOptimizedSystemPrompt('可以幫忙搬上4樓嗎？');
+  assert.ok(prompt.includes('02-2972-5559'));
+  assert.ok(prompt.includes('盛隆瓦斯行'));
+  assert.ok(prompt.includes('現金'));
+  assert.ok(prompt.includes('樓層'));
+
+  // Test emergency leak inquiry
+  const leakPrompt = getOptimizedSystemPrompt('瓦斯桶旁邊有嘶嘶叫的漏氣聲');
+  assert.ok(leakPrompt.includes('⚠️ 最高安全防線'));
+  assert.ok(leakPrompt.includes('關閉瓦斯角閥') || leakPrompt.includes('關閉鋼瓶角閥'));
+  assert.ok(leakPrompt.includes('免費前往查漏') || leakPrompt.includes('免費派師傅前往'));
+});
