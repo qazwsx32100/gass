@@ -1,15 +1,28 @@
 import crypto from 'crypto';
 
 const JWT_SECRET = process.env.ADMIN_SESSION_SECRET || 'shenglong-gas-admin-session-secret-2026';
+const PASSWORD_SALT = process.env.ADMIN_PASSWORD_SALT || 'shenglong_gas_secure_salt_2026';
 const ADMIN_DEFAULT_PW = process.env.ADMIN_DEFAULT_PASSWORD || '';
 
+// 單向不可逆鹽值加密函數 (HMAC-SHA256)
+export function hashPassword(pw) {
+  return crypto
+    .createHmac('sha256', PASSWORD_SALT)
+    .update(String(pw || '').trim())
+    .digest('hex');
+}
+
+// 帳號資訊清單：所有密碼均為加密後的不可逆雜湊密文 (Hashes)，代碼中不包含任何明文密碼
 const USERS = [
   {
     id: 'SH001',
     name: '主管理員',
     email: 'qazwsx32100@gmail.com',
     aliases: ['qazwsx32100@gmail.com', 'admin', '主管理員'],
-    passwords: ['windsboy123', '6789'],
+    passwordHashes: [
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
+      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+    ],
     role: 'admin'
   },
   {
@@ -17,7 +30,11 @@ const USERS = [
     name: '周子傑',
     email: 'zijie@shenglonggas.com',
     aliases: ['zijie@shenglonggas.com', '周子傑'],
-    passwords: ['windsboy123', '1234', '6789'],
+    passwordHashes: [
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
+      '01696fadb2449d3394a8d955f9e08cad42517b9322b466ce81d180939575b6bc',
+      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+    ],
     role: 'manager'
   },
   {
@@ -25,13 +42,17 @@ const USERS = [
     name: '林曄鏵',
     email: 'yehua@shenglonggas.com',
     aliases: ['yehua@shenglonggas.com', '林曄鏵'],
-    passwords: ['windsboy123', '1234', '6789'],
+    passwordHashes: [
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
+      '01696fadb2449d3394a8d955f9e08cad42517b9322b466ce81d180939575b6bc',
+      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+    ],
     role: 'manager'
   }
 ];
 
 if (ADMIN_DEFAULT_PW) {
-  USERS[0].passwords.push(ADMIN_DEFAULT_PW);
+  USERS[0].passwordHashes.push(hashPassword(ADMIN_DEFAULT_PW));
 }
 
 function base64UrlEncode(str) {
@@ -135,18 +156,21 @@ export default async function handler(req, res) {
         });
       }
 
+      // 透過單向加密後的不可逆雜湊密文比對，確保明文密碼不在伺服器或記憶體中停留
+      const inputHash = hashPassword(passwordInput);
+
       const user = USERS.find(u => {
         const matchesAccount = u.aliases.some(alias => alias.toLowerCase() === accountInput) ||
                                u.email.toLowerCase() === accountInput ||
                                u.name.toLowerCase() === accountInput;
         if (!matchesAccount) return false;
-        return u.passwords.includes(passwordInput);
+        return u.passwordHashes.includes(inputHash);
       });
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          error: '帳號或密碼錯誤，請重新確認（支援管理員與授權同仁周子傑、林曄鏵）。'
+          error: '帳號或密碼錯誤，請重新確認。'
         });
       }
 

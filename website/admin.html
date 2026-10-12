@@ -787,27 +787,8 @@
           errBox.classList.remove('hidden');
         }
       } catch (err) {
-        // Fallback 本機比對 (若 API 暫時離線時)
-        const validPw = ['windsboy123', '6789', '1234'];
-        const isMaster = account.toLowerCase() === 'qazwsx32100@gmail.com' && validPw.includes(password);
-        const isZijie = (account.toLowerCase() === '周子傑' || account.toLowerCase() === 'zijie@shenglonggas.com') && validPw.includes(password);
-        const isYehua = (account.toLowerCase() === '林曄鏵' || account.toLowerCase() === 'yehua@shenglonggas.com') && validPw.includes(password);
-
-        if (isMaster || isZijie || isYehua) {
-          currentAuthUser = {
-            id: isMaster ? 'SH001' : (isZijie ? 'SH002' : 'SH003'),
-            name: isMaster ? '主管理員' : (isZijie ? '周子傑' : '林曄鏵'),
-            role: isMaster ? 'admin' : 'manager'
-          };
-          authToken = 'local-offline-session';
-          localStorage.setItem('shenglong_admin_token', authToken);
-          localStorage.setItem('shenglong_admin_user', JSON.stringify(currentAuthUser));
-          showAdminApp();
-          showToast('✅', `登入成功：${currentAuthUser.name}`);
-        } else {
-          errBox.textContent = '帳號或密碼錯誤，請重新確認。';
-          errBox.classList.remove('hidden');
-        }
+        errBox.textContent = '連線至驗證伺服器失敗，請確認網路連線或稍後再試。';
+        errBox.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<span>登入管理系統</span><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
