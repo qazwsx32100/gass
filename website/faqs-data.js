@@ -1,8 +1,116 @@
+var faqCategories = [
+        {
+          "id": "all",
+          "name": "📋 全部問答",
+          "icon": "📋"
+        },
+        {
+          "id": "price",
+          "name": "💰 價格與費用",
+          "icon": "💰"
+        },
+        {
+          "id": "order",
+          "name": "📱 訂購與配送",
+          "icon": "📱"
+        },
+        {
+          "id": "specs",
+          "name": "🛢️ 規格與容量",
+          "icon": "🛢️"
+        },
+        {
+          "id": "usage",
+          "name": "⏳ 用量與消耗",
+          "icon": "⏳"
+        },
+        {
+          "id": "deposit",
+          "name": "🔄 押金與換桶",
+          "icon": "🔄"
+        },
+        {
+          "id": "safety",
+          "name": "⚠️ 漏氣與緊急",
+          "icon": "⚠️"
+        },
+        {
+          "id": "storage",
+          "name": "🛡️ 存放與防護",
+          "icon": "🛡️"
+        },
+        {
+          "id": "stove",
+          "name": "🍳 瓦斯爐故障",
+          "icon": "🍳"
+        },
+        {
+          "id": "heater",
+          "name": "🚿 熱水器問題",
+          "icon": "🚿"
+        },
+        {
+          "id": "regulator",
+          "name": "⚙️ 調整器開關",
+          "icon": "⚙️"
+        },
+        {
+          "id": "hoses",
+          "name": "🔩 管線與軟管",
+          "icon": "🔩"
+        },
+        {
+          "id": "install",
+          "name": "🔧 安裝與更換",
+          "icon": "🔧"
+        },
+        {
+          "id": "commercial",
+          "name": "🍜 商用與餐飲",
+          "icon": "🍜"
+        },
+        {
+          "id": "natural_gas",
+          "name": "📋 天然氣比較",
+          "icon": "📋"
+        },
+        {
+          "id": "flame",
+          "name": "🔵 品質與火焰",
+          "icon": "🔵"
+        },
+        {
+          "id": "anomaly",
+          "name": "⚖️ 重量與殘氣",
+          "icon": "⚖️"
+        },
+        {
+          "id": "payment",
+          "name": "💳 帳單與發票",
+          "icon": "💳"
+        },
+        {
+          "id": "law",
+          "name": "📜 法規與檢驗",
+          "icon": "📜"
+        },
+        {
+          "id": "service",
+          "name": "🤝 客服與安檢",
+          "icon": "🤝"
+        },
+        {
+          "id": "trivia",
+          "name": "💡 特殊與常識",
+          "icon": "💡"
+        }
+      ];
+
 // 盛隆瓦斯 20 大分類消費者常見問題完整知識庫 (80 題完整收錄)
 // 此檔案由全端 AI 知識庫引擎自動產生，繁體中文 UTF-8 編碼
 // 支援關鍵字即時比對、分類篩選、離線備援載入
 
-const allFaqs = [
+var allFaqs = [
   {
     "cat": "price",
     "q": "現在一桶瓦斯多少錢？",
@@ -491,5 +599,5 @@ const allFaqs = [
 ];
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { allFaqs };
+  module.exports = { allFaqs, faqCategories };
 }
