@@ -6,6 +6,21 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/13 - 🤖 系統監控看板整合「AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度營運面板)
+* **變更類型**：介面升級 (ui-dashboard) / 智慧監控 (ai-observability) / 互動式容錯演練 (failover-sandbox)
+* **核心成果**：
+  * **頂部雙主軸分頁切換器 (`app/components/SystemStatusView.tsx`)**：
+    * 採用「選項 B」架構，於監控看板頂部建立 `🖥️ 主機與核心五大支柱監控` 與 `🤖 AI 客服輪調中心` 雙分頁，完整保留原有 SQL/IIS/來電/備份/同步五大支柱，同時提供專屬 AI 深度儀表板。
+  * **全方位 AI 輪調監控面板 (`app/components/AiRotatorDashboard.tsx`)**：
+    * **頂部指揮官橫幅与即時指針**：即時顯示目前下一筆優先指派發話帳號 (`Pointer #`)、調度模式 (`真・循環輪調` / `主備順位容錯` 一鍵切換)、全節點 Ping 測速與指針歸零按鈕。
+    * **6 大核心 KPI 儀表卡**：涵蓋可用候選節點數、Gemini 今日免費額度總池 (4,500 次/日)、今日與累計調用數、累計處理 Token 總量、平均回應延遲 (ms)、服務可用率與 429 攔截統計。
+    * **4 層動態故障轉移拓撲圖**：視覺化呈現 `LINE/官網進線 ➔ qaz (#1) ➔ 無名 (#2) ➔ 神燈 (#3) ➔ OpenAI 終極兜底` 之即時鏈路與冷卻繞道狀態。
+    * **4 組帳號深度水位卡与 429 壓力演練**：顯示遮罩 API Key、免費配額進度條、實測延遲，並內建「🧪 模擬 429 限流」按鈕，可現場演練 60 秒冷卻隔離與毫秒級自動跳號。
+    * **即時輪調問答實測沙盒与審計日誌**：支援一鍵發送範例問題或自訂提問，即時檢視接單帳號、耗時與回覆，並提供分類審計日誌。
+  * **後端 AI 輪調狀態與控制端點 (`app/api/ai-status/route.ts`)**：
+    * 支援 `GET` 雲端/本地雙軌狀態聚合與 `POST` 六大互動指令 (`probe`, `reset_pointer`, `toggle_account`, `switch_strategy`, `simulate_cooldown`, `test_chat`)，通過 `tsc --noEmit` 零錯誤驗證。
+
+---
 ## 📅 2026/10/13 - 🧪 全維度安全性與 API 穩定度 8 大角度深度壓力測試與邊界補強 (Multi-Angle Security & Stability QA)
 * **變更類型**：深度壓力測試 (qa-testing) / 邊界防禦 (boundary-protection) / 併發穩定性 (concurrency) / 原型污染防禦 (prototype-pollution)
 * **核心成果**：

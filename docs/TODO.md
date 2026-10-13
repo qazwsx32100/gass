@@ -84,7 +84,13 @@
 ## ✅ 四、 近期已驗收完成 (Recently Completed)
 > 近期完成之重要項目，標註完成時間、負責設備與詳細發布紀錄
 
-### 1. GitHub Actions 遠端觸發端點與環境部署自動建置
+### 1. 系統監控看板整合「🤖 AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度監控)
+- **完成日期**：2026/10/13
+- **負責設備/端點**：`Next.js 營運主控台 (/system-status)` ＆ `AI 輪調 API (/api/ai-status)` ＆ `AiRotatorDashboard.tsx`
+- **老闆指示備註**：依老闆拍板之「選項 B（頂部獨立分頁切換＋豐富深度資訊）」，於系統健康看板頂部建立「🖥️ 主機與核心五大支柱監控」與「🤖 AI 客服輪調中心」雙分頁；AI 輪調中心涵蓋 6 大核心 KPI 儀表卡、4 層動態故障轉移拓撲圖、4 組 AI 帳號（qaz / 無名 / 神燈 / OpenAI 兜底）即時配額水位與 429 冷卻倒數、一鍵全節點連線測速 (Ping)、模擬 429 限流演練、即時輪調問答實測沙盒與審計日誌。
+- **關聯詳細記錄**：[`AiRotatorDashboard.tsx`](file:///c:/shenglong-next/app/components/AiRotatorDashboard.tsx)、[`SystemStatusView.tsx`](file:///c:/shenglong-next/app/components/SystemStatusView.tsx)、[`route.ts`](file:///c:/shenglong-next/app/api/ai-status/route.ts)
+
+### 2. GitHub Actions 遠端觸發端點與環境部署自動建置
 - **完成日期**：2026/10/13
 - **負責設備/端點**：`Vercel 雲端 API (/api/trigger-github-workflow)` ＆ `GitHub Actions (.github/workflows/)` ＆ `本機環境 (.env)`
 - **老闆指示備註**：自動擷取本機 Git 憑證管理員內建之 `qazwsx32100` 授權 Token (含 `repo` 與 `workflow` 權限)，自動寫入 `c:\Gass\.env` 與 `c:\shenglong-next\.env`，並於倉庫根目錄 `.github/workflows/` 部署 `sync-members.yml` 與 `inspect-backup.yml` 工作流，10 項單元測試 100% 通過。
