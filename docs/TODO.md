@@ -4,14 +4,18 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-13 12:06
+> **最後更新時間**：2026-10-13 12:20
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-- *（目前進行中之項目已全數完成驗收並移入下方近期完成區）*
+### 1. 移除 ERP 股東簡易預設密碼後門與客戶歷史查詢防枚舉加固 (Anti-Tampering & Data Enumeration Hardening)
+- **狀態**：`[/]` 進行中
+- **優先級**：`P0` (核心帳務防竄改與客戶個資防枚舉)
+- **負責設備/端點**：`ERP 登入驗證 (api/auth-login.js, website/api/auth.js, src/db/storage.js)` ＆ `客戶歷史查詢 (api/_customer-history.js)` ＆ `排程備份驗證 (api/cron-daily-backup.js)`
+- **老闆指示備註**：徹底移除 `1234` 與 `6789` 簡易預設密碼後門與明文比對，強制全面走 PBKDF2-SHA256 / HMAC-SHA256 高強度雜湊驗證，杜絕有心人士以股東名義猜測簡易密碼竄改帳目；同時為 `/api/customer-history` 加上 IP 頻率限制與最小電話/姓名查詢長度門檻，防止單字元模糊查詢撈出全店客戶訂單。
 
 ---
 
@@ -29,21 +33,8 @@
   - [ ] 左側選單進入「Sitemaps」，提交 `sitemap.xml`
 - **備註**：所有權已 100% 驗證完成，目前已開啟「Google 搜尋生成式 AI (SGE)」納入權限。
 
-### 2. LINE 訂單自動匯入舊進銷存系統 - 階段 1：資料庫結構逆向分析
-- **狀態**：`[ ]` 待辦 (等待排定執行)
-- **優先級**：`P0` (核心營運自動化)
-- **負責設備/端點**：`店面主力 Windows 主機 (SQL Server 127.0.0.1:1000)`
-- **估計花費時間**：1 個工作天 (在店面主機執行一次唯讀結構分析腳本)
-- **老闆指示備註**：打通線上叫瓦斯到店面系統的最後一哩路，省去人工看 Telegram 抄單鍵單。採用主動拉單 (Pull-Agent)，免開對外 Port、免固定 IP。
-- **具體任務**：
-  - [ ] 執行 SQL 結構分析腳本，確認訂單主檔表名 (例如 `dbo.orders`) 與明細檔表名
-  - [ ] 確認商品代號對照表 (50kg / 20kg / 16kg / 4kg 等)
-  - [ ] 確認優惠折讓處理欄位 (單獨折扣欄位或負數品項)
-- **關聯文件**：
-  - 專案報告書：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
-
 ### 2. LINE 訂單自動匯入舊進銷存系統 - 階段 2：雲端佇列端點與本地 Daemon 開發
-- **狀態**：`[ ]` 待辦 (待階段 1 確認後啟動)
+- **狀態**：`[ ]` 待辦 (階段 1 資料庫結構逆向已 100% 完成，隨時可啟動開發)
 - **優先級**：`P0`
 - **負責設備/端點**：`Vercel 雲端佇列 API` ＆ `店面 Windows 背景 Service`
 - **估計花費時間**：2 個工作天
@@ -51,7 +42,7 @@
 - **具體任務**：
   - [ ] 雲端新增 `GET /api?action=pending-ingest-orders`
   - [ ] 雲端新增 `POST /api?action=mark-ingest-success`
-  - [ ] 開發本地常駐程式 `shenglong_order_ingest_daemon.py` (每 5 秒輪詢拉單寫入 SQL)
+  - [ ] 開發本地常駐程式 `shenglong_order_ingest_daemon.py` (每 5 秒輪詢拉單寫入 `dbo.gas_oders`)
   - [ ] 串接 Telegram 入單成功即時推播通知
 - **關聯文件**：
   - 專案報告書：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
@@ -84,7 +75,13 @@
 ## ✅ 四、 近期已驗收完成 (Recently Completed)
 > 近期完成之重要項目，標註完成時間、負責設備與詳細發布紀錄
 
-### 1. 系統監控看板整合「🤖 AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度監控)
+### 1. LINE 訂單自動匯入舊進銷存系統 - 階段 1：資料庫結構逆向分析
+- **完成日期**：2026/10/13
+- **負責設備/端點**：`店面主力 Windows 主機 (SQL Server ShengLong_Inspection / gas_station_ShengLong)`
+- **老闆指示備註**：完成全庫 50 張表與訂單主表 `dbo.gas_oders`（234,769 筆）、客戶表 `dbo.customers`（3,903 筆）之 34 欄位完整逆向對齊。確認舊系統為單一寬表設計（`oder_50kg`~`oder_4kg` 同一列寫入，無獨立明細表）、主鍵 `oder_id` 為 `IDENTITY(1,1)` 自動配號、內建 `discount` 折讓與 `tip` 樓層費欄位、`deliver = '稍後輸入'` 待派工狀態與 `music = 'T'` 店面響鈴觸發機制。
+- **關聯詳細記錄**：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md#43-模組-c舊系統資料庫欄位對齊與逆向工程`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
+
+### 2. 系統監控看板整合「🤖 AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度監控)
 - **完成日期**：2026/10/13
 - **負責設備/端點**：`Next.js 營運主控台 (/system-status)` ＆ `AI 輪調 API (/api/ai-status)` ＆ `AiRotatorDashboard.tsx`
 - **老闆指示備註**：依老闆拍板之「選項 B（頂部獨立分頁切換＋豐富深度資訊）」，於系統健康看板頂部建立「🖥️ 主機與核心五大支柱監控」與「🤖 AI 客服輪調中心」雙分頁；AI 輪調中心涵蓋 6 大核心 KPI 儀表卡、4 層動態故障轉移拓撲圖、4 組 AI 帳號（qaz / 無名 / 神燈 / OpenAI 兜底）即時配額水位與 429 冷卻倒數、一鍵全節點連線測速 (Ping)、模擬 429 限流演練、即時輪調問答實測沙盒與審計日誌。

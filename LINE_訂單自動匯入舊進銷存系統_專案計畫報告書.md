@@ -132,17 +132,34 @@ sequenceDiagram
   - 傳入參數：`{ orderId, legacyOrderId, importedAt }`。
   - 動作：更新 Google Sheets 的 O 欄（舊系統狀態）與 P 欄（舊系統單號）。
 
-### 4.3 模組 C：舊系統資料庫欄位對齊與逆向工程
-在店面電腦執行逆向腳本，確認以下 4 項數據結構：
-1. **訂單主檔表名**：確認為 `dbo.orders`、`dbo.sales_head` 或 `dbo.delivery_order`。
-2. **品項代碼對照表**：
-   - `50kg` 瓦斯 ➜ 舊系統商品代號（例：`G50`）
-   - `20kg` 瓦斯 ➜ 舊系統商品代號（例：`G20`）
-   - `16kg` 瓦斯 ➜ 舊系統商品代號（例：`G16`）
-   - `4kg` 瓦斯 ➜ 舊系統商品代號（例：`G04`）
-3. **優惠折抵處理方式**：
-   - 方式 A：舊系統有折讓欄位，直接填入 `discount`。
-   - 方式 B：舊系統無折讓欄位，新增一筆負數品項（例：`PROMO_DISCOUNT`，金額 `-$50`）。
+### 4.3 模組 C：舊系統資料庫欄位對齊與逆向工程（✅ 已於 2026/10/13 實機逆向驗證完成）
+經實機檢測 `ShengLong_Inspection` / `gas_station_ShengLong` 資料庫，舊系統採用**單一寬表設計（主檔與各規格數量合一，無獨立明細表）**，寫入單筆 `INSERT` 即可 100% 原子化完成建單與扣庫存：
+
+1. **訂單主檔表名**：`dbo.gas_oders`（共 34 欄，累積 234,769 筆歷史訂單）
+   - **主鍵單號 (`oder_id`)**：`int NOT NULL IDENTITY(1,1)`（由 SQL Server 自動遞增配號，寫入後以 `SCOPE_IDENTITY()` 直接取回舊系統單號，無須手動計算流水號）。
+   - **客戶關聯 (`customer_id`)**：`int`，對應 `dbo.customers.customer_id`（共 3,903 筆客戶，主鍵亦為 `IDENTITY(1,1)`）。
+2. **瓦斯規格數量欄位對照表（全為 `int`，未訂購規格填 `0`）**：
+   - `50kg` 瓦斯 ➜ `oder_50kg`
+   - `20kg` 瓦斯 ➜ `oder_20kg`
+   - `18kg` 瓦斯 ➜ `oder_18kg`
+   - `16kg` 瓦斯 ➜ `oder_16kg`
+   - `10kg` 瓦斯 ➜ `oder_10kg`
+   - `新4kg` 瓦斯 ➜ `oder_new_4kg`
+   - `4kg` 瓦斯 ➜ `oder_4kg`
+3. **金額、折抵與樓層費處理規則**：
+   - **應收總額 (`oder_price`, `int`)**：填入該筆訂單最終應收金額。
+   - **優惠折抵 (`discount`, `int`)**：舊系統內建 `discount` 欄位（預設 `0`），若有折抵直接填入正整數折讓金額。
+   - **樓層費/小費 (`tip`, `int`)**：舊系統內建 `tip` 欄位（預設 `0`），無電梯樓層加價直接填入此欄。
+4. **新單預設狀態與店面響鈴機制**：
+   - `oder_date` (`char(10)`)：`'YYYY/MM/DD'`（例：`'2026/10/13'`）
+   - `oder_time` (`char(8)`)：`'HH:mm:ss'`（例：`'12:20:00'`）
+   - `deliver` (`varchar(20)`)：預設填入 `'稍後輸入'`（舊系統待派工標準狀態）
+   - `payed` (`char(1)`)：`'N'`（未收款）
+   - `disable` (`char(1)`)：`'N'`（有效單；若客戶於 LINE 取消則更新為 `'Y'` 並填入 `disable_date`）
+   - `type` (`char(1)`)：`'C'`、`future_oder` (`char(1)`)：`'F'`
+   - `music` (`char(1)`)：`'T'`（自動觸發店面舊進銷存電腦新單提示音！）
+   - `keyin` (`char(10)`)：`'LINE自動'`
+   - `oder_remarks` (`varchar(50)`)：填入 `LINE#<單號後6碼> <客戶備註>`，兼具防重複入單（Idempotency）校驗。
 
 ---
 

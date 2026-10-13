@@ -6,6 +6,21 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/13 - 🗄️ LINE 訂單自動匯入舊進銷存系統（階段 1：SQL Server 資料庫結構逆向分析 100% 完成） [ver: 20261013_auto_release]
+
+### 一、 核心逆向分析成果 (`dbo.gas_oders` ＆ `dbo.customers` 34 欄位完整對齊)
+1. **單一寬表架構確認（零跨表失敗風險）**：
+   - 實機檢測舊系統資料庫（50 張表），確認瓦斯訂單主表為 `dbo.gas_oders`（共 34 欄，累積 234,769 筆訂單），**主檔與各規格數量合一，無獨立明細表**。
+   - 主鍵 `oder_id` 為 `int NOT NULL IDENTITY(1,1)`（自動遞增配號，目前最新單號 `359421`），寫入後透過 `SCOPE_IDENTITY()` 即可直接取回正式單號。
+2. **瓦斯規格欄位對照表（均為 `int`，未訂購填 `0`）**：
+   - `50kg` ➜ `oder_50kg`、`20kg` ➜ `oder_20kg`、`18kg` ➜ `oder_18kg`、`16kg` ➜ `oder_16kg`、`10kg` ➜ `oder_10kg`、`新4kg` ➜ `oder_new_4kg`、`4kg` ➜ `oder_4kg`。
+3. **金額、折抵、樓層費與店面響鈴機制**：
+   - `oder_price` (`int`)：最終應收總額；`discount` (`int`)：單次折讓金額；`tip` (`int`)：無電梯樓層費。
+   - `deliver = '稍後輸入'`（待派工預設值）、`payed = 'N'`、`disable = 'N'`、`type = 'C'`、`future_oder = 'F'`、`music = 'T'`（自動觸發店面電腦新單提示音）、`keyin = 'LINE自動'`。
+4. **文件與看板同步**：
+   - 完整結構已寫入 [`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md) 第 4.3 節，並同步更新 [`docs/TODO.md`](file:///c:/Gass/docs/TODO.md) 與老闆桌面看板。
+
+---
 ## 📅 2026/10/13 - 🤖 系統監控看板整合「AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度營運面板) [ver: 20261013_auto_release]
 
 ### 一、 核心建置與豐富視覺化成果

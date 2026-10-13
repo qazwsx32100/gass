@@ -6,6 +6,14 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/13 - 🗄️ LINE 訂單自動匯入舊進銷存系統（階段 1：SQL Server 資料庫結構逆向分析 100% 完成）
+* **變更類型**：資料庫逆向工程 (db-schema-reverse) / 專案里程碑 (milestone-stage1)
+* **核心成果**：
+  * **訂單主表 `dbo.gas_oders` 34 欄位完整對齊**：確認舊系統為單一寬表設計（無獨立明細表），主鍵 `oder_id` 為 `IDENTITY(1,1)` 自動配號；規格欄位對照為 `oder_50kg`, `oder_20kg`, `oder_18kg`, `oder_16kg`, `oder_10kg`, `oder_new_4kg`, `oder_4kg`。
+  * **折抵、樓層費與響鈴狀態確認**：內建 `discount` (折讓) 與 `tip` (樓層費) 欄位；新單預設 `deliver='稍後輸入'`, `payed='N'`, `disable='N'`, `music='T'` (觸發店面電腦新單響鈴), `keyin='LINE自動'`。
+  * **專案計畫書與任務看板更新**：更新 `LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md` 與 `docs/TODO.md`（同步老闆桌面看板）。
+
+---
 ## 📅 2026/10/13 - 🤖 系統監控看板整合「AI 客服輪調中心」獨立分頁旗艦版 (選項 B 深度營運面板)
 * **變更類型**：介面升級 (ui-dashboard) / 智慧監控 (ai-observability) / 互動式容錯演練 (failover-sandbox)
 * **核心成果**：
