@@ -67,6 +67,14 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { ok: false, error: '請提供 prompt 或 messages 參數' });
     }
 
+    // 攔截非法 Null Byte 控制字元注入，防止消耗上游配額
+    if (prompt && /\x00/.test(String(prompt))) {
+      return sendJson(res, 400, {
+        ok: false,
+        error: '提問內容包含非法控制字元 (Null Byte)，請重新輸入。'
+      });
+    }
+
     // 防範巨型 Payload 惡意消耗老闆的 Token 額度
     if (prompt && String(prompt).length > MAX_PROMPT_LENGTH) {
       return sendJson(res, 400, {

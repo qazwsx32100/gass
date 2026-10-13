@@ -88,8 +88,8 @@ function base64UrlDecode(str) {
 
 export function createToken(payload) {
   const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60); // 7 days
-  const body = base64UrlEncode(JSON.stringify({ ...payload, exp }));
+  const exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60); // 7 days default
+  const body = base64UrlEncode(JSON.stringify({ exp, ...payload }));
   const signature = crypto
     .createHmac('sha256', JWT_SECRET)
     .update(`${header}.${body}`)

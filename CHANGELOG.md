@@ -6,6 +6,19 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/13 - 🧪 全維度安全性與 API 穩定度 8 大角度深度壓力測試與邊界補強 (Multi-Angle Security & Stability QA)
+* **變更類型**：深度壓力測試 (qa-testing) / 邊界防禦 (boundary-protection) / 併發穩定性 (concurrency) / 原型污染防禦 (prototype-pollution)
+* **核心成果**：
+  * **新建 8 大維度 16 項綜合安全與穩定度測試套件 (`tests/multi-angle-security-and-stability.test.mjs`)**：
+    * **維度 1 (邊界與畸形負載)**：原型污染 (`__proto__`) 防禦、極端數值 (`Infinity`, `NaN`) 自動歸位、Null Byte (`\x00`) 控制字元入口攔截、25KB 巨型封包 `413` 阻擋。
+    * **維度 2 (高併發與防記憶體洩漏)**：50 筆 `Promise.all` 非同步突發請求下計數器 100% 精準攔截；2,000 個洪水 IP 嚴格控制在 `maxEntries` 上限內，杜絕 OOM 記憶體溢位。
+    * **維度 3 (偽造權限與時序穿透矩陣)**：實測 `{"alg":"none"}`、裸 Token、SQL 注入簽名、過期憑證全數攔截；`/api/line-ai-logs` HTML/JSON 未授權與錯誤金鑰 401 攔截；Telegram Webhook Secret Token 403 驗證。
+    * **維度 4 (韌性與零外洩)**：非法 HTTP 方法全數回傳 `405`；`/api/ai-status` 金鑰遮罩與機密環境變數零洩漏審查。
+    * **維度 5 ~ 8 (協定、簽章與代理 IP)**：CORS OPTIONS 預檢、全站 A+ 安全標頭一致性、LINE Webhook 缺簽章強制 401 攔截、多重反向代理真實 IP 提取。
+  * **系統穩定度補強**：`website/api/auth.js` 支援自訂 `exp` 效期覆寫；`api/ai-chat.js` 於入口端即刻攔截 `\x00` 控制字元，避免無謂消耗上游 AI Token。
+  * **總體測試驗收**：全專案 **190 項單元與多維度安全測試 100% 綠燈通過（0 失敗，耗時 3.5 秒）**。
+
+---
 ## 📅 2026/10/13 - 🛡️ 網頁與雲端 API 全方位安全防護機制重大升級 (Web & API Security Hardening)
 * **變更類型**：安全機制強化 (security-hardening) / 頻率限制 (rate-limiting) / XSS 防護 (xss-prevention) / 隱私保護 (privacy-protection) / 標頭防禦 (security-headers)
 * **核心成果**：

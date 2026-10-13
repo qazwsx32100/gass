@@ -4,13 +4,38 @@
         xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
   <url>
     <loc>https://shenglong-gas.vercel.app/</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-13</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://shenglong-gas.vercel.app/logo.jpg</image:loc>
       <image:title>三重瓦斯推薦首選 - 盛隆瓦斯行 (新北三重合法桶裝瓦斯配送)</image:title>
       <image:caption>盛隆瓦斯深耕新北三重全區直達免運，提供 4kg、10kg、16kg、20kg、50kg 合格送檢桶裝瓦斯與免費安全檢驗</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/images/gas-consumption-comparison.jpg</image:loc>
+      <image:title>盛隆瓦斯專業圖鑑｜桶裝瓦斯 vs 天然瓦斯 用量與熱值換算指南</image:title>
+      <image:caption>1公斤桶裝瓦斯等於1.25~1.33度天然氣，既有設備0元安裝以桶換桶，新裝基本1000~5000元，零固定基本費</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/images/cylinder-sizes-comparison.jpg</image:loc>
+      <image:title>盛隆瓦斯桶規格尺寸與容量全覽 (4kg/10kg/16kg/20kg/50kg)</image:title>
+      <image:caption>家用與餐飲營業用桶裝瓦斯鋼瓶規格、尺寸高度與適用情境比較表</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/images/gas-leak-sop.jpg</image:loc>
+      <image:title>瓦斯漏氣緊急處置安全四步驟 SOP - 盛隆瓦斯安全宣導</image:title>
+      <image:caption>聞到瓦斯味切勿開關電器，立即關閉角閥、慢推開窗通風並撥打 119 或盛隆專線 02-2972-5559 免費測漏</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/images/stove-flame-damper.jpg</image:loc>
+      <image:title>瓦斯爐紅火黃火燻黑鍋底排除指南 - 風門空氣調節教學</image:title>
+      <image:caption>調整瓦斯爐底部風門進氣量，恢復純藍火焰省瓦斯、不燻黑鍋底</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://shenglong-gas.vercel.app/images/heater-troubleshoot.jpg</image:loc>
+      <image:title>瓦斯熱水器點不著、忽冷忽熱自我排查指南</image:title>
+      <image:caption>熱水器電池更換、水壓檢查與溫度設定技巧</image:caption>
     </image:image>
   </url>
 </urlset>

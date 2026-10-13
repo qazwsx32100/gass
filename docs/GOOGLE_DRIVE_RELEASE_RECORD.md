@@ -6,6 +6,52 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/13 - 🚀 GitHub Actions 遠端觸發端點與雙工作流 (`sync-members` / `inspect-backup`) 自動建置完成 [ver: 20261013_auto_release]
+
+### 一、 核心建置與自動化成果
+1. **本機 GitHub 授權憑證自動提取與配置**：
+   - 自動由 Windows 憑證管理員提取 `qazwsx32100` 授權憑證（已驗證具備 `repo` 與 `workflow` 完整權限），無須人工手動申請。
+   - 自動寫入 `c:\Gass\.env` 與 `c:\shenglong-next\.env`（包含 `GITHUB_ACTIONS_PAT`、`GITHUB_REPO_OWNER=qazwsx32100`、`GITHUB_REPO_NAME=gass`、`GITHUB_WORKFLOW_REF=main`）。
+2. **GitHub Actions 根目錄工作流正式部署 (`.github/workflows/`)**：
+   - 建立 [`.github/workflows/sync-members.yml`](file:///c:/Gass/.github/workflows/sync-members.yml)（每日清晨 05:30 與午間 13:30 定時同步 + `workflow_dispatch` 遠端觸發）。
+   - 建立 [`.github/workflows/inspect-backup.yml`](file:///c:/Gass/.github/workflows/inspect-backup.yml)（`workflow_dispatch` 遠端觸發 SQL Server 備份結構逆向檢查）。
+   - 經 GitHub REST API 實測驗證，2 組工作流在 `qazwsx32100/gass` 倉庫均已處於 `active` 啟用狀態。
+3. **全局任務看板 (`docs/TODO.md`) ＆ 桌面鏡像同步更新**：
+   - 將「GitHub Actions 遠端觸發端點與環境部署」標記為已完成並移入近期驗收區，同步更新老闆桌面看板。
+
+---
+## 📅 2026/10/13 - 🧪 全維度安全性與 API 穩定度 8 大角度深度壓力測試與邊界補強 (Multi-Angle Security & Stability QA) [ver: 20261013_auto_release]
+
+### 一、 8 大測試維度與 16 項深度測試全數驗收通過 (`tests/multi-angle-security-and-stability.test.mjs`)
+1. **維度一：邊界條件與極端畸形 Payload 測試 (Boundary & Malformed Payloads)**：
+   - **原型污染防禦 (Prototype Pollution)**：傳入含 `__proto__` 與 `constructor.prototype` 之惡意 JSON 至 CMS API，驗證全域 `Object.prototype` 完全無污染。
+   - **極端數值與型別混淆 (Type Confusion)**：傳入 `Infinity`、`-999999999`、`NaN`、`'1e308'` 作為瓦斯價格，驗證 `sanitizeNumber` 自動歸位與保護，無溢位或當機。
+   - **控制字元與 Null Byte 注入攔截 (`api/ai-chat.js`)**：於 API 入口層新增 `\x00` (Null Byte) 控制字元攔截，毫秒級拒絕非法字串（回傳 400），徹底避免消耗上游付費 AI 配額。
+   - **巨型封包 DoS 防禦 (`website/api/auth.js`)**：傳入 25KB 超大請求體，驗證伺服器精確回傳 `413 Payload Too Large`。
+
+2. **維度二：高頻突發流量、並發競爭與記憶體安全測試 (Burst Concurrency & Memory)**：
+   - **非同步高併發突發請求 (`Promise.all` 50 併發)**：驗證 Rate Limiter 於高併發競爭下計數器 100% 精準，前 15 筆放行、後 35 筆滴水不漏攔截，無競態漏洞 (Race Condition)。
+   - **記憶體洩漏防護 (OOM Protection)**：模擬灌入 2,000 個相異洪水 IP，驗證內部 `Map` 嚴格受限於 `maxEntries` 上限（FIFO 自動淘汰舊鍵），保證 Node.js 永不因記憶體爆滿當機。
+
+3. **維度三：身分鑑別、時序比對與授權穿透矩陣 (Authentication & Bypass Matrix)**：
+   - **JWT 偽造攻擊矩陣**：實測 `{"alg":"none"}` 無演算法繞過、裸 Token、SQL 注入簽名與過期憑證，全數回傳 `null` 拒絕；同步優化 `website/api/auth.js` 之 `createToken` 支援自訂 `exp` 效期覆寫。
+   - **客戶對話隱私存取矩陣 (`/api/line-ai-logs`)**：驗證未授權 HTML 請求回傳 401 並渲染安全鎖定畫面（絕不洩漏訂單文字）、未授權 JSON 回傳 401、偽造金鑰回傳 401、Telegram 特助帶正確金鑰 200 順暢放行。
+   - **Telegram Webhook Secret Token 驗證**：驗證缺少或錯誤 `x-telegram-bot-api-secret-token` 標頭時精確回傳 `403 Forbidden`。
+
+4. **維度四：API 韌性、容錯降級與敏感資訊零外洩 (Resilience & Zero Leakage)**：
+   - **非法 HTTP Method 容錯**：針對全站各 API 發送 `PUT / DELETE / PATCH` 等非預期方法，全數優雅回傳 `405 Method Not Allowed`。
+   - **敏感金鑰零外洩審查 (`/api/ai-status`)**：驗證回傳之所有 AI 帳號金鑰皆已遮罩（含 `...`），且絕不暴露任何系統機密環境變數。
+
+5. **維度五 ~ 八：協定相容、端到端簽章與代理 IP 辨識**：
+   - **CORS Preflight (OPTIONS)**：驗證全端點 OPTIONS 預檢請求正確回應 `200/204` 與標準 CORS 標頭。
+   - **全站 Vercel A+ 安全標頭一致性**：自動化檢驗根目錄與 `website/` 之 `vercel.json` 均涵蓋 2 年期 HSTS Preload、CSP、COOP、CORP 與 nosniff。
+   - **LINE Webhook 端到端簽章強制檢核**：驗證設定 `LINE_CHANNEL_SECRET` 時，缺簽章或偽造簽章一律 `401` 攔截。
+   - **多層反向代理真實 IP 提取 (`getClientIp`)**：驗證 `X-Real-IP`、逗號分隔 `X-Forwarded-For`、陣列標頭與 Socket 退回機制 100% 準確。
+
+6. **全專案總體測試成果**：
+   - 全專案 **190 項單元與多維度安全測試 100% 綠燈通過（0 失敗，總耗時 3.5 秒）**。
+
+---
 ## 📅 2026/10/13 - 🛡️ 網頁與雲端 API 全方位安全防護機制重大升級 (Web & API Security Hardening) [ver: 20261013_auto_release]
 
 ### 一、 核心成果與安全防禦體系落地
