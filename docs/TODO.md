@@ -4,7 +4,7 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-11 12:40
+> **最後更新時間**：2026-10-13 11:38
 
 ---
 
@@ -93,7 +93,13 @@
 ## ✅ 四、 近期已驗收完成 (Recently Completed)
 > 近期完成之重要項目，標註完成時間、負責設備與詳細發布紀錄
 
-### 1. LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面實作
+### 1. 網頁與雲端 API 全方位安全防禦機制重大升級 (Web & API Security Hardening)
+- **完成日期**：2026/10/13
+- **負責設備/端點**：`官方網站 (website/)` ＆ `雲端 API (api/, website/api/)` ＆ `Vercel 安全設定 (vercel.json)` ＆ `單元測試 (tests/web-and-api-security.test.mjs)`
+- **老闆指示備註**：落實全端防暴力破解 (Rate Limiting)、DOM XSS 輸入過濾、防 AI 額度盜刷、LINE 客戶對話隱私授權保護、時序安全比對與 HSTS/CSP/COOP/CORP 嚴格安全標頭，9 項專屬安全測試與全庫 174 項單元測試 100% 綠燈通過。
+- **關聯詳細記錄**：[`docs/GOOGLE_DRIVE_RELEASE_RECORD.md#20261013---網頁與雲端-api-全方位安全防禦機制升級`](file:///c:/Gass/docs/GOOGLE_DRIVE_RELEASE_RECORD.md)
+
+### 2. LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面實作
 - **完成日期**：2026/10/12
 - **負責設備/端點**：`Vercel (/api/_ai-rotator.js, /api/line-webhook.js, /api/_knowledge-base.js)` ＆ `單元測試 (tests/ai-rotator.test.mjs)`
 - **老闆指示備註**：老闆親自裁定採用「方案 B 智慧雙模分流」+「真輪調」。簡單問題（查價、叫單、營業時間）以 Flash 輕量秒回（0.5s）；複雜疑難（爐具故障、熱水器忽冷忽熱、漏氣排險、異常耗量）自動升級條理化專家推理模式（Temperature 0.3 診斷指導）。3 組 Google 帳號（qaz、無名、神燈）以原子指標循環輪替（Round-Robin），徹底均分請求壓力，遇 429 容錯並由 OpenAI 兜底。

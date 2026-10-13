@@ -6,6 +6,27 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/13 - 🛡️ 網頁與雲端 API 全方位安全防護機制重大升級 (Web & API Security Hardening)
+* **變更類型**：安全機制強化 (security-hardening) / 頻率限制 (rate-limiting) / XSS 防護 (xss-prevention) / 隱私保護 (privacy-protection) / 標頭防禦 (security-headers)
+* **核心成果**：
+  * **官網後台防暴力破解與防刷限流 (`website/api/auth.js` & `website/api/cms.js`)**：
+    * 引入雙重速率限制（單一帳號 5 分鐘最多 6 次失敗、單一 IP 最多 30 次），超額回傳 429 Retry-After: 300。
+    * Token 簽名驗證全面改採 `crypto.timingSafeEqual`，防範時序攻擊 (Timing Attacks)。
+    * 訪客點擊追蹤 (`track`) 實施 IP 頻率限制（每分鐘最多 40 次）與事件名稱白名單過濾，阻斷假點擊數據。
+  * **前端 DOM 與儲存型 XSS 雙層過濾 (`website/index.html`, `website/admin.html`, `website/api/cms.js`)**：
+    * 公告橫幅、自訂問答、價格備註字串全面進行 HTML 特殊字元跳脫 (`escapeHtml`) 與長度截斷，防範惡意腳本注入。
+  * **雲端 AI 配額防刷爆保護 (`api/ai-chat.js` & `api/ai-status.js`)**：
+    * 限制公開 AI 提問頻率（每分鐘最多 12 次），提問限制 1,500 字元、總長度 3,000 字元，保護老闆 Google Gemini 3.8 Flash 與 OpenAI 付費額度。
+    * `api/ai-status.js` 增加 IP 頻率限制（每分鐘最多 30 次），保護 Supabase 資料庫連線池。
+  * **客戶隱私隔離與 Webhook 驗證加固 (`api/line-ai-logs.js`, `api/line-webhook.js`, `api/telegram-webhook.js`)**：
+    * `api/line-ai-logs.js` 新增管理員身分與金鑰驗證，阻斷外部訪客窺探客戶住址與訂單，未授權顯示安全鎖定卡片；整合 Telegram 特助一鍵安全跳轉。
+    * `api/line-webhook.js` 簽章校驗漏洞修補，強制要求 signature 標頭並改用 `crypto.timingSafeEqual`。
+    * `api/telegram-webhook.js` 支援 `X-Telegram-Bot-Api-Secret-Token` 標頭驗證。
+  * **全站 A+ 級 HTTP 安全標頭全面佈建 (`vercel.json` & `website/vercel.json`)**：
+    * 啟用 `Strict-Transport-Security` (HSTS preload)、`Permissions-Policy`、`Cross-Origin-Opener-Policy`、`Cross-Origin-Resource-Policy`、`X-XSS-Protection`、`DENY`/`SAMEORIGIN` 與 CSP。
+  * **單元測試與驗收**：專屬整合安全測試套件 `tests/web-and-api-security.test.mjs` 9 項全數通過，全庫 174 項單元測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/12 - 🔄 LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面上線
 * **變更類型**：架構升級 (architecture-upgrade) / 負載均衡 (load-balancing) / 雙模路由 (dual-model-router)
 * **核心成果**：

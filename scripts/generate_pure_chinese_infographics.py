@@ -267,89 +267,131 @@ def process_stove_flame_damper():
     overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # 1. Top Title [100, 5, 1280, 85]
-    draw.rectangle([100, 5, 1280, 85], fill=(255, 255, 255, 255))
-    draw_centered_text(draw, [100, 18, 1280, 75], "瓦斯爐火焰判讀與爐底風門調節教學", get_font(34), (30, 41, 59, 255))
+    PEACH_BG = (252, 223, 209, 255)
+    LIGHT_BLUE_BG = (235, 243, 245, 255)
+    PANEL_BG = (225, 240, 250, 255)
 
-    # 2. Left Header [120, 70, 660, 155] (Peach background)
-    draw.rectangle([120, 70, 660, 155], fill=(255, 237, 226, 255))
-    draw_left_text(draw, 140, 82, "燃燒不完全（紅黃火）", get_font(22), (220, 38, 38, 255))
-    draw_left_text(draw, 140, 118, "熱效率差・耗瓦斯・鍋底嚴重積碳燻黑", get_font(15), (100, 116, 139, 255))
+    # 1. Top Title (pure white area [0, 0, 1376, 85])
+    draw.rectangle([50, 0, 1326, 85], fill=(255, 255, 255, 255))
+    draw_centered_text(draw, [50, 12, 1326, 75], "瓦斯爐火焰判讀與爐底風門調節教學", get_font(36), (30, 41, 59, 255))
 
-    # Left Soot Text [50, 155, 345, 280]
-    draw.rectangle([50, 155, 345, 280], fill=(255, 237, 226, 255))
-    draw_left_text(draw, 55, 160, "鍋底積碳焦黑", get_font(18), (15, 23, 42, 255))
-    draw_left_text(draw, 55, 188, "阻礙熱傳導效率", get_font(14), (71, 85, 105, 255))
-    draw_left_text(draw, 55, 212, "浪費燃氣瓦斯費", get_font(14), (220, 38, 38, 255))
-    draw_left_text(draw, 55, 236, "鍋底厚垢難刷洗", get_font(14), (100, 116, 139, 255))
+    # 2. Left Header [115, 80, 660, 160] (peach background)
+    draw.rectangle([115, 80, 660, 160], fill=PEACH_BG)
+    draw_left_text(draw, 130, 86, "燃燒不完全（紅黃火）", get_font(24), (220, 38, 38, 255))
+    draw_left_text(draw, 130, 124, "熱效率差・耗瓦斯・鍋底積碳燻黑", get_font(16), (100, 116, 139, 255))
 
-    # Left Flame Text [50, 315, 345, 435]
-    draw.rectangle([50, 315, 345, 435], fill=(255, 237, 226, 255))
-    draw_left_text(draw, 55, 320, "紅火 / 黃火", get_font(20), (220, 38, 38, 255))
-    draw_left_text(draw, 55, 355, "空氣不足或快沒氣", get_font(14), (71, 85, 105, 255))
-    draw_left_text(draw, 55, 382, "燃燒不全冒黑煙", get_font(14), (100, 116, 139, 255))
+    # Wipe all old English text on left: strictly x in [25, 330], y in [160, 440]
+    draw.rectangle([25, 160, 330, 440], fill=PEACH_BG)
 
-    # 3. Right Header [730, 70, 1310, 155] (Light Blue background)
-    draw.rectangle([730, 70, 1310, 155], fill=(235, 245, 255, 255))
-    draw_left_text(draw, 750, 82, "完全燃燒（清澈藍火）", get_font(22), (37, 99, 235, 255))
-    draw_left_text(draw, 750, 118, "火力最強・導熱佳・鍋底乾淨無碳垢", get_font(15), (100, 116, 139, 255))
+    # Left Body (Pure solid peach area, completely clear of pot and stove):
+    # Upper: Soot
+    draw_left_text(draw, 35, 175, "鍋底積碳焦黑", get_font(22), (15, 23, 42, 255))
+    draw_left_text(draw, 35, 212, "• 阻礙熱傳導 ｜ 浪費瓦斯", get_font(16), (220, 38, 38, 255))
+    draw_left_text(draw, 35, 242, "• 鍋底厚黑垢極難刷洗", get_font(16), (71, 85, 105, 255))
+    draw_left_text(draw, 35, 272, "• 空氣不足燃燒不完全", get_font(15), (100, 116, 139, 255))
 
-    # Right Clean Pot Text [1020, 155, 1350, 280]
-    draw.rectangle([1020, 155, 1350, 280], fill=(235, 245, 255, 255))
-    draw_left_text(draw, 1030, 160, "鍋底乾淨不燒黑", get_font(18), (15, 23, 42, 255))
-    draw_left_text(draw, 1030, 188, "受熱均勻熱效最高", get_font(14), (71, 85, 105, 255))
-    draw_left_text(draw, 1030, 212, "大幅節省瓦斯費用", get_font(14), (5, 150, 105, 255))
-    draw_left_text(draw, 1030, 236, "鍋具光亮好沖洗", get_font(14), (100, 116, 139, 255))
+    # Indicator arrow towards pot bottom
+    draw.line([250, 253, 315, 253], fill=(185, 28, 28, 255), width=2)
+    draw.polygon([(315, 249), (323, 253), (315, 257)], fill=(185, 28, 28, 255))
 
-    # Right Blue Flame Text [1020, 315, 1350, 435]
-    draw.rectangle([1020, 315, 1350, 435], fill=(235, 245, 255, 255))
-    draw_left_text(draw, 1030, 320, "清澈健康藍火", get_font(20), (37, 99, 235, 255))
-    draw_left_text(draw, 1030, 355, "火力充沛無黑煙", get_font(14), (71, 85, 105, 255))
-    draw_left_text(draw, 1030, 382, "熱量完全釋放極高溫", get_font(14), (100, 116, 139, 255))
+    # Lower: Red Flame
+    draw_left_text(draw, 35, 320, "紅火 / 黃火", get_font(24), (220, 38, 38, 255))
+    draw_left_text(draw, 35, 356, "• 空氣不足 或 瓦斯快用盡", get_font(16), (15, 23, 42, 255))
+    draw_left_text(draw, 35, 384, "• 燃燒不全游離碳冒黑煙", get_font(16), (71, 85, 105, 255))
+    draw_left_text(draw, 35, 412, "• 需調大爐底進氣風門片", get_font(16), (220, 38, 38, 255))
+
+    # Indicator arrow towards flame
+    draw.line([235, 395, 305, 395], fill=(220, 38, 38, 255), width=2)
+    draw.polygon([(305, 391), (313, 395), (305, 399)], fill=(220, 38, 38, 255))
+
+    # 3. Right Header [780, 80, 1320, 160] (light blue background)
+    draw.rectangle([780, 80, 1320, 160], fill=LIGHT_BLUE_BG)
+    draw_left_text(draw, 795, 86, "完全燃燒（清澈藍火）", get_font(24), (37, 99, 235, 255))
+    draw_left_text(draw, 795, 124, "火力最強・導熱佳・鍋底乾淨無碳垢", get_font(16), (100, 116, 139, 255))
+
+    # Wipe all old English text on right: x in [1050, 1348], y in [160, 440]
+    draw.rectangle([1050, 160, 1348, 440], fill=LIGHT_BLUE_BG)
+    draw.rectangle([1010, 245, 1060, 265], fill=LIGHT_BLUE_BG)
+    draw.rectangle([1010, 370, 1060, 395], fill=LIGHT_BLUE_BG)
+
+    # Right Body (Pure solid light blue area, completely clear of pot and stove):
+    # Upper: Clean Pot
+    draw_left_text(draw, 1065, 175, "鍋底乾淨不燒黑", get_font(22), (15, 23, 42, 255))
+    draw_left_text(draw, 1065, 212, "• 受熱均勻 ｜ 熱效率最高", get_font(16), (5, 150, 105, 255))
+    draw_left_text(draw, 1065, 242, "• 大幅節省燃氣瓦斯費用", get_font(16), (71, 85, 105, 255))
+    draw_left_text(draw, 1065, 272, "• 鍋具光亮潔淨好沖洗", get_font(15), (100, 116, 139, 255))
+
+    # Indicator arrow from pot bottom towards text
+    draw.line([1015, 253, 1055, 253], fill=(5, 150, 105, 255), width=2)
+    draw.polygon([(1015, 249), (1007, 253), (1015, 257)], fill=(5, 150, 105, 255))
+
+    # Lower: Blue Flame
+    draw_left_text(draw, 1065, 320, "清澈健康藍火", get_font(24), (37, 99, 235, 255))
+    draw_left_text(draw, 1065, 356, "• 火力充沛 ｜ 無黑煙無異味", get_font(16), (15, 23, 42, 255))
+    draw_left_text(draw, 1065, 384, "• 熱量完全釋放達極高溫", get_font(16), (71, 85, 105, 255))
+    draw_left_text(draw, 1065, 412, "• 最佳空氣配比完全燃燒", get_font(16), (5, 150, 105, 255))
+
+    # Indicator arrow towards blue flame
+    draw.line([1020, 395, 1055, 395], fill=(37, 99, 235, 255), width=2)
+    draw.polygon([(1020, 391), (1012, 395), (1020, 399)], fill=(37, 99, 235, 255))
 
     # 4. Bottom Section
-    # Left Dark Blue Banner [25, 445, 440, 570]
-    draw.rounded_rectangle([25, 445, 440, 570], radius=12, fill=(30, 58, 138, 255))
-    draw_centered_text(draw, [25, 452, 440, 488], "爐底風門調節教學", get_font(22), (255, 255, 255, 255))
-    draw_centered_text(draw, [25, 492, 440, 518], "撥動調節片，紅火變藍火！", get_font(15), (224, 242, 254, 255))
-    draw_centered_text(draw, [25, 520, 440, 545], "盛隆專線 02-2972-5559 ｜ LINE: @350MZOGG", get_font(13), (253, 224, 71, 255))
+    # Left Blue Box [25, 450, 440, 570] (solid dark blue card)
+    draw.rounded_rectangle([25, 450, 440, 570], radius=12, fill=(30, 58, 138, 255))
+    draw_centered_text(draw, [25, 456, 440, 492], "爐底風門調節教學", get_font(24), (255, 255, 255, 255))
+    draw_centered_text(draw, [25, 495, 440, 522], "撥動調節片，紅火立刻變藍火！", get_font(16), (224, 242, 254, 255))
+    draw_centered_text(draw, [25, 526, 440, 548], "若調整後仍為紅火，盛隆派員專業檢修", get_font(14), (253, 224, 71, 255))
+    draw_centered_text(draw, [25, 548, 440, 566], "服務專線 02-2972-5559 ｜ LINE: @350MZOGG", get_font(13), (253, 224, 71, 255))
 
-    # Burner head left [470, 480, 640, 520]
-    draw.rectangle([470, 480, 640, 520], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [470, 480, 640, 520], "爐心燃燒頭", get_font(14), (15, 23, 42, 255))
+    # Component Labels - Clean exact original English positions with clean pill styling:
+    # 1. Left burner: [470, 480, 640, 516]
+    draw.rounded_rectangle([470, 480, 640, 516], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [470, 480, 640, 516], "爐心燃燒頭", get_font(15), (15, 23, 42, 255))
 
-    # Burner head right [850, 470, 1010, 510]
-    draw.rectangle([850, 470, 1010, 510], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [850, 470, 1010, 510], "爐頭分火蓋", get_font(14), (15, 23, 42, 255))
+    # 2. Right burner: [850, 470, 1020, 506]
+    draw.rounded_rectangle([850, 470, 1020, 506], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [850, 470, 1020, 506], "爐頭分火蓋", get_font(15), (15, 23, 42, 255))
 
-    # Gas flow (top pipe) [255, 595, 375, 635]
-    draw.rectangle([255, 595, 375, 635], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [255, 595, 375, 635], "瓦斯氣流", get_font(14), (15, 23, 42, 255))
+    # 3. Gas flow (top pipe): [250, 595, 380, 632]
+    draw.rounded_rectangle([250, 595, 380, 632], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [250, 595, 380, 632], "瓦斯氣流", get_font(15), (15, 23, 42, 255))
 
-    # Gas pipe [160, 705, 280, 745]
-    draw.rectangle([160, 705, 280, 745], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [160, 705, 280, 745], "瓦斯進氣管", get_font(14), (15, 23, 42, 255))
+    # 4. Bottom row:
+    # Gas pipe: [150, 708, 290, 746]
+    draw.rounded_rectangle([150, 708, 290, 746], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [150, 708, 290, 746], "瓦斯進氣管", get_font(15), (15, 23, 42, 255))
 
-    # Gas flow (bottom) [350, 705, 470, 745]
-    draw.rectangle([350, 705, 470, 745], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [350, 705, 470, 745], "瓦斯流向", get_font(14), (15, 23, 42, 255))
+    # Gas flow: [340, 708, 480, 746]
+    draw.rounded_rectangle([340, 708, 480, 746], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [340, 708, 480, 746], "瓦斯流向", get_font(15), (15, 23, 42, 255))
 
-    # Venturi tube [520, 715, 670, 750]
-    draw.rectangle([520, 715, 670, 750], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [520, 715, 670, 750], "文氏混合管", get_font(14), (15, 23, 42, 255))
+    # Venturi tube: [510, 712, 680, 750]
+    draw.rounded_rectangle([510, 712, 680, 750], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [510, 712, 680, 750], "文氏混合管", get_font(15), (15, 23, 42, 255))
 
-    # Air Shutter Damper Plate [720, 705, 920, 755]
-    draw.rectangle([720, 705, 920, 755], fill=(225, 240, 250, 255))
-    draw_centered_text(draw, [720, 705, 920, 755], "空氣調節風門片", get_font(14), (15, 23, 42, 255))
+    # Damper plate: [710, 705, 930, 750]
+    draw.rounded_rectangle([710, 705, 930, 750], radius=6, fill=PANEL_BG, outline=(191, 219, 254, 255))
+    draw_centered_text(draw, [710, 705, 930, 750], "空氣調節風門片", get_font(15), (15, 23, 42, 255))
 
-    # Unified bottom right mechanism card [940, 545, 1360, 740]
-    draw.rounded_rectangle([940, 545, 1360, 740], radius=12, fill=(235, 245, 255, 255), outline=(191, 219, 254, 255), width=1)
-    draw_left_text(draw, 960, 558, "進氣調節孔（已開啟）", get_font(18), (15, 23, 42, 255))
-    draw_left_text(draw, 960, 592, "瓦斯與空氣均勻預混 ｜ 最佳空燃比完全燃燒", get_font(14), (71, 85, 105, 255))
-    draw.line([960, 626, 1340, 626], fill=(219, 234, 254, 255), width=1)
-    draw_left_text(draw, 960, 640, "撥動風門調節片：增加進氣量即可消除紅火", get_font(15), (37, 99, 235, 255))
-    draw_left_text(draw, 960, 672, "若調整後仍為紅火，請致電盛隆 02-2972-5559 派員檢修", get_font(14), (220, 38, 38, 255))
-    draw_left_text(draw, 960, 702, "門市諮詢 LINE: @350MZOGG 專人線上協助判讀", get_font(13), (100, 116, 139, 255))
+    # Bottom Right Mechanism Area - ZERO OBSTRUCTION:
+    # 1. Clean old English text beside openings [1080, 560, 1348, 665]
+    draw.rectangle([1080, 560, 1348, 665], fill=PANEL_BG)
+
+    # 2. Clean old English text along bottom [950, 675, 1348, 750]
+    draw.rectangle([950, 675, 1348, 750], fill=PANEL_BG)
+
+    # Chinese explanations in solid light blue area:
+    draw_left_text(draw, 1100, 570, "進氣調節孔（已開啟）", get_font(18), (15, 23, 42, 255))
+    draw_left_text(draw, 1100, 602, "瓦斯與空氣均勻預混", get_font(15), (71, 85, 105, 255))
+    draw_left_text(draw, 1100, 630, "達到最佳空燃比完全燃燒", get_font(15), (37, 99, 235, 255))
+
+    # Pointer arrow pointing left to damper holes
+    draw.line([1060, 582, 1090, 582], fill=(37, 99, 235, 255), width=2)
+    draw.polygon([(1060, 578), (1052, 582), (1060, 586)], fill=(37, 99, 235, 255))
+
+    # Bottom instruction below arrow
+    draw_left_text(draw, 960, 685, "撥動風門調節片：增加進氣量即可消除紅火", get_font(18), (37, 99, 235, 255))
+    draw_left_text(draw, 960, 715, "（若火苗跳動或離焰，微調關小風門即可恢復穩定）", get_font(14), (100, 116, 139, 255))
 
     final_img = Image.alpha_composite(img, overlay).convert('RGB')
     final_img.save(out_path, quality=95)

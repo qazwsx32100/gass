@@ -1,8 +1,25 @@
 import crypto from 'crypto';
+import { createBoundedRateLimiter } from './_rateLimit.js';
 
 const JWT_SECRET = process.env.ADMIN_SESSION_SECRET || 'shenglong-gas-admin-session-secret-2026';
 const PASSWORD_SALT = process.env.ADMIN_PASSWORD_SALT || 'shenglong_gas_secure_salt_2026';
 const ADMIN_DEFAULT_PW = process.env.ADMIN_DEFAULT_PASSWORD || '';
+const MAX_LOGIN_BODY_BYTES = 16 * 1024; // 16 KB
+
+// 限制 5 分鐘內單一 IP 最多 30 次，單一帳號最多 6 次登入失敗
+export const loginLimiter = createBoundedRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  maxEntries: 3000
+});
+
+export function getClientIp(req) {
+  const realIp = req.headers['x-real-ip'];
+  if (realIp) return String(realIp).trim();
+  const forwarded = req.headers['x-forwarded-for'];
+  return Array.isArray(forwarded)
+    ? forwarded[0].trim()
+    : String(forwarded || req.socket?.remoteAddress || '').split(',')[0].trim();
+}
 
 // 單向不可逆鹽值加密函數 (HMAC-SHA256)
 export function hashPassword(pw) {
@@ -97,7 +114,11 @@ export function verifyToken(token) {
     .replace(/\+/g, '-')
     .replace(/\//g, '_');
 
-  if (signature !== expectedSig) return null;
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expectedSig);
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return null;
+  }
 
   try {
     const payload = JSON.parse(base64UrlDecode(body));
@@ -110,15 +131,26 @@ export function verifyToken(token) {
   }
 }
 
-export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+function setCorsAndSecurityHeaders(req, res) {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+}
+
+export default async function handler(req, res) {
+  setCorsAndSecurityHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -142,9 +174,14 @@ export default async function handler(req, res) {
     });
   }
 
-  // POST: Login
+  // POST: Login with Brute-Force Rate Limiting & Input Validation
   if (req.method === 'POST') {
     try {
+      const rawString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+      if (Buffer.byteLength(rawString, 'utf8') > MAX_LOGIN_BODY_BYTES) {
+        return res.status(413).json({ success: false, error: '登入請求資料體積過大。' });
+      }
+
       const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
       const accountInput = String(body.account || body.email || '').trim().toLowerCase();
       const passwordInput = String(body.password || '').trim();
@@ -156,7 +193,28 @@ export default async function handler(req, res) {
         });
       }
 
-      // 透過單向加密後的不可逆雜湊密文比對，確保明文密碼不在伺服器或記憶體中停留
+      if (accountInput.length > 100 || passwordInput.length > 128) {
+        return res.status(400).json({
+          success: false,
+          error: '輸入帳號或密碼長度超出合理範圍。'
+        });
+      }
+
+      const ip = getClientIp(req) || 'unknown';
+      const isLimited = loginLimiter.check([
+        { key: `ip:${ip}`, max: 30 },
+        { key: `id:${ip}:${accountInput}`, max: 6 }
+      ]);
+
+      if (isLimited) {
+        res.setHeader('Retry-After', '300');
+        return res.status(429).json({
+          success: false,
+          error: '登入嘗試過於頻繁，為維護帳戶安全請於 5 分鐘後再試。'
+        });
+      }
+
+      // 透過不可逆雜湊密文比對，明文密碼不在伺服器或日誌中留存
       const inputHash = hashPassword(passwordInput);
 
       const user = USERS.find(u => {
@@ -173,6 +231,9 @@ export default async function handler(req, res) {
           error: '帳號或密碼錯誤，請重新確認。'
         });
       }
+
+      // 登入成功，清除該身分的限流失敗計數
+      loginLimiter.clear([`id:${ip}:${accountInput}`]);
 
       const safeUser = {
         id: user.id,

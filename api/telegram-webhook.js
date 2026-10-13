@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   createCloudBackup,
   fetchAppState,
@@ -45,6 +46,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
     return sendJson(res, 405, { ok: false, error: 'Method not allowed' });
+  }
+
+  // 驗證 Telegram 官方 Webhook Secret Token
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const receivedSecret = String(req.headers['x-telegram-bot-api-secret-token'] || '');
+    const secretBuf = Buffer.from(receivedSecret);
+    const expectedBuf = Buffer.from(String(webhookSecret));
+    if (secretBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(secretBuf, expectedBuf)) {
+      console.warn('[Telegram Webhook] 拒絕未經授權之 Telegram Webhook Secret Token');
+      return sendJson(res, 403, { ok: false, error: 'Invalid Webhook Secret Token' });
+    }
   }
 
   const { token } = getTelegramConfig();
@@ -210,7 +223,12 @@ export default async function handler(req, res) {
             msg += `\n${isOrder} *客戶 (*...${user})*（${time}）：\n「${q}」\n🤖 *AI 回覆* [${l.model || 'Gemini'}]：\n「${a}」\n────────────────────────`;
           }
           const erpDomain = process.env.ERP_BASE_URL || 'https://erp-weld-three-96.vercel.app';
-          msg += `\n🌐 [點此開啟完整 LINE AI 對話視覺看板](${erpDomain}/api/line-ai-logs?format=html)`;
+          let authParam = '';
+          const adminSecret = process.env.ADMIN_SESSION_SECRET || process.env.ERP_SYNC_SECRET || '';
+          if (adminSecret) {
+            authParam = `&key=${encodeURIComponent(adminSecret)}`;
+          }
+          msg += `\n🌐 [點此開啟完整 LINE AI 對話視覺看板](${erpDomain}/api/line-ai-logs?format=html${authParam})`;
           await sendTelegramMessage(chatId, msg);
         }
       } catch (e) {

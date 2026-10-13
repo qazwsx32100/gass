@@ -1,5 +1,86 @@
+import crypto from 'node:crypto';
 import { fetchLineAiLogs } from './_line-ai-logger.js';
-import { sendJson } from './_auth.js';
+import { sendJson, verifyToken, getBearerToken, getClientIp } from './_auth.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
+
+const lineLogsRateLimiter = createBoundedRateLimiter({
+  windowMs: 60 * 1000,
+  maxEntries: 2000
+});
+
+export function isAuthorizedToViewLogs(req) {
+  // 1. 檢查 Bearer Token
+  const bearer = getBearerToken(req);
+  if (bearer) {
+    const decoded = verifyToken(bearer);
+    if (decoded && (decoded.role === 'admin' || decoded.role === 'business_reviewer' || decoded.id === 'ADMIN')) {
+      return true;
+    }
+  }
+
+  // 2. 檢查 Query Token (?token=...)
+  const queryToken = req.query?.token;
+  if (queryToken) {
+    const decoded = verifyToken(queryToken);
+    if (decoded) return true;
+  }
+
+  // 3. 檢查 Query Key 或 Header (?key=... 或 ?secret=...)
+  const providedKey = String(req.query?.key || req.query?.secret || req.headers['x-admin-key'] || '').trim();
+  const validSecrets = [
+    process.env.ADMIN_SESSION_SECRET,
+    process.env.ERP_SYNC_SECRET,
+    process.env.TELEGRAM_WEBHOOK_SECRET
+  ].filter(Boolean);
+
+  if (providedKey && validSecrets.length > 0) {
+    const provBuf = Buffer.from(providedKey);
+    const matches = validSecrets.some(sec => {
+      const secBuf = Buffer.from(sec);
+      return secBuf.length === provBuf.length && crypto.timingSafeEqual(secBuf, provBuf);
+    });
+    if (matches) return true;
+  }
+
+  return false;
+}
+
+function renderAuthLockScreen() {
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>盛隆管理員安全驗證 - LINE AI 對話看板</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; }
+    .auth-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; max-width: 440px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); text-align: center; }
+    .icon { font-size: 40px; margin-bottom: 12px; }
+    h2 { margin: 0 0 8px 0; font-size: 20px; font-weight: 800; color: #38bdf8; }
+    p { margin: 0 0 24px 0; font-size: 13px; color: #94a3b8; line-height: 1.6; }
+    input { width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #475569; border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 14px; margin-bottom: 16px; outline: none; }
+    input:focus { border-color: #38bdf8; }
+    button { width: 100%; background: #0284c7; color: white; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #0369a1; }
+    .back { margin-top: 16px; display: inline-block; font-size: 12px; color: #64748b; text-decoration: none; }
+    .back:hover { color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="icon">🔒</div>
+    <h2>盛隆管理員安全驗證</h2>
+    <p>此看板記錄客戶即時叫瓦斯、住址與聯絡資訊。為守護客戶個人隱私，請驗證管理員授權金鑰後方可查閱。</p>
+    <form method="GET" action="/api/line-ai-logs">
+      <input type="password" name="key" placeholder="請輸入管理金鑰 (Secret Key)" required autofocus />
+      <input type="hidden" name="format" value="html" />
+      <button type="submit">驗證並進入看板</button>
+    </form>
+    <a href="/" class="back">← 回到盛隆 ERP 首頁</a>
+  </div>
+</body>
+</html>`;
+}
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -222,10 +303,12 @@ function renderHtmlDashboard(result, queryParams) {
  * 2. 外部 API 呼叫: ?format=json 取得結構化 JSON 陣列
  */
 export default async function handler(req, res) {
-  // CORS 設定
+  // CORS 與安全標頭設定
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -233,6 +316,30 @@ export default async function handler(req, res) {
 
   if (req.method !== 'GET') {
     return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+  }
+
+  // IP 速率限制防護
+  const clientIp = getClientIp(req) || 'unknown';
+  if (lineLogsRateLimiter.check([{ key: `line_logs:${clientIp}`, max: 30 }])) {
+    res.setHeader('Retry-After', '60');
+    return sendJson(res, 429, { ok: false, error: '存取頻率過高，請稍候 1 分鐘後再試。' });
+  }
+
+  // 判斷是否回傳 HTML 頁面 (若請求含 format=html 或瀏覽器預設存取)
+  const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+  const isExplicitJson = req.query?.format === 'json';
+  const shouldRenderHtml = (req.query?.format === 'html' || acceptsHtml) && !isExplicitJson;
+
+  // 驗證管理員授權（阻斷外部任意窺探客戶對話與住址）
+  if (!isAuthorizedToViewLogs(req)) {
+    if (shouldRenderHtml) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(401).send(renderAuthLockScreen());
+    }
+    return sendJson(res, 401, {
+      ok: false,
+      error: '未授權存取：此端點包含客戶即時對話與個資，需提供有效的管理員金鑰或登入憑證。'
+    });
   }
 
   try {

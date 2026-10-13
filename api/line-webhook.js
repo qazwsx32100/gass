@@ -7,15 +7,23 @@ import { recordLineAiChat } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
 
 /**
- * 驗證 LINE 數位簽章
+ * 驗證 LINE 數位簽章 (Timing-Safe Equal 防時序攻擊)
  */
-function verifyLineSignature(bodyBuffer, signature, channelSecret) {
+export function verifyLineSignature(bodyBuffer, signature, channelSecret) {
   if (!signature || !channelSecret) return false;
-  const hash = crypto
-    .createHmac('sha256', channelSecret)
-    .update(bodyBuffer)
-    .digest('base64');
-  return hash === signature;
+  try {
+    const hash = crypto
+      .createHmac('sha256', channelSecret)
+      .update(bodyBuffer)
+      .digest('base64');
+
+    const hashBuf = Buffer.from(hash);
+    const sigBuf = Buffer.from(signature);
+    if (hashBuf.length !== sigBuf.length) return false;
+    return crypto.timingSafeEqual(hashBuf, sigBuf);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -64,8 +72,12 @@ export default async function handler(req, res) {
   // 讀取 Raw Body 以便進行簽章驗證
   let rawBodyBuffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}));
 
-  // 若有設定 Channel Secret 則進行簽名校驗
-  if (channelSecret && signature) {
+  // 若有設定 Channel Secret 則強制嚴格進行簽名校驗
+  if (channelSecret) {
+    if (!signature) {
+      console.warn('[LINE Webhook] 拒絕未附帶簽章之請求');
+      return sendJson(res, 401, { ok: false, message: 'Missing Signature' });
+    }
     const isValid = verifyLineSignature(rawBodyBuffer, signature, channelSecret);
     if (!isValid) {
       console.warn('[LINE Webhook] 簽章驗證失敗');

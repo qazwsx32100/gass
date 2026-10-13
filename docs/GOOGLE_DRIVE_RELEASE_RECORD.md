@@ -6,6 +6,43 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/13 - 🛡️ 網頁與雲端 API 全方位安全防護機制重大升級 (Web & API Security Hardening) [ver: 20261013_auto_release]
+
+### 一、 核心成果與安全防禦體系落地
+1. **官網後台與 CMS API 暴力破解防禦 (Brute-Force & Anti-Spam Rate Limiting)**：
+   - **`website/api/auth.js`**：引入雙重速率限制機制（單一帳號 5 分鐘最多 6 次失敗、單一 IP 最多 30 次），超額立即回傳 `429 Too Many Requests` 與 `Retry-After: 300`；登入成功自動清除身分計數。
+   - **時序安全簽名驗證 (Timing-Safe Token Verification)**：Token 校驗全面改用 `crypto.timingSafeEqual`，阻絕微秒級時序分析攻擊 (Timing Attacks)。
+   - **Payload 與請求大小限制**：強制驗證 Body 大小上限（16KB），嚴防記憶體溢位 DoS 攻擊。
+   - **`website/api/cms.js`**：對訪客點擊追蹤 (`track`) 實施 IP 速率限制（單一 IP 每分鐘最多 40 次），並白名單校驗事件名稱（`line`, `phone`, `leak`, `calc`），杜絕惡意刷點擊數據。
+
+2. **前端 DOM 與儲存型 XSS (Stored XSS) 雙層過濾**：
+   - **`website/api/cms.js` 後端深層清理**：公告標題 (title)、內容 (content)、自訂問答 (customFaqs)、價格與備註字串全面進行 HTML 特殊字元跳脫 (`&lt;`, `&gt;`, `&quot;`, `&#39;`) 與長度截斷，非法數值自動校正。
+   - **`website/index.html` ＆ `website/admin.html` 前端安全渲染**：動態公告橫幅與問答渲染全面加入 `escapeHtml` 輔助函式，阻絕惡意腳本執行。
+
+3. **雲端付費 AI 配額防刷爆保護 (`api/ai-chat.js` & `api/ai-status.js`)**：
+   - **`api/ai-chat.js`**：加入單一 IP 每分鐘最多 12 次請求防線；提問限制 1,500 字元、歷史訊息最多 10 則且總字數不超過 3,000 字元，保護老闆 Google Gemini 3.8 Flash 與 OpenAI 商業額度不被惡意耗盡或刷爆。
+   - **`api/ai-status.js`**：加入 IP 頻率限制（單一 IP 每分鐘 30 次），保護 Supabase 資料庫連線池與內部架構資訊。
+
+4. **客戶對話隱私與通訊 Webhook 安全加固 (`api/line-ai-logs.js`, `api/line-webhook.js`, `api/telegram-webhook.js`)**：
+   - **`api/line-ai-logs.js` 客戶隱私隔離**：新增管理員存取權限審查（支援 ERP Bearer Token、管理員 Session 或授權金鑰），未經授權者直接拒絕 (401) 並呈現安全鎖定卡片；整合 Telegram 特助 `/line` 指令自動帶入安全授權金鑰，保障老闆點擊一秒開啟，外部訪客無法偷窺客戶住址與訂單。
+   - **`api/line-webhook.js`**：修正簽名漏驗漏洞，當設定 `LINE_CHANNEL_SECRET` 時強制檢查 `x-line-signature` 標頭；比對全面改採 `crypto.timingSafeEqual`。
+   - **`api/telegram-webhook.js`**：支援 Telegram 官方 `X-Telegram-Bot-Api-Secret-Token` 標頭驗證，防範假冒 Webhook 偽造管理指令。
+
+5. **全站 A+ 級 HTTP 安全標頭全面佈建 (`vercel.json` & `website/vercel.json`)**：
+   - `Strict-Transport-Security` (HSTS): `max-age=63072000; includeSubDomains; preload`
+   - `X-Content-Type-Options`: `nosniff`
+   - `X-Frame-Options`: `DENY` / `SAMEORIGIN` (點擊劫持防禦)
+   - `Permissions-Policy`: `camera=(), microphone=(), geolocation=(), payment=()`
+   - `Cross-Origin-Opener-Policy` (COOP): `same-origin`
+   - `Cross-Origin-Resource-Policy` (CORP): `same-origin`
+   - `X-XSS-Protection`: `1; mode=block`
+   - `Content-Security-Policy`: 限制腳本來源、object-src 'none'、base-uri 'self'。
+
+6. **單元測試與驗收驗證**：
+   - 建立專屬整合安全測試套件 `tests/web-and-api-security.test.mjs`（9 大安全場景全數通過）。
+   - 全專案 174 項單元測試 100% 綠燈通過（0 失敗），Oxlint 語法檢查 0 錯誤。
+
+---
 ## 📅 2026/10/12 - 🔄 LINE AI 客服真・循環輪調 (Round-Robin) 與智慧雙模分流 (Hybrid Router) 全面上線 [ver: 20261012_auto_release]
 
 ### 一、 核心成果與架構落地

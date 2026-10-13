@@ -734,6 +734,15 @@
     let currentAuthUser = null;
     let authToken = localStorage.getItem('shenglong_admin_token') || '';
 
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // 初始化程式
     window.addEventListener('DOMContentLoaded', () => {
       // 複製預設 faqs-data.js
@@ -925,8 +934,8 @@
 
       box.innerHTML = `
         <div class="flex items-center gap-2">
-          <span class="font-black px-2 py-0.5 rounded bg-white/70 text-[11px] shadow-2xs">📢 ${title}</span>
-          <span class="font-medium">${content || '請輸入公告內容...'}</span>
+          <span class="font-black px-2 py-0.5 rounded bg-white/70 text-[11px] shadow-2xs">📢 ${escapeHtml(title)}</span>
+          <span class="font-medium">${escapeHtml(content || '請輸入公告內容...')}</span>
         </div>
         <span class="text-[10px] font-bold opacity-75 whitespace-nowrap">前台即時橫幅</span>
       `;
@@ -1028,7 +1037,7 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs">
-            查無符合「${searchVal}」的題目，您可點選右上角新增。
+            查無符合「${escapeHtml(searchVal)}」的題目，您可點選右上角新增。
           </div>
         `;
         return;
@@ -1042,13 +1051,13 @@
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-1">
               <span class="text-[10px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
-                ${faq.cat || '一般'}
+                ${escapeHtml(faq.cat || '一般')}
               </span>
               ${faq.isCommon ? '<span class="text-[10px] font-black px-2 py-0.5 rounded bg-blue-50 text-blue-700">⭐ 首頁精選</span>' : ''}
               ${faq.image ? '<span class="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">🖼️ 附專業圖解</span>' : ''}
             </div>
-            <div class="text-sm font-bold text-slate-900 leading-snug">${faq.q}</div>
-            <div class="text-xs text-slate-500 line-clamp-1 mt-0.5">${faq.a.replace(/<[^>]*>?/gm, '')}</div>
+            <div class="text-sm font-bold text-slate-900 leading-snug">${escapeHtml(faq.q)}</div>
+            <div class="text-xs text-slate-500 line-clamp-1 mt-0.5">${escapeHtml(faq.a.replace(/<[^>]*>?/gm, ''))}</div>
           </div>
 
           <div class="flex items-center gap-2 self-end sm:self-center">

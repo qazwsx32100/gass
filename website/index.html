@@ -2239,12 +2239,19 @@
           if (ann.type === 'warning') bgClass = 'bg-amber-600 text-white';
           if (ann.type === 'alert') bgClass = 'bg-rose-600 text-white';
 
+          const escapeHtml = (str) => String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
           banner.className = `${bgClass} text-xs font-bold py-2 px-4 shadow-sm relative z-50 transition-all`;
           banner.innerHTML = `
             <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
               <div class="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] uppercase font-black tracking-wider">📢 ${ann.title || '最新公告'}</span>
-                <span>${ann.content}</span>
+                <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] uppercase font-black tracking-wider">📢 ${escapeHtml(ann.title || '最新公告')}</span>
+                <span>${escapeHtml(ann.content)}</span>
               </div>
               <button onclick="this.parentElement.parentElement.remove()" class="text-white/80 hover:text-white font-black text-sm px-1.5 focus:outline-none" aria-label="關閉公告">✕</button>
             </div>

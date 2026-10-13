@@ -1,5 +1,11 @@
-import { getSupabase, sendJson } from './_auth.js';
+import { getSupabase, sendJson, getClientIp } from './_auth.js';
 import { getAiCandidates } from './_ai-rotator.js';
+import { createBoundedRateLimiter } from './_rateLimit.js';
+
+const aiStatusRateLimiter = createBoundedRateLimiter({
+  windowMs: 60 * 1000,
+  maxEntries: 2000
+});
 
 /**
  * 盛隆瓦斯 雲端 AI 輪調狀態監控 API
@@ -7,10 +13,18 @@ import { getAiCandidates } from './_ai-rotator.js';
  * 供本機監控面板 (localhost:3333) 與後台儀表板即時讀取雲端狀態
  */
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS 與安全標頭設定
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -18,6 +32,13 @@ export default async function handler(req, res) {
 
   if (req.method !== 'GET') {
     return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+  }
+
+  // IP 速率限制
+  const clientIp = getClientIp(req) || 'unknown';
+  if (aiStatusRateLimiter.check([{ key: `ai_status:${clientIp}`, max: 30 }])) {
+    res.setHeader('Retry-After', '60');
+    return sendJson(res, 429, { ok: false, error: '請求過於頻繁，請稍候重試。' });
   }
 
   let supabaseConnected = false;
