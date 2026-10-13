@@ -155,6 +155,7 @@ export const sanitizeStateForClient = (state = {}, session = null) => {
         includeDeviceManagement: isAdmin
       }))
     : [];
+  delete sanitized.websiteCms;
   return sanitized;
 };
 
@@ -194,11 +195,15 @@ export const secureStateForSave = (incomingState = {}, previousState = {}) => {
       })
     : [];
 
+  if (state.websiteCms === undefined && previousState.websiteCms !== undefined) {
+    state.websiteCms = cloneJson(previousState.websiteCms);
+  }
+
   return state;
 };
 
 export const getBearerToken = (req) => {
-  const header = req.headers.authorization || '';
+  const header = req?.headers?.authorization || '';
   return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 };
 
@@ -339,8 +344,9 @@ export const restoreCloudBackup = async ({ backupId, actor = 'system', requestIp
 };
 
 export const getClientIp = (req) => {
-  const realIp = req.headers['x-real-ip'];
+  const headers = req?.headers || {};
+  const realIp = headers['x-real-ip'];
   if (realIp) return String(realIp).trim();
-  const forwarded = req.headers['x-forwarded-for'];
-  return Array.isArray(forwarded) ? forwarded[0].trim() : String(forwarded || req.socket?.remoteAddress || '').split(',')[0].trim();
+  const forwarded = headers['x-forwarded-for'];
+  return Array.isArray(forwarded) ? forwarded[0].trim() : String(forwarded || req?.socket?.remoteAddress || '').split(',')[0].trim();
 };

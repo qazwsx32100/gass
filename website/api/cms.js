@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { verifyToken, getClientIp } from './auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 
@@ -17,6 +18,13 @@ const ALLOWED_TRACK_EVENTS = new Set(['line', 'phone', 'leak', 'calc']);
 const ALLOWED_HOURS_STATUS = new Set(['open', 'busy', 'rest', 'typhoon']);
 const ALLOWED_ANNOUNCE_TYPES = new Set(['info', 'warning', 'alert']);
 const MAX_CMS_BODY_BYTES = 64 * 1024; // 64 KB
+
+const CMS_BRIDGE_URL = process.env.WEBSITE_CMS_BRIDGE_URL || 'https://erp-weld-three-96.vercel.app/api/health?scope=website-cms';
+const CMS_BRIDGE_SECRET = process.env.WEBSITE_CMS_BRIDGE_KEY || 'shenglong-cms-supabase-bridge-v1-2026';
+const IS_TEST_ENV = process.env.NODE_ENV === 'test' || process.execArgv.includes('--test');
+
+let lastCloudSyncAt = 0;
+let isCloudPersisted = false;
 
 function escapeText(str) {
   return String(str || '')
@@ -67,6 +75,100 @@ let cmsState = {
   customFaqs: []
 };
 
+function mergeCloudCmsState(cloudData) {
+  if (!cloudData || typeof cloudData !== 'object') return;
+  if (cloudData.prices && typeof cloudData.prices === 'object') {
+    cmsState.prices = { ...cmsState.prices, ...cloudData.prices };
+  }
+  if (cloudData.hours && typeof cloudData.hours === 'object') {
+    cmsState.hours = { ...cmsState.hours, ...cloudData.hours };
+  }
+  if (cloudData.announcement && typeof cloudData.announcement === 'object') {
+    cmsState.announcement = { ...cmsState.announcement, ...cloudData.announcement };
+  }
+  if (cloudData.stats && typeof cloudData.stats === 'object') {
+    cmsState.stats = {
+      lineClicks: Math.max(Number(cmsState.stats.lineClicks) || 0, Number(cloudData.stats.lineClicks) || 0),
+      phoneClicks: Math.max(Number(cmsState.stats.phoneClicks) || 0, Number(cloudData.stats.phoneClicks) || 0),
+      leakSopClicks: Math.max(Number(cmsState.stats.leakSopClicks) || 0, Number(cloudData.stats.leakSopClicks) || 0),
+      calcClicks: Math.max(Number(cmsState.stats.calcClicks) || 0, Number(cloudData.stats.calcClicks) || 0),
+      lastUpdated: cloudData.stats.lastUpdated || cmsState.stats.lastUpdated
+    };
+  }
+  if (Array.isArray(cloudData.customFaqs)) {
+    cmsState.customFaqs = cloudData.customFaqs;
+  }
+  if (cloudData.lastUpdated) cmsState.lastUpdated = cloudData.lastUpdated;
+  if (cloudData.updatedBy) cmsState.updatedBy = cloudData.updatedBy;
+}
+
+async function syncFromCloud(force = false) {
+  if (IS_TEST_ENV) return false;
+  const now = Date.now();
+  if (!force && lastCloudSyncAt > 0 && now - lastCloudSyncAt < 10_000) {
+    return isCloudPersisted;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4500);
+    const response = await fetch(CMS_BRIDGE_URL, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (response.ok) {
+      const payload = await response.json();
+      if (payload?.ok) {
+        isCloudPersisted = true;
+        lastCloudSyncAt = Date.now();
+        if (payload.data) {
+          mergeCloudCmsState(payload.data);
+        }
+        return true;
+      }
+    }
+  } catch {
+    // Fallback to in-memory state if network hiccup
+  }
+  return isCloudPersisted;
+}
+
+async function pushToCloud(payloadObj) {
+  if (IS_TEST_ENV) return false;
+  try {
+    const rawBody = JSON.stringify(payloadObj);
+    const sig = crypto.createHmac('sha256', CMS_BRIDGE_SECRET).update(rawBody).digest('hex');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(CMS_BRIDGE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CMS-Bridge-Sig': sig
+      },
+      body: rawBody,
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (response.ok) {
+      const resJson = await response.json();
+      if (resJson?.ok && resJson.data) {
+        mergeCloudCmsState(resJson.data);
+        isCloudPersisted = true;
+        lastCloudSyncAt = Date.now();
+        return true;
+      }
+    }
+  } catch {
+    // Non-fatal fallback
+  }
+  return false;
+}
+
 function setCorsAndSecurityHeaders(req, res) {
   const origin = req.headers.origin;
   if (origin) {
@@ -92,10 +194,12 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // GET: Fetch current CMS settings & stats
+  // GET: Fetch current CMS settings & stats (synced from Supabase Cloud)
   if (req.method === 'GET') {
+    const persisted = await syncFromCloud(false);
     return res.status(200).json({
       success: true,
+      persisted,
       data: cmsState,
       timestamp: new Date().toISOString()
     });
@@ -126,13 +230,20 @@ export default async function handler(req, res) {
         }
 
         if (event === 'line') cmsState.stats.lineClicks = (cmsState.stats.lineClicks || 0) + 1;
-        else if (event === 'phone') cmsState.stats.phoneClicks = (cmsState.stats.phoneClicks || 0) + 1;
-        else if (event === 'leak') cmsState.stats.leakSopClicks = (cmsState.stats.leakSopClicks || 0) + 1;
-        else if (event === 'calc') cmsState.stats.calcClicks = (cmsState.stats.calcClicks || 0) + 1;
+        else if (event === 'phone') cmsState.stats.phoneClicks = (Number(cmsState.stats.phoneClicks) || 0) + 1;
+        else if (event === 'leak') cmsState.stats.leakSopClicks = (Number(cmsState.stats.leakSopClicks) || 0) + 1;
+        else if (event === 'calc') cmsState.stats.calcClicks = (Number(cmsState.stats.calcClicks) || 0) + 1;
         cmsState.stats.lastUpdated = new Date().toISOString();
+
+        const persisted = await pushToCloud({
+          action: 'track',
+          event,
+          fallbackState: cmsState
+        });
 
         return res.status(200).json({
           success: true,
+          persisted,
           stats: cmsState.stats
         });
       }
@@ -156,6 +267,9 @@ export default async function handler(req, res) {
           error: '權限不足或登入已過期，請重新登入管理後台'
         });
       }
+
+      // 先與雲端同步最新狀態（避免覆蓋其他欄位的既有設定）
+      await syncFromCloud(true);
 
       // 嚴格過濾與驗證 Prices
       if (body.prices && typeof body.prices === 'object') {
@@ -207,9 +321,16 @@ export default async function handler(req, res) {
       cmsState.lastUpdated = new Date().toISOString();
       cmsState.updatedBy = escapeText(decoded.user?.name || '管理員');
 
+      const persisted = await pushToCloud({
+        action: 'save',
+        cmsState,
+        updatedBy: cmsState.updatedBy
+      });
+
       return res.status(200).json({
         success: true,
-        message: '官網設定已成功儲存並同步',
+        persisted,
+        message: persisted ? '官網設定已永久儲存至雲端資料庫並同步' : '官網設定已成功儲存並同步',
         data: cmsState
       });
     } catch (err) {
