@@ -22,6 +22,15 @@
   - 單元測試：[`tests/trigger-github-workflow.test.mjs`](file:///c:/Gass/tests/trigger-github-workflow.test.mjs)
   - 環境範例：[`.env.example`](file:///c:/Gass/.env.example)
 
+### 2. 全維度安全性與 API 穩定度深度測試與壓力驗證 (Multi-Angle Security & Stability QA)
+- **狀態**：`[/]` 進行中
+- **優先級**：`P0` (全系統穩定性與安全邊界把關)
+- **負責設備/端點**：`全站 API (api/, website/api/)` ＆ `單元測試 (tests/multi-angle-security-and-stability.test.mjs)`
+- **估計花費時間**：15 ~ 20 分鐘
+- **老闆指示備註**：從「邊界極端負載、高頻突發併發、偽造權限繞過矩陣、異常容錯降級、敏感資訊零外洩」五大維度全方位測試，確保全系統高併發且安全無虞。
+- **關聯文件**：
+  - 綜合測試：[`tests/multi-angle-security-and-stability.test.mjs`](file:///c:/Gass/tests/multi-angle-security-and-stability.test.mjs)
+
 ---
 
 ## ⏳ 二、 近期高優先待辦 (High Priority / Next Sprint)
