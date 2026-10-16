@@ -6,6 +6,22 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/16 - 🚀 LINE 訂單自動匯入舊進銷存系統（階段 3：店面自動開機自啟動、桌面控制台與部署完工） [ver: 20261016_auto_release]
+
+### 一、 核心建置成果
+1. **Windows 開機自動靜默常駐啟動**：
+   - 建立並部署 `ShengLong_Order_Ingest_Daemon.vbs` 至 Windows 使用者啟動目錄 (`Startup`)，開機登入即自動於背景靜默運行，無黑框干擾。
+2. **店面現場維護工具集 (`scripts/`)**：
+   - `start_ingest_daemon.bat`：一鍵啟動背景守護進程。
+   - `stop_ingest_daemon.bat`：一鍵安全終止守護進程。
+   - `status_ingest_daemon.bat`：一鍵檢視守護進程 PID、啟動時間與運行狀態。
+   - `install_windows_startup_task.ps1`：系統排程安裝備援腳本。
+3. **老闆與店面桌面一鍵整合控制台**：
+   - 建立 `C:\Users\懶\Desktop\盛隆瓦斯_訂單自動入單系統控制台.bat`，提供直覺化 1~5 數字選單（啟動、狀態檢查、停止、模擬入單測試、查看任務看板），現場人員一鍵即可完成全部管理工作。
+4. **全端看板同步**：
+   - 全面更新 `docs/TODO.md` 與老闆桌面鏡像 `盛隆瓦斯_進行中與待完成項目看板.md`。
+
+---
 ## 📅 2026/10/16 - ⚡ LINE 訂單自動匯入舊進銷存系統（階段 2：雲端佇列端點與本地 Ingest Daemon 100% 建置驗證完成） [ver: 20261016_auto_release]
 
 ### 一、 核心開發與驗證成果

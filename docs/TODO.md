@@ -11,11 +11,16 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 全系統最高級別安全防護與 LINE 會員個資防護加固 (Full-System Security & LINE Privacy Defense)
-- **狀態**：`[x]` 已完成 (全系統最高等級安全防護全面加固上線，雙倉庫測試與編譯 100% 綠燈通過)
-- **優先級**：`P0` (核心帳務防竄改、LINE 會員資料防竊取、客戶個資防枚舉)
-- **負責設備/端點**：`Gass (api/auth-login.js, api/_customer-history.js, api/_telegram.js, api/telegram-webhook.js, api/line-ai-logs.js)` ＆ `LINE 會員系統 (shenglong-line-sync)` ＆ `主營運中心 (shenglong-next: app/api/customer-history, lib/auth.ts, middleware.ts)`
-- **老闆指示備註**：落實最高規格安全防禦，杜絕有心人士竊取資料，特別是 LINE 會員資料。徹底封堵已發現之 5 大安全破口（電話暴力枚舉、試算表公式注入、客戶歷史未授權爬取、偽造同源繞過、Telegram 陌生指令洩密），實施 Edge 邊界攔截、HMAC-SHA256 時效數位簽章、時序安全常數比對與個資脫敏遮罩。
+### 1. LINE 訂單自動匯入舊進銷存系統 - 階段 3：店面開機自啟動常駐、桌面一鍵控制台與實機部署驗收
+- **狀態**：`[x]` 已完成 (開機自啟動 VBS、桌面一鍵控制台、啟動/停止/狀態批次檔全數配置就緒)
+- **優先級**：`P0` (打通店面現場最後一哩路，實現無人化自動接單入庫)
+- **負責設備/端點**：`店面 Windows 主機 (Startup 自動啟動目錄、桌面捷徑)`
+- **老闆指示備註**：店面電腦開機必須自動在背景常駐執行，無需現場人員手動下指令；同時在桌面提供一鍵控制台與狀態查詢捷徑，確保現場阿姨或員工能直覺點擊管理。
+- **完成項目**：
+  - [x] 配置開機自動靜默啟動腳本 (`ShengLong_Order_Ingest_Daemon.vbs`) 至 Windows Startup 目錄，開機登入即在背景常駐輪詢拉單
+  - [x] 建立店面現場啟動工具：`scripts/start_ingest_daemon.bat`（一鍵啟動）、`scripts/stop_ingest_daemon.bat`（一鍵停止）、`scripts/status_ingest_daemon.bat`（一鍵查狀態）
+  - [x] 建立老闆與現場專屬桌面控制台：`C:\Users\懶\Desktop\盛隆瓦斯_訂單自動入單系統控制台.bat`（提供 1~5 數字選單：啟動、狀態、停止、模擬入單測試、查看任務看板）
+  - [x] 實機 Dry-Run 模擬與 SQL 連線驗證 100% 成功
 
 ---
 

@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/16 - 🚀 LINE 訂單自動匯入舊進銷存系統（階段 3：店面自動開機自啟動、桌面控制台與現場部署完工）
+* **變更類型**：現場部署 (deployment) / 自動化運維 (devops) / 控制台腳本 (batch-console) / 專案里程碑 (milestone-stage3)
+* **核心成果**：
+  * **Windows 開機自動常駐**：部署 `ShengLong_Order_Ingest_Daemon.vbs` 至 Windows 啟動目錄 (`Startup`)，開機登入全自動背景啟動。
+  * **店面現場工具集**：提供 `start_ingest_daemon.bat`, `stop_ingest_daemon.bat`, `status_ingest_daemon.bat` 與 `install_windows_startup_task.ps1`。
+  * **桌面整合控制台**：建立 `C:\Users\懶\Desktop\盛隆瓦斯_訂單自動入單系統控制台.bat`（1~5 選單式操作，現場人員點擊即可管理）。
+  * **看板同步**：同步更新 `docs/TODO.md` 與老闆桌面鏡像 `盛隆瓦斯_進行中與待完成項目看板.md`。
+
+---
 ## 📅 2026/10/16 - ⚡ LINE 訂單自動匯入舊進銷存系統（階段 2：雲端佇列端點與本地 Ingest Daemon 100% 建置驗證完成）
 * **變更類型**：系統整合 (integration) / 雲端 API (cloud-api) / 本地守護進程 (daemon) / 專案里程碑 (milestone-stage2)
 * **核心成果**：
