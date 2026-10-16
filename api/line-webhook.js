@@ -57,42 +57,64 @@ async function replyLineMessage(replyToken, messages, channelAccessToken) {
  * 智慧解析多輪對話中的訂單關鍵要素 (地址、電話、規格數量、樓層電梯)
  */
 export function extractOrderEntities(messages = [], currentText = '') {
-  const allTexts = [...messages.map(m => m.content || m.text || ''), currentText].join('\n');
+  // 將最新輸入與歷史紀錄按「由新到舊」順序排列，確保最新提供的資訊具備最高優先級，歷史資訊絕不漏失
+  const revHistory = [...messages].reverse().map(m => m.content || m.text || '');
+  const allTextsList = [currentText, ...revHistory].filter(Boolean);
+  const combined = allTextsList.join('\n');
 
-  // 1. 電話
-  const phoneMatch = allTexts.match(/(09\d{2}[-\s]?\d{3}[-\s]?\d{3}|02[-\s]?\d{4}[-\s]?\d{4}|09\d{8})/);
-  const phone = phoneMatch ? phoneMatch[0].replace(/\s+/g, '') : null;
+  // 1. 電話 (新 -> 舊)
+  let phone = null;
+  for (const txt of allTextsList) {
+    const phoneMatch = txt.match(/(09\d{2}[-\s]?\d{3}[-\s]?\d{3}|02[-\s]?\d{4}[-\s]?\d{4}|09\d{8})/);
+    if (phoneMatch) {
+      phone = phoneMatch[0].replace(/\s+/g, '');
+      break;
+    }
+  }
 
-  // 2. 規格與數量
+  // 2. 規格與數量 (新 -> 舊)
   let spec = null;
-  const specMatch = allTexts.match(/(20|16|10|4)\s*(公斤|kg|KG)|大桶|小桶/i);
-  if (specMatch) {
-    spec = specMatch[0];
-  }
   let quantity = 1;
-  const qtyMatch = allTexts.match(/([一二三兩四1-4])\s*桶/);
-  if (qtyMatch) {
-    const qStr = qtyMatch[1];
-    quantity = (qStr === '一' || qStr === '1') ? 1 : (qStr === '二' || qStr === '兩' || qStr === '2') ? 2 : (qStr === '三' || qStr === '3') ? 3 : (qStr === '四' || qStr === '4') ? 4 : 1;
+  for (const txt of allTextsList) {
+    const specMatch = txt.match(/(20|16|10|4)\s*(公斤|kg|KG)|大桶|小桶/i);
+    if (specMatch) {
+      spec = specMatch[0];
+      const qtyMatch = txt.match(/([一二三兩四1-4])\s*桶/);
+      if (qtyMatch) {
+        const qStr = qtyMatch[1];
+        quantity = (qStr === '一' || qStr === '1') ? 1 : (qStr === '二' || qStr === '兩' || qStr === '2') ? 2 : (qStr === '三' || qStr === '3') ? 3 : (qStr === '四' || qStr === '4') ? 4 : 1;
+      }
+      break;
+    }
   }
 
-  // 3. 樓層與電梯
+  // 3. 樓層與電梯 (新 -> 舊)
   let floor = null;
-  const floorMatch = allTexts.match(/([1-9一二三四五六七八九十])\s*樓/);
-  if (floorMatch) {
-    floor = floorMatch[0];
+  for (const txt of allTextsList) {
+    const floorMatch = txt.match(/([1-9一二三四五六七八九十])\s*樓/);
+    if (floorMatch) {
+      floor = floorMatch[0];
+      break;
+    }
   }
-  const hasElevator = /有電梯|電梯大樓|電梯/.test(allTexts);
-  const noElevator = /沒電梯|無電梯|爬樓梯|走樓梯/.test(allTexts);
+  const hasElevator = /有電梯|電梯大樓|電梯/.test(combined);
+  const noElevator = /沒電梯|無電梯|爬樓梯|走樓梯/.test(combined);
   let elevatorInfo = null;
   if (noElevator) elevatorInfo = '無電梯';
   else if (hasElevator) elevatorInfo = '有電梯';
 
-  // 4. 地址
+  // 4. 地址 (新 -> 舊，支援路/街/巷/弄/段/號/樓與對話前綴脫敏)
   let address = null;
-  const addrMatch = allTexts.match(/((新北市|台北市)?(三重|新莊|蘆洲|板橋)?[^,\n，。]+?(路|街|大道|巷|弄)\s*\d+?\s*號(\s*\d+?\s*樓)?)/);
-  if (addrMatch) {
-    address = addrMatch[0].trim();
+  const taiwanAddrRegex = /((?:(?:新北市|台北市))?(?:(?:三重|新莊|蘆洲|板橋|中和|永和)區?)?[^\s,，。:：\n]+?(?:路|街|大道|巷|弄)(?:[一二三四五六七八九十\d]+段)?(?:\d+巷)?(?:\d+弄)?\s*\d+(?:-\d+)?號(?:之\d+)?(?:\s*[1-9\d一二三四五六七八九十]+樓)?)/;
+  for (const txt of allTextsList) {
+    const addrMatch = txt.match(taiwanAddrRegex);
+    if (addrMatch) {
+      address = addrMatch[0]
+        .trim()
+        .replace(/^(我家在|抱歉更正一下地址，?|更正為|改送到|改送|換送到|送去|送到|請送|送|在|住|地址是|麻煩送|請幫我送)+/, '')
+        .trim();
+      break;
+    }
   }
 
   const missing = [];
@@ -190,7 +212,7 @@ export default async function handler(req, res) {
 
         if (userId) {
           try {
-            const historyRes = await fetchLineAiLogs({ userId, limit: 4 });
+            const historyRes = await fetchLineAiLogs({ userId, limit: 10 });
             if (historyRes?.ok && Array.isArray(historyRes.logs) && historyRes.logs.length > 0) {
               // fetchLineAiLogs 預設為時間倒序 (新 -> 舊)，需反轉為對話先後順序
               const pastLogs = [...historyRes.logs].reverse();

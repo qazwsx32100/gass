@@ -153,5 +153,28 @@ test('KnowledgeBase: Few-shot examples and orderStateContext injection', async (
   assert.ok(promptWithContext.includes('正義北路100號'));
   assert.ok(promptWithContext.includes('0912-345-678'));
   assert.ok(promptWithContext.includes('盛隆金牌客服典範問答'));
+
+  // Test scattered multi-turn preservation across many messages
+  const scatteredHistory = [
+    { role: 'user', content: '老闆你好' },
+    { role: 'assistant', content: '您好！請問今天需要為您服務什麼呢？' },
+    { role: 'user', content: '我家在三重區三和路四段20號' },
+    { role: 'assistant', content: '收到三和路四段20號！請問是幾樓呢？' },
+    { role: 'user', content: '5樓走樓梯' },
+    { role: 'assistant', content: '好的，5樓無電梯！請問需要幾公斤的瓦斯呢？' },
+    { role: 'user', content: '一桶16公斤的' }
+  ];
+  const scatteredEntities = extractOrderEntities(scatteredHistory, '好那我電話留 0988-777-666');
+  assert.equal(scatteredEntities.isComplete, true);
+  assert.ok(scatteredEntities.address.includes('三和路四段20號'));
+  assert.ok(scatteredEntities.floor.includes('5樓'));
+  assert.ok(scatteredEntities.floor.includes('無電梯'));
+  assert.ok(scatteredEntities.spec.includes('16公斤'));
+  assert.equal(scatteredEntities.phone, '0988-777-666');
+
+  // Test address update override (latest wins)
+  const updateEntities = extractOrderEntities(scatteredHistory, '抱歉更正一下地址，改送到正義北路88號');
+  assert.ok(updateEntities.address.includes('正義北路88號'));
 });
+
 
