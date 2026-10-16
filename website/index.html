@@ -562,6 +562,50 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .fade-in { animation: fadeInUp 0.5s ease both; }
+
+    /* ===== 長輩關懷大字模式 (Elder Mode) ===== */
+    body.elder-mode {
+      font-size: 19px !important;
+    }
+    body.elder-mode p, body.elder-mode li, body.elder-mode div.text-xs, body.elder-mode div.text-sm {
+      font-size: 1.15em !important;
+      line-height: 1.7 !important;
+    }
+    body.elder-mode h1 { font-size: 2.8rem !important; line-height: 1.2 !important; }
+    body.elder-mode h2 { font-size: 2.2rem !important; }
+    body.elder-mode h3 { font-size: 1.6rem !important; }
+    body.elder-mode button, body.elder-mode input, body.elder-mode select, body.elder-mode textarea {
+      font-size: 1.1em !important;
+    }
+    body.elder-mode a[href^="tel:"], body.elder-mode a[href*="line.me"], body.elder-mode .elder-btn-large {
+      padding-top: 1rem !important;
+      padding-bottom: 1rem !important;
+      font-size: 1.15rem !important;
+    }
+
+    /* ===== AI 小幫手浮動對話盒動畫 ===== */
+    #aiChatDrawer {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+    #aiChatDrawer.closed {
+      transform: translateY(20px) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+    }
+    #aiChatDrawer.opened {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    /* ===== 下單精靈規格選取卡片高亮 ===== */
+    .spec-card-selected {
+      border-color: #2563EB !important;
+      background-color: #EFF6FF !important;
+      box-shadow: 0 4px 16px -2px rgba(37,99,235,0.25) !important;
+    }
   </style>
 </head>
 
@@ -598,28 +642,38 @@
         </div>
       </a>
 
-      <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
-        <a href="#how" class="hover:text-brand-accent transition-colors">3步驟叫瓦斯</a>
-        <a href="#guarantee" class="hover:text-brand-accent transition-colors">安心承諾</a>
-        <a href="#specs" class="hover:text-brand-accent transition-colors">瓦斯規格</a>
+      <nav class="hidden md:flex items-center gap-5 text-sm font-semibold text-slate-600">
+        <a href="#order-wizard" class="text-blue-600 hover:text-blue-700 font-bold transition-colors flex items-center gap-1">⚡ 線上叫瓦斯</a>
+        <a href="#specs" class="hover:text-brand-accent transition-colors">規格牌價</a>
+        <a href="#commercial" class="hover:text-brand-accent transition-colors">餐飲商用</a>
         <a href="#area" class="hover:text-brand-accent transition-colors">服務區域</a>
         <a href="#overview" class="hover:text-brand-accent transition-colors">店家速查</a>
         <a href="#faq" class="hover:text-brand-accent transition-colors">知識庫問答</a>
       </nav>
 
       <div class="flex items-center gap-2">
+        <button id="elderModeBtn" onclick="toggleElderMode()" class="flex items-center gap-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg transition-all shadow-2xs" title="切換為長輩清晰大字模式">
+          <span>👵</span>
+          <span id="elderModeText" class="hidden sm:inline">大字模式</span>
+        </button>
+
         <a href="tel:+886229725559" class="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-brand-accent bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
           02-2972-5559
         </a>
         <a href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
-           class="flex items-center gap-1.5 bg-line hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg text-sm shadow-xs transition-all hover:shadow-sm">
+           class="flex items-center gap-1.5 bg-line hover:bg-green-600 text-white font-bold px-3.5 py-2 rounded-lg text-sm shadow-xs transition-all hover:shadow-sm">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.63 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.105.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
-          LINE 立即叫瓦斯
+          LINE 叫瓦斯
         </a>
       </div>
     </div>
   </header>
+
+  <!-- ========== 長輩清晰大字提示橫幅 ========== -->
+  <div id="elderBanner" class="hidden bg-amber-400 text-slate-950 font-black px-4 py-2.5 text-center text-sm sm:text-base sticky top-16 z-30 shadow-md border-b border-amber-500">
+    👵 盛隆長輩清晰大字模式已開啟 ｜ 叫瓦斯可按大按鈕或直接打電話：<a href="tel:+886229725559" class="underline font-black text-blue-900 ml-1">02-2972-5559</a>
+  </div>
 
   <!-- ========== HERO ========== -->
   <section id="hero" class="bg-white border-b border-slate-200">
@@ -642,16 +696,20 @@
             三重全區專車直達免運費・依中油牌價透明計價・不偷斤減兩・假日夜間照常配送不加價！
           </p>
 
-          <div class="flex flex-col sm:flex-row gap-3 mb-6">
+          <div class="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
+            <a href="#order-wizard"
+               class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-base px-6 py-3.5 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5">
+              <span>⚡</span> 30 秒線上叫瓦斯
+            </a>
             <a href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
-               class="inline-flex items-center justify-center gap-2.5 bg-line hover:bg-green-600 text-white font-bold text-base px-7 py-3.5 rounded-xl shadow-sm transition-all hover:shadow hover:-translate-y-0.5">
+               class="inline-flex items-center justify-center gap-2.5 bg-line hover:bg-green-600 text-white font-bold text-base px-6 py-3.5 rounded-xl shadow-sm transition-all hover:shadow hover:-translate-y-0.5">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.63 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.105.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
-              加 LINE @350MZOGG 立即下單
+              加 LINE @350MZOGG
             </a>
             <a href="tel:+886229725559"
-               class="inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-base px-6 py-3.5 rounded-xl border border-slate-300 transition-all">
+               class="inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-base px-5 py-3.5 rounded-xl border border-slate-300 transition-all">
               <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-              電話專線 02-2972-5559
+              02-2972-5559
             </a>
           </div>
 
@@ -763,6 +821,247 @@
                   <span class="text-blue-600 text-xs">✓</span> 實體門市誠信服務
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 【30秒極速下單精靈】線上預約叫瓦斯 ========== -->
+  <section id="order-wizard" class="bg-gradient-to-b from-blue-50/70 via-white to-slate-50 py-12 md:py-16 border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4">
+      <div class="text-center max-w-2xl mx-auto mb-8">
+        <span class="inline-flex items-center gap-1.5 bg-blue-100 text-blue-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+          ⚡ 30 秒智慧快速叫瓦斯
+        </span>
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+          免打字・線上快速預約叫瓦斯
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 mt-2">
+          選擇規格與地址，即時自動試算金額！支援一鍵送出官方 LINE 或電話派工，熟客自動記憶！
+        </p>
+
+        <!-- 熟客記憶提示條 -->
+        <div id="returningCustomerBadge" class="hidden mt-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl px-4 py-2 text-left sm:text-center flex items-center justify-between gap-2 shadow-2xs">
+          <span class="flex items-center gap-2">
+            <span>✨</span>
+            <span id="returningCustomerText">已自動帶入您上次的配送資料</span>
+          </span>
+          <button type="button" onclick="clearCustomerProfile()" class="text-emerald-700 hover:text-emerald-900 underline text-[11px] font-medium">清除重填</button>
+        </div>
+      </div>
+
+      <!-- 下單精靈主體卡片 -->
+      <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xl p-5 sm:p-8">
+        <!-- 步驟 1: 選擇瓦斯規格 -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black">1</span>
+              選擇瓦斯規格與數量
+            </h3>
+            <span class="text-xs text-slate-500">依中油牌價誠信計價</span>
+          </div>
+
+          <!-- 5 大規格卡片群 -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" id="specCardContainer">
+            <!-- 4kg -->
+            <button type="button" onclick="selectWizardSpec('p4kg')" id="specBtn_p4kg"
+                    class="wizard-spec-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 transition-all flex flex-col justify-between group relative">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">露營 / 泡茶</div>
+                <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">4 <span class="text-xs font-bold text-slate-500">kg</span></div>
+                <div class="text-[11px] text-blue-600 font-black mt-1" id="wizPrice_p4kg">NT$ 260</div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100">超輕量好攜帶</div>
+            </button>
+
+            <!-- 10kg -->
+            <button type="button" onclick="selectWizardSpec('p10kg')" id="specBtn_p10kg"
+                    class="wizard-spec-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 transition-all flex flex-col justify-between group relative">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">窄流理台專用</div>
+                <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">10 <span class="text-xs font-bold text-slate-500">kg</span></div>
+                <div class="text-[11px] text-blue-600 font-black mt-1" id="wizPrice_p10kg">NT$ 460</div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100">矮空間推薦</div>
+            </button>
+
+            <!-- 16kg (預設選中) -->
+            <button type="button" onclick="selectWizardSpec('p16kg')" id="specBtn_p16kg"
+                    class="wizard-spec-card spec-card-selected text-left p-3.5 rounded-2xl border-2 border-blue-600 bg-blue-50/60 transition-all flex flex-col justify-between group relative">
+              <span class="absolute -top-2.5 right-2 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-2xs">熱門首選</span>
+              <div>
+                <div class="text-[10px] text-blue-800 font-bold uppercase">家用主流規格</div>
+                <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">16 <span class="text-xs font-bold text-slate-500">kg</span></div>
+                <div class="text-[11px] text-blue-700 font-black mt-1" id="wizPrice_p16kg">NT$ 680</div>
+              </div>
+              <div class="text-[10px] text-blue-700 font-medium mt-2 pt-2 border-t border-blue-200">熱水器/雙口爐</div>
+            </button>
+
+            <!-- 20kg -->
+            <button type="button" onclick="selectWizardSpec('p20kg')" id="specBtn_p20kg"
+                    class="wizard-spec-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 transition-all flex flex-col justify-between group relative">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">大家庭 / 快炒</div>
+                <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">20 <span class="text-xs font-bold text-slate-500">kg</span></div>
+                <div class="text-[11px] text-blue-600 font-black mt-1" id="wizPrice_p20kg">NT$ 840</div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100">大容量更耐用</div>
+            </button>
+
+            <!-- 50kg -->
+            <button type="button" onclick="selectWizardSpec('p50kg')" id="specBtn_p50kg"
+                    class="wizard-spec-card text-left p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-blue-400 transition-all flex flex-col justify-between group relative">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase">餐廳 / 商用</div>
+                <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">50 <span class="text-xs font-bold text-slate-500">kg</span></div>
+                <div class="text-[11px] text-blue-600 font-black mt-1" id="wizPrice_p50kg">NT$ 2,050</div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-100">營業大用量</div>
+            </button>
+          </div>
+
+          <!-- 數量調整 -->
+          <div class="mt-4 flex items-center justify-between bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-700">訂購桶數：</span>
+            <div class="flex items-center gap-3">
+              <button type="button" onclick="updateWizardQty(-1)" class="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all">-</button>
+              <span id="wizQty" class="text-base font-black text-slate-900 w-6 text-center">1</span>
+              <button type="button" onclick="updateWizardQty(1)" class="w-8 h-8 rounded-lg bg-white border border-slate-300 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100 active:scale-95 transition-all">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 步驟 2: 填寫配送資訊 -->
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs flex items-center justify-center font-black">2</span>
+              填寫配送地址與聯絡人
+            </h3>
+            <span class="text-xs text-emerald-600 font-bold">三重全區免運費</span>
+          </div>
+
+          <!-- 常用三重路段快捷標籤 -->
+          <div class="mb-3">
+            <div class="text-[11px] font-bold text-slate-500 mb-1.5">常用路段快速填入：</div>
+            <div class="flex flex-wrap gap-1.5" id="quickRoadTags">
+              <button type="button" onclick="quickFillRoad('重新路')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">重新路</button>
+              <button type="button" onclick="quickFillRoad('三和路')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">三和路</button>
+              <button type="button" onclick="quickFillRoad('正義北路')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">正義北路</button>
+              <button type="button" onclick="quickFillRoad('集美街')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">集美街</button>
+              <button type="button" onclick="quickFillRoad('自強路')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">自強路</button>
+              <button type="button" onclick="quickFillRoad('重陽路')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">重陽路</button>
+              <button type="button" onclick="quickFillRoad('蘆洲區')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">蘆洲區</button>
+              <button type="button" onclick="quickFillRoad('五股區')" class="text-[11px] font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">五股區</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- 行政區與詳細地址 -->
+            <div class="space-y-1.5 md:col-span-2">
+              <label class="text-xs font-bold text-slate-700">送達地址 <span class="text-red-500">*</span></label>
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <select id="wizDistrict" class="sm:col-span-1 border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm bg-white focus:outline-none focus:border-blue-600 font-medium">
+                  <option value="新北市三重區" selected>新北市三重區</option>
+                  <option value="新北市蘆洲區">新北市蘆洲區</option>
+                  <option value="新北市五股區">新北市五股區</option>
+                  <option value="台北市鄰近商圈">台北市鄰近商圈</option>
+                </select>
+                <input type="text" id="wizAddress" placeholder="請輸入路名、巷弄門牌（如：重新路二段 88 號）"
+                       class="sm:col-span-3 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium" />
+              </div>
+            </div>
+
+            <!-- 樓層與電梯 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">樓層與電梯狀況</label>
+              <select id="wizFloor" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm bg-white focus:outline-none focus:border-blue-600 font-medium">
+                <option value="電梯大樓（免爬樓梯）" selected>電梯大樓（免爬樓梯）</option>
+                <option value="公寓 1 樓 / 店面">公寓 1 樓 / 店面</option>
+                <option value="公寓 2 樓">公寓 2 樓</option>
+                <option value="公寓 3 樓">公寓 3 樓</option>
+                <option value="公寓 4 樓">公寓 4 樓</option>
+                <option value="公寓 5 樓及以上">公寓 5 樓及以上</option>
+              </select>
+            </div>
+
+            <!-- 期望送達時段 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">期望送達時段</label>
+              <select id="wizTimeSlot" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm bg-white focus:outline-none focus:border-blue-600 font-medium">
+                <option value="立即專車送達（約15~25分鐘）" selected>🔥 立即專車送達（約15~25分鐘）</option>
+                <option value="今日上午（08:00 – 12:00）">🌅 今日上午（08:00 – 12:00）</option>
+                <option value="今日下午（13:00 – 17:00）">☀️ 今日下午（13:00 – 17:00）</option>
+                <option value="今日晚間（17:00 – 20:30）">🌙 今日晚間（17:00 – 20:30）</option>
+              </select>
+            </div>
+
+            <!-- 訂購人姓名 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">訂購人姓名 / 稱謂</label>
+              <input type="text" id="wizName" placeholder="例如：林先生 / 王小姐"
+                     class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium" />
+            </div>
+
+            <!-- 聯絡電話 -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700">聯絡電話 <span class="text-red-500">*</span></label>
+              <input type="tel" id="wizPhone" placeholder="例如：0912-345-678 或 02-2972..."
+                     class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium" />
+            </div>
+          </div>
+
+          <!-- 特殊需求核取方塊 -->
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs text-slate-700">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="wizCheckLeak" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+              <span>請師傅送達時<strong>免費協助安檢、測漏氣與更換安全防漏墊圈</strong></span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="wizCheckResidual" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+              <span>空鋼瓶放門口交換更換，無需留人家中等候（盛隆無現場秤重退殘氣服務）</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer" onchange="document.getElementById('wizInvoiceBox').classList.toggle('hidden', !this.querySelector('input').checked)">
+              <input type="checkbox" id="wizCheckInvoice" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+              <span>需要開立統一發票（公司報帳抵扣 5% 營業稅）</span>
+            </label>
+
+            <!-- 發票統編輸入框 -->
+            <div id="wizInvoiceBox" class="hidden pt-2 pl-6 space-y-1.5">
+              <input type="text" id="wizTaxId" placeholder="請輸入統一編號（8碼）與公司抬頭"
+                     class="w-full sm:max-w-md border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:border-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 步驟 3: 金額結算與送出 -->
+        <div class="pt-5 border-t border-slate-200">
+          <div class="flex flex-col md:flex-row items-center justify-between gap-5">
+            <div>
+              <div class="text-xs text-slate-500">預估合計金額（依中油牌價誠信計價・現場滿意再付款）：</div>
+              <div class="flex items-baseline gap-2 mt-1">
+                <span class="text-3xl font-black text-slate-900" id="wizTotalAmount">NT$ 680</span>
+                <span class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">三重全區免運費</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1" id="wizSummaryText">16公斤 × 1 桶</div>
+            </div>
+
+            <!-- 送出按鈕群 -->
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              <button type="button" onclick="submitWizardOrder('line')"
+                      class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-line hover:bg-green-600 text-white font-black text-sm sm:text-base px-6 py-3.5 rounded-2xl shadow-md transition-all hover:shadow-lg active:scale-98">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.63 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.105.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+                <span>LINE 送出訂單</span>
+              </button>
+
+              <button type="button" onclick="submitWizardOrder('phone')"
+                      class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm sm:text-base px-5 py-3.5 rounded-2xl shadow-sm transition-all hover:shadow active:scale-98">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                <span>電話快速下單確認</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1038,6 +1337,172 @@
     </div>
   </section>
 
+  <!-- ========== 商業餐飲專區 & 殘氣退費試算 (B2B Energy Solution) ========== -->
+  <section id="commercial" class="bg-white py-14 md:py-20 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="mb-10 text-center max-w-2xl mx-auto">
+        <span class="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+          🍜 B2B Commercial Energy
+        </span>
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+          商用與餐飲專區｜盛隆瓦斯 商業供氣特快車
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-600 mt-2">
+          專為新北三重、蘆洲、五股小吃快炒、便當店、小火鍋、連鎖餐廳提供穩定猛火、永不斷氣、依法開立發票！
+        </p>
+      </div>
+
+      <!-- 4 大商業專屬特權卡片 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <!-- 特權 1 -->
+        <div class="bg-slate-50 hover:bg-white rounded-2xl p-5 border border-slate-200 hover:border-amber-300 transition-all shadow-2xs hover:shadow-sm">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl font-bold mb-3">
+            🔀
+          </div>
+          <h3 class="font-black text-base text-slate-900 mb-1.5">雙桶自動切換閥安裝</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            大火出餐時最怕斷氣！盛隆免費規劃多桶自動切換系統，主桶用盡自動切換備用桶，亮紅標提示，營業無縫運轉。
+          </p>
+        </div>
+
+        <!-- 特權 2 -->
+        <div class="bg-slate-50 hover:bg-white rounded-2xl p-5 border border-slate-200 hover:border-blue-300 transition-all shadow-2xs hover:shadow-sm">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl font-bold mb-3">
+            🧾
+          </div>
+          <h3 class="font-black text-base text-slate-900 mb-1.5">合規統一發票完整扣抵</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            依法誠信開立二聯/三聯式統一發票，5% 營業稅全額合法進項扣抵，公司行號與餐廳合法作帳，無幽靈發票稅務風險。
+          </p>
+        </div>
+
+        <!-- 特權 3 -->
+        <div class="bg-slate-50 hover:bg-white rounded-2xl p-5 border border-slate-200 hover:border-emerald-300 transition-all shadow-2xs hover:shadow-sm">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold mb-3">
+            💰
+          </div>
+          <h3 class="font-black text-base text-slate-900 mb-1.5">量大月結批發優惠</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            月用量達標享有每公斤大宗批發優惠牌價，提供彈性月結對帳單、公司銀行轉帳，降低餐飲店家平日備用現金周轉負擔。
+          </p>
+        </div>
+
+        <!-- 特權 4 -->
+        <div class="bg-slate-50 hover:bg-white rounded-2xl p-5 border border-slate-200 hover:border-rose-300 transition-all shadow-2xs hover:shadow-sm">
+          <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-xl font-bold mb-3">
+            🚨
+          </div>
+          <h3 class="font-black text-base text-slate-900 mb-1.5">尖峰 15 分鐘極速特快車</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            午晚餐尖峰客滿若突發叫瓦斯，盛隆後勤調度系統啟動餐飲特快通道，專車優先直達後廚，師傅迅速到位絕不耽誤出餐！
+          </p>
+        </div>
+      </div>
+
+      <!-- 殘氣秤重折抵試算器 & 空瓶押金退款 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <!-- 左側：殘氣秤重試算器 (佔 7 欄) -->
+        <div class="lg:col-span-7 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="inline-flex items-center gap-1.5 text-xs font-black text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full">
+                ⚖️ 盛隆誠信守則
+              </span>
+              <span class="text-xs font-bold text-slate-500">標準牌價約 NT$ 42 / kg 試算</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 mb-2">鋼瓶殘氣折抵秤重試算器</h3>
+            <p class="text-xs text-slate-600 leading-relaxed mb-5">
+              換新瓦斯時舊鋼瓶還有些許底氣？盛隆堅持誠實老派作風，送達現場<strong>實秤剩餘公斤數，並依當期中油公定牌價現場折抵扣除瓦斯費</strong>，一毛錢也不偷斤減兩！
+            </p>
+
+            <!-- 互動控制：輸入/滑桿 -->
+            <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-4">
+              <div>
+                <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
+                  <span>舊鋼瓶殘餘瓦斯重量：</span>
+                  <span class="text-base font-black text-blue-600"><span id="residualWeightDisplay">1.5</span> 公斤 (kg)</span>
+                </div>
+                <input type="range" id="residualWeightSlider" min="0.2" max="6.0" step="0.1" value="1.5"
+                       oninput="updateResidualCalculation(this.value)"
+                       class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>0.2 kg（少量底氣）</span>
+                  <span>3.0 kg</span>
+                  <span>6.0 kg（半桶多）</span>
+                </div>
+              </div>
+
+              <!-- 選擇瓦斯桶規格 -->
+              <div class="pt-2 border-t border-slate-100">
+                <span class="text-xs font-bold text-slate-700 block mb-1.5">舊瓶使用規格：</span>
+                <div class="grid grid-cols-3 gap-2">
+                  <button type="button" onclick="selectResidualSpec('16kg')" id="resSpecBtn_16kg"
+                          class="py-1.5 px-3 rounded-xl border border-blue-600 bg-blue-50 text-blue-800 text-xs font-bold transition-all text-center">16kg 家用瓶</button>
+                  <button type="button" onclick="selectResidualSpec('20kg')" id="resSpecBtn_20kg"
+                          class="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:border-blue-300 transition-all text-center">20kg 大用量</button>
+                  <button type="button" onclick="selectResidualSpec('50kg')" id="resSpecBtn_50kg"
+                          class="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:border-blue-300 transition-all text-center">50kg 營業用</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 折抵結果試算卡片 -->
+          <div class="mt-5 bg-blue-600 text-white rounded-2xl p-4 flex items-center justify-between shadow-sm">
+            <div>
+              <div class="text-[11px] text-blue-100 font-bold uppercase tracking-wide">現場立即折抵現折瓦斯費</div>
+              <div class="text-2xl sm:text-3xl font-black mt-0.5" id="residualRefundTotal">NT$ 63 元</div>
+            </div>
+            <a href="#order-wizard" onclick="quickFillResidualCheck()"
+               class="bg-white text-blue-700 hover:bg-blue-50 text-xs sm:text-sm font-black px-4 py-2.5 rounded-xl shadow-xs transition-all hover:scale-105 text-center">
+              立即以此折抵叫瓦斯 →
+            </a>
+          </div>
+        </div>
+
+        <!-- 右側：空瓶回收保證金與商業預約 (佔 5 欄) -->
+        <div class="lg:col-span-5 bg-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="inline-flex items-center gap-1.5 bg-slate-800 text-amber-300 text-xs font-bold px-3 py-1 rounded-full mb-3">
+              <span>🔄</span>
+              <span>退瓶押金安心保障</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black mb-2">空瓶保證金退還與退租換約</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-4">
+              因租約到期退租、店面頂讓或改裝天然氣不再需要鋼瓶？只要鋼瓶為盛隆合格配送鋼瓶，依規定<strong class="text-amber-300">憑押瓶收據或合格送檢鋼瓶，門市均全額退還保證金</strong>，絕無巧立名目剋扣問題！
+            </p>
+
+            <div class="space-y-2 text-xs text-slate-300 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700 mb-5">
+              <div class="flex items-start gap-2">
+                <span class="text-emerald-400 font-black">✓</span>
+                <span><strong>保證金全額退還：</strong>依照消防法規標準退還押瓶費。</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-emerald-400 font-black">✓</span>
+                <span><strong>專車到府收瓶：</strong>年長或無搬運工具可預約專車上門回收。</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="text-emerald-400 font-black">✓</span>
+                <span><strong>餐飲大用量簽約：</strong>專人到店場勘評估配管及優惠估價。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 pt-4 border-t border-slate-800">
+            <a href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
+               class="w-full inline-flex items-center justify-center gap-2 bg-line hover:bg-green-600 text-white font-black text-sm py-3 rounded-xl shadow-xs transition-all text-center">
+              <span>📱</span> 餐飲批發 / 門市退瓶預約 (LINE 專人)
+            </a>
+            <a href="tel:+886229725559"
+               class="w-full inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-xl transition-colors text-center border border-slate-700">
+              <span>📞</span> 商業合作諮詢：02-2972-5559
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ========== 服務配送範圍 ========== -->
   <section id="area" class="bg-slate-50 py-14 md:py-18 border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4">
@@ -1049,6 +1514,50 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div class="space-y-3.5">
+          <!-- 各路段最快送達時間速查互動卡 -->
+          <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-md">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-black uppercase tracking-wider text-blue-200">⏱️ 即時配送時速速查</span>
+              <span class="text-[11px] bg-white/20 text-white font-bold px-2 py-0.5 rounded-full">專車直達免運</span>
+            </div>
+            <h4 class="font-black text-base text-white mb-2">點選您的路段，秒查專車預估抵達時間</h4>
+            
+            <div class="flex flex-wrap gap-1.5 mb-3.5">
+              <button type="button" onclick="checkDeliverySpeed('cailiao')" id="speedBtn_cailiao"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-white text-blue-900 shadow-2xs transition-all">菜寮/集美街</button>
+              <button type="button" onclick="checkDeliverySpeed('chongxin')" id="speedBtn_chongxin"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">重新路一至五段</button>
+              <button type="button" onclick="checkDeliverySpeed('sanhe')" id="speedBtn_sanhe"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">三和路/天台</button>
+              <button type="button" onclick="checkDeliverySpeed('zhengyi')" id="speedBtn_zhengyi"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">正義北/南路</button>
+              <button type="button" onclick="checkDeliverySpeed('ziqiang')" id="speedBtn_ziqiang"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">自強路/重陽路</button>
+              <button type="button" onclick="checkDeliverySpeed('erchong')" id="speedBtn_erchong"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">二重重劃區</button>
+              <button type="button" onclick="checkDeliverySpeed('luzhou')" id="speedBtn_luzhou"
+                      class="speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all">蘆洲/五股區</button>
+            </div>
+
+            <!-- 即時動態結果面板 -->
+            <div class="bg-white/10 backdrop-blur-xs rounded-xl p-3 border border-white/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <div class="font-bold text-white text-sm" id="speedRoadName">📍 三重 菜寮 / 集美街 生活圈</div>
+                <div class="text-blue-100 mt-0.5">外勤師傅專趟直達 ｜ 運費：<strong class="text-emerald-300">0 元免運</strong> ｜ 附贈免費防漏測漏檢驗</div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="text-right">
+                  <div class="text-[10px] text-blue-200">專車最快送達</div>
+                  <div class="text-base sm:text-lg font-black text-amber-300" id="speedEstimatedTime">約 15 ~ 20 分鐘</div>
+                </div>
+                <a href="#order-wizard" onclick="quickFillFromSpeedCheck()"
+                   class="bg-white hover:bg-blue-50 text-blue-900 font-black text-xs px-3 py-2 rounded-lg shadow-xs transition-all hover:scale-105">
+                  立即叫此區
+                </a>
+              </div>
+            </div>
+          </div>
+
           <!-- 三重區 (核心加強版) -->
           <div class="bg-white border-2 border-blue-500/30 rounded-2xl p-6 shadow-sm relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-blue-600 text-white text-[11px] font-black px-3 py-1 rounded-bl-xl">

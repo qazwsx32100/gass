@@ -196,76 +196,91 @@ export async function callAiWithFailover({
       ? 'https://api.openai.com/v1/chat/completions'
       : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
-    let targetModel = isOpenAi
-      ? 'gpt-4o-mini'
-      : (preferredModel || 'gemini-3.8-flash');
+    let candidateModels = isOpenAi ? ['gpt-4o-mini'] : Array.from(new Set([
+      preferredModel || 'gemini-3-flash-preview',
+      'gemini-3-flash-preview',
+      'gemini-3.8-flash',
+      'gemini-3.1-flash-lite'
+    ])).filter(Boolean);
 
-    if (!isOpenAi && (targetModel.includes('2.5') || targetModel.includes('2.0') || targetModel.includes('1.5') || targetModel.includes('1.0'))) {
-      targetModel = 'gemini-3.8-flash';
+    let accountSucceeded = false;
+
+    for (const targetModel of candidateModels) {
+      try {
+        const res = await fetchWithTimeout(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${acc.apiKey}`
+          },
+          body: JSON.stringify({
+            model: targetModel,
+            messages: fullMessages,
+            temperature
+          })
+        }, 25000);
+
+        const latencyMs = Date.now() - attemptStart;
+
+        if (res.status === 429) {
+          const errText = await res.text().catch(() => '');
+          console.warn(`[AI Rotator] 帳號「${acc.name}」(${targetModel}) 觸發 429 限流，自動轉移至下一組...`);
+          acc.status = 'cooldown';
+          acc.cooldownUntil = Date.now() + 60_000;
+          reportCooldown(acc.id, 60, errText).catch(() => {});
+          errors.push({ account: acc.name, model: targetModel, status: 429, error: '429 Rate Limit' });
+          break; // 429 為帳號級限流，換下一個帳號
+        }
+
+        if (res.status === 503 || res.status === 404) {
+          const errText = await res.text().catch(() => '');
+          console.warn(`[AI Rotator] 帳號「${acc.name}」模型「${targetModel}」暫時繁忙/不可用 (HTTP ${res.status})，嘗試備援模型...`);
+          errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 100) });
+          continue; // 嘗試此帳號下的備援模型 (如 gemini-3-flash-preview)
+        }
+
+        if (res.status >= 500) {
+          const errText = await res.text().catch(() => '');
+          console.warn(`[AI Rotator] 帳號「${acc.name}」伺服器錯誤 (HTTP ${res.status})，自動轉移至下一組...`);
+          errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 100) });
+          break; // 嚴重服務端錯誤，換下一個帳號
+        }
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 150) });
+          continue;
+        }
+
+        const json = await res.json();
+        const replyText = json.choices?.[0]?.message?.content || '';
+        const totalTokens = json.usage?.total_tokens || 0;
+
+        // 成功！非同步回報 Supabase
+        reportSuccess(acc.id, totalTokens, latencyMs, targetModel).catch(() => {});
+
+        accountSucceeded = true;
+        return {
+          text: replyText,
+          accountId: acc.id,
+          accountName: acc.name,
+          provider: acc.provider,
+          model: targetModel,
+          tokens: totalTokens,
+          latencyMs,
+          failoverCount: i,
+          strategy,
+          mode,
+          totalDurationMs: Date.now() - startTime
+        };
+      } catch (err) {
+        console.warn(`[AI Rotator] 帳號「${acc.name}」(${targetModel}) 連線異常 [${err.message}]...`);
+        errors.push({ account: acc.name, model: targetModel, error: err.message });
+      }
     }
 
-    try {
-      const res = await fetchWithTimeout(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${acc.apiKey}`
-        },
-        body: JSON.stringify({
-          model: targetModel,
-          messages: fullMessages,
-          temperature
-        })
-      }, 25000);
-
-      const latencyMs = Date.now() - attemptStart;
-
-      if (res.status === 429) {
-        const errText = await res.text().catch(() => '');
-        console.warn(`[AI Rotator] 帳號「${acc.name}」觸發 429 限流，自動轉移至下一組...`);
-        acc.status = 'cooldown';
-        acc.cooldownUntil = Date.now() + 60_000;
-        reportCooldown(acc.id, 60, errText).catch(() => {});
-        errors.push({ account: acc.name, status: 429, error: '429 Rate Limit' });
-        continue;
-      }
-
-      if (res.status >= 500) {
-        const errText = await res.text().catch(() => '');
-        console.warn(`[AI Rotator] 帳號「${acc.name}」伺服器繁忙 (HTTP ${res.status})，自動轉移至下一組...`);
-        errors.push({ account: acc.name, status: res.status, error: errText.slice(0, 100) });
-        continue;
-      }
-
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 150)}`);
-      }
-
-      const json = await res.json();
-      const replyText = json.choices?.[0]?.message?.content || '';
-      const totalTokens = json.usage?.total_tokens || 0;
-
-      // 成功！非同步回報 Supabase
-      reportSuccess(acc.id, totalTokens, latencyMs, targetModel).catch(() => {});
-
-      return {
-        text: replyText,
-        accountId: acc.id,
-        accountName: acc.name,
-        provider: acc.provider,
-        model: targetModel,
-        tokens: totalTokens,
-        latencyMs,
-        failoverCount: i,
-        strategy,
-        mode,
-        totalDurationMs: Date.now() - startTime
-      };
-    } catch (err) {
-      console.warn(`[AI Rotator] 帳號「${acc.name}」連線異常 [${err.message}], 切換下一組...`);
-      errors.push({ account: acc.name, error: err.message });
-      continue;
+    if (accountSucceeded) {
+      break;
     }
   }
 

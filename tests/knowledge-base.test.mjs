@@ -42,6 +42,31 @@ test('KnowledgeBase: matchBestFaq accurately matches relevant queries', () => {
   const burnerMatch = matchBestFaq('家裡瓦斯爐火變紅黃色鍋底都變黑了');
   assert.ok(burnerMatch, 'Should find burner/flame match');
   assert.ok(burnerMatch.category.includes('瓦斯爐'));
+
+  // 6. Gas order inquiry
+  const orderMatch = matchBestFaq('我想叫一桶瓦斯送三重');
+  assert.ok(orderMatch, 'Should find gas order match');
+  assert.ok(orderMatch.category.includes('叫瓦斯'));
+
+  // 7. Service area
+  const areaMatch = matchBestFaq('請問新莊有送嗎？');
+  assert.ok(areaMatch, 'Should find service area match');
+  assert.ok(areaMatch.category.includes('服務區域'));
+
+  // 8. Remaining gas
+  const remainingMatch = matchBestFaq('請問瓦斯剩下多少怎麼看？');
+  assert.ok(remainingMatch, 'Should find remaining gas match');
+  assert.ok(remainingMatch.category.includes('剩餘量'));
+
+  // 9. Storage safety
+  const storageMatch = matchBestFaq('瓦斯桶可以放室內廚房嗎？');
+  assert.ok(storageMatch, 'Should find storage match');
+  assert.ok(storageMatch.category.includes('鋼瓶存放'));
+
+  // 10. Pipe installation
+  const pipeMatch = matchBestFaq('師傅送來會幫忙接管子嗎？');
+  assert.ok(pipeMatch, 'Should find pipe match');
+  assert.ok(pipeMatch.category.includes('安裝'));
 });
 
 test('KnowledgeBase: getOptimizedSystemPrompt generates comprehensive prompt', () => {

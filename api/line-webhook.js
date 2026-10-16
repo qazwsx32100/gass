@@ -3,7 +3,7 @@ import { callAiWithFailover } from './_ai-rotator.js';
 import { sendJson } from './_auth.js';
 import { fetchWithTimeout } from './_fetch.js';
 import { getOptimizedSystemPrompt, classifyQueryComplexity } from './_knowledge-base.js';
-import { recordLineAiChat } from './_line-ai-logger.js';
+import { recordLineAiChat, fetchLineAiLogs } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
 
 /**
@@ -102,16 +102,47 @@ export default async function handler(req, res) {
       try {
         console.log(`[LINE Webhook] 收到來自使用者 [${userId || '未知'}] 的訊息: "${userText}"`);
 
-        const isOrderIntent = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText);
+        // 查詢該用戶最近的對話歷程以構建多輪上下文 (Context Memory)
+        const historyMessages = [];
+        let hadRecentOrderIntent = false;
+
+        if (userId) {
+          try {
+            const historyRes = await fetchLineAiLogs({ userId, limit: 4 });
+            if (historyRes?.ok && Array.isArray(historyRes.logs) && historyRes.logs.length > 0) {
+              // fetchLineAiLogs 預設為時間倒序 (新 -> 舊)，需反轉為對話先後順序
+              const pastLogs = [...historyRes.logs].reverse();
+              for (const log of pastLogs) {
+                if (log.is_order_intent) hadRecentOrderIntent = true;
+                if (log.user_message) {
+                  historyMessages.push({ role: 'user', content: log.user_message });
+                }
+                if (log.ai_reply) {
+                  historyMessages.push({ role: 'assistant', content: log.ai_reply });
+                }
+              }
+            }
+          } catch (histErr) {
+            console.warn('[LINE Webhook] 讀取對話歷程異常 (非致命):', histErr.message);
+          }
+        }
+
+        const messages = [...historyMessages, { role: 'user', content: userText }];
+
+        const currentIsOrder = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText);
+        // 若上一句在叫瓦斯且本句提供地址/樓層/電話，延續叫瓦斯意圖
+        const isOrderIntent = currentIsOrder || (hadRecentOrderIntent && /(路|街|巷|弄|號|樓|電梯|電話|09\d{8})/i.test(userText));
+
         const complexityMode = classifyQueryComplexity(userText);
         const isExpert = complexityMode === 'expert';
 
         // 呼叫雲端 AI 輪調中心 (方案 B 智慧雙模分流 + 真・循環輪調 Round-Robin)
         const aiResult = await callAiWithFailover({
           prompt: userText,
+          messages,
           systemInstruction: getOptimizedSystemPrompt(userText, complexityMode),
           temperature: isExpert ? 0.3 : 0.6,
-          preferredModel: 'gemini-3.8-flash',
+          preferredModel: 'gemini-3-flash-preview',
           strategy: 'round-robin',
           mode: complexityMode
         });

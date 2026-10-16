@@ -64,3 +64,45 @@ test('LineAiLogger: correctly filters orderIntent and search keywords', async ()
   assert.equal(searchAddress.ok, true);
   assert.ok(searchAddress.logs.some(l => l.user_message.includes('板橋中山路')));
 });
+
+test('LineAiLogger: multi-turn context reconstruction preserves chronological message order', async () => {
+  const multiUserId = `multi-user-${Date.now()}`;
+
+  // Turn 1
+  await recordLineAiChat({
+    lineUserId: multiUserId,
+    userMessage: '我家在三重正義北路100號',
+    aiReply: '請問是幾樓呢？是否有電梯？',
+    isOrderIntent: true
+  });
+
+  // Turn 2
+  await recordLineAiChat({
+    lineUserId: multiUserId,
+    userMessage: '3樓沒有電梯',
+    aiReply: '好的，3樓爬樓梯會為您試算樓層費，請問需要哪種規格的瓦斯？',
+    isOrderIntent: true
+  });
+
+  const res = await fetchLineAiLogs({ userId: multiUserId, limit: 4 });
+  assert.equal(res.ok, true);
+  assert.equal(res.logs.length, 2);
+
+  // 反轉為時間正序
+  const chrono = [...res.logs].reverse();
+  const messages = [];
+  for (const log of chrono) {
+    if (log.user_message) messages.push({ role: 'user', content: log.user_message });
+    if (log.ai_reply) messages.push({ role: 'assistant', content: log.ai_reply });
+  }
+
+  // 加入最新第 3 輪
+  messages.push({ role: 'user', content: '送一桶20公斤' });
+
+  assert.equal(messages.length, 5);
+  assert.equal(messages[0].content, '我家在三重正義北路100號');
+  assert.equal(messages[1].content, '請問是幾樓呢？是否有電梯？');
+  assert.equal(messages[2].content, '3樓沒有電梯');
+  assert.equal(messages[3].content, '好的，3樓爬樓梯會為您試算樓層費，請問需要哪種規格的瓦斯？');
+  assert.equal(messages[4].content, '送一桶20公斤');
+});

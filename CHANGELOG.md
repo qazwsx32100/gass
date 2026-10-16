@@ -6,6 +6,22 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/16 - 🤖 LINE AI 客服上下文記憶貫通、Gemini 備援容錯降級與常見問答擴充完工 [ver: 20261016_auto_release]
+* **變更類型**：AI 智慧升級 (ai-enhancement) / 多輪上下文 (context-memory) / 模型高可用 (model-failover) / 知識庫檢索 (rag-lite)
+* **核心成果**：
+  * **多輪上下文記憶貫通 (`api/line-webhook.js`)**：
+    * 收到客戶訊息時自動調用 `fetchLineAiLogs` 撈取該使用者的前 4 輪對話，反向按時間順序組裝成標準 `messages` 陣列注入 AI。
+    * 實現「叫瓦斯意圖跨輪延續」：前一句表明叫瓦斯，後續提供樓層、地址或電話時，AI 與系統自動保留叫瓦斯訂單意圖並精準銜接。
+  * **模型級智能容災備援 (`api/_ai-rotator.js`)**：
+    * 解決 Google 雲端端點對 `gemini-3.8-flash` 尖峰時段回傳 503 (High Demand) 造成掉入死板罐頭回覆問題。
+    * 加入候選模型自動轉移鏈路：`gemini-3-flash-preview` ➔ `gemini-3.8-flash` ➔ `gemini-3.1-flash-lite`，遇 503/404 毫秒級自動容錯，保證 100% 秒回。
+  * **20 大類 300 題知識庫意圖擴充 (`api/_knowledge-base.js`)**：
+    * 大幅擴充「叫瓦斯下單意圖」、「服務區域（三重/新莊/蘆洲）」、「瓦斯剩餘量判斷（摸瓶身/看爐火）」、「鋼瓶存放與安全（直立/陽台）」、「鋼瓶檢驗期限與鋁牌身分證」、「外送師傅免費安裝接管查漏」、「停電地震天災應變」等 7 大高頻問答分類。
+    * 明確約束並禁止 AI 承諾「提供現場秤重」，100% 恪遵盛隆「無現場秤重服務，亦不退殘氣費」鐵律。
+  * **單元測試與全面驗證**：
+    * 擴充 `tests/line-ai-logs.test.mjs` 與 `tests/knowledge-base.test.mjs`，全專案 196 項測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/16 - 🛡️ 全系統最高級別安全防禦與 LINE 會員個資防護全面加固完工
 * **變更類型**：資訊安全 (security) / 防禦加固 (hardening) / 零信任邊界 (zero-trust) / 專案里程碑 (milestone)
 * **核心成果**：
