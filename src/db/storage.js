@@ -867,7 +867,6 @@ export const initializeDB = (forceReset = false) => {
           email: 'zijie@shenglonggas.com',
           idCard: 'A123456780',
           phone: '0912-000-001',
-          password: '1234',
           role: USER_ROLES.BUSINESS_REVIEWER,
           allowedCompanies: ['COMP001'],
           allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
@@ -882,7 +881,6 @@ export const initializeDB = (forceReset = false) => {
           email: 'yehua@shenglonggas.com',
           idCard: 'A123456781',
           phone: '0912-000-002',
-          password: '1234',
           role: USER_ROLES.BUSINESS_REVIEWER,
           allowedCompanies: ['COMP001'],
           allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
@@ -1948,7 +1946,7 @@ export const verifyLogin = (email, password) => {
   const normalizedPassword = String(password || '').trim();
   // 1. Check if admin credentials
   const adminPassword = String(localStorage.getItem(KEYS.ADMIN_PASSWORD) || '').trim();
-  if (normalizedEmail === 'qazwsx32100@gmail.com' && (normalizedPassword === 'windsboy123' || (adminPassword && normalizedPassword === adminPassword) || normalizedPassword === '6789')) {
+  if (normalizedEmail === 'qazwsx32100@gmail.com' && adminPassword && !['1234', '6789', '0000', '123456', 'password', 'admin'].includes(adminPassword.toLowerCase()) && normalizedPassword === adminPassword) {
     const security = getAdminSecurity();
     const displayName = getAdminDisplayName();
     if (security.disabled) {
@@ -1978,10 +1976,10 @@ export const verifyLogin = (email, password) => {
     const isTarget = sEmail === normalizedEmail || sName === normalizedEmail;
     if (!isTarget) return false;
     const storedPw = String(s.password || '').trim();
-    return storedPw === normalizedPassword ||
-      normalizedPassword === '1234' ||
-      normalizedPassword === '6789' ||
-      normalizedPassword === 'windsboy123';
+    return Boolean(storedPw) && !['1234', '6789', '0000', '123456', 'password', 'admin'].includes(storedPw.toLowerCase()) && storedPw === normalizedPassword &&
+      normalizedPassword !== '1234' &&
+      normalizedPassword !== '6789' &&
+      normalizedPassword.length >= 6;
   });
   if (user) {
     const role = user.role || USER_ROLES.READONLY_SHAREHOLDER;

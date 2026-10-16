@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  authenticateShareholder,
+  isWeakBannedPassword,
   resolveAdminCredential,
   resolveAdminLoginCredential
 } from '../api/auth-login.js';
@@ -72,3 +74,45 @@ test('keeps a valid stored admin password authoritative', () => {
 
   assert.equal(resolved.source, 'adminSecurity');
 });
+
+test('strictly blocks weak default PINs (1234, 6789) from logging in as shareholder even if legacy state had 1234', () => {
+  assert.equal(isWeakBannedPassword('1234'), true);
+  assert.equal(isWeakBannedPassword('6789'), true);
+  assert.equal(isWeakBannedPassword('123456'), true);
+
+  const legacyStateWithWeakPin = {
+    shareholders: [{
+      id: 'SH002',
+      name: '周子傑',
+      email: 'zijie@shenglonggas.com',
+      role: 'business_reviewer',
+      password: '1234'
+    }]
+  };
+
+  assert.equal(authenticateShareholder(legacyStateWithWeakPin, '周子傑', '1234').matched, false);
+  assert.equal(authenticateShareholder(legacyStateWithWeakPin, 'zijie@shenglonggas.com', '6789').matched, false);
+  assert.equal(authenticateShareholder({ shareholders: [] }, '林曄鏵', '1234').matched, false);
+});
+
+test('authenticates shareholder with custom PBKDF2-SHA256 credential and rejects wrong passwords', () => {
+  const customCred = hashPassword('ZijieStrongPass#2026');
+  const state = {
+    shareholders: [{
+      id: 'SH002',
+      name: '周子傑',
+      email: 'zijie@shenglonggas.com',
+      role: 'business_reviewer',
+      ...customCred
+    }]
+  };
+
+  const failedAttempt = authenticateShareholder(state, 'zijie@shenglonggas.com', 'wrong-pass');
+  assert.equal(failedAttempt.matched, false);
+
+  const validAttempt = authenticateShareholder(state, 'zijie@shenglonggas.com', 'ZijieStrongPass#2026');
+  assert.equal(validAttempt.matched, true);
+  assert.equal(validAttempt.user.id, 'SH002');
+  assert.equal(validAttempt.user.role, 'business_reviewer');
+});
+

@@ -6,6 +6,24 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/16 - ⚡ LINE 訂單自動匯入舊進銷存系統（階段 2：雲端佇列端點與本地 Ingest Daemon 100% 建置驗證完成） [ver: 20261016_auto_release]
+
+### 一、 核心開發與驗證成果
+1. **雲端佇列 API 端點建置 (`shenglong-line-sync/web/api/index.js`)**：
+   - 新增 `GET /api?action=pending-ingest-orders`：以 `x-internal-sync-secret` 進行時序安全驗證，自 Google Sheets 批次讀取 `訂單` (A:Q 範圍) 與 `訂單明細`，智慧過濾未匯入 (`imported !== true`) 且未取消之待處理訂單。
+   - 新增 `POST /api?action=mark-ingest-success`：接收 `{ orderId, legacyOrderId, importedAt }`，自動更新狀態為「已接單」，並於 O~Q 欄精確回填舊進銷存流水單號與入庫時間戳。
+   - 擴充 `_test` 導出並新增自動化單元測試，全站 22 項測試 100% 通過。
+2. **店面本地 Order Ingest Daemon (`scripts/shenglong_order_ingest_daemon.py`)**：
+   - 連線管理：支援 `.\SQLEXPRESS` 與目標資料庫 (`gas_station_ShengLong` / `ShengLong_Inspection`) 自動容錯切換。
+   - 客戶匹配機制：比對電話號碼尋找既有客戶，若為首叫新客戶則自動向 `dbo.customers` 新增客戶資料並取得 `customer_id`。
+   - 交易寫入主檔：將 7 種瓦斯規格 (`50kg`, `20kg`, `18kg`, `16kg`, `10kg`, `new_4kg`, `4kg`)、金額與防重複 Idempotency Key (`LINE#<orderId>`) 寫入 `dbo.gas_oders`，並設 `music='T'` 觸發店面主機新單提示音。
+   - 雙軌部署與編碼防護：內建 Windows 控制台 UTF-8/cp950 雙向容錯，支援 `--once` (單次)、`--dry-run` (模擬測試) 與持續常駐背景守護模式。
+   - 派工通知連動：成功寫入後推播 Telegram 派工群組（含進銷存單號、規格品項、客戶電話、地址與 Google 導航按鈕）。
+3. **驗證與單元測試**：
+   - Python 單元與實體 SQL Server 連線測試 (`tests/test_order_ingest_daemon.py`) 3 項 100% 通過。
+   - 看板同步：已全面同步覆蓋 `docs/TODO.md` 與老闆桌面看板 `C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`。
+
+---
 ## 📅 2026/10/13 - 🗄️ LINE 訂單自動匯入舊進銷存系統（階段 1：SQL Server 資料庫結構逆向分析 100% 完成） [ver: 20261013_auto_release]
 
 ### 一、 核心逆向分析成果 (`dbo.gas_oders` ＆ `dbo.customers` 34 欄位完整對齊)

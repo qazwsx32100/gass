@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from './_fetch.js';
+import { createCustomerHistorySignature } from './_customer-history.js';
 
 /**
  * 取得 Telegram 環境設定
@@ -123,7 +124,8 @@ export const sendOrderNotification = async (orderPayload) => {
 
   const phone = orderPayload.phone || '';
   const customerName = orderPayload.customerName || '';
-  const historyUrl = `${baseUrl}/api/customer-history?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(customerName)}`;
+  const sig = createCustomerHistorySignature(phone, customerName);
+  const historyUrl = `${baseUrl}/api/customer-history?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(customerName)}${sig ? `&sig=${sig}` : ''}`;
 
   // 第一排按鈕：地圖導航 + 查看歷史明細
   const navRow = [];

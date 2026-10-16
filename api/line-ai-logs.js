@@ -8,6 +8,18 @@ const lineLogsRateLimiter = createBoundedRateLimiter({
   maxEntries: 2000
 });
 
+const lineLogsAuthFailLimiter = createBoundedRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  maxEntries: 2000
+});
+
+export function maskLineUserId(uid) {
+  const s = String(uid || '').trim();
+  if (!s || s === 'unknown') return '未知';
+  if (s.length <= 10) return `${s.slice(0, 3)}***`;
+  return `${s.slice(0, 6)}...${s.slice(-4)}`;
+}
+
 export function isAuthorizedToViewLogs(req) {
   // 1. 檢查 Bearer Token
   const bearer = getBearerToken(req);
@@ -136,7 +148,7 @@ function renderHtmlDashboard(result, queryParams) {
         <div class="chat-card ${isOrder ? 'order-highlight' : ''}">
           <div class="card-header">
             <div class="header-left">
-              <span class="user-badge">👤 客戶 [${escapeHtml(item.line_user_id || '未知')}]</span>
+              <span class="user-badge">👤 客戶 [${escapeHtml(maskLineUserId(item.line_user_id))}]</span>
               ${isOrder ? '<span class="tag tag-order">🔥 疑似叫瓦斯訂單</span>' : '<span class="tag tag-chat">💬 一般諮詢</span>'}
               <span class="tag" style="${modeStyle}">${modeLabel}</span>
               ${item.account_name ? `<span class="tag" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">🔄 輪調帳號: ${escapeHtml(item.account_name)}</span>` : ''}
@@ -303,12 +315,14 @@ function renderHtmlDashboard(result, queryParams) {
  * 2. 外部 API 呼叫: ?format=json 取得結構化 JSON 陣列
  */
 export default async function handler(req, res) {
-  // CORS 與安全標頭設定
+  // CORS 與最高級別安全標頭設定
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Key');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -332,6 +346,11 @@ export default async function handler(req, res) {
 
   // 驗證管理員授權（阻斷外部任意窺探客戶對話與住址）
   if (!isAuthorizedToViewLogs(req)) {
+    const hasAttemptedKey = Boolean(req.query?.key || req.query?.secret || req.headers?.['x-admin-key'] || req.query?.token);
+    if (hasAttemptedKey && lineLogsAuthFailLimiter.check([{ key: `line_logs_fail:${clientIp}`, max: 5 }])) {
+      res.setHeader('Retry-After', '300');
+      return sendJson(res, 429, { ok: false, error: '管理金鑰驗證失敗次數過多，已鎖定 5 分鐘。' });
+    }
     if (shouldRenderHtml) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       return res.status(401).send(renderAuthLockScreen());

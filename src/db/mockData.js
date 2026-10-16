@@ -11,7 +11,6 @@ export const INITIAL_SHAREHOLDERS = [
     email: 'qazwsx32100@gmail.com',
     idCard: 'A123456789',
     phone: '0912-345-678',
-    password: 'windsboy123',
     role: 'admin',
     allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'auditZone', 'firebase']
@@ -22,7 +21,6 @@ export const INITIAL_SHAREHOLDERS = [
     email: 'zijie@shenglonggas.com',
     idCard: 'A123456780',
     phone: '0912-000-001',
-    password: '1234',
     role: 'business_reviewer',
     allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']
@@ -33,7 +31,6 @@ export const INITIAL_SHAREHOLDERS = [
     email: 'yehua@shenglonggas.com',
     idCard: 'A123456781',
     phone: '0912-000-002',
-    password: '1234',
     role: 'business_reviewer',
     allowedCompanies: ['COMP001'],
     allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone']

@@ -193,20 +193,20 @@ def process_heater_troubleshoot():
     draw.rectangle([950, 0, 1376, 108], fill=(241, 245, 249, 255))
     draw_centered_text(draw, [950, 0, 1376, 108], "盛隆居家安全自我排查 5 步驟", get_font(24), (30, 41, 59, 255))
 
-    # Step 1: Left Top [115, 110, 420, 245]
-    draw.rectangle([115, 110, 420, 245], fill=(240, 248, 252, 255))
+    # Step 1: Left Top - stops at y=215 above the gauge (y=220) and y=235 left of gauge
+    draw.rectangle([115, 110, 420, 215], fill=(240, 248, 252, 255))
+    draw.rectangle([115, 215, 290, 235], fill=(240, 248, 252, 255))
     draw_left_text(draw, 120, 112, "步驟 1：確認是否有瓦斯", get_font(22), (15, 23, 42, 255))
     draw_left_text(draw, 120, 146, "檢查桶裝瓦斯存量與角閥開關", get_font(16), (71, 85, 105, 255))
-    draw_left_text(draw, 120, 178, "若無瓦斯請立即預約換桶", get_font(16), (71, 85, 105, 255))
-    draw_left_text(draw, 120, 210, "盛隆專線 02-2972-5559", get_font(16), (37, 99, 235, 255))
+    draw_left_text(draw, 120, 176, "若無瓦斯請致電 02-2972-5559", get_font(16), (37, 99, 235, 255))
 
     # Cylinder "LPG" label [125, 305, 195, 355]
     draw.rectangle([125, 305, 195, 355], fill=(210, 218, 224, 255))
     draw_centered_text(draw, [125, 305, 195, 355], "瓦斯", get_font(18), (71, 85, 105, 255))
 
-    # Gauge "Low" label [310, 268, 370, 295]
-    draw.rectangle([310, 268, 370, 295], fill=(255, 255, 255, 255))
-    draw_centered_text(draw, [310, 268, 370, 295], "殘量", get_font(14), (220, 38, 38, 255))
+    # Gauge "Low" label [324, 268, 360, 293] (strictly inside gauge face)
+    draw.rectangle([324, 268, 360, 293], fill=(255, 255, 255, 255))
+    draw_centered_text(draw, [324, 267, 360, 291], "殘量", get_font(13), (220, 38, 38, 255))
 
     # Step 2: Left Bottom [115, 420, 420, 555]
     draw.rectangle([115, 420, 420, 555], fill=(240, 248, 252, 255))
@@ -215,37 +215,36 @@ def process_heater_troubleshoot():
     draw_left_text(draw, 120, 488, "推薦使用全新大電量鹼性電池", get_font(16), (71, 85, 105, 255))
     draw_left_text(draw, 120, 518, "注意正負極方向安裝正確", get_font(16), (37, 99, 235, 255))
 
-    # Step 3: Right Top [1015, 110, 1345, 195]
-    draw.rectangle([1015, 110, 1345, 195], fill=(235, 246, 252, 255))
-    draw_left_text(draw, 1020, 112, "步驟 3：確認瓦斯開關開啟", get_font(22), (15, 23, 42, 255))
+    # Step 3: Right Top - stops at x=1255 to preserve hand-turning-valve icon at x>=1272
+    draw.rectangle([1015, 110, 1255, 192], fill=(235, 246, 252, 255))
+    draw_left_text(draw, 1020, 112, "步驟 3：確認瓦斯開關", get_font(22), (15, 23, 42, 255))
     draw_left_text(draw, 1020, 144, "確認管路凡而把手平行暢通", get_font(16), (71, 85, 105, 255))
     draw_left_text(draw, 1020, 170, "角閥旋鈕逆時針完全開啟", get_font(15), (71, 85, 105, 255))
 
-    # Step 4: Right Middle - strictly x <= 1210 to avoid showerhead curve
-    draw.rectangle([1015, 305, 1210, 405], fill=(235, 246, 252, 255))
-    draw_left_text(draw, 1020, 308, "步驟 4：確認水壓水量足夠", get_font(22), (15, 23, 42, 255))
-    draw_left_text(draw, 1020, 340, "水流過小微動開關無法點火", get_font(15), (71, 85, 105, 255))
-    draw_left_text(draw, 1020, 368, "調大進水量或清除龍頭水垢", get_font(15), (71, 85, 105, 255))
+    # Step 4: Right Middle - stops at y=372 above water gauge (y=380) and x=1210 left of showerhead
+    draw.rectangle([1015, 305, 1210, 372], fill=(235, 246, 252, 255))
+    draw.rectangle([1015, 372, 1087, 394], fill=(235, 246, 252, 255))
+    draw_left_text(draw, 1020, 308, "步驟 4：確認水壓水量", get_font(21), (15, 23, 42, 255))
+    draw_left_text(draw, 1020, 342, "水流過小微動開關無法點火", get_font(15), (71, 85, 105, 255))
 
-    # Step 4: Subtitle below gauge [1015, 435, 1240, 480]
-    draw.rectangle([1015, 435, 1240, 480], fill=(235, 246, 252, 255))
-    draw_left_text(draw, 1020, 445, "檢查家中蓮蓬頭出水水壓", get_font(16), (71, 85, 105, 255))
+    # Step 4: Subtitle below gauge [1030, 442, 1215, 485]
+    draw.rectangle([1030, 442, 1215, 485], fill=(235, 246, 252, 255))
+    draw_left_text(draw, 1032, 450, "調大進水量或清除龍頭水垢", get_font(15), (71, 85, 105, 255))
 
     # Step 5: Right Bottom - strictly y <= 588 to stay above curved green arrow
     draw.rectangle([1015, 510, 1260, 588], fill=(235, 246, 252, 255))
-    draw_left_text(draw, 1020, 512, "步驟 5：清洗冷熱水濾網", get_font(22), (15, 23, 42, 255))
+    draw_left_text(draw, 1020, 512, "步驟 5：清洗進水濾網", get_font(22), (15, 23, 42, 255))
     draw_left_text(draw, 1020, 542, "旋開進水濾網清除泥沙雜質", get_font(16), (71, 85, 105, 255))
     draw_left_text(draw, 1020, 567, "避免泥沙堵塞阻礙水流啟動", get_font(15), (71, 85, 105, 255))
 
-    # Step 5: Below filter [1020, 660, 1260, 725]
-    draw.rectangle([1020, 660, 1260, 725], fill=(235, 246, 252, 255))
-    draw_left_text(draw, 1025, 665, "旋開濾網", get_font(16), (15, 23, 42, 255))
-    draw_left_text(draw, 1125, 665, "清水沖洗", get_font(16), (15, 23, 42, 255))
-    draw_left_text(draw, 1025, 695, "清除水垢泥沙與鐵屑", get_font(15), (100, 116, 139, 255))
+    # Step 5: Below filter - strictly y >= 675 (below green arrow) and x <= 1205 (left of water stream)
+    draw.rectangle([1055, 675, 1205, 730], fill=(235, 246, 252, 255))
+    draw_left_text(draw, 1060, 678, "旋開濾網・清水沖洗", get_font(15), (15, 23, 42, 255))
+    draw_left_text(draw, 1060, 703, "清除水垢泥沙與鐵屑", get_font(14), (100, 116, 139, 255))
 
-    # Bottom valve arrow "OPEN" [540, 660, 625, 705]
-    draw.rectangle([540, 660, 625, 705], fill=(255, 255, 255, 255))
-    draw_centered_text(draw, [540, 660, 625, 705], "開啟", get_font(18), (15, 23, 42, 255))
+    # Bottom valve arrow "OPEN" - starts at x=578 to preserve green arrow at x=[544, 574]
+    draw.rectangle([578, 665, 635, 700], fill=(255, 255, 255, 255))
+    draw_centered_text(draw, [578, 665, 635, 700], "開啟", get_font(18), (15, 23, 42, 255))
 
     # Bottom Contact Bar [340, 712, 980, 760]
     draw.rounded_rectangle([340, 712, 980, 760], radius=8, fill=(255, 255, 255, 255), outline=(220, 38, 38, 255), width=2)
@@ -409,63 +408,65 @@ def process_natural_vs_lpg():
     overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # 1. Top Title [100, 50, 1300, 180]
-    draw.rectangle([100, 50, 1300, 180], fill=(255, 255, 255, 255))
-    draw_centered_text(draw, [100, 60, 1300, 125], "天然瓦斯 (NG) 與 桶裝瓦斯 (LPG) 規格與設備差異圖解", get_font(34), (30, 41, 59, 255))
-    draw_centered_text(draw, [100, 130, 1300, 175], "盛隆瓦斯專業安全指南 ｜ 門市電話 02-2972-5559 ｜ LINE: @350MZOGG", get_font(18), (100, 116, 139, 255))
+    ICY_LEFT = (247, 251, 252, 255)
+    ICY_RIGHT = (242, 247, 251, 255)
+
+    # 1. Top Title [100, 50, 1300, 178]
+    draw.rectangle([100, 50, 1300, 178], fill=(247, 251, 252, 255))
+    draw_centered_text(draw, [100, 58, 1300, 122], "天然瓦斯 (NG) 與 桶裝瓦斯 (LPG) 規格與設備差異圖解", get_font(34), (30, 41, 59, 255))
+    draw_centered_text(draw, [100, 128, 1300, 172], "盛隆瓦斯專業安全指南 ｜ 門市電話 02-2972-5559 ｜ LINE: @350MZOGG", get_font(18), (100, 116, 139, 255))
 
     # 2. Left Side (Natural Gas)
-    # Low pressure [300, 200, 555, 285]
-    draw.rectangle([300, 200, 555, 285], fill=(255, 255, 255, 255))
-    draw_left_text(draw, 305, 208, "天然瓦斯 (NG)", get_font(22), (37, 99, 235, 255))
-    draw_left_text(draw, 305, 244, "市區供氣低壓: 150~200 mmH2O", get_font(16), (71, 85, 105, 255))
+    # Low pressure - starts at x=352 right of the left gauge (x <= 340)
+    draw.rectangle([352, 200, 555, 280], fill=ICY_LEFT)
+    draw_left_text(draw, 358, 205, "天然瓦斯 (NG)", get_font(22), (37, 99, 235, 255))
+    draw_left_text(draw, 358, 240, "低壓供氣: 150~200 mmH2O", get_font(15), (71, 85, 105, 255))
 
     # Pipeline [120, 390, 440, 440]
-    draw.rectangle([120, 390, 440, 440], fill=(255, 255, 255, 255))
+    draw.rectangle([120, 390, 440, 440], fill=ICY_LEFT)
     draw_centered_text(draw, [120, 390, 440, 440], "市區自來管線集中供氣", get_font(20), (15, 23, 42, 255))
 
-    # Large orifice [330, 605, 555, 675]
-    draw.rectangle([330, 605, 555, 675], fill=(255, 255, 255, 255))
-    draw_left_text(draw, 335, 610, "噴嘴孔徑較大", get_font(20), (37, 99, 235, 255))
-    draw_left_text(draw, 335, 642, "天然氣專用燃氣規格", get_font(15), (100, 116, 139, 255))
+    # Large orifice - starts at x=355 right of the left burner (x <= 341)
+    draw.rectangle([355, 605, 555, 675], fill=ICY_LEFT)
+    draw_left_text(draw, 362, 610, "噴嘴孔徑較大", get_font(20), (37, 99, 235, 255))
+    draw_left_text(draw, 362, 642, "天然氣專用燃氣規格", get_font(15), (100, 116, 139, 255))
 
     # 3. Center STOP Sign & Warning Card
     # Patch exact STOP letters inside octagon [618, 263, 756, 331] with exact octagon red (217, 13, 22)
-    # This preserves both the original octagon border and the red warning triangle below it!
     draw.rectangle([618, 263, 756, 331], fill=(217, 13, 22, 255))
     draw_centered_text(draw, [618, 260, 756, 330], "停！", get_font(42), (255, 255, 255, 255))
 
-    # Center card warning body: covers [568, 422, 807, 578] strictly inside card below the triangle (y=419)
-    draw.rectangle([568, 422, 807, 578], fill=(255, 255, 255, 255))
-    draw_centered_text(draw, [568, 424, 807, 454], "嚴禁私自混接！", get_font(22), (220, 38, 38, 255))
-    draw_centered_text(draw, [568, 456, 807, 482], "供壓與熱值完全不同", get_font(16), (220, 38, 38, 255))
-    draw_centered_text(draw, [568, 484, 807, 510], "天然氣爐具直接接桶裝", get_font(16), (15, 23, 42, 255))
-    draw_centered_text(draw, [568, 512, 807, 538], "將產生巨大爆燃極危險！", get_font(16), (220, 38, 38, 255))
-    draw.line([585, 543, 790, 543], fill=(226, 232, 240, 255), width=1)
-    draw_centered_text(draw, [568, 548, 807, 576], "須由合格技術士改機換噴嘴", get_font(15), (5, 150, 105, 255))
+    # Center card warning body: starts at y=432 to preserve the bottom red border of the warning triangle (y=428)
+    draw.rectangle([568, 432, 807, 578], fill=(255, 255, 255, 255))
+    draw_centered_text(draw, [568, 434, 807, 462], "嚴禁私自混接！", get_font(21), (220, 38, 38, 255))
+    draw_centered_text(draw, [568, 464, 807, 488], "供壓與熱值完全不同", get_font(16), (220, 38, 38, 255))
+    draw_centered_text(draw, [568, 490, 807, 514], "天然氣爐具直接接桶裝", get_font(16), (15, 23, 42, 255))
+    draw_centered_text(draw, [568, 516, 807, 540], "將產生巨大爆燃極危險！", get_font(16), (220, 38, 38, 255))
+    draw.line([585, 545, 790, 545], fill=(226, 232, 240, 255), width=1)
+    draw_centered_text(draw, [568, 550, 807, 576], "須由合格技術士改機換噴嘴", get_font(15), (5, 150, 105, 255))
 
     # 4. Right Side (LPG)
-    # High pressure [830, 200, 1060, 285]
-    draw.rectangle([830, 200, 1060, 285], fill=(255, 255, 255, 255))
-    draw_left_text(draw, 835, 208, "桶裝瓦斯 (LPG)", get_font(22), (5, 150, 105, 255))
-    draw_left_text(draw, 835, 244, "安全標準控壓: R280 調整器", get_font(16), (71, 85, 105, 255))
+    # High pressure - stops at x=1005 left of the right gauge (x >= 1013)
+    draw.rectangle([825, 200, 1005, 280], fill=ICY_RIGHT)
+    draw_left_text(draw, 830, 205, "桶裝瓦斯 (LPG)", get_font(22), (5, 150, 105, 255))
+    draw_left_text(draw, 830, 240, "控壓: R280 調整器", get_font(15), (71, 85, 105, 255))
 
-    # High energy density [830, 320, 1050, 395]
-    draw.rectangle([830, 320, 1050, 395], fill=(255, 255, 255, 255))
-    draw_left_text(draw, 835, 326, "單位熱值極高", get_font(20), (5, 150, 105, 255))
-    draw_left_text(draw, 835, 360, "大火快炒鑊氣足・加熱迅捷", get_font(16), (71, 85, 105, 255))
+    # High energy density - stops at x=1042 left of the blue arrow (x >= 1052)
+    draw.rectangle([825, 318, 1042, 392], fill=ICY_RIGHT)
+    draw_left_text(draw, 830, 324, "單位熱值極高", get_font(20), (5, 150, 105, 255))
+    draw_left_text(draw, 830, 358, "大火快炒鑊氣足・加熱快", get_font(15), (71, 85, 105, 255))
 
     # Cylinder label "LPG" [1155, 300, 1255, 355]
     draw.rectangle([1155, 300, 1255, 355], fill=(205, 230, 242, 255))
     draw_centered_text(draw, [1155, 300, 1255, 355], "瓦斯", get_font(22), (71, 85, 105, 255))
 
     # Smaller orifice [830, 660, 1040, 730]
-    draw.rectangle([830, 660, 1040, 730], fill=(255, 255, 255, 255))
+    draw.rectangle([830, 660, 1040, 730], fill=ICY_RIGHT)
     draw_left_text(draw, 835, 665, "噴嘴孔徑較小", get_font(20), (5, 150, 105, 255))
     draw_left_text(draw, 835, 698, "桶裝高壓專用設備", get_font(15), (100, 116, 139, 255))
 
     # Reverse thread left-hand screw valve [1040, 665, 1360, 730]
-    draw.rectangle([1040, 665, 1360, 730], fill=(255, 255, 255, 255))
+    draw.rectangle([1040, 665, 1360, 730], fill=ICY_RIGHT)
     draw_left_text(draw, 1045, 668, "台灣標準反牙左旋角閥", get_font(19), (15, 23, 42, 255))
     draw_left_text(draw, 1045, 700, "盛隆專線 02-2972-5559 ｜ LINE: @350MZOGG", get_font(14), (37, 99, 235, 255))
 

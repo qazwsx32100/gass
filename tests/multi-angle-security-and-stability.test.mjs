@@ -16,6 +16,9 @@ import aiChatHandler from '../api/ai-chat.js';
 import aiStatusHandler from '../api/ai-status.js';
 import lineAiLogsHandler from '../api/line-ai-logs.js';
 import telegramWebhookHandler from '../api/telegram-webhook.js';
+import authLoginHandler, { authenticateShareholder } from '../api/auth-login.js';
+import customerHistoryHandler, { historyRateLimiter } from '../api/_customer-history.js';
+import { isAuthorizedCron } from '../api/cron-daily-backup.js';
 
 // 輔助函式：建立標準 Mock Response
 const createMockRes = () => {
@@ -494,4 +497,94 @@ test('Dimension 8.1: Client IP Resolution Handles X-Real-IP, X-Forwarded-For Arr
     '127.0.0.1'
   );
 });
+
+// ==============================================================================
+// 🎯 維度九：防資料竄改、弱密碼後門封堵與客戶個資防枚舉 (Anti-Tampering & Anti-Enumeration)
+// ==============================================================================
+
+test('Dimension 9.1: Weak Default PINs (1234 / 6789) Strictly Blocked Across ERP & Website Auth', async () => {
+  // 1. 官網後台 (/api/auth) 嘗試使用 1234 或 6789 登入股東帳號 ➔ 必須回傳 401
+  for (const weakPin of ['1234', '6789']) {
+    const webReq = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-real-ip': '198.51.100.201' },
+      body: { account: '周子傑', password: weakPin }
+    };
+    const webRes = createMockRes();
+    await authHandler(webReq, webRes);
+    assert.equal(webRes.statusCode, 401, `Website auth must reject weak PIN "${weakPin}"`);
+  }
+
+  // 2. ERP 雲端登入 (/api/auth-login) 嘗試使用 1234 或 6789 登入 ➔ 入口端立即攔截 401（不觸發資料庫查詢）
+  for (const weakPin of ['1234', '6789', '0000', '123456', 'admin']) {
+    const erpReq = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-real-ip': '198.51.100.202' },
+      body: { email: 'zijie@shenglonggas.com', password: weakPin }
+    };
+    const erpRes = createMockRes();
+    await authLoginHandler(erpReq, erpRes);
+    assert.equal(erpRes.statusCode, 401, `ERP auth-login must reject weak password "${weakPin}"`);
+    assert.equal(erpRes.body.success, false);
+  }
+
+  // 3. 驗證前端原始碼 (mockData.js) 不再包含任何明文密碼欄位
+  const mockDataSrc = fs.readFileSync(path.resolve('src/db/mockData.js'), 'utf8');
+  assert.ok(!mockDataSrc.includes("password: '1234'"), 'mockData.js must not contain plaintext 1234');
+  assert.ok(!mockDataSrc.includes('windsboy123'), 'mockData.js must not contain plaintext owner password');
+});
+
+test('Dimension 9.2: Customer History API Blocks Wildcard Enumeration & Enforces IP Rate Limit', async () => {
+  // 1. 單字元或過短電話模糊枚舉 (?phone=09) ➔ 必須回傳 400 拒絕撈取全店訂單
+  const shortPhoneReq = {
+    method: 'GET',
+    url: '/api/customer-history?phone=09&format=json',
+    headers: { 'x-real-ip': '203.0.113.199' }
+  };
+  const shortPhoneRes = createMockRes();
+  await customerHistoryHandler(shortPhoneReq, shortPhoneRes);
+  assert.equal(shortPhoneRes.statusCode, 400, 'Short phone wildcard query (?phone=09) must be rejected with 400');
+  assert.equal(shortPhoneRes.body.ok, false);
+
+  // 2. 單字元姓氏模糊枚舉 (?name=陳) ➔ 必須回傳 400 拒絕撈取全店同姓客戶
+  const shortNameReq = {
+    method: 'GET',
+    url: '/api/customer-history?name=陳&format=json',
+    headers: { 'x-real-ip': '203.0.113.199' }
+  };
+  const shortNameRes = createMockRes();
+  await customerHistoryHandler(shortNameReq, shortNameRes);
+  assert.equal(shortNameRes.statusCode, 400, 'Single-character name query (?name=陳) must be rejected with 400');
+
+  // 3. 模擬單一 IP 惡意爬蟲連續發起超過 30 次查詢 ➔ 必須觸發 429 限流保護
+  const scraperIp = '203.0.113.250';
+  historyRateLimiter.clear([`cust_hist:${scraperIp}`]);
+  for (let i = 0; i < 30; i++) {
+    historyRateLimiter.check([{ key: `cust_hist:${scraperIp}`, max: 30 }]);
+  }
+  const rateLimitedReq = {
+    method: 'GET',
+    url: '/api/customer-history?phone=0912345678&format=json',
+    headers: { 'x-real-ip': scraperIp }
+  };
+  const rateLimitedRes = createMockRes();
+  await customerHistoryHandler(rateLimitedReq, rateLimitedRes);
+  assert.equal(rateLimitedRes.statusCode, 429, '31st request within 1 min must be blocked with 429');
+  assert.equal(rateLimitedRes.headers['retry-after'], '60');
+});
+
+test('Dimension 9.3: Cron Daily Backup Enforces Timing-Safe Secret Verification', () => {
+  process.env.CRON_SECRET = 'cron-secret-test-999';
+  process.env.ERP_SYNC_SECRET = 'sync-secret-test-888';
+
+  // 未帶 Authorization 或錯誤 Token ➔ 拒絕
+  assert.equal(isAuthorizedCron({ headers: {} }), false);
+  assert.equal(isAuthorizedCron({ headers: { authorization: 'Bearer wrong-secret' } }), false);
+  assert.equal(isAuthorizedCron({ headers: { authorization: 'Bearer cron-secret-test-998' } }), false);
+
+  // 正確 CRON_SECRET 或 ERP_SYNC_SECRET ➔ 通過
+  assert.equal(isAuthorizedCron({ headers: { authorization: 'Bearer cron-secret-test-999' } }), true);
+  assert.equal(isAuthorizedCron({ headers: { authorization: 'Bearer sync-secret-test-888' } }), true);
+});
+
 

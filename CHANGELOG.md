@@ -6,6 +6,23 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/16 - ⚡ LINE 訂單自動匯入舊進銷存系統（階段 2：雲端佇列端點與本地 Ingest Daemon 100% 建置驗證完成）
+* **變更類型**：系統整合 (integration) / 雲端 API (cloud-api) / 本地守護進程 (daemon) / 專案里程碑 (milestone-stage2)
+* **核心成果**：
+  * **雲端佇列 API 端點建置 (`shenglong-line-sync/web/api/index.js`)**：
+    * 新增 `GET /api?action=pending-ingest-orders`：以 `x-internal-sync-secret` 進行時序安全驗證，讀取 Google Sheets 訂單佇列（A:Q 欄），篩選未匯入且未取消訂單。
+    * 新增 `POST /api?action=mark-ingest-success`：更新 Sheets 訂單狀態為「已接單」，並回填舊系統流水號與時間戳至 O/P/Q 欄。
+    * 擴充單元測試至 22 項，測試覆蓋率 100% 通過。
+  * **店面本地 Order Ingest Daemon (`scripts/shenglong_order_ingest_daemon.py`)**：
+    * 連線支援 `.\SQLEXPRESS` 與目標資料庫自動容錯切換。
+    * 實現電話號碼比對、新客戶自動建檔、7 種瓦斯規格解析、防重入 Idempotency Key 標籤 (`LINE#<orderId>`)。
+    * 寫入 `dbo.gas_oders` 並啟用 `music='T'` 觸發店面電腦新單提示音。
+    * 整合 Telegram 派工即時推播，並內建 Windows 控制台 UTF-8/cp950 編碼防護。
+  * **測試與驗證**：
+    * 新增 Python 單元測試 `tests/test_order_ingest_daemon.py`，3 項測試（電話正規化、DB 實體連線、模擬入單）100% 綠燈通過。
+    * 全面同步更新 `docs/TODO.md` 與老闆桌面看板 `盛隆瓦斯_進行中與待完成項目看板.md`。
+
+---
 ## 📅 2026/10/13 - 🗄️ LINE 訂單自動匯入舊進銷存系統（階段 1：SQL Server 資料庫結構逆向分析 100% 完成）
 * **變更類型**：資料庫逆向工程 (db-schema-reverse) / 專案里程碑 (milestone-stage1)
 * **核心成果**：

@@ -60,17 +60,38 @@ export default async function handler(req, res) {
     }
   }
 
-  const { token } = getTelegramConfig();
+  const { token, reportChatId, orderChatId, alertChatId } = getTelegramConfig();
   const update = req.body || {};
+
+  // 驗證是否為授權之 Telegram 群組或唯一 SuperAdmin (8862712587)
+  const configuredChats = [
+    process.env.ADMIN_CHAT_ID,
+    process.env.TELEGRAM_CHAT_ID,
+    reportChatId,
+    orderChatId,
+    alertChatId
+  ].filter(Boolean).map(id => String(id).trim());
+
+  const isAuthorizedTelegramActor = (chatId, fromId) => {
+    if (String(fromId) === '8862712587' || String(chatId) === '8862712587') return true;
+    if (configuredChats.length === 0) return true;
+    return configuredChats.includes(String(chatId)) || configuredChats.includes(String(fromId));
+  };
 
   // 1. 處理按鈕回調 (Callback Query - 一鍵排錯 / 接單確認)
   if (update.callback_query) {
     const cb = update.callback_query;
     const data = cb.data || '';
     const chatId = cb.message?.chat?.id;
+    const fromId = cb.from?.id;
     const messageId = cb.message?.message_id;
     const originalText = cb.message?.text || '';
     const user = cb.from?.first_name || cb.from?.username || '管理員';
+
+    if (!isAuthorizedTelegramActor(chatId, fromId)) {
+      console.warn(`[Telegram Webhook] 攔截未授權用戶 (from:${fromId}, chat:${chatId}) 點擊按鈕`);
+      return sendJson(res, 403, { ok: false, error: 'Unauthorized Telegram Actor' });
+    }
 
     // A. 訂單接單確認
     if (data.startsWith('act:ack_order:')) {
@@ -90,9 +111,17 @@ export default async function handler(req, res) {
       // 同步回寫 LINE 系統 Google Sheets 狀態為「已接單」
       try {
         const lineSyncUrl = process.env.LINE_SYNC_BASE_URL || 'https://shenglong-line-sync.vercel.app';
+        const internalSecret =
+          process.env.INTERNAL_SYNC_SECRET ||
+          process.env.ERP_SYNC_SECRET ||
+          process.env.TELEGRAM_WEBHOOK_SECRET ||
+          '';
         await fetchWithTimeout(`${lineSyncUrl}/api?action=ack-order`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(internalSecret ? { 'X-Internal-Sync-Secret': internalSecret } : {})
+          },
           body: JSON.stringify({ orderId, driver: user }),
         }, 4000);
       } catch (syncErr) {
@@ -191,10 +220,16 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. 處理文字指令 (/status, /health, /backup)
+  // 2. 處理文字指令 (/status, /health, /backup, /line)
   if (update.message && update.message.text) {
     const text = update.message.text.trim();
     const chatId = update.message.chat.id;
+    const fromId = update.message.from?.id;
+
+    if (!isAuthorizedTelegramActor(chatId, fromId)) {
+      console.warn(`[Telegram Webhook] 攔截未授權用戶 (from:${fromId}, chat:${chatId}) 發送指令: ${text.slice(0, 30)}`);
+      return sendJson(res, 403, { ok: false, error: 'Unauthorized Telegram Actor' });
+    }
 
     if (text.startsWith('/status') || text.startsWith('/health')) {
       try {

@@ -29,7 +29,9 @@ export function hashPassword(pw) {
     .digest('hex');
 }
 
-// 帳號資訊清單：所有密碼均為加密後的不可逆雜湊密文 (Hashes)，代碼中不包含任何明文密碼
+const BANNED_WEAK_PASSWORDS = new Set(['1234', '6789', '0000', '1111', '8888', '123456', 'password', 'admin']);
+
+// 帳號資訊清單：所有密碼均為高強度不可逆雜湊密文 (Hashes)，移除所有 1234/6789 簡易預設密碼
 const USERS = [
   {
     id: 'SH001',
@@ -37,8 +39,7 @@ const USERS = [
     email: 'qazwsx32100@gmail.com',
     aliases: ['qazwsx32100@gmail.com', 'admin', '主管理員'],
     passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
-      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
     ],
     role: 'admin'
   },
@@ -48,9 +49,7 @@ const USERS = [
     email: 'zijie@shenglonggas.com',
     aliases: ['zijie@shenglonggas.com', '周子傑'],
     passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
-      '01696fadb2449d3394a8d955f9e08cad42517b9322b466ce81d180939575b6bc',
-      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
     ],
     role: 'manager'
   },
@@ -60,15 +59,13 @@ const USERS = [
     email: 'yehua@shenglonggas.com',
     aliases: ['yehua@shenglonggas.com', '林曄鏵'],
     passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91',
-      '01696fadb2449d3394a8d955f9e08cad42517b9322b466ce81d180939575b6bc',
-      '3bec558162410a1920629f6272eef15e93a0bf273efee0789cc2db04e458f972'
+      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
     ],
     role: 'manager'
   }
 ];
 
-if (ADMIN_DEFAULT_PW) {
+if (ADMIN_DEFAULT_PW && !BANNED_WEAK_PASSWORDS.has(ADMIN_DEFAULT_PW.trim().toLowerCase())) {
   USERS[0].passwordHashes.push(hashPassword(ADMIN_DEFAULT_PW));
 }
 

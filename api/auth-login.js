@@ -83,9 +83,122 @@ const publicUserFromState = (state, id, fallback) => (
   (state.shareholders || []).find(item => item.id === id) || fallback
 );
 
+const BANNED_WEAK_PASSWORDS = new Set([
+  '1234',
+  '6789',
+  '0000',
+  '1111',
+  '8888',
+  '123456',
+  'password',
+  'admin'
+]);
+
+export const isWeakBannedPassword = (password = '') =>
+  BANNED_WEAK_PASSWORDS.has(String(password || '').trim().toLowerCase());
+
+export const FALLBACK_SHAREHOLDERS = [
+  {
+    id: 'SH002',
+    name: '周子傑',
+    email: 'zijie@shenglonggas.com',
+    role: 'business_reviewer',
+    requiresPasswordChange: false,
+    passwordHash: '5184eede40351670a55e1cd16eb5e4d0313f7d8bee5b0334c373a71511ba7a38',
+    passwordSalt: 'c73846f41240c67b94054ec6cabe8a14',
+    passwordAlgo: 'pbkdf2_sha256_120000',
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
+    allowedCompanies: ['COMP001']
+  },
+  {
+    id: 'SH003',
+    name: '林曄鏵',
+    email: 'yehua@shenglonggas.com',
+    role: 'business_reviewer',
+    requiresPasswordChange: false,
+    passwordHash: '6fa80adaf72b70e1f4decffb1c7ff85ce494498ff144492269748a8ac7d5c222',
+    passwordSalt: 'c4e37fe6bb5627d91c3036521e4c1281',
+    passwordAlgo: 'pbkdf2_sha256_120000',
+    allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
+    allowedCompanies: ['COMP001']
+  }
+];
+
 const hasCredential = (record = {}) => Boolean(
-  record.password || (record.passwordHash && record.passwordSalt)
+  (record.password && !isWeakBannedPassword(record.password)) ||
+  (record.passwordHash && record.passwordSalt)
 );
+
+export const authenticateShareholder = (state = {}, emailInput = '', passwordInput = '') => {
+  const email = normalizeEmail(emailInput);
+  const password = String(passwordInput || '').trim();
+  const shareholders = Array.isArray(state.shareholders) ? [...state.shareholders] : [];
+
+  if (!email || !password || isWeakBannedPassword(password)) {
+    return { matched: false, idx: -1, user: null, shareholders };
+  }
+
+  let idx = shareholders.findIndex((s) => {
+    const isTarget =
+      normalizeEmail(s.email) === email ||
+      String(s.name || '').trim().toLowerCase() === email;
+    if (!isTarget) return false;
+
+    if (hasCredential(s) && verifyPassword(password, s)) {
+      return true;
+    }
+
+    // 若資料庫舊紀錄尚未初始化有效憑證（或僅存舊版預設簡易碼），僅允許匹配預設 PBKDF2 強雜湊憑證
+    if (!hasCredential(s)) {
+      const fb = FALLBACK_SHAREHOLDERS.find(
+        (f) => f.id === s.id || normalizeEmail(f.email) === email || f.name.toLowerCase() === email
+      );
+      if (fb && verifyPassword(password, fb)) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (idx !== -1 && !hasCredential(shareholders[idx])) {
+    const fb = FALLBACK_SHAREHOLDERS.find(
+      (f) => f.id === shareholders[idx].id || normalizeEmail(f.email) === email || f.name.toLowerCase() === email
+    );
+    if (fb) {
+      const upgraded = {
+        ...shareholders[idx],
+        passwordHash: fb.passwordHash,
+        passwordSalt: fb.passwordSalt,
+        passwordAlgo: fb.passwordAlgo
+      };
+      delete upgraded.password;
+      shareholders[idx] = upgraded;
+    }
+  }
+
+  if (idx === -1) {
+    const fb = FALLBACK_SHAREHOLDERS.find(
+      (f) =>
+        (normalizeEmail(f.email) === email || f.name.toLowerCase() === email) &&
+        verifyPassword(password, f)
+    );
+    if (fb) {
+      idx = shareholders.length;
+      shareholders.push({ ...fb });
+    }
+  }
+
+  if (idx === -1) {
+    return { matched: false, idx: -1, user: null, shareholders };
+  }
+
+  const user = {
+    ...shareholders[idx],
+    role: shareholders[idx].role || 'readonly_shareholder'
+  };
+
+  return { matched: true, idx, user, shareholders };
+};
 
 export const resolveAdminCredential = (state = {}, security = {}, defaultPassword = '') => {
   if (hasCredential(security)) {
@@ -99,7 +212,7 @@ export const resolveAdminCredential = (state = {}, security = {}, defaultPasswor
     return { record: owner, fallbackPassword: '', source: 'ownerAccount' };
   }
 
-  if (defaultPassword) {
+  if (defaultPassword && !isWeakBannedPassword(defaultPassword)) {
     return { record: security, fallbackPassword: defaultPassword, source: 'environment' };
   }
 
@@ -115,6 +228,10 @@ export const resolveAdminLoginCredential = (
   defaultPassword = ''
 ) => {
   const stored = resolveAdminCredential(state, security, '');
+  if (isWeakBannedPassword(attemptedPassword)) {
+    return stored;
+  }
+
   if (
     stored.source !== 'missing' &&
     verifyPassword(attemptedPassword, stored.record, stored.fallbackPassword)
@@ -122,7 +239,11 @@ export const resolveAdminLoginCredential = (
     return stored;
   }
 
-  if (defaultPassword && verifyPassword(attemptedPassword, {}, defaultPassword)) {
+  if (
+    defaultPassword &&
+    !isWeakBannedPassword(defaultPassword) &&
+    verifyPassword(attemptedPassword, {}, defaultPassword)
+  ) {
     return { record: {}, fallbackPassword: defaultPassword, source: 'environmentRecovery' };
   }
 
@@ -156,6 +277,11 @@ export default async function handler(req, res) {
     if (isLoginRateLimited(req, email)) {
       res.setHeader('Retry-After', '300');
       return sendJson(res, 429, { success: false, error: '登入嘗試過多，請稍後再試。' });
+    }
+
+    if (isWeakBannedPassword(password)) {
+      console.warn('blocked weak password login attempt', { email: email || 'unknown', ip: getClientIp(req) });
+      return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
     }
 
     const row = await fetchAppState();
@@ -240,51 +366,13 @@ export default async function handler(req, res) {
       });
     }
 
-    const FALLBACK_SHAREHOLDERS = [
-      {
-        id: 'SH002',
-        name: '周子傑',
-        email: 'zijie@shenglonggas.com',
-        role: 'business_reviewer',
-        requiresPasswordChange: false,
-        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
-        allowedCompanies: ['COMP001']
-      },
-      {
-        id: 'SH003',
-        name: '林曄鏵',
-        email: 'yehua@shenglonggas.com',
-        role: 'business_reviewer',
-        requiresPasswordChange: false,
-        allowedTabs: ['dashboard', 'reports', 'inputs', 'cylinders', 'settings', 'shareholderZone', 'auditZone'],
-        allowedCompanies: ['COMP001']
-      }
-    ];
-    const shareholders = Array.isArray(state.shareholders) ? [...state.shareholders] : [];
-    let idx = shareholders.findIndex(s => (
-      (normalizeEmail(s.email) === email || String(s.name || '').trim().toLowerCase() === email) &&
-      (verifyPassword(password, s) || password === '1234' || password === '6789' || password === 'windsboy123')
-    ));
-    if (idx === -1) {
-      const fb = FALLBACK_SHAREHOLDERS.find(f => (
-        (normalizeEmail(f.email) === email || f.name.toLowerCase() === email) &&
-        (password === '1234' || password === '6789' || password === 'windsboy123')
-      ));
-      if (fb) {
-        idx = shareholders.length;
-        shareholders.push(fb);
-      }
-    }
-
-    if (idx === -1) {
+    const authResult = authenticateShareholder(state, email, password);
+    if (!authResult.matched) {
       console.warn('user login failed', { email: email || 'unknown', ip: getClientIp(req) });
       return sendJson(res, 401, { success: false, error: '帳號或密碼錯誤。' });
     }
 
-    const user = {
-      ...shareholders[idx],
-      role: shareholders[idx].role || 'readonly_shareholder'
-    };
+    const { user, shareholders } = authResult;
 
     if (user.disabled) {
       state = appendLog(state, user.name || email, 'LOGIN_BLOCKED', '帳號已停用');

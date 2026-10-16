@@ -4,7 +4,7 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-13 12:20
+> **最後更新時間**：2026-10-16 14:36
 
 ---
 
@@ -22,30 +22,33 @@
 ## ⏳ 二、 近期高優先待辦 (High Priority / Next Sprint)
 > 已明確排定、準備啟動的核心重要工程
 
-### 1. Google Search Console 索引與 Sitemap 提交 (明日額度重置後執行)
-- **狀態**：`[ ]` 待辦 (今日 GSC 額度已達上限，預計明天重試)
+### 1. Google Search Console 索引與 Sitemap 提交
+- **狀態**：`[x]` 已完成 (Googlebot 已成功排入索引隊列，Sitemap 已建立)
 - **優先級**：`P0` (SEO 排行榜衝刺關鍵)
 - **負責帳號**：`shenglonggas@gmail.com`
 - **目標網址**：`https://shenglong-gas.vercel.app/`
-- **具體任務**：
-  - [ ] 進入 Google Search Console，在最上方搜尋框輸入 `https://shenglong-gas.vercel.app/`
-  - [ ] 點擊「要求建立索引 (Request Indexing)」，強制 Googlebot 抓取最新「三重瓦斯」Title 與在地 Schema
-  - [ ] 左側選單進入「Sitemaps」，提交 `sitemap.xml`
-- **備註**：所有權已 100% 驗證完成，目前已開啟「Google 搜尋生成式 AI (SGE)」納入權限。
+- **完成項目**：
+  - [x] 進入 Google Search Console，在最上方搜尋框輸入 `https://shenglong-gas.vercel.app/`
+  - [x] 點擊「要求建立索引 (Request Indexing)」，強制 Googlebot 抓取最新「三重瓦斯」Title 與在地 Schema
+  - [x] 左側選單進入「Sitemaps」，提交 `sitemap.xml`
+- **成果**：所有權 100% 驗證完成，Google 搜尋生成式 AI (SGE) 權限已啟用，最新三重關鍵字權重正式進入 Google 索引核心排程。
 
 ### 2. LINE 訂單自動匯入舊進銷存系統 - 階段 2：雲端佇列端點與本地 Daemon 開發
-- **狀態**：`[ ]` 待辦 (階段 1 資料庫結構逆向已 100% 完成，隨時可啟動開發)
+- **狀態**：`[x]` 已完成 (雲端佇列端點與本地 Ingest Daemon 測試全數 100% 通過)
 - **優先級**：`P0`
-- **負責設備/端點**：`Vercel 雲端佇列 API` ＆ `店面 Windows 背景 Service`
-- **估計花費時間**：2 個工作天
+- **負責設備/端點**：`Vercel 雲端佇列 API (web/api/index.js)` ＆ `店面 Windows 常駐 Daemon (scripts/shenglong_order_ingest_daemon.py)`
+- **估計花費時間**：1.5 個工作天
 - **老闆指示備註**：以 FIFO 保證順序，斷網或關機時佇列安全保留，復電連網後自動補單，杜絕重複扣庫存。
-- **具體任務**：
-  - [ ] 雲端新增 `GET /api?action=pending-ingest-orders`
-  - [ ] 雲端新增 `POST /api?action=mark-ingest-success`
-  - [ ] 開發本地常駐程式 `shenglong_order_ingest_daemon.py` (每 5 秒輪詢拉單寫入 `dbo.gas_oders`)
-  - [ ] 串接 Telegram 入單成功即時推播通知
+- **完成項目**：
+  - [x] 雲端新增 `GET /api?action=pending-ingest-orders` (驗證內部密鑰，讀取未匯入且未取消訂單)
+  - [x] 雲端新增 `POST /api?action=mark-ingest-success` (更新 Sheets 狀態為已接單，回填舊系統單號至 O/P/Q 欄)
+  - [x] 開發本地常駐程式 `shenglong_order_ingest_daemon.py` (支援 Windows UTF-8/cp950 防護、電話比對客戶、防重入 Idempotency Key、寫入 `dbo.gas_oders`、`music='T'` 觸發店面電腦響鈴)
+  - [x] 串接 Telegram 入單成功即時推播通知 (含舊進銷存單號、規格數量、金額與導航)
+  - [x] 完成 Node.js API 測試 (22 項) 與 Python 單元及實體 SQL Server 連線測試 (3 項) 100% 綠燈
 - **關聯文件**：
   - 專案報告書：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
+  - 本地 Daemon：[`scripts/shenglong_order_ingest_daemon.py`](file:///c:/Gass/scripts/shenglong_order_ingest_daemon.py)
+  - 測試套件：[`tests/test_order_ingest_daemon.py`](file:///c:/Gass/tests/test_order_ingest_daemon.py)
 
 ---
 

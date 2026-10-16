@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { captureServerException } from './_monitoring.js';
 import {
   createCloudBackup,
@@ -9,11 +10,19 @@ import {
 import { uploadBackupToGoogleDrive } from './_google-drive.js';
 import { sendErrorAlert, sendSystemReport } from './_telegram.js';
 
-const isAuthorizedCron = (req) => {
-  const authHeader = req.headers.authorization || '';
+const safeEqual = (a, b) => {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+};
+
+export const isAuthorizedCron = (req) => {
+  const authHeader = String(req?.headers?.authorization || '').trim();
+  if (!authHeader) return false;
   const expectedCronSecret = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : '';
   const expectedSyncSecret = process.env.ERP_SYNC_SECRET ? `Bearer ${process.env.ERP_SYNC_SECRET}` : '';
-  return Boolean(authHeader) && (authHeader === expectedCronSecret || authHeader === expectedSyncSecret);
+  return safeEqual(authHeader, expectedCronSecret) || safeEqual(authHeader, expectedSyncSecret);
 };
 
 const taipeiStamp = () => (
