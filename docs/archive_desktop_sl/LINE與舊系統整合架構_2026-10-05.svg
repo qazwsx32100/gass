@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .title{font:700 38px 'Microsoft JhengHei',sans-serif;fill:#123047}.sub{font:400 18px 'Microsoft JhengHei',sans-serif;fill:#496575}
+      .h{font:700 24px 'Microsoft JhengHei',sans-serif;fill:#123047}.t{font:400 18px 'Microsoft JhengHei',sans-serif;fill:#17394d}
+      .s{font:400 15px 'Microsoft JhengHei',sans-serif;fill:#496575}.box{stroke-width:2;rx:18}.arrow{stroke:#327a72;stroke-width:4;fill:none;marker-end:url(#a)}
+      .dash{stroke:#cc8b2b;stroke-width:3;fill:none;stroke-dasharray:10 8;marker-end:url(#b)}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#327a72"/></marker>
+    <marker id="b" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#cc8b2b"/></marker>
+  </defs>
+  <rect width="1600" height="1000" fill="#f5fbfd"/>
+  <text x="800" y="58" text-anchor="middle" class="title">盛隆 LINE 會員與舊系統整合架構</text>
+  <text x="800" y="90" text-anchor="middle" class="sub">正式資料一致、快速讀取、防重複、可重試；舊系統橋接目前保持停用</text>
+
+  <rect x="70" y="150" width="300" height="150" fill="#e5f5ff" stroke="#4b9dcc" class="box"/>
+  <text x="220" y="194" text-anchor="middle" class="h">LINE 客戶</text>
+  <text x="220" y="230" text-anchor="middle" class="t">會員登入・地址・下單</text>
+  <text x="220" y="260" text-anchor="middle" class="s">只看自己的價格、地址與訂單</text>
+
+  <rect x="470" y="125" width="340" height="200" fill="#eaf8f2" stroke="#3a9a76" class="box"/>
+  <text x="640" y="170" text-anchor="middle" class="h">Vercel LINE 官網</text>
+  <text x="640" y="208" text-anchor="middle" class="t">LINE 身分驗證・API・管理後台</text>
+  <text x="640" y="240" text-anchor="middle" class="s">伺服器端密鑰，不交給瀏覽器</text>
+  <text x="640" y="268" text-anchor="middle" class="s">速率限制・60 天 session・操作稽核</text>
+  <text x="640" y="296" text-anchor="middle" class="s">舊系統專用入口預設關閉</text>
+
+  <rect x="930" y="125" width="390" height="200" fill="#eef1ff" stroke="#677bd0" class="box"/>
+  <text x="1125" y="170" text-anchor="middle" class="h">Supabase 正式資料中心</text>
+  <text x="1125" y="208" text-anchor="middle" class="t">會員・地址・價格・訂單・狀態</text>
+  <text x="1125" y="240" text-anchor="middle" class="s">RLS＋瀏覽器禁止直接存取</text>
+  <text x="1125" y="268" text-anchor="middle" class="s">指定用途 RPC・交易鎖・稽核紀錄</text>
+  <text x="1125" y="296" text-anchor="middle" class="s">同步佇列・唯一編號・重試</text>
+
+  <path d="M370 225 H470" class="arrow"/><path d="M810 225 H930" class="arrow"/>
+  <text x="420" y="208" text-anchor="middle" class="s">HTTPS</text><text x="870" y="208" text-anchor="middle" class="s">窄範圍 RPC</text>
+
+  <rect x="100" y="470" width="330" height="180" fill="#fff8e8" stroke="#cc8b2b" class="box"/>
+  <text x="265" y="514" text-anchor="middle" class="h">真正營業主機</text>
+  <text x="265" y="550" text-anchor="middle" class="t">本機安全同步程式</text>
+  <text x="265" y="582" text-anchor="middle" class="s">先 inspect → dry-run → 人工核對</text>
+  <text x="265" y="610" text-anchor="middle" class="s">只主動連出，不開放 SQL 到網路</text>
+  <text x="265" y="638" text-anchor="middle" class="s">另設正式寫入開關</text>
+
+  <rect x="520" y="470" width="330" height="180" fill="#fff3ef" stroke="#c66b50" class="box"/>
+  <text x="685" y="514" text-anchor="middle" class="h">舊營業系統 SQL Server</text>
+  <text x="685" y="550" text-anchor="middle" class="t">customers・gas_oders</text>
+  <text x="685" y="582" text-anchor="middle" class="s">門市仍可照原方式下訂</text>
+  <text x="685" y="610" text-anchor="middle" class="s">LINE 訂單取得舊系統 oder_id</text>
+  <text x="685" y="638" text-anchor="middle" class="s">地址保留訂單當時快照</text>
+
+  <path d="M430 530 H520" class="arrow"/><path d="M520 595 H430" class="arrow"/>
+  <text x="475" y="512" text-anchor="middle" class="s">參數化寫入</text><text x="475" y="625" text-anchor="middle" class="s">增量讀取</text>
+
+  <path d="M265 470 C265 380 720 400 930 280" class="dash"/>
+  <path d="M930 305 C760 430 420 390 335 470" class="dash"/>
+  <text x="605" y="392" text-anchor="middle" class="s">HMAC 驗證＋5 分鐘時效＋Nonce 防重播</text>
+
+  <rect x="1010" y="470" width="390" height="180" fill="#f1fbef" stroke="#6da960" class="box"/>
+  <text x="1205" y="514" text-anchor="middle" class="h">Google Sheets</text>
+  <text x="1205" y="550" text-anchor="middle" class="t">每日非同步備份</text>
+  <text x="1205" y="582" text-anchor="middle" class="s">不參與即時下單主流程</text>
+  <text x="1205" y="610" text-anchor="middle" class="s">失敗可重試，不影響客戶下單</text>
+  <text x="1205" y="638" text-anchor="middle" class="s">財務、測試與舊工具分開管理</text>
+  <path d="M1125 325 V470" class="arrow"/>
+
+  <rect x="120" y="760" width="1360" height="150" fill="#ffffff" stroke="#b9d2dc" class="box"/>
+  <text x="800" y="802" text-anchor="middle" class="h">同步規則</text>
+  <text x="180" y="844" class="t">① LINE 新單：Supabase 先成功 → 同步佇列 → 舊系統</text>
+  <text x="180" y="878" class="t">② 舊系統新單：流水號／變更追蹤 → Supabase → LINE 訂單紀錄</text>
+  <text x="870" y="844" class="t">③ 每筆保留來源、雙方訂單編號與指紋</text>
+  <text x="870" y="878" class="t">④ 衝突停在待處理，不自動改客戶或搬移地址</text>
+  <text x="800" y="960" text-anchor="middle" class="sub">橘色虛線：尚待在真正營業主機完成唯讀檢查後啟用</text>
+</svg>

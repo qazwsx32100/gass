@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🔥 盛隆瓦斯 - 五大獨立 App 安裝與直達指南</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --accent-green: #10b981;
+      --accent-orange: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --accent-cyan: #06b6d4;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px 16px 40px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .guide-banner {
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.4), rgba(15, 23, 42, 0.8));
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .guide-banner h3 {
+      font-size: 16px;
+      color: #93c5fd;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .guide-steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    @media (max-width: 520px) {
+      .guide-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+    .step-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .step-title {
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .step-box ol {
+      padding-left: 18px;
+      color: var(--text-muted);
+    }
+    .step-box ol li {
+      margin-bottom: 4px;
+    }
+    .app-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .app-card:hover {
+      border-color: rgba(59, 130, 246, 0.6);
+    }
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .app-info {
+      flex: 1;
+    }
+    .app-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .app-icon {
+      font-size: 24px;
+    }
+    .app-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .app-target {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+    .app-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .qr-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+    }
+    .qr-img {
+      width: 90px;
+      height: 90px;
+      background: #ffffff;
+      padding: 4px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .qr-tip {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .open-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--primary);
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      margin-top: 8px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+    }
+    .open-btn:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge">盛隆瓦斯 全通路體系</span>
+      <h1>📱 五大獨立 App 安裝與直達</h1>
+      <p class="subtitle">各系統已徹底獨立解耦，手機點擊連結後即可「加入主畫面」變身專屬獨立 App！</p>
+    </header>
+
+    <!-- 安裝教學 -->
+    <div class="guide-banner">
+      <h3>📲 手機「加到主畫面」變成獨立 App 教學</h3>
+      <div class="guide-steps">
+        <div class="step-box">
+          <div class="step-title">🍎 iPhone / iPad (Safari)</div>
+          <ol>
+            <li>點擊下方按鈕或掃描 QR 碼開啟網頁</li>
+            <li>點擊底部中央的<strong>「分享」按鈕</strong>（向上箭頭圖示）</li>
+            <li>往下滑找到並點選<strong>「加入主畫面」</strong></li>
+            <li>點選右上角<strong>「新增」</strong>即完成！</li>
+          </ol>
+        </div>
+        <div class="step-box">
+          <div class="step-title">🤖 Android 手機 (Chrome)</div>
+          <ol>
+            <li>點擊下方按鈕或掃描 QR 碼開啟網頁</li>
+            <li>點擊右上角<strong>「三個點選單」</strong></li>
+            <li>點選<strong>「加到主畫面」</strong>或<strong>「安裝應用程式」</strong></li>
+            <li>點選<strong>「新增 / 安裝」</strong>即完成！</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 1: 營運調度中心 -->
+    <div class="app-card">
+      <div class="app-header">
+        <div class="app-info">
+          <div class="app-title-row">
+            <span class="app-icon">🚀</span>
+            <span class="app-title">1. 即時營運調度中心</span>
+            <span class="app-target" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">調度員 / 老闆</span>
+          </div>
+          <p class="app-desc">今日叫貨派工、指派司機、待送訂單調度、主機健康監控與 Telegram 告警管理。</p>
+        </div>
+      </div>
+      <div class="qr-container">
+        <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://shenglong-next-phi.vercel.app/operations" alt="營運調度 QR" />
+        <div class="qr-tip">
+          <div><strong>網址：</strong>shenglong-next-phi.vercel.app/operations</div>
+          <div>用手機掃描或點擊下方按鈕加入主畫面：</div>
+          <a class="open-btn" style="background: #2563eb;" href="https://shenglong-next-phi.vercel.app/operations" target="_blank">🚀 開啟營運中心 App</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 2: 雲端財報系統 -->
+    <div class="app-card">
+      <div class="app-header">
+        <div class="app-info">
+          <div class="app-title-row">
+            <span class="app-icon">📊</span>
+            <span class="app-title">2. 雲端財報系統</span>
+            <span class="app-target" style="background: rgba(139, 92, 246, 0.2); color: #c084fc;">老闆 / 股東 / 會計</span>
+          </div>
+          <p class="app-desc">當月損益表、現金流、毛利率、股東分紅報表、鋼瓶資產與會計記帳核銷。</p>
+        </div>
+      </div>
+      <div class="qr-container">
+        <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://erp-weld-three-96.vercel.app" alt="雲端財報 QR" />
+        <div class="qr-tip">
+          <div><strong>網址：</strong>erp-weld-three-96.vercel.app</div>
+          <div>純淨財務後台，無派工與外送雜訊干擾：</div>
+          <a class="open-btn" style="background: #7c3aed;" href="https://erp-weld-three-96.vercel.app" target="_blank">📊 開啟雲端財報 App</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 3: 即時庫存電子看板 -->
+    <div class="app-card">
+      <div class="app-header">
+        <div class="app-info">
+          <div class="app-title-row">
+            <span class="app-icon">🛢️</span>
+            <span class="app-title">3. 即時庫存電子看板</span>
+            <span class="app-target" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">倉庫 / 充填場 / 門市大螢幕</span>
+          </div>
+          <p class="app-desc">50/20/16/10/4kg 各規格實存桶數、今日進出量、安全水位警報，全螢幕獨立顯示。</p>
+        </div>
+      </div>
+      <div class="qr-container">
+        <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://shenglong-next-phi.vercel.app/gas-stock" alt="庫存看板 QR" />
+        <div class="qr-tip">
+          <div><strong>網址：</strong>shenglong-next-phi.vercel.app/gas-stock</div>
+          <div>現場免操作，掛在牆上或手機隨時檢視：</div>
+          <a class="open-btn" style="background: #d97706;" href="https://shenglong-next-phi.vercel.app/gas-stock" target="_blank">🛢️ 開啟庫存看板 App</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 4: 外送司機專用 App -->
+    <div class="app-card">
+      <div class="app-header">
+        <div class="app-info">
+          <div class="app-title-row">
+            <span class="app-icon">🛵</span>
+            <span class="app-title">4. 外送司機專用 App</span>
+            <span class="app-target" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">外送師傅</span>
+          </div>
+          <p class="app-desc">師傅手機專屬。免帳密專屬直達、挑桶警示、一鍵地圖導航、一鍵通話、送達回報。</p>
+        </div>
+      </div>
+      <div class="qr-container">
+        <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://shenglong-next-phi.vercel.app/driver" alt="司機 App QR" />
+        <div class="qr-tip">
+          <div><strong>網址：</strong>shenglong-next-phi.vercel.app/driver</div>
+          <div>各大師傅皆可加入手機主畫面，天天直接接單：</div>
+          <a class="open-btn" style="background: #059669;" href="https://shenglong-next-phi.vercel.app/driver" target="_blank">🛵 開啟司機專用 App</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- App 5: 店面本地 ERP (Windows) -->
+    <div class="app-card">
+      <div class="app-header">
+        <div class="app-info">
+          <div class="app-title-row">
+            <span class="app-icon">🖥️</span>
+            <span class="app-title">5. 店面本地 ERP 進銷存</span>
+            <span class="app-target" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee;">店面主機櫃檯</span>
+          </div>
+          <p class="app-desc">JM489 來電顯示即時接單、舊客戶歷史地址售價速查、薪資出勤核算、本地資料庫直連。</p>
+        </div>
+      </div>
+      <div class="qr-container">
+        <div class="qr-tip" style="padding: 4px 0;">
+          <div><strong>主機本機網址：</strong><code>http://127.0.0.1:3000</code></div>
+          <div style="margin-top: 6px; color: #94a3b8;">此系統專屬安裝於店面電腦，已在電腦桌面為您建立<strong>「5. 盛隆店面本地ERP」</strong>獨立捷徑，點擊即可像桌面軟體般獨立運行！</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
