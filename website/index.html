@@ -1821,14 +1821,96 @@
     </div>
   </footer>
 
-  <!-- ========== 浮動 LINE 按鈕 ========== -->
+  <!-- ========== 全站浮動 AI 智慧瓦斯諮詢小幫手 ========== -->
+  <div id="aiChatDrawer" class="closed fixed bottom-24 right-4 z-50 w-[92vw] sm:w-96 max-w-[400px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[520px] max-h-[80vh]">
+    <!-- 頂部 Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 flex items-center justify-between shadow-xs">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-lg shadow-2xs backdrop-blur-xs">
+          🤖
+        </div>
+        <div>
+          <div class="font-black text-sm flex items-center gap-1.5">
+            盛隆 AI 智慧瓦斯安全管家
+            <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+          </div>
+          <div class="text-[10px] text-blue-100">24hr 題庫支援 · 現場安全檢驗指引</div>
+        </div>
+      </div>
+      <button type="button" onclick="toggleAiChat()" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="關閉對話盒">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- 訊息對話區 -->
+    <div id="aiChatBody" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs bg-slate-50/70">
+      <!-- 機器人歡迎語 -->
+      <div class="flex items-start gap-2.5">
+        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+          🤖
+        </div>
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs max-w-[85%] text-slate-700 leading-relaxed">
+          您好！我是盛隆瓦斯 AI 智慧管家 🤖<br />
+          您可以問我任何關於<strong>熱水器忽冷忽熱排查、瓦斯爐紅火調風門、漏氣避險 SOP、鋼瓶規格尺寸</strong>或<strong>叫瓦斯費用</strong>！<br />
+          點選下方推薦問題或直接打字提問：
+        </div>
+      </div>
+
+      <!-- 快捷推薦問題 Chips -->
+      <div class="pt-1 pl-9 space-y-1.5" id="aiQuickChips">
+        <div class="text-[10px] text-slate-400 font-bold">點選快速查看專業解答：</div>
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" onclick="askAiQuestion('熱水器點不著或忽冷忽熱怎麼自我排查？')"
+                  class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all">
+            🚿 熱水器忽冷忽熱/點不著
+          </button>
+          <button type="button" onclick="askAiQuestion('瓦斯爐出現紅火黃火燻黑鍋底怎麼調風門？')"
+                  class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all">
+            🔥 瓦斯爐紅火/燻黑鍋底
+          </button>
+          <button type="button" onclick="askAiQuestion('新北三重叫瓦斯送達時間多久？假日有送嗎？')"
+                  class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all">
+            ⏱️ 送達時間與運費
+          </button>
+          <button type="button" onclick="askAiQuestion('1公斤桶裝瓦斯等於多少度天然氣？換算費用哪個省？')"
+                  class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all">
+            💰 桶裝瓦斯 vs 天然瓦斯
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 輸入區 -->
+    <div class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
+      <input type="text" id="aiChatInput" placeholder="請輸入您的瓦斯或安全疑問..."
+             onkeydown="if(event.key==='Enter') submitAiChat()"
+             class="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-100" />
+      <button type="button" onclick="submitAiChat()"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs flex-shrink-0">
+        發送
+      </button>
+    </div>
+  </div>
+
+  <!-- ========== 浮動操作群 (AI + 電話 + LINE) ========== -->
   <div class="fixed bottom-6 right-4 z-50 flex flex-col items-end gap-2.5">
+    <!-- AI 智慧諮詢按鈕 -->
+    <button type="button" onclick="toggleAiChat()" id="aiChatBtn"
+            class="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform relative group"
+            aria-label="開啟 AI 智慧瓦斯諮詢">
+      <span class="text-xl">🤖</span>
+      <span class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full"></span>
+      <span class="hidden group-hover:block absolute right-14 bg-slate-900 text-white text-[11px] font-bold px-2 py-1 rounded-md whitespace-nowrap shadow-md">AI 智慧諮詢</span>
+    </button>
+
+    <!-- 電話直撥按鈕 -->
     <a href="tel:+886229725559"
        class="w-11 h-11 bg-white border border-slate-300 rounded-full shadow-md flex items-center justify-center hover:scale-105 transition-transform"
        aria-label="撥打電話 02-2972-5559">
       <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
     </a>
 
+    <!-- LINE 立即叫瓦斯主按鈕 -->
     <a href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener"
        class="pulse-btn w-14 h-14 bg-line rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
        aria-label="LINE 立即叫瓦斯 @350MZOGG">
@@ -2717,12 +2799,12 @@
           trackCta('phone');
         } else if (target.innerText && (target.innerText.includes('漏氣') || target.innerText.includes('緊急'))) {
           trackCta('leak');
-        } else if (target.innerText && (target.innerText.includes('試算') || target.id?.includes('spec-btn'))) {
+        } else if (target.innerText && (target.innerText.includes('試算') || target.id?.includes('spec-btn') || target.closest('#order-wizard'))) {
           trackCta('calc');
         }
       });
 
-      // 2. 獲取後台動態公告與營業設定
+      // 2. 獲取後台動態公告與營業設定 + 牌價同步至下單精靈
       async function applyCmsBanner() {
         let cmsConfig = null;
         try {
@@ -2739,6 +2821,11 @@
         }
 
         if (!cmsConfig) return;
+
+        // 若 CMS 有自訂牌價，同步至下單精靈與殘氣試算
+        if (cmsConfig.prices) {
+          applyCmsPricesToWizard(cmsConfig.prices);
+        }
 
         // 若啟用頂部公告，於頁面頂部動態插入橫幅
         if (cmsConfig.announcement && cmsConfig.announcement.enabled && cmsConfig.announcement.content) {
@@ -2775,6 +2862,494 @@
         applyCmsBanner();
       }
     })();
+  </script>
+
+  <!-- ========== 升級四大旗艦功能核心互動邏輯 ========== -->
+  <script>
+    // ==========================================
+    // 1. 長輩關懷大字模式 (Elder-Friendly Mode)
+    // ==========================================
+    function toggleElderMode(forceState) {
+      const isElder = forceState !== undefined 
+        ? forceState 
+        : !document.body.classList.contains('elder-mode');
+      
+      document.body.classList.toggle('elder-mode', isElder);
+      const banner = document.getElementById('elderBanner');
+      const text = document.getElementById('elderModeText');
+
+      if (banner) {
+        banner.classList.toggle('hidden', !isElder);
+      }
+      if (text) {
+        text.innerText = isElder ? '正常字體' : '大字模式';
+      }
+      try {
+        localStorage.setItem('shenglong_elder_mode', isElder ? 'true' : 'false');
+      } catch (_) {}
+    }
+
+    // ==========================================
+    // 2. 30 秒智慧快速叫瓦斯精靈 (Order Wizard)
+    // ==========================================
+    window.currentWizSpec = 'p16kg';
+    window.currentWizQty = 1;
+    window.wizPrices = {
+      p4kg: 260,
+      p10kg: 460,
+      p16kg: 680,
+      p20kg: 840,
+      p50kg: 2050
+    };
+
+    function applyCmsPricesToWizard(prices) {
+      if (!prices || typeof prices !== 'object') return;
+      ['p4kg', 'p10kg', 'p16kg', 'p20kg', 'p50kg'].forEach(k => {
+        if (prices[k]) {
+          window.wizPrices[k] = parseInt(prices[k], 10) || window.wizPrices[k];
+          const el = document.getElementById('wizPrice_' + k);
+          if (el) el.innerText = 'NT$ ' + window.wizPrices[k].toLocaleString();
+        }
+      });
+      updateWizardTotal();
+    }
+
+    function selectWizardSpec(specKey) {
+      window.currentWizSpec = specKey;
+      document.querySelectorAll('.wizard-spec-card').forEach(card => {
+        card.classList.remove('spec-card-selected', 'border-blue-600', 'bg-blue-50/60');
+        card.classList.add('border-slate-200', 'bg-white');
+      });
+      const target = document.getElementById('specBtn_' + specKey);
+      if (target) {
+        target.classList.remove('border-slate-200', 'bg-white');
+        target.classList.add('spec-card-selected', 'border-blue-600', 'bg-blue-50/60');
+      }
+      updateWizardTotal();
+    }
+
+    function updateWizardQty(delta) {
+      window.currentWizQty = Math.max(1, Math.min(20, (window.currentWizQty || 1) + delta));
+      const el = document.getElementById('wizQty');
+      if (el) el.innerText = window.currentWizQty;
+      updateWizardTotal();
+    }
+
+    function updateWizardTotal() {
+      const specTitles = {
+        p4kg: '4公斤 輕便裝',
+        p10kg: '10公斤 小家庭',
+        p16kg: '16公斤 家用主力',
+        p20kg: '20公斤 大家庭',
+        p50kg: '50公斤 餐廳商用'
+      };
+      const unit = window.wizPrices[window.currentWizSpec] || 680;
+      const total = unit * (window.currentWizQty || 1);
+      const totalEl = document.getElementById('wizTotalAmount');
+      const sumEl = document.getElementById('wizSummaryText');
+      if (totalEl) totalEl.innerText = 'NT$ ' + total.toLocaleString();
+      if (sumEl) sumEl.innerText = (specTitles[window.currentWizSpec] || '16公斤') + ' × ' + window.currentWizQty + ' 桶';
+    }
+
+    function quickFillRoad(road) {
+      const addrInput = document.getElementById('wizAddress');
+      if (addrInput) {
+        if (!addrInput.value.includes(road)) {
+          addrInput.value = road + ' ';
+        }
+        addrInput.focus();
+      }
+      const wizardSec = document.getElementById('order-wizard');
+      if (wizardSec) {
+        wizardSec.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function submitWizardOrder(channel) {
+      const district = document.getElementById('wizDistrict')?.value || '新北市三重區';
+      const address = document.getElementById('wizAddress')?.value.trim();
+      const floor = document.getElementById('wizFloor')?.value || '電梯大樓';
+      const name = document.getElementById('wizName')?.value.trim();
+      const phone = document.getElementById('wizPhone')?.value.trim();
+      const timeSlot = document.getElementById('wizTimeSlot')?.value || '立即專車送達';
+      const checkLeak = document.getElementById('wizCheckLeak')?.checked;
+      const checkResidual = document.getElementById('wizCheckResidual')?.checked;
+      const checkInvoice = document.getElementById('wizCheckInvoice')?.checked;
+      const taxId = document.getElementById('wizTaxId')?.value.trim();
+
+      if (!address || !phone) {
+        alert('請填寫完整的送達地址與聯絡電話，以便師傅專車為您送達！');
+        if (!address) document.getElementById('wizAddress')?.focus();
+        else document.getElementById('wizPhone')?.focus();
+        return;
+      }
+
+      // 記憶熟客資料
+      try {
+        const profile = { name, phone, district, address, floor, lastSpec: window.currentWizSpec };
+        localStorage.setItem('shenglong_customer_profile', JSON.stringify(profile));
+      } catch (_) {}
+
+      const specTitles = {
+        p4kg: '4公斤 (輕便露營)',
+        p10kg: '10公斤 (小家庭窄空間)',
+        p16kg: '16公斤 (家用主力熱門首選)',
+        p20kg: '20公斤 (快炒大用量)',
+        p50kg: '50公斤 (餐飲商用大桶)'
+      };
+      const specTitle = specTitles[window.currentWizSpec] || '16公斤';
+      const unit = window.wizPrices[window.currentWizSpec] || 680;
+      const total = unit * (window.currentWizQty || 1);
+
+      let reqs = [];
+      if (checkLeak) reqs.push('到府免費測漏氣與換防漏墊圈');
+      if (checkResidual) reqs.push('舊鋼瓶尚有殘氣，需秤重折抵');
+      if (checkInvoice) reqs.push(taxId ? `需開立統一發票 (統編/抬頭: ${taxId})` : '需開立統一發票');
+
+      const orderText = [
+        '【盛隆瓦斯行・線上快速叫瓦斯訂單】',
+        '-----------------------',
+        `📦 規格數量：${specTitle} × ${window.currentWizQty} 桶`,
+        `💰 預估金額：NT$ ${total.toLocaleString()} 元（三重全區免運費）`,
+        `📍 送達地址：${district} ${address} (${floor})`,
+        `👤 訂購姓名：${name || '老鄰居客官'}`,
+        `📞 聯絡電話：${phone}`,
+        `⏱️ 期望時段：${timeSlot}`,
+        reqs.length ? `📝 備註需求：${reqs.join('、')}` : '',
+        '-----------------------',
+        '感謝盛隆瓦斯，請師傅儘快安排專車送達！'
+      ].filter(Boolean).join('\n');
+
+      if (channel === 'line') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(orderText).catch(() => {});
+        }
+        window.open('https://line.me/R/ti/p/@350MZOGG', '_blank');
+        alert('✅ 訂單已自動為您複製！\n已開啟盛隆瓦斯官方 LINE，直接在聊天對話框「貼上」送出即可！我們將以最快速度專車送達！');
+      } else {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(orderText).catch(() => {});
+        }
+        location.href = 'tel:+886229725559';
+      }
+    }
+
+    function loadCustomerProfile() {
+      try {
+        const raw = localStorage.getItem('shenglong_customer_profile');
+        if (!raw) return;
+        const p = JSON.parse(raw);
+        if (p.name) document.getElementById('wizName').value = p.name;
+        if (p.phone) document.getElementById('wizPhone').value = p.phone;
+        if (p.district) document.getElementById('wizDistrict').value = p.district;
+        if (p.address) document.getElementById('wizAddress').value = p.address;
+        if (p.floor) document.getElementById('wizFloor').value = p.floor;
+        if (p.lastSpec && window.wizPrices[p.lastSpec]) selectWizardSpec(p.lastSpec);
+
+        const badge = document.getElementById('returningCustomerBadge');
+        const text = document.getElementById('returningCustomerText');
+        if (badge && text) {
+          badge.classList.remove('hidden');
+          text.innerText = `歡迎回來！已為您自動填入上次資料（${p.name || '老顧客'} / ${p.address}）`;
+        }
+      } catch (_) {}
+    }
+
+    function clearCustomerProfile() {
+      try {
+        localStorage.removeItem('shenglong_customer_profile');
+      } catch (_) {}
+      document.getElementById('wizName').value = '';
+      document.getElementById('wizPhone').value = '';
+      document.getElementById('wizAddress').value = '';
+      document.getElementById('returningCustomerBadge')?.classList.add('hidden');
+    }
+
+    // ==========================================
+    // 3. 商業餐飲專區：殘氣秤重折抵試算器
+    // ==========================================
+    window.currentResSpec = '16kg';
+    function selectResidualSpec(spec) {
+      window.currentResSpec = spec;
+      ['16kg', '20kg', '50kg'].forEach(s => {
+        const btn = document.getElementById('resSpecBtn_' + s);
+        if (!btn) return;
+        if (s === spec) {
+          btn.className = 'py-1.5 px-3 rounded-xl border border-blue-600 bg-blue-50 text-blue-800 text-xs font-bold transition-all text-center';
+        } else {
+          btn.className = 'py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:border-blue-300 transition-all text-center';
+        }
+      });
+      updateResidualCalculation();
+    }
+
+    function updateResidualCalculation(val) {
+      const slider = document.getElementById('residualWeightSlider');
+      const num = parseFloat(val !== undefined ? val : (slider?.value || 1.5)) || 1.5;
+      const display = document.getElementById('residualWeightDisplay');
+      if (display) display.innerText = num.toFixed(1);
+
+      // 當期公定每公斤瓦斯單價約 42 元
+      const refund = Math.round(num * 42);
+      const totalEl = document.getElementById('residualRefundTotal');
+      if (totalEl) totalEl.innerText = 'NT$ ' + refund + ' 元';
+    }
+
+    function quickFillResidualCheck() {
+      const chk = document.getElementById('wizCheckResidual');
+      if (chk) chk.checked = true;
+      document.getElementById('order-wizard')?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ==========================================
+    // 4. 即時配送時速速查 (Delivery Speed Check)
+    // ==========================================
+    window.speedData = {
+      cailiao: { name: '📍 三重 菜寮 / 集美街 生活圈', time: '約 15 ~ 20 分鐘', road: '集美街' },
+      chongxin: { name: '📍 三重 重新路一至五段 主幹道', time: '約 15 ~ 20 分鐘', road: '重新路' },
+      sanhe: { name: '📍 三重 三和路 / 天台商圈 / 三和夜市', time: '約 15 ~ 25 分鐘', road: '三和路' },
+      zhengyi: { name: '📍 三重 正義北路 / 正義南路 商圈', time: '約 15 ~ 25 分鐘', road: '正義北路' },
+      ziqiang: { name: '📍 三重 自強路 / 重陽路 生活圈', time: '約 20 ~ 25 分鐘', road: '自強路' },
+      erchong: { name: '📍 三重 二重疏洪重劃區 / 先嗇宮', time: '約 20 ~ 25 分鐘', road: '重新路五段' },
+      luzhou: { name: '📍 鄰近 蘆洲區 / 五股區 配送生活圈', time: '約 25 ~ 35 分鐘', road: '蘆洲區' }
+    };
+    window.currentSpeedRoad = '集美街';
+
+    function checkDeliverySpeed(key) {
+      const item = window.speedData[key];
+      if (!item) return;
+      window.currentSpeedRoad = item.road;
+
+      document.querySelectorAll('.speed-tag-btn').forEach(btn => {
+        btn.className = 'speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-500/50 hover:bg-white hover:text-blue-900 text-white transition-all';
+      });
+      const activeBtn = document.getElementById('speedBtn_' + key);
+      if (activeBtn) {
+        activeBtn.className = 'speed-tag-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-white text-blue-900 shadow-2xs transition-all';
+      }
+
+      const roadEl = document.getElementById('speedRoadName');
+      const timeEl = document.getElementById('speedEstimatedTime');
+      if (roadEl) roadEl.innerText = item.name;
+      if (timeEl) timeEl.innerText = item.time;
+    }
+
+    function quickFillFromSpeedCheck() {
+      quickFillRoad(window.currentSpeedRoad || '重新路');
+    }
+
+    // ==========================================
+    // 5. 全站浮動 AI 智慧瓦斯諮詢管家
+    // ==========================================
+    function toggleAiChat() {
+      const drawer = document.getElementById('aiChatDrawer');
+      if (!drawer) return;
+      const isClosed = drawer.classList.contains('closed');
+      if (isClosed) {
+        drawer.classList.remove('closed');
+        drawer.classList.add('opened');
+        setTimeout(() => {
+          document.getElementById('aiChatInput')?.focus();
+        }, 150);
+      } else {
+        drawer.classList.remove('opened');
+        drawer.classList.add('closed');
+      }
+    }
+
+    function askAiQuestion(qText) {
+      appendChatMessage('user', qText);
+      const answerObj = matchAiAnswer(qText);
+      setTimeout(() => {
+        appendChatMessage('bot', answerObj.text, answerObj.image, answerObj.actions);
+      }, 350);
+    }
+
+    function submitAiChat() {
+      const input = document.getElementById('aiChatInput');
+      const val = input?.value.trim();
+      if (!val) return;
+      input.value = '';
+      askAiQuestion(val);
+    }
+
+    function appendChatMessage(sender, text, image, actions) {
+      const body = document.getElementById('aiChatBody');
+      if (!body) return;
+
+      const bubble = document.createElement('div');
+      if (sender === 'user') {
+        bubble.className = 'flex items-start justify-end gap-2.5';
+        bubble.innerHTML = `
+          <div class="bg-blue-600 text-white rounded-2xl p-3 shadow-2xs max-w-[85%] leading-relaxed font-medium">
+            ${escapeHtmlText(text)}
+          </div>
+          <div class="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+            您
+          </div>
+        `;
+      } else {
+        bubble.className = 'flex items-start gap-2.5 fade-in';
+        bubble.innerHTML = `
+          <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+            🤖
+          </div>
+          <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs max-w-[88%] text-slate-700 leading-relaxed space-y-2.5">
+            <div>${text}</div>
+            ${image ? `
+              <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mt-2">
+                <img src="${image}" alt="盛隆安全圖解" class="w-full h-auto object-cover" loading="lazy" />
+              </div>
+            ` : ''}
+            <div class="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5">
+              <a href="#order-wizard" onclick="toggleAiChat()" class="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-lg text-[11px] transition-colors">
+                🛒 30秒線上叫瓦斯
+              </a>
+              <a href="https://line.me/R/ti/p/@350MZOGG" target="_blank" rel="noopener" class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-2.5 py-1 rounded-lg text-[11px] transition-colors">
+                📱 LINE 專人檢驗
+              </a>
+              <a href="tel:+886229725559" class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-2.5 py-1 rounded-lg text-[11px] transition-colors">
+                📞 02-2972-5559
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      body.appendChild(bubble);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function escapeHtmlText(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function matchAiAnswer(query) {
+      const q = (query || '').toLowerCase();
+
+      // 1. 熱水器故障排查
+      if (q.includes('熱水器') || q.includes('點不著') || q.includes('忽冷忽熱') || q.includes('水溫') || q.includes('洗澡')) {
+        return {
+          text: `<strong>🚿 熱水器故障自我排查 4 大要點：</strong><br />
+          1. <strong>更換 1 號大電池：</strong>熱水器發出達達聲但點不著，90% 是電池電力不足，請優先更換全新鹼性/碳鋅電池。<br />
+          2. <strong>檢查冷熱水壓：</strong>水量過小無法頂開水盤開關，建議將冷水進水閥全開並清潔蓮蓬頭水垢。<br />
+          3. <strong>調整瓦斯微調紐：</strong>夏季將火排調至小火避免水太燙，冬季調至大火。<br />
+          4. <strong>保持空氣流通：</strong>若仍無法排除，歡迎隨時呼叫盛隆師傅到府免費安全檢測！`,
+          image: './images/heater-troubleshoot.jpg'
+        };
+      }
+
+      // 2. 瓦斯爐紅火黃火調風門
+      if (q.includes('風門') || q.includes('紅火') || q.includes('黃火') || q.includes('黑鍋') || q.includes('積碳') || q.includes('瓦斯爐')) {
+        return {
+          text: `<strong>🔥 瓦斯爐紅火・燻黑鍋底排除指南：</strong><br />
+          1. <strong>空氣比例失衡：</strong>正常燃燒應為純藍色火焰。出現紅火或黃火代表進氣氧氣不足，容易燃燒不完全並燻黑鍋底。<br />
+          2. <strong>風門撥動調節：</strong>俯身觀察瓦斯爐底部，每口爐頭下方皆有一片左右旋轉的金屬風門片，輕輕左右撥動，直到火燄由紅轉為純藍即可！<br />
+          3. <strong>清理爐蓋孔隙：</strong>使用鐵絲或牙籤將火蓋阻塞之油垢通暢。`,
+          image: './images/stove-flame-damper.jpg'
+        };
+      }
+
+      // 3. 漏氣緊急 SOP
+      if (q.includes('漏氣') || q.includes('味道') || q.includes('瓦斯味') || q.includes('臭味') || q.includes('安全') || q.includes('緊急')) {
+        return {
+          text: `<strong>⚠️ 瓦斯漏氣緊急應變 4 步驟 SOP（請務必嚴格遵守）：</strong><br />
+          1. <strong>順時針關閉鋼瓶角閥：</strong>立即切斷瓦斯氣源供應。<br />
+          2. <strong>輕推慢開門窗通風：</strong>切勿用力甩窗避免摩擦生火花，讓瓦斯自然飄散。<br />
+          3. <strong>嚴禁開關任何電器：</strong>嚴禁開關電燈、抽油煙機、排風扇或使用打火機，以免產生微小電弧引爆！<br />
+          4. <strong>速至戶外撥打專線：</strong>前往通風安全處撥打 119 或盛隆專線 02-2972-5559 尋求技術支援。`,
+          image: './images/gas-leak-sop.jpg'
+        };
+      }
+
+      // 4. 桶裝瓦斯 vs 天然瓦斯
+      if (q.includes('天然') || q.includes('度數') || q.includes('換算') || q.includes('比較') || q.includes('省錢') || q.includes('熱值')) {
+        return {
+          text: `<strong>📊 桶裝瓦斯 (LPG) vs 天然瓦斯 (NG) 換算指南：</strong><br />
+          • <strong>熱值換算：</strong>1 公斤桶裝瓦斯熱值約 11,500 kcal，相當於 <strong>1.25 ~ 1.33 度</strong>天然瓦斯。<br />
+          • <strong>建置成本優勢：</strong>桶裝瓦斯免拉管裝表費（天然氣配管常需 3~10 萬元），既有設備 0 元以桶換桶！<br />
+          • <strong>零固定基本費：</strong>零表租、無固定月租費，叫幾桶算幾桶，適合一般家庭與老舊公寓！`,
+          image: './images/gas-consumption-comparison.jpg'
+        };
+      }
+
+      // 5. 規格與尺寸
+      if (q.includes('規格') || q.includes('尺寸') || q.includes('重量') || q.includes('高度') || q.includes('幾公斤') || q.includes('容量')) {
+        return {
+          text: `<strong>🛢️ 盛隆合格瓦斯鋼瓶規格一覽：</strong><br />
+          • <strong>4kg 輕便型：</strong>高約 42cm，泡茶露營專用。<br />
+          • <strong>10kg 矮身型：</strong>高約 55cm，流理台窄空間專用。<br />
+          • <strong>16kg 家用主力：</strong>高約 68cm，熱水器與家用爐人氣首選！<br />
+          • <strong>20kg 大用量：</strong>高約 80cm，熱炒快炒大容量。<br />
+          • <strong>50kg 營業用：</strong>高約 125cm，餐飲連鎖中央廚房用。`,
+          image: './images/cylinder-sizes-comparison.jpg'
+        };
+      }
+
+      // 6. 配送時段與費用
+      if (q.includes('配送') || q.includes('時間') || q.includes('運費') || q.includes('多久') || q.includes('營業時間') || q.includes('假日')) {
+        return {
+          text: `<strong>🚚 盛隆配送服務與時效說明：</strong><br />
+          • <strong>專車配送時間：</strong>每日 08:00 – 21:00（建議於 20:30 前預約）。<br />
+          • <strong>送達時效：</strong>三重核心各路段專車最快約 <strong>15 ~ 25 分鐘</strong>準時抵達！<br />
+          • <strong>運費保障：</strong>新北三重全區<strong>專車直達 0 元免運費</strong>！假日、春節、中秋照常配送不加價！`,
+          image: null
+        };
+      }
+
+      // 7. 通用題庫關鍵字模糊搜尋 (從 allFaqs 尋找最佳答案)
+      if (typeof allFaqs !== 'undefined' && Array.isArray(allFaqs)) {
+        let bestMatch = null;
+        let maxScore = 0;
+        const keywords = q.split(/[\s,，、。？?！!]+/);
+
+        allFaqs.forEach(faq => {
+          let score = 0;
+          keywords.forEach(kw => {
+            if (kw && faq.q.toLowerCase().includes(kw)) score += 3;
+            if (kw && faq.a.toLowerCase().includes(kw)) score += 1;
+          });
+          if (score > maxScore) {
+            maxScore = score;
+            bestMatch = faq;
+          }
+        });
+
+        if (bestMatch && maxScore >= 2) {
+          return {
+            text: `<strong>💡 相關解答：</strong><br />${bestMatch.a}`,
+            image: bestMatch.image || null
+          };
+        }
+      }
+
+      // 預設回覆
+      return {
+        text: `收到您的提問！盛隆瓦斯提供專業合格鋼瓶配送與免費安全檢驗。<br />
+        若您有特殊的瓦斯熱水器檢修、管線改裝或緊急叫瓦斯需求，建議直接點選下方按鈕加 LINE 或撥打專線，師傅將立刻為您處理！`,
+        image: null
+      };
+    }
+
+    // 初始化載入
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. 初始化長輩模式
+      try {
+        if (localStorage.getItem('shenglong_elder_mode') === 'true') {
+          toggleElderMode(true);
+        }
+      } catch (_) {}
+
+      // 2. 初始化下單精靈與熟客記憶
+      updateWizardTotal();
+      loadCustomerProfile();
+
+      // 3. 初始化殘氣試算器
+      updateResidualCalculation(1.5);
+    });
   </script>
 
   <!-- ===== 流量與訪客行為分析 (Vercel Web Analytics) ===== -->
