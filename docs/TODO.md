@@ -11,11 +11,11 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 移除 ERP 股東簡易預設密碼後門與客戶歷史查詢防枚舉加固 (Anti-Tampering & Data Enumeration Hardening)
-- **狀態**：`[/]` 進行中
-- **優先級**：`P0` (核心帳務防竄改與客戶個資防枚舉)
-- **負責設備/端點**：`ERP 登入驗證 (api/auth-login.js, website/api/auth.js, src/db/storage.js)` ＆ `客戶歷史查詢 (api/_customer-history.js)` ＆ `排程備份驗證 (api/cron-daily-backup.js)`
-- **老闆指示備註**：徹底移除 `1234` 與 `6789` 簡易預設密碼後門與明文比對，強制全面走 PBKDF2-SHA256 / HMAC-SHA256 高強度雜湊驗證，杜絕有心人士以股東名義猜測簡易密碼竄改帳目；同時為 `/api/customer-history` 加上 IP 頻率限制與最小電話/姓名查詢長度門檻，防止單字元模糊查詢撈出全店客戶訂單。
+### 1. 全系統最高級別安全防護與 LINE 會員個資防護加固 (Full-System Security & LINE Privacy Defense)
+- **狀態**：`[x]` 已完成 (全系統最高等級安全防護全面加固上線，雙倉庫測試與編譯 100% 綠燈通過)
+- **優先級**：`P0` (核心帳務防竄改、LINE 會員資料防竊取、客戶個資防枚舉)
+- **負責設備/端點**：`Gass (api/auth-login.js, api/_customer-history.js, api/_telegram.js, api/telegram-webhook.js, api/line-ai-logs.js)` ＆ `LINE 會員系統 (shenglong-line-sync)` ＆ `主營運中心 (shenglong-next: app/api/customer-history, lib/auth.ts, middleware.ts)`
+- **老闆指示備註**：落實最高規格安全防禦，杜絕有心人士竊取資料，特別是 LINE 會員資料。徹底封堵已發現之 5 大安全破口（電話暴力枚舉、試算表公式注入、客戶歷史未授權爬取、偽造同源繞過、Telegram 陌生指令洩密），實施 Edge 邊界攔截、HMAC-SHA256 時效數位簽章、時序安全常數比對與個資脫敏遮罩。
 
 ---
 
