@@ -45,3 +45,7 @@
   * 主進程：`sync-stock.cjs` (即時庫存、訂單、派單同步)
   * 軍師特助：`advisor-bot.cjs` (@shenlong_advisor_bot，通訊埠 48996 實體隔離)
 * 嚴格禁止降級或修改 Telegram ID `8862712587` 之唯一 SuperAdmin 最高權限。
+
+### 6. 📱 桌面 sl 目錄專屬規範 (Desktop sl Folder Rule)
+* **核心鐵律**：`C:\Users\懶\Desktop\sl` 資料夾**專門且僅限存放 Android `.apk` 安裝包檔案**（如：司機端 App、外送專用 App、特助 App）。
+* 任何系統架構文件、資安檢驗報告、TODO 看板、日誌或代碼等其他檔案，**一律嚴禁輸出或堆積在 `Desktop\sl`**，必須歸檔至專案正規資料夾（如 `docs/`）並同步提交至 GitHub 倉庫與雲端發布日誌。

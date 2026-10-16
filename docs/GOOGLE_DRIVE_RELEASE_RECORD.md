@@ -6,6 +6,34 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/16 - 🛡️ 全系統最高級別安全防護與 LINE 會員個資防護全面加固完工 [ver: 20261016_auto_release]
+
+### 一、 核心加固成果（五大破口徹底封堵）
+1. **LINE 會員手機號碼字典窮舉防禦 (`shenglong-line-sync/web/api/index.js`)**：
+   - 實施嚴格雙層速率限制：單一 LINE UID 每 10 分鐘上限 6 次查詢；單一 IP 每 10 分鐘上限 10 次。
+   - 註冊每 10 分鐘限 5 次，下單每 10 分鐘限 10 次，超額一律直接阻斷回傳 429。
+2. **Google Sheets 公式注入漏洞封堵 (`sanitizeSheetCell`)**：
+   - 入庫強制轉義脫敏：凡欄位開頭為 `=`, `+`, `-`, `@`, `\t`, `\r` 者，一律自動前置單引號 `'` 脫敏，強制以純文字儲存，徹底杜絕 `=IMPORTXML` 等公式外傳攻擊。
+3. **客戶歷程四重鑑權與 HMAC-SHA256 時效數位簽章 (`api/_customer-history.js`)**：
+   - 阻絕全表掃描：要求電話 $\ge 7$ 碼或姓名 $\ge 2$ 字。
+   - Telegram 訂單群組點擊帶時效 HMAC-SHA256 簽章連結查閱，外部竄改號碼立刻失效。未授權存取一律回傳 401 並顯示安全鎖定卡片。
+4. **主控台移除偽造同源標頭漏洞與 Edge 邊界防禦 (`shenglong-next`)**：
+   - 移除 `isSameOriginRequest` 偽造標頭繞過漏洞，強制 Session 驗證 (`getSessionUser()`)。
+   - `middleware.ts` 邊界層攔截敏感 API（未登入者直接在 Edge 回傳 401，不消耗後端資源）。
+   - Vercel 雲端登入加入記憶體防爆破鎖（15 分鐘錯 8 次鎖定），股東密碼全面升級為時序安全 `timingSafeEqual` 比對。
+5. **Telegram 機器人硬性白名單身分校驗 (`api/telegram-webhook.js`)**：
+   - 嚴格限制只有 SuperAdmin (`8862712587`) 或設定之官方群組才能觸發指令與點擊按鈕，陌生私訊一律阻斷，防止洩露對話與金鑰。
+
+### 二、 規範與歸檔更新
+1. **歸檔規範訂立 (`PROJECT_RULES.md`)**：
+   - 明確規定 `C:\Users\懶\Desktop\sl` 專門且僅限存放 Android `.apk` 安裝包檔案。
+   - 所有系統架構報告與文件一律歸檔至 `docs/` 資料夾，並同步提交至 GitHub 倉庫。
+2. **歸檔檔案列表**：
+   - [`docs/盛隆瓦斯_全系統最高安全防禦架構與LINE會員個資加固報告_2026-10-16.md`](file:///c:/Gass/docs/盛隆瓦斯_全系統最高安全防禦架構與LINE會員個資加固報告_2026-10-16.md)
+   - [`docs/盛隆瓦斯_全系統清單與安全邊界總覽_2026-10-16.md`](file:///c:/Gass/docs/盛隆瓦斯_全系統清單與安全邊界總覽_2026-10-16.md)
+   - [`docs/TODO.md`](file:///c:/Gass/docs/TODO.md)
+
+---
 ## 📅 2026/10/16 - 🚀 LINE 訂單自動匯入舊進銷存系統（階段 3：店面自動開機自啟動、桌面控制台與部署完工） [ver: 20261016_auto_release]
 
 ### 一、 核心建置成果

@@ -6,6 +6,24 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/16 - 🛡️ 全系統最高級別安全防禦與 LINE 會員個資防護全面加固完工
+* **變更類型**：資訊安全 (security) / 防禦加固 (hardening) / 零信任邊界 (zero-trust) / 專案里程碑 (milestone)
+* **核心成果**：
+  * **LINE 會員系統防護 (`shenglong-line-sync`)**：
+    * 電話查詢限流：單一 LINE UID 10 分鐘限 6 次，單一 IP 限 10 次，徹底阻斷手機號碼枚舉。
+    * 公式注入脫敏 (`sanitizeSheetCell`)：自動轉義以 `=,+,-,@,\t,\r` 開頭的字串，防範試算表公式竊取會員總表。
+    * 接單通訊強制校驗 `X-Internal-Sync-Secret`，阻絕偽造請求。
+  * **主控台身分鑑權 (`shenglong-next`)**：
+    * 移除 `isSameOriginRequest` 標頭偽造繞過破口，強制 Session 身分驗證。
+    * Edge Middleware 邊界層攔截敏感 API（未登入者直接在 CDN 回傳 401）。
+    * Vercel 雲端登入實施記憶體防爆破鎖定（15 分鐘錯 8 次鎖定），股東密碼比對全面升級為 `crypto.timingSafeEqual`。
+  * **Telegram 機器人與客戶歷程簽章 (`Gass`)**：
+    * 嚴格限制只有 SuperAdmin (`8862712587`) 或設定之官方群組才能觸發指令與點擊按鈕。
+    * 歷史查詢連結自動帶入 HMAC-SHA256 時效數位簽章，竄改參數即刻失效。
+  * **歸檔規範落實**：
+    * `PROJECT_RULES.md` 確立 `C:\Users\懶\Desktop\sl` 僅存放 Android `.apk` 檔案，所有系統報告一律歸檔至 `docs/` 並提交 GitHub。
+
+---
 ## 📅 2026/10/16 - 🚀 LINE 訂單自動匯入舊進銷存系統（階段 3：店面自動開機自啟動、桌面控制台與現場部署完工）
 * **變更類型**：現場部署 (deployment) / 自動化運維 (devops) / 控制台腳本 (batch-console) / 專案里程碑 (milestone-stage3)
 * **核心成果**：
