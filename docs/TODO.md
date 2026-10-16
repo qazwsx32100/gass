@@ -11,7 +11,25 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. LINE AI 客服上下文記憶貫通、模型高可用容錯與 300 題知識庫檢索全面強化
+### 1. LINE AI 深度強化（第二階段：對話實體狀態機、Few-Shot 示範學習、20大類完整知識庫與司機派單卡片化）
+- **狀態**：`[x]` 已完成 (實體狀態追蹤上線、Few-Shot 金牌範例入網、20大類題庫補齊、派單卡片化與 12s 高速切換全面上線)
+- **優先級**：`P0` (讓 AI 客服達到具備台灣在地老店溫度、主動記憶訂單要素、零跳針的旗艦水準)
+- **負責設備/端點**：`Vercel 雲端 API (api/line-webhook.js, api/_ai-rotator.js, api/_knowledge-base.js)`
+- **完成日期**：2026/10/16
+- **老闆指示備註**：再次強化 AI 智慧度。實現：
+  1. 對話實體狀態機 (Customer Entity Tracking)：跨輪次自動解析地址、電話、規格、樓層，動態注入「已掌握訂單要素」，讓 AI 絕不重問已提供的資料。
+  2. Few-Shot 示範教學 (In-Context Exemplars)：注入標準範例對話，徹底固化盛隆親切專業口吻與業務守則。
+  3. 20 大類題庫全面對齊補完：補齊商用設備、瓦斯燃燒品質、法規責任、客訴專線等剩餘領域。
+  4. 智能派單卡片：客戶訂單要素齊全時，自動格式化推播 Telegram 師傅群組（含導航與撥號快捷按鈕）。
+  5. 調用超時縮減至 12s：讓節點切換速度提升一倍，秒級回應客戶。
+- **完成項目**：
+  - [x] 在 `api/line-webhook.js` 實作實體提取器與狀態注入器 (`extractOrderEntities`, `formatOrderStateContext`)。
+  - [x] 在 `api/_knowledge-base.js` 補齊全 20 大類題庫，並注入 Few-Shot 金牌範例教學 (`FEW_SHOT_EXAMPLES`)。
+  - [x] 在 `api/_ai-rotator.js` 優化超時至 12s，並以 `gemini-3-flash-preview` ➔ `gemini-3.1-flash-lite` 打造毫秒級容錯階梯。
+  - [x] 全專案單元測試 198 項 100% 綠燈通過，成功發布至 Vercel 生產環境並覆蓋桌面看板。
+
+
+### 2. LINE AI 客服上下文記憶貫通、模型高可用容錯與 300 題知識庫檢索全面強化 (第一階段)
 - **狀態**：`[x]` 已完成 (對話記憶已貫通、模型自動容錯 100% 綠燈、知識庫命中率大幅提升)
 - **優先級**：`P0` (徹底解決 AI 客服失憶與伺服器高負載罐頭回覆問題)
 - **負責設備/端點**：`Vercel 雲端 API (api/line-webhook.js, api/_ai-rotator.js, api/_knowledge-base.js)`

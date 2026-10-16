@@ -54,6 +54,88 @@ async function replyLineMessage(replyToken, messages, channelAccessToken) {
 }
 
 /**
+ * 智慧解析多輪對話中的訂單關鍵要素 (地址、電話、規格數量、樓層電梯)
+ */
+export function extractOrderEntities(messages = [], currentText = '') {
+  const allTexts = [...messages.map(m => m.content || m.text || ''), currentText].join('\n');
+
+  // 1. 電話
+  const phoneMatch = allTexts.match(/(09\d{2}[-\s]?\d{3}[-\s]?\d{3}|02[-\s]?\d{4}[-\s]?\d{4}|09\d{8})/);
+  const phone = phoneMatch ? phoneMatch[0].replace(/\s+/g, '') : null;
+
+  // 2. 規格與數量
+  let spec = null;
+  const specMatch = allTexts.match(/(20|16|10|4)\s*(公斤|kg|KG)|大桶|小桶/i);
+  if (specMatch) {
+    spec = specMatch[0];
+  }
+  let quantity = 1;
+  const qtyMatch = allTexts.match(/([一二三兩四1-4])\s*桶/);
+  if (qtyMatch) {
+    const qStr = qtyMatch[1];
+    quantity = (qStr === '一' || qStr === '1') ? 1 : (qStr === '二' || qStr === '兩' || qStr === '2') ? 2 : (qStr === '三' || qStr === '3') ? 3 : (qStr === '四' || qStr === '4') ? 4 : 1;
+  }
+
+  // 3. 樓層與電梯
+  let floor = null;
+  const floorMatch = allTexts.match(/([1-9一二三四五六七八九十])\s*樓/);
+  if (floorMatch) {
+    floor = floorMatch[0];
+  }
+  const hasElevator = /有電梯|電梯大樓|電梯/.test(allTexts);
+  const noElevator = /沒電梯|無電梯|爬樓梯|走樓梯/.test(allTexts);
+  let elevatorInfo = null;
+  if (noElevator) elevatorInfo = '無電梯';
+  else if (hasElevator) elevatorInfo = '有電梯';
+
+  // 4. 地址
+  let address = null;
+  const addrMatch = allTexts.match(/((新北市|台北市)?(三重|新莊|蘆洲|板橋)?[^,\n，。]+?(路|街|大道|巷|弄)\s*\d+?\s*號(\s*\d+?\s*樓)?)/);
+  if (addrMatch) {
+    address = addrMatch[0].trim();
+  }
+
+  const missing = [];
+  if (!address) missing.push('配送地址');
+  if (!floor) missing.push('樓層');
+  if (!spec) missing.push('瓦斯規格與數量');
+  if (!phone) missing.push('聯絡電話');
+
+  return {
+    phone,
+    spec: spec ? `${spec} × ${quantity}桶` : null,
+    floor: floor ? (elevatorInfo ? `${floor} (${elevatorInfo})` : floor) : (elevatorInfo || null),
+    address,
+    missing,
+    isComplete: Boolean(phone && spec && (address || floor))
+  };
+}
+
+/**
+ * 格式化訂單狀態要素上下文提示詞
+ */
+export function formatOrderStateContext(extracted) {
+  if (!extracted || (!extracted.address && !extracted.floor && !extracted.spec && !extracted.phone)) {
+    return '';
+  }
+  const missingPrompts = [];
+  if (!extracted.address) missingPrompts.push('配送地址（路名、門牌）');
+  if (!extracted.floor) missingPrompts.push('樓層（是否有電梯）');
+  if (!extracted.spec) missingPrompts.push('瓦斯規格（20kg/16kg/10kg/4kg）與桶數');
+  if (!extracted.phone) missingPrompts.push('聯絡電話');
+
+  return `【📦 目前系統從對話中自動掌握之訂單要素】
+- 配送地址：${extracted.address || '（尚未提供）'}
+- 樓層狀況：${extracted.floor || '（尚未提供）'}
+- 瓦斯規格：${extracted.spec || '（尚未提供）'}
+- 聯絡電話：${extracted.phone || '（尚未提供）'}
+${missingPrompts.length > 0
+  ? `【⚠️ 待確認資訊】：目前僅缺少「${missingPrompts.join('、')}」，請在回答中親切向客戶確認缺少的項目即可，切勿重複詢問客戶已經說過的資料！`
+  : '【🎉 訂單要素已齊全】：所有配送必備資料（地址、樓層、規格、電話）均已收集完畢！請以親切熱情的口吻為客戶總結訂單內容，告知師傅出車前會先致電通知，並提醒現場備妥現金付款與空桶交換！'
+}`;
+}
+
+/**
  * LINE Messaging API Webhook 端點 (Vercel Serverless Function)
  */
 export default async function handler(req, res) {
@@ -129,6 +211,10 @@ export default async function handler(req, res) {
 
         const messages = [...historyMessages, { role: 'user', content: userText }];
 
+        // 自動解析多輪對話中掌握之訂單要素 (地址、樓層、規格、電話)
+        const extracted = extractOrderEntities(messages, userText);
+        const orderStateContext = formatOrderStateContext(extracted);
+
         const currentIsOrder = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userText);
         // 若上一句在叫瓦斯且本句提供地址/樓層/電話，延續叫瓦斯意圖
         const isOrderIntent = currentIsOrder || (hadRecentOrderIntent && /(路|街|巷|弄|號|樓|電梯|電話|09\d{8})/i.test(userText));
@@ -140,7 +226,7 @@ export default async function handler(req, res) {
         const aiResult = await callAiWithFailover({
           prompt: userText,
           messages,
-          systemInstruction: getOptimizedSystemPrompt(userText, complexityMode),
+          systemInstruction: getOptimizedSystemPrompt(userText, complexityMode, orderStateContext),
           temperature: isExpert ? 0.3 : 0.6,
           preferredModel: 'gemini-3-flash-preview',
           strategy: 'round-robin',
@@ -174,7 +260,12 @@ export default async function handler(req, res) {
         if (isOrderIntent) {
           const { orderChatId, isConfigured } = getTelegramConfig();
           if (isConfigured && orderChatId) {
-            const tgMsg = `🔔 *【LINE 客服 - 叫瓦斯訊息提示】*\n\n👤 *客戶內容*：\n${userText}\n\n🤖 *AI 已自動回覆*：\n${aiResult.text.slice(0, 150)}...\n\n_請值班同仁注意是否有地址與訂購需求！_`;
+            let tgMsg = '';
+            if (extracted.isComplete) {
+              tgMsg = `🎉 *【LINE 客服 - 完整訂單要素已齊全派工】*\n────────────────────────\n👤 *客戶電話*：\`${extracted.phone}\`\n📍 *配送地址*：${extracted.address || '未提供'} ${extracted.floor ? `(${extracted.floor})` : ''}\n⛽ *預訂規格*：${extracted.spec}\n💵 *收款方式*：現場現金\n\n💬 *客戶最新訊息*：\n「${userText}」\n\n🤖 *AI 已確認回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁立即確認並備妥車趟！_`;
+            } else {
+              tgMsg = `🔔 *【LINE 客服 - 叫瓦斯訊息提示】*\n────────────────────────\n👤 *客戶內容*：\n${userText}\n\n🤖 *AI 已自動回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁注意是否有地址與訂購需求！_`;
+            }
             sendTelegramMessage(orderChatId, tgMsg).catch(() => {});
           }
         }

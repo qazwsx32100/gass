@@ -104,3 +104,54 @@ test('KnowledgeBase: classifyQueryComplexity correctly separates fast and expert
   assert.ok(expertPrompt.includes('深度專家診斷與邏輯推理指導'));
   assert.ok(expertPrompt.includes('條理化步驟排除'));
 });
+
+test('KnowledgeBase: Categories 19 & 20 matching and residual gas rules', () => {
+  // Category 19: Commercial equipment & fast-fire stoves
+  const commMatch = matchBestFaq('快炒店中壓快速爐火變很小怎麼辦？');
+  assert.ok(commMatch, 'Should match commercial gas FAQ');
+  assert.ok(commMatch.category.includes('商用瓦斯'));
+
+  // Category 20: Flame quality & legal responsibilities
+  const sootMatch = matchBestFaq('請問住宅瓦斯有消防法規存放限制嗎？');
+  assert.ok(sootMatch, 'Should match flame quality & legal regulation FAQ');
+  assert.ok(sootMatch.category.includes('燃燒品質'));
+
+  // Verify strict store rule: No residual weighing/refund
+  const prompt = getOptimizedSystemPrompt('可以現場幫我秤重退殘氣嗎？');
+  assert.ok(prompt.includes('現場秤重'), 'Prompt must prohibit on-site weighing');
+  assert.ok(prompt.includes('不退殘氣費'), 'Prompt must state no residual gas refund');
+});
+
+test('KnowledgeBase: Few-shot examples and orderStateContext injection', async () => {
+  const { extractOrderEntities, formatOrderStateContext } = await import('../api/line-webhook.js');
+
+  // Test multi-turn order entity extraction
+  const history = [
+    { role: 'user', content: '我要叫瓦斯，送三重區正義北路100號' },
+    { role: 'assistant', content: '好的！請問送到幾樓？需要幾公斤瓦斯呢？' },
+    { role: 'user', content: '3樓沒電梯，要一桶20公斤' }
+  ];
+  const entities = extractOrderEntities(history, '電話是 0912-345-678');
+
+  assert.ok(entities.address.includes('正義北路100號'));
+  assert.ok(entities.spec.includes('20公斤'));
+  assert.ok(entities.floor.includes('3樓'));
+  assert.ok(entities.floor.includes('無電梯'));
+  assert.equal(entities.phone, '0912-345-678');
+  assert.equal(entities.isComplete, true);
+
+  // Incomplete entities test
+  const partialEntities = extractOrderEntities([], '送重新路二段50號4樓有電梯');
+  assert.equal(partialEntities.isComplete, false);
+  assert.ok(partialEntities.missing.includes('聯絡電話'));
+  assert.ok(partialEntities.missing.includes('瓦斯規格與數量'));
+
+  // Injection into prompt
+  const contextText = formatOrderStateContext(entities);
+  const promptWithContext = getOptimizedSystemPrompt('電話是 0912-345-678', 'fast', contextText);
+  assert.ok(promptWithContext.includes('目前系統從對話中自動掌握之訂單要素'));
+  assert.ok(promptWithContext.includes('正義北路100號'));
+  assert.ok(promptWithContext.includes('0912-345-678'));
+  assert.ok(promptWithContext.includes('盛隆金牌客服典範問答'));
+});
+

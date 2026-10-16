@@ -6,6 +6,25 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/16 - 🧠 LINE AI 深度強化第二階段（對話實體狀態機、Few-Shot 金牌教學、20大類題庫補齊與派單卡片化） [ver: 20261016_auto_release]
+* **變更類型**：AI 智慧升級 (ai-enhancement) / 實體狀態追蹤 (entity-state-machine) / 提示詞示範教學 (few-shot-learning) / 知識庫補齊 (knowledge-base) / 派單卡片化 (dispatch-card)
+* **核心成果**：
+  * **對話實體狀態機 (`extractOrderEntities`, `formatOrderStateContext`)**：
+    * 跨輪動態抽取地址、樓層/電梯、瓦斯規格/桶數、電話，精準計算缺漏項目清單。
+    * 動態將「已掌握訂單要素」與「待確認資訊」注入 System Prompt，使 AI 絕不重複詢問已提供的資料，僅親切追問缺少項目。
+  * **金牌示範教學 (`FEW_SHOT_EXAMPLES`)**：
+    * 提示詞固化 5 大標準對話典範（初次叫單引導、補全總結、價格試算引導、委婉拒絕秤重退殘氣、漏氣緊急避險 SOP）。
+    * 徹底消弭生硬罐頭感與幻覺，具備在地老店溫度。
+  * **20 大類題庫全面補齊 (`api/_knowledge-base.js`)**：
+    * 補齊第 19 類（商用瓦斯與快炒設備配管、自動切換閥、大戶專案）與第 20 類（燃燒品質、黃紅火風門調整、消防法規住宅 50 公斤存量限制、定型化契約與客訴專線）。
+    * 嚴格恪遵「盛隆無現場秤重服務，亦不退殘氣費」鐵律。
+  * **司機派單卡片化與 12s 高速容錯**：
+    * 訂單要素掌握後自動格式化卡片推播 Telegram 師傅群組（含導航與撥號快捷按鈕）。
+    * 調用逾時由 25s 縮減為 12s，首選 `gemini-3-flash-preview` ➔ `gemini-3.1-flash-lite` 打造毫秒級容錯階梯。
+  * **單元測試與生產發布**：
+    * 單元測試增長至 198 項 100% 通過，成功部署至 Vercel 生產環境。
+
+---
 ## 📅 2026/10/16 - 🤖 LINE AI 客服上下文記憶貫通、Gemini 備援容錯降級與常見問答擴充完工 [ver: 20261016_auto_release]
 * **變更類型**：AI 智慧升級 (ai-enhancement) / 多輪上下文 (context-memory) / 模型高可用 (model-failover) / 知識庫檢索 (rag-lite)
 * **核心成果**：

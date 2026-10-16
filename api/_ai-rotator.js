@@ -199,8 +199,8 @@ export async function callAiWithFailover({
     let candidateModels = isOpenAi ? ['gpt-4o-mini'] : Array.from(new Set([
       preferredModel || 'gemini-3-flash-preview',
       'gemini-3-flash-preview',
-      'gemini-3.8-flash',
-      'gemini-3.1-flash-lite'
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash'
     ])).filter(Boolean);
 
     let accountSucceeded = false;
@@ -218,7 +218,7 @@ export async function callAiWithFailover({
             messages: fullMessages,
             temperature
           })
-        }, 25000);
+        }, 12000);
 
         const latencyMs = Date.now() - attemptStart;
 
