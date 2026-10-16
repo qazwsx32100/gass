@@ -105,7 +105,7 @@ export default async function handler(req, res) {
     const result = await callAiWithFailover({
       prompt: prompt ? String(prompt).slice(0, MAX_PROMPT_LENGTH) : undefined,
       messages: Array.isArray(messages) ? messages : [],
-      systemInstruction: systemInstruction ? String(systemInstruction).slice(0, 4000) : undefined,
+      systemInstruction: systemInstruction ? String(systemInstruction).slice(0, 32000) : undefined,
       temperature: safeTemperature,
       preferredModel: model
     });

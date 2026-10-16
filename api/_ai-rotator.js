@@ -218,7 +218,7 @@ export async function callAiWithFailover({
             messages: fullMessages,
             temperature
           })
-        }, 12000);
+        }, 25000);
 
         const latencyMs = Date.now() - attemptStart;
 

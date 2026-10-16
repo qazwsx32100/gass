@@ -37,3 +37,5 @@ dist-*/
 shenglong-line-sync/
 tools/gemini-rotator/config.json
 usage_by_project.json
+
+.env*
