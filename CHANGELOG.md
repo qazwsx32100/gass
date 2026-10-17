@@ -6,6 +6,25 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/17 - 🛡️ 全系統安全性能與穩定度全面重檢（9大安全維度、198項自動化測試 100% 綠燈、線上實體穿透探針） [ver: 20261017_security_audit]
+* **變更類型**：安全性能審計 (security-audit) / 穿透防禦驗收 (penetration-test) / 穩定性測試 (stability-assurance)
+* **核心成果**：
+  * **九大安全防禦維度全面過關 (54 項專項安全測試 100% 綠燈)**：
+    * 原型鏈污染 (Prototype Pollution) & 畸形 JSON 阻斷。
+    * 控制字元與空字元 (`\x00` Null Byte) 注入即時防禦。
+    * 突發併發請求限流 (Rate Limiting) 與記憶體邊界保護 (Bounded LRU Cache)。
+    * 偽造 JWT / Bearer Token 拒絕、RBAC 權限控管 (`/api/line-ai-logs` 401 攔截)。
+    * Telegram Webhook Secret Token 防偽認證。
+    * HTTP 405 Method Not Allowed 與敏感端點零資訊外洩 (Zero Leakage)。
+    * CORS 跨域預檢安全規範 (OPTIONS 204) 與 A+ 頂規安全標頭 (`nosniff`, `DENY`, `HSTS preload`)。
+    * LINE Webhook 端到端簽章時序安全驗證 (`crypto.timingSafeEqual`)。
+    * 業務邏輯防線：嚴格封殺弱預設 PIN (`1234`/`6789`)、防範客戶歷史萬用字元枚舉 (`phone=*`)。
+  * **線上生產實時穿透測試 (`https://erp-weld-three-96.vercel.app`)**：
+    * 針對已部署的 Vercel 生產端點發起 9 組實體攻擊探針，包含無憑證存取客戶對話 (401)、Null Byte 注入 (400)、超大負載注入 (400)、非法電話枚舉 (401)、TRACE 探測 (405) 等，全部精準攔截。
+  * **全專案 198 項測試全數通過**：
+    * `npm test` 執行 198 項單元與整合測試，0 失敗、0 跳過，全綠通過。
+
+---
 ## 📅 2026/10/16 - 🧠 LINE AI 深度強化第二階段（對話實體狀態機、Few-Shot 金牌教學、20大類題庫補齊與派單卡片化） [ver: 20261016_auto_release]
 * **變更類型**：AI 智慧升級 (ai-enhancement) / 實體狀態追蹤 (entity-state-machine) / 提示詞示範教學 (few-shot-learning) / 知識庫補齊 (knowledge-base) / 派單卡片化 (dispatch-card)
 * **核心成果**：

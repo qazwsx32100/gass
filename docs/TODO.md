@@ -4,14 +4,28 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-16 14:36
+> **最後更新時間**：2026-10-17 11:52
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. LINE AI 深度強化（第二階段：對話實體狀態機、Few-Shot 示範學習、20大類完整知識庫與司機派單卡片化）
+### 1. 全系統安全性能與穩定度全面重檢 (9大維度、198項自動化測試、線上實體穿透探針驗收)
+- **狀態**：`[x]` 已完成 (54項九大安全維度測試、198項全系統測試 100% 綠燈、線上生產環境 9 大穿透探針全數通過)
+- **優先級**：`P0` (確保客戶個資、ERP 狀態、API 防禦、防止時序與注入攻擊堅不可摧)
+- **負責設備/端點**：`全系統 (ERP 前端、Vercel API、Supabase、Telegram/LINE Webhook)`
+- **完成日期**：2026/10/17
+- **檢驗重點**：
+  1. 九大安全維度（原型鏈污染、畸形 JSON、空字元注入、防 DoS/突發限流、時序安全防時序攻擊、RBAC 權限矩陣、弱 PIN 阻擋、HSTS Preload A+ 安全標頭）。
+  2. 線上生產環境實時穿透測試 (`https://erp-weld-three-96.vercel.app`)：驗證 `/api/line-ai-logs` 401 攔截、`/api/ai-chat` Null Byte 與長負載 400 阻斷、`/api/customer-history` 萬用字元防枚舉。
+- **完成項目**：
+  - [x] 執行 `tests/multi-angle-security-and-stability.test.mjs` 等 4 套安全性測試，54 項 100% 通過。
+  - [x] 執行全套 `npm test` 測試，198 項 100% 綠燈無異常。
+  - [x] 執行線上穿透測試探針，所有安全邊界與防護機制全面在線生效。
+  - [x] 產出專案報告：[`盛隆瓦斯_全系統安全性能重檢總結報告_2026-10-17.md`](file:///C:/Users/懶/.gemini/antigravity/brain/f516d482-0cb8-4fbf-bd99-abe04dc0ab50/盛隆瓦斯_全系統安全性能重檢總結報告_2026-10-17.md)。
+
+### 2. LINE AI 深度強化（第二階段：對話實體狀態機、Few-Shot 示範學習、20大類完整知識庫與司機派單卡片化）
 - **狀態**：`[x]` 已完成 (實體狀態追蹤上線、Few-Shot 金牌範例入網、20大類題庫補齊、派單卡片化與 12s 高速切換全面上線)
 - **優先級**：`P0` (讓 AI 客服達到具備台灣在地老店溫度、主動記憶訂單要素、零跳針的旗艦水準)
 - **負責設備/端點**：`Vercel 雲端 API (api/line-webhook.js, api/_ai-rotator.js, api/_knowledge-base.js)`
