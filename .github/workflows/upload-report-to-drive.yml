@@ -1,0 +1,36 @@
+name: Upload Stage 2 Report to Google Drive
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'docs/LINE_ORDER_INGEST_STAGE2_REPORT.md'
+      - 'public/reports/stage2.html'
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Google API client
+        run: |
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+      - name: Upload Report to Google Drive
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: 1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM
+        run: |
+          python scripts/upload_report_to_drive.py

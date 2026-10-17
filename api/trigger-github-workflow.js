@@ -23,6 +23,10 @@ const ALLOWED_WORKFLOWS = {
     file: 'inspect-backup.yml',
     label: '備份結構檢查 (inspect_backup.py)',
   },
+  'upload-report-to-drive': {
+    file: 'upload-report-to-drive.yml',
+    label: '階段報告同步至 Google Drive (upload_report_to_drive.py)',
+  },
 };
 
 function getGithubConfig() {
