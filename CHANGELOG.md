@@ -6,6 +6,18 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 🔕 外送 App「鈴聲設定」彈窗刪除多餘靜音按鈕（權威收斂至頂部派單鈴聲總開關、8款抗噪鈴聲純淨清單、雙員 Signed APK 發布） [ver: 20261019_1832_auto_release]
+* **變更類型**：介面純淨化 (ui-streamline) / 鈴聲設定權威歸一 (sound-switch-unification) / 雙員 APK 發布 (dual-driver-apk-release)
+* **核心成果**：
+  * **移除鈴聲清單中的靜音按鈕**：自 `ALERT_RINGTONE_OPTIONS` 徹底刪除重複的「🔕 關閉鈴聲 (純靜音)」按鈕，消除多頭設定干擾，清單純化為 8 款專業抗噪鈴聲。
+  * **權威收斂至頂部開關**：由彈窗頂部「派單鈴聲開關」（`tempAudioEnabled`）統一掌控聲音開關，開啟時正常發聲，關閉時安靜靜音。
+  * **向後相容保護**：若本機 Storage 存有 `"silent"`，於初始化與打開彈窗時自動安全 fallback 至第一款鈴聲，儲存時若開關為關閉則自動向原生層傳遞 `"silent"`，完美保持背景輪詢與通知列靜音。
+  * **全量測試與 APK 發布**：
+    * `npm test` 200 項測試 100% 綠燈通過。
+    * 小龍專用 APK (`盛隆外送_小龍專用.apk`) 與 游柏林專用 APK (`盛隆外送_游柏林專用.apk`) 已發布至 `C:\Users\懶\Desktop\sl\`。
+    * 代碼自動推送至 GitHub main 分支，Vercel 上線完成。
+
+---
 ## 📅 2026/10/19 - 📊 2026 全年度所有訂單歷史紀錄全量提取、多源融合與全維度營運分析報表（實體資料庫與雲端即時單據打通、9,061 筆無亂碼標準化與桌面一鍵調閱）
 * **變更類型**：歷史資料全量提取 (full-order-history-extraction) / 多源去重融合 (multi-source-order-merge) / 營運大數據核算 (kpi-analytics) / 離線快照種子同步 (offline-history-seed)
 * **核心成果**：
