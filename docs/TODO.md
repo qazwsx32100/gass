@@ -4,12 +4,29 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 13:54
+> **最後更新時間**：2026-10-19 14:19
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
+
+### 1. 外送派單多重推播通知徹底根治（統一通知 Tag/ID、30秒防重鎖、SW 前景壓制、排除 Android 重複 WebPush）
+- **狀態**：`[x]` 已完成 (深度定位「跳三次通知」根本原因，實裝 30 秒伺服端派單防重鎖、Web Push 手機端互斥隔離、Service Worker 前台壓制與固定 Tag、原生 FCM 與輪詢服務統一通知 Tag/ID 與已通知排重檢驗，200 項測試全數通過，完成最新 Signed APK 編譯發布至桌面與 GitHub 雙軌自動同步)
+- **優先級**：`P0` (依老闆指示「有查到問題嗎 上次通知改版後就狂跳訊息」->「我們來做」)
+- **負責設備/端點**：`shenglong-next: lib/web-push.ts, public/sw.js, MyFirebaseMessagingService.java, DriverOrderService.java, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **根本原因排查與定位**：
+    1. 手機上第一道通知（標題「⛽ 新訂單指派！」）：為手機殘留之舊版 APK（10/6 package: `com.shenglong.driver`）之背景服務仍在運作。
+    2. 第二道通知（標題「📢 派單系統｜新訂單指派！」）：原生 FCM 雲端推播發射，先前使用隨機時間戳作為 notificationId 且無 Tag。
+    3. 第三道通知（標題「📢 派單系統｜新訂單指派！」）：Web Push 透過 Service Worker 發射，先前 tag 為動態時間戳且未檢查 Native FCM 或前景狀態。
+  - [x] **伺服端 30 秒派單全局防重鎖 (`lib/web-push.ts`)**：新增 `isDuplicateOrderPush`，同一外勤人員 30 秒內收到同一筆訂單之派單推播自動攔截阻斷，避免派單 API 與訂單同步 API 連鎖重複發射。
+  - [x] **Web Push 手機端互斥隔離 (`lib/web-push.ts`)**：若該外送人員已註冊 Android 原生 FCM Token，Web Push 自動排除其手機端/Android 訂閱端點，僅發送給 PC 桌面端，徹底避免同一手機重複接收 FCM 與 WebPush。
+  - [x] **Service Worker 前景壓制與固定 Tag (`public/sw.js`)**：若前台網頁已處於可見或聚焦狀態，改為靜默 `postMessage` 刷新清單，不彈出重複系統通知；若需彈出通知，改用固定 tag `order_${orderId}` 且 `renotify: false`，避免通知堆疊。
+  - [x] **原生 FCM 雙重防重與標籤統一 (`MyFirebaseMessagingService.java`)**：收到訊息時優先呼叫 `DriverOrderService.isOrderNotified(this, orderId)`，若已通知則直接退出；通知欄顯示統一採用 `tag = "order_" + orderId` 與 `id = orderId % 100000`。
+  - [x] **原生輪詢待命服務標籤統一 (`DriverOrderService.java`)**：`notifyOrder` 同步採用 `tag = "order_" + orderId` 與 `id = orderId % 100000`，確保 Android 系統層級自動覆蓋更新而非疊加卡片。
+  - [x] **全量編譯與測試驗證**：TypeScript 0 錯誤、全專案 200 項測試全數通過，完成 Signed APK 編譯並自動發布至 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` 與 GitHub main。
 
 ### 1. AI 系統營業時間標示全面標準化（08:00–21:00（盡量在 20:30 前下單））
 - **狀態**：`[x]` 已完成 (依老闆指示將 AI 系統各處營業時間統一代換標示為「08:00–21:00（盡量在 20:30 前下單）」，全鏈路知識庫、System Prompt、FAQ 300、官網常見問題與測試套件 200 項測試 100% 綠燈通過)

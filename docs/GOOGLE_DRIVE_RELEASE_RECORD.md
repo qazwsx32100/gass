@@ -6,6 +6,26 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 🛡️ 外送派單多重推播通知徹底根治（統一通知 Tag/ID、30秒防重鎖、SW 前景壓制、排除 Android 重複 WebPush） [ver: 20261019_1413_auto_release]
+
+### 一、 需求與問題核心
+1. **問題現象**：外送人員反映一筆派單在手機通知列連續跳出 3 道通知卡片，造成強烈干擾。
+2. **根本原因排查（100% 確診定位）**：
+   - **第一道通知（標題「⛽ 新訂單指派！」）**：外勤手機上同時安裝了 10/6 舊版 APK（套件名稱 `com.shenglong.driver`），其後台常駐服務未移除，因此收到派單時依然發出舊版通知。
+   - **第二道通知（標題「📢 派單系統｜新訂單指派！」）**：新版 App 之原生 FCM 雲端推播發射，先前 notificationId 採用隨機時間戳且無 Tag。
+   - **第三道通知（標題「📢 派單系統｜新訂單指派！」）**：Web Push 透過 Service Worker 發射，先前 tag 為動態時間戳且未檢查原生 FCM 註冊狀態。
+3. **解決方案落地**：
+   - **伺服端 30 秒全局防重鎖 (`lib/web-push.ts`)**：針對同一外送人員與訂單 ID，30 秒內杜絕重複發射推播。
+   - **Web Push 手機端互斥隔離 (`lib/web-push.ts`)**：若設備已註冊 FCM Token，自動過濾排除其 Android Web Push 端點，杜絕雙重通道併發。
+   - **Service Worker 前景壓制與固定 Tag (`public/sw.js`)**：若分頁處於可見或聚焦狀態，轉為純內部訊息更新；通知標籤統一使用 `order_${orderId}` 且 `renotify: false`。
+   - **原生 FCM 與輪詢服務標籤統一與已通知排重 (`MyFirebaseMessagingService.java` & `DriverOrderService.java`)**：收到訊息優先校驗 `isOrderNotified`；系統通知欄統一採用 `tag = "order_" + orderId` 與 `id = orderId % 100000`，確保 Android 系統層級自動覆蓋單一卡片。
+
+### 二、 系統測試與發布
+- **型別與單元測試**：TypeScript 0 錯誤，Gass 200 項測試 100% 綠燈通過。
+- **APK 編譯與同步**：編譯 Signed Release APK，自動同步至 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`，並完成 GitHub 雙軌推播。
+- **維護配套建議**：需請外勤人員將手機上 10/6 舊版舊款 App（com.shenglong.driver）徹底解除安裝，杜絕雙服務並行。
+
+---
 ## 📅 2026/10/19 - ⏰ AI 系統營業時間標示全面標準化（08:00–21:00（盡量在 20:30 前下單）） [ver: 20261019_ai_business_hours_standardization]
 
 ### 一、 需求背景與決策
