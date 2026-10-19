@@ -101,15 +101,16 @@
 - **自動化測試覆蓋**：更新 `tests/knowledge-base.test.mjs` 營業時間字串與 Prompt 生成斷言，全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
 
 ---
-## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步 [ver: 20261019_disable_announcement_banner]
+## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）徹底物理移除與全端防禦清理 [ver: 20261019_disable_announcement_banner]
 
 ### 一、 需求背景與決策
 1. **老闆最高指示落實**：
-   - 官網頂部原顯示測試殘留之 `📢 NORMAL Normal` 藍色橫幅，老闆裁示直接「關閉」。
-2. **多維度防禦與關閉落地**：
-   - **雲端資料庫狀態同步**：透過持久化橋接器直接更新 Supabase 資料庫中的 `app_state.websiteCms.announcement`，將 `enabled` 設為 `false`，內容清空。
-   - **程式預設值與 DOM 清理**：`website/api/cms.js` 預設 state 鎖定 `enabled: false, content: ''`；`website/index.html` 取得最新 CMS 資料時同步更新 `localStorage`，公告關閉時自動移除既有橫幅 DOM。
-   - **測試環境隔離防護**：`tests/multi-angle-security-and-stability.test.mjs` 原型污染測試後自動復原為關閉狀態，防止本地與部署測試時污染記憶體狀態。
+   - 老闆最新指示「這我也不要」，要求徹底消除頂部橫幅（無論是測試字串、藍條、紅條或任何公告）。
+2. **多維度防禦與徹底物理移除落地**：
+   - **徹底刪除渲染邏輯**：自 `website/index.html` 完全刪除插入頂部公告橫幅的 DOM 建構邏輯，杜絕未來任何紅條、藍條或測試文字產生。
+   - **實裝自動清理掃描器 (`purgeCmsBanner`)**：頁面啟動時自動掃描並移除任何殘存之公告 DOM 節點，並清除 `localStorage` 中公告啟用標記。
+   - **修復 `tests/web-and-api-security.test.mjs` 測試污染**：Stored XSS 測試後自動重置 CMS 狀態，根除測試後殘留 `<script>` 與 `<img onerror>` 等攻擊字串污染常駐記憶體與資料庫。
+   - **雲端資料庫狀態再次同步鎖定**：透過持久化橋接器重置 Supabase `app_state.websiteCms.announcement` 為 `enabled: false, content: ''`。
 
 ### 二、 系統測試與上線驗證
 - **自動化測試覆蓋**：全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。

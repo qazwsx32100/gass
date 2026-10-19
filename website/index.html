@@ -2281,67 +2281,32 @@
         }
       });
 
-      // 2. 獲取後台動態公告與營業設定
-      async function applyCmsBanner() {
-        let cmsConfig = null;
-        try {
-          const res = await fetch('/api/cms');
-          if (res.ok) {
-            const json = await res.json();
-            if (json.data) {
-              cmsConfig = json.data;
-              try {
-                const currentLocal = JSON.parse(localStorage.getItem('shenglong_cms_settings') || '{}');
-                localStorage.setItem('shenglong_cms_settings', JSON.stringify({ ...currentLocal, announcement: json.data.announcement }));
-              } catch (_) {}
-            }
-          }
-        } catch (_) {
-          const local = localStorage.getItem('shenglong_cms_settings');
-          if (local) {
-            try { cmsConfig = JSON.parse(local); } catch (_) {}
-          }
-        }
-
+      // 2. 徹底移除頂部公告橫幅（依老闆指示：官網不展示頂部公告）
+      function purgeCmsBanner() {
         const existingBanner = document.getElementById('cmsTopAnnouncementBanner');
         if (existingBanner) existingBanner.remove();
-
-        if (!cmsConfig) return;
-
-        // 若啟用頂部公告，於頁面頂部動態插入橫幅
-        if (cmsConfig.announcement && cmsConfig.announcement.enabled && cmsConfig.announcement.content) {
-          const ann = cmsConfig.announcement;
-          const banner = document.createElement('div');
-          banner.id = 'cmsTopAnnouncementBanner';
-          let bgClass = 'bg-blue-600 text-white';
-          if (ann.type === 'warning') bgClass = 'bg-amber-600 text-white';
-          if (ann.type === 'alert') bgClass = 'bg-rose-600 text-white';
-
-          const escapeHtml = (str) => String(str || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-
-          banner.className = `${bgClass} text-xs font-bold py-2 px-4 shadow-sm relative z-50 transition-all`;
-          banner.innerHTML = `
-            <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
-                <span class="px-2 py-0.5 rounded bg-white/20 text-[10px] uppercase font-black tracking-wider">📢 ${escapeHtml(ann.title || '最新公告')}</span>
-                <span>${escapeHtml(ann.content)}</span>
-              </div>
-              <button onclick="this.parentElement.parentElement.remove()" class="text-white/80 hover:text-white font-black text-sm px-1.5 focus:outline-none" aria-label="關閉公告">✕</button>
-            </div>
-          `;
-          document.body.insertBefore(banner, document.body.firstChild);
-        }
+        document.querySelectorAll('div').forEach(el => {
+          if (el.textContent && el.textContent.includes('📢') && el.querySelector('button[aria-label="關閉公告"]')) {
+            el.remove();
+          }
+        });
+        try {
+          const local = localStorage.getItem('shenglong_cms_settings');
+          if (local) {
+            const parsed = JSON.parse(local);
+            if (parsed.announcement) {
+              parsed.announcement.enabled = false;
+              parsed.announcement.content = '';
+              localStorage.setItem('shenglong_cms_settings', JSON.stringify(parsed));
+            }
+          }
+        } catch (_) {}
       }
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyCmsBanner);
+        document.addEventListener('DOMContentLoaded', purgeCmsBanner);
       } else {
-        applyCmsBanner();
+        purgeCmsBanner();
       }
     })();
   </script>

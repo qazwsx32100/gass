@@ -91,16 +91,16 @@
   - [x] **官網端點與常見問題對齊 (`website/faqs-data.js`, `website/index.html`)**：官網配送時段與問答全面同步為 `08:00–21:00（盡量在 20:30 前下單）`。
   - [x] **自動化測試覆蓋與驗證**：更新並擴充 `tests/knowledge-base.test.mjs` 針對營業時間格式之嚴格斷言，全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
 
-### 2. 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步
-- **狀態**：`[x]` 已完成 (依老闆指示關閉橫幅，更新雲端資料庫狀態為 enabled: false，清理 DOM 節點與前端本地快取防禦，測試環境加入清理隔離，200 項測試全數通過)
-- **優先級**：`P0` (依老闆指示「關閉」)
-- **負責設備/端點**：`website/index.html, website/api/cms.js, tests/multi-angle-security-and-stability.test.mjs`
+### 2. 官網頂部即時公告橫幅（Top Announcement Banner）徹底物理移除與全端防禦清理
+- **狀態**：`[x]` 已完成 (依老闆指示「這我也不要」，徹底自官網 `website/index.html` 移除公告渲染邏輯，實裝主動掃描清理函式 `purgeCmsBanner`，修復 `tests/web-and-api-security.test.mjs` 測試後重置乾淨狀態，全庫 200 項測試全綠通過)
+- **優先級**：`P0` (依老闆最高指示「這我也不要」徹底消除)
+- **負責設備/端點**：`website/index.html, website/api/cms.js, tests/web-and-api-security.test.mjs, tests/multi-angle-security-and-stability.test.mjs`
 - **完成日期**：2026/10/19
 - **完成項目**：
-  - [x] **雲端資料庫狀態即時更新**：透過持久化橋接將雲端資料庫 `app_state.websiteCms.announcement.enabled` 設為 `false`，內容清空。
-  - [x] **系統預設值防護**：`website/api/cms.js` 預設 CMS state 鎖定 `enabled: false, content: ''`。
-  - [x] **前端 DOM 與 LocalStorage 快取防禦**：`website/index.html` 取得最新 CMS 設定時同步更新 `localStorage`，公告關閉時自動移除既有橫幅 DOM。
-  - [x] **安全測試環境清理隔離**：`tests/multi-angle-security-and-stability.test.mjs` 測試後自動恢復關閉狀態，杜絕記憶體污染。
+  - [x] **徹底移除公告渲染程式碼**：從 `website/index.html` 完全刪除插入公告橫幅的 DOM 建構邏輯，杜絕未來任何紅條、藍條或測試文字產生。
+  - [x] **實裝自動掃描清理函式 (`purgeCmsBanner`)**：頁面載入時主動掃描並清除現存或快取之公告節點，同步清除 `localStorage` 內公告標記。
+  - [x] **修復 `tests/web-and-api-security.test.mjs` 測試污染**：Stored XSS 測試後立即重置 CMS 狀態，根除記憶體常駐污染。
+  - [x] **雲端資料庫狀態再次同步鎖定**：已透過橋接器重置雲端 `app_state.websiteCms.announcement` 為 `enabled: false, content: ''`。
   - [x] **全量自動化測試驗證**：全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
 
 ### 2. AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收）

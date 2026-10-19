@@ -132,6 +132,23 @@ test('Security: website CMS input sanitization prevents Stored XSS', async () =>
   // 驗證非法價格被校正或重設
   const savedPrices = res.body.data.prices;
   assert.ok(savedPrices.p16kg >= 0, 'Negative prices must be sanitized to valid values');
+
+  // 測試後重置公告為關閉狀態與乾淨文字，防範常駐記憶體與資料庫污染
+  await cmsHandler({
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${adminToken}`,
+      'content-type': 'application/json'
+    },
+    body: {
+      announcement: {
+        enabled: false,
+        type: 'info',
+        title: '盛隆暖心公告',
+        content: ''
+      }
+    }
+  }, mockRes());
 });
 
 test('Security: website CMS CTA track endpoint validates event names and resists spam', async () => {
