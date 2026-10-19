@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 📱 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化 [ver: 20261019_1205_auto_release]
+* **變更類型**：介面精簡 (ui-simplification) / 橫向手勢滑動修復 (gesture-fix) / 鈴聲選項文案純淨化 (sound-options-clean)
+* **核心成果**：
+  * **移除頂部靜音快捷按鈕**：將上方導覽列之 `🔕 / 🔔 關掉鈴聲` 快捷按鈕完全移除，消除按鈕擁擠問題，只保留原有「更新派單」、「字體大小」、「強光模式」與「鈴聲設定」4 顆實用膠囊按鈕。
+  * **保留鈴聲設定內部靜音**：派單前奏鈴聲開關（正常發聲 / 純靜音模式）收斂於「鈴聲設定」彈窗內，支援隨選即時保存與本地持久化隔離存儲。
+  * **清除鈴聲秒數與10倍文字**：全面清理 `ALERT_RINGTONE_OPTIONS` 及彈窗中「15秒」、「10秒」、「4秒」、「10倍音壓」等贅字標籤與說明，文案保持專業清晰。
+  * **全面修復頂部 Bar 橫向平滑滑動**：為頂部外層導覽容器加入觸控冒泡阻斷（`stopPropagation`），徹底杜絕下拉刷新手勢搶奪橫向滾動；軌道容器鎖定 `flexWrap: "nowrap"`, `overflowX: "auto"`, `WebkitOverflowScrolling: "touch"`, `touchAction: "pan-x"`，每個按鈕鎖定 `flexShrink: 0`，實現手指左右順暢橫向滑動。
+  * **驗證與發布**：通過 `npx tsc --noEmit`（0錯誤）、全套 199 項自動化測試通過、雙軌自動編譯 Android Signed Release APK 並同步至 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` 與 GitHub/Vercel。
+
+---
 ## 📅 2026/10/19 - 🔍 全系統跨模組對接健康狀態即時體檢與深度診斷 [ver: 20261019_system_integrations_audit]
 * **變更類型**：系統體檢 (system-audit) / 跨系統對接驗證 (integration-check) / 防重複優化 (query-optimization)
 * **核心成果**：

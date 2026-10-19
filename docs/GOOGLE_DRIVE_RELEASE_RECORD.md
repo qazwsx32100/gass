@@ -6,6 +6,28 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 📱 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化 [ver: 20261019_1205_auto_release]
+
+### 一、 需求與更動摘要
+1. **移除頂部按鈕的靜音開關**：
+   - 上方功能列移除常態「🔕 / 🔔 關掉鈴聲」快捷按鈕，避免按鈕擠迫或誤觸。
+   - 保留「鈴聲設定」彈窗內部的「派單鈴聲開關 (靜音模式)」，滿足不同外勤人員彈性安靜作業需求。
+2. **清除鈴聲設定中的秒數與10倍倍率文字**：
+   - 全面清理 `ALERT_RINGTONE_OPTIONS` 及彈窗中「15秒」、「10秒」、「4秒」、「10倍音壓」等贅字標籤與說明。
+   - 文案調整為簡潔直觀的「加長循環音效」、「超神級抗噪」、「極限抗噪」與「標準長度」。
+3. **全面修復上方 Bar 按鈕橫向平滑滑動功能**：
+   - 頂部外層容器加入 `onTouchStart`, `onTouchMove`, `onTouchEnd` 觸控冒泡阻斷 (`stopPropagation`)，徹底避免下拉刷新手勢搶奪橫向滑動。
+   - 滾動膠囊軌道容器設定 `flexWrap: "nowrap"`, `whiteSpace: "nowrap"`, `overflowX: "auto"`, `WebkitOverflowScrolling: "touch"`, `touchAction: "pan-x"`。
+   - 每個按鈕鎖定 `flexShrink: 0`, `touchAction: "pan-x"`，自然產生平滑滾動熱區，手指左右推動順暢無阻。
+
+### 二、 驗證與發布成果
+1. **編譯檢驗**：`npx tsc --noEmit` 0 型別錯誤；`node --test tests/*.test.mjs` 199 項全數通過。
+2. **禁令合規**：`git diff` 抽檢絕無違規詞彙。
+3. **雙軌自動發布**：
+   - 雲端發布：GitHub commit `500bf37` 已推送到 main 分支，Vercel 自動部署完成。
+   - 原生打包：Android Signed Release APK 編譯成功，同步更新至電腦桌面 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`。
+
+---
 ## 📅 2026/10/19 - 🔍 全系統跨模組對接健康狀態即時體檢與深度診斷 [ver: 20261019_system_integrations_audit]
 
 ### 一、 體檢背景與目標
