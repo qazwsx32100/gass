@@ -266,9 +266,13 @@ def ingest_single_order(conn, order: dict, dry_run: bool = False) -> int | None:
 
     cursor = conn.cursor()
 
-    # 1. 防重複檢查 (Idempotency Key: LINE#<orderId>)
+    # 1. 防重複檢查 (Idempotency Key: LINE#<orderId>，限制於最新 1,000 筆內快速比對，避免 23 萬筆全表掃描延遲)
     idempotency_key = f"LINE#{order_id}"
-    query_check = "SELECT TOP 1 oder_id FROM dbo.gas_oders WHERE oder_remarks LIKE ?"
+    query_check = """
+    SELECT TOP 1 oder_id FROM (
+        SELECT TOP 1000 oder_id, oder_remarks FROM dbo.gas_oders ORDER BY oder_id DESC
+    ) sub WHERE oder_remarks LIKE ?
+    """
     cursor.execute(query_check, (f"%{idempotency_key}%",))
     existing = cursor.fetchone()
     if existing:

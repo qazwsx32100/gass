@@ -11,7 +11,22 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 官網 AI 智慧瓦斯諮詢管家升級（同源串接 LINE 官方大語言模型、雙重備援、動態提示詞與在地知識庫安全降級）
+### 1. 盛隆瓦斯全生態系跨模組對接健康狀態即時體檢與深度診斷
+- **狀態**：`[x]` 已完成 (8大跨系統對接全面體檢完成，7項成功對接，1項待雲端合併，全庫199項測試通過)
+- **優先級**：`P0` (依老闆最高指示全面盤查所有跨系統對接連通性與健康度)
+- **負責設備/端點**：`全生態系 (SQL Server, Ingest Daemon, Vercel Queue, Telegram Bot, LINE AI, Shenglong-Next, GitHub Actions, Google Drive)`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **舊進銷存 (SQL Server .\SQLEXPRESS)**：實體連線成功（延遲 1,048ms），歷史單據 234,769 筆與客戶 3,903 戶正常在線。
+  - [x] **本地自動入單 Daemon**：優化防重複查詢（最新 1,000 筆子查詢），單元測試延遲從 0.71s 降至 0.14s；開機自啟動 VBS 與桌面控制台正常。
+  - [x] **Telegram 機器人**：實測 `@shenglong_gas_bot` 連線正常，各群組推播與權限隔離機制健全。
+  - [x] **LINE AI 客服與知識庫**：Gemini 2.5/1.5 輪調 + OpenAI 備援 + 300 題知識庫測試 100% 綠燈。
+  - [x] **Next.js 營運主控台 ＆ 雙向庫存**：`C:\shenglong-next` 與 `sync-stock.cjs` 正常待命，司機 App 更新就緒。
+  - [x] **LINE 會員系統 (shenglong-line-liff)**：本地佇列代碼 22 項測試綠燈；經跨倉庫深度診斷，確認線上生產環境需經由 GitHub `qazwsx32100/shenglong-line-liff` 分支合併上線，杜絕覆蓋既有 10 個 Lambda。
+  - [x] **GitHub Actions 與 Google 雲端**：工作流觸發 API 測試通過，指定雲端資料夾 `1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM` 綁定正確。
+  - [x] **全庫回歸驗證**：全專案 199 項測試 100% 綠燈通過。
+
+### 2. 官網 AI 智慧瓦斯諮詢管家升級（同源串接 LINE 官方大語言模型、雙重備援、動態提示詞與在地知識庫安全降級）
 - **狀態**：`[x]` 已完成 (官網與 LINE 全面同源大語言模型，199 項測試全數綠燈，已部署上線)
 - **優先級**：`P0` (實現老闆指示「以 LINE 的大語言模型為主」，全站智慧回答標準 100% 一致)
 - **負責設備/端點**：`api/ai-chat.js, website/index.html, website/vercel.json (https://shenglong-gas.vercel.app)`
