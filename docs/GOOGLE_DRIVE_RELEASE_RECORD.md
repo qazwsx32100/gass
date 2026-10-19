@@ -6,6 +6,34 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - ⚡ 外勤 App 派單提醒「方案 A：前景／背景互斥分流」架構實裝（徹底消除提醒跳兩次與聲音打架） [ver: 20261019_1301_auto_release]
+
+### 一、 需求與問題核心
+1. **問題背景**：外勤手機在收到派單時，手機系統本身的通知聲音會響，App 本身的超響鈴聲與語音也會響，導致「提醒跳兩次」且「聲音打架重疊」，嚴重干擾外送作業。
+2. **決策落實**：老闆裁定採行「方案 A（前景／背景互斥分流）」，從根本架構上切分前台與背景之推播、聲音與語音職責，達成單一來源、零重疊、零打架。
+
+### 二、 核心架構改造與技術實現
+1. **MainActivity 前景狀態真實判定 (`isAppTrulyInForeground`)**：
+   - 結合 Activity 生命週期狀態 (`isAppInForeground`)、螢幕亮屏與互動判定 (`PowerManager.isInteractive()`) 與系統鎖屏檢測 (`KeyguardManager.isKeyguardLocked()`)。
+   - 只要外勤人員手機熄屏、放口袋或螢幕鎖屏，即使 Activity 尚未完全銷毀，亦能 0ms 精準切換為背景模式。
+2. **FCM 雲端推播互斥分流 (`MyFirebaseMessagingService`)**：
+   - **前台模式**：外勤人員正在查看 App 畫面，原生層 100% 阻斷 Android 系統通知欄下拉橫幅與原生 TTS 播報，不覆蓋畫面、不搶奪聲音，僅調用 `MainActivity.notifyFcmOrderReceived()` 穿透喚醒 WebView。
+   - **背景模式**：手機鎖屏或黑屏時，原生層全權接管（自動拉滿各通道音量、喚醒點亮螢幕 8 秒、懸浮通知橫幅、強烈震動、原生真人繁中語音朗讀）。
+3. **原生待命服務輪詢互斥分流 (`DriverOrderService`)**：
+   - 輪詢捕獲新派單時，若判定處於前台，跳過通知列與原生 TTS，即時觸發前端刷新；若處於背景，則由原生層開屏彈出橫幅與朗讀語音。
+4. **雙向排重鎖定機制 (`isOrderNotified` / `markOrderNotified`)**：
+   - 原生端維護 `shenglong_driver_notified` 快取並透過 `AndroidBridge` 暴露給前端；原生層背景已處理之單據，前端切回前台時自動阻斷重複發聲。
+5. **前端 Web 互斥防禦 (`app/driver/page.tsx`)**：
+   - 在 `sendOrderNotification` 加入 `document.hidden` 與 `isOrderNotified` 阻斷，避免網頁在背景執行 Web Audio 或切回前台時重新叫一次。
+
+### 三、 驗證與發布成果
+1. **編譯檢驗**：`npx tsc --noEmit` 0 型別錯誤；全套 199 項自動化測試 100% 綠燈通過。
+2. **禁令合規**：`git diff` 抽檢 100% 零違規詞彙。
+3. **雙軌自動發布**：
+   - 雲端發布：GitHub commit `2070fc7` 已推送到 main 分支，Vercel 自動熱更新上線。
+   - 原生打包：Android Signed Release APK 編譯成功，同步更新至電腦桌面 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`。
+
+---
 ## 📅 2026/10/19 - 📱 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化 [ver: 20261019_1205_auto_release]
 
 ### 一、 需求與更動摘要

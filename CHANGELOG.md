@@ -6,6 +6,17 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - ⚡ 外勤 App 派單提醒「方案 A：前景／背景互斥分流」架構實裝（徹底消除提醒跳兩次與聲音打架） [ver: 20261019_1301_auto_release]
+* **變更類型**：架構分流 (architecture-dispatch) / 聲音互斥 (sound-exclusive) / 防重複排重 (deduplication)
+* **核心成果**：
+  * **MainActivity 前景狀態真實判定 (`isAppTrulyInForeground`)**：結合 Activity 生命週期狀態、螢幕亮屏與互動判定 (`PowerManager.isInteractive()`) 與系統鎖屏檢測 (`KeyguardManager.isKeyguardLocked()`)，確保手機熄屏或放口袋時 100% 精準切換為背景模式。
+  * **FCM 雲端推播互斥分流 (`MyFirebaseMessagingService`)**：前台收到新單時跳過通知列與原生語音播報，僅通知 WebView 加載；背景收到新單時由原生層全權接管（自動拉滿音量、喚醒亮屏 8 秒、懸浮通知橫幅、原生真人繁中語音朗讀）。
+  * **原生輪詢待命服務互斥分流 (`DriverOrderService`)**：前台輪詢到新單時跳過通知列與原生 TTS，即時通知 WebView 重新加載；背景時才彈出系統通知列並執行原生 TTS。
+  * **雙向通知排重鎖定機制 (`isOrderNotified` / `markOrderNotified`)**：原生層與前端 WebView 雙向共享已通知訂單 ID 快取，原生背景已通知之單據切回前台時自動阻斷重複發聲。
+  * **前端 Web 互斥防禦 (`app/driver/page.tsx`)**：在 `sendOrderNotification` 內加入 `document.hidden` 與 `isOrderNotified` 阻斷，處於背景或已由原生層播報時絕不重複觸發 Web Audio 與 Web Speech，徹底消除雙重發聲。
+  * **驗證與發布**：通過 `npx tsc --noEmit`（0錯誤）、全套 199 項自動化測試通過、雙軌自動編譯 Android Signed Release APK 並同步至 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` 與 GitHub/Vercel。
+
+---
 ## 📅 2026/10/19 - 📱 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化 [ver: 20261019_1205_auto_release]
 * **變更類型**：介面精簡 (ui-simplification) / 橫向手勢滑動修復 (gesture-fix) / 鈴聲選項文案純淨化 (sound-options-clean)
 * **核心成果**：

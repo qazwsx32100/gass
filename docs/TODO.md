@@ -11,7 +11,21 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化
+### 1. 外勤 App 派單提醒「方案 A：前景／背景互斥分流」架構實裝（徹底消除提醒跳兩次與聲音打架）
+- **狀態**：`[x]` 已完成 (實裝方案 A 前景／背景互斥分流架構，前台專屬 App 內大橫幅與自選超響音樂，背景專屬開屏震動、通知列與原生 TTS，雙向排重杜絕重複提醒，全量測試通過並完成桌面 APK 與雲端部署)
+- **優先級**：`P0` (依老闆決策徹底解決手機通知聲與 App 聲音打架、提醒跳兩次之痛點)
+- **負責設備/端點**：`shenglong-next: MainActivity.java, DriverOrderService.java, MyFirebaseMessagingService.java, app/driver/page.tsx, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **MainActivity 前景狀態精準判定 (`isAppTrulyInForeground`)**：結合 Activity 生命週期、螢幕亮屏互動狀態 (`PowerManager.isInteractive()`) 與鎖屏檢測 (`KeyguardManager.isKeyguardLocked()`)，確保螢幕熄滅或鎖屏時 100% 精準切換為背景模式。
+  - [x] **FCM 雲端推播互斥分流 (`MyFirebaseMessagingService`)**：前台收到新單時跳過系統通知欄下拉橫幅與原生 TTS 播報，僅觸發 `notifyFcmOrderReceived()` 供 WebView 處理；背景收到新單時由原生層全權接管（自動拉滿音量、喚醒亮屏 8 秒、懸浮通知橫幅、原生真人語音朗讀）。
+  - [x] **原生輪詢待命服務互斥分流 (`DriverOrderService`)**：前台輪詢到新單時跳過通知列與原生 TTS，即時通知 WebView 重新加載；背景時才彈出系統通知列並執行原生 TTS。
+  - [x] **雙向通知排重鎖定機制 (`isOrderNotified` / `markOrderNotified`)**：原生層與前端 WebView 雙向共享已通知訂單 ID 快取，原生背景已通知之單據切回前台時自動阻斷重複發聲。
+  - [x] **前端 Web 互斥防禦 (`app/driver/page.tsx`)**：在 `sendOrderNotification` 內加入 `document.hidden` 與 `isOrderNotified` 阻斷，處於背景或已由原生層播報時絕不重複觸發 Web Audio 與 Web Speech，徹底消除雙重發聲。
+  - [x] **合規與回歸驗證**：禁令詞抽檢 100% 零違規、`npx tsc --noEmit` 0 錯誤、盛隆全庫單元測試 199 項全數通過。
+  - [x] **自動打包發布**：執行 `node scripts/release.cjs` 完成編譯與簽章，發布至 `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` 並同步推播至 GitHub main 分支與 Vercel 雲端熱更新。
+
+### 2. 外勤 App 頂部按鈕列精簡、橫向平滑滑動軌道修復與鈴聲設定介面純淨化
 - **狀態**：`[x]` 已完成 (頂部靜音快捷按鈕刪除、鈴聲設定彈窗保留靜音、徹底清除秒數與10倍文字、全面修復頂部膠囊軌道平滑橫向滑動手勢、桌面 APK 與雲端全量發布)
 - **優先級**：`P0` (依老闆最新指示優化外勤人員騎車操作體驗與介面純淨度)
 - **負責設備/端點**：`shenglong-next: app/driver/page.tsx, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
