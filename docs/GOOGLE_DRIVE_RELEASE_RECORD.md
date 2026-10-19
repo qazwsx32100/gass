@@ -21,9 +21,11 @@
    - 歷史單據查詢窗口由 60 天大幅擴增至 365 天（`DATEADD(day, -365, GETDATE())`），確保整年度各月份歷史完整可用。
    - 實裝 UTF-8 優先與相容雙重解碼機制，並增加人員名稱強韌標準化轉換。
    - 優化 KVDB 備援推播負載，自動篩選在職人員與近期全量單據，杜絕 502 Payload Too Large 異常。
-2. **歷史單據全量補回雲端 (`scripts/sync_history_backfill.cjs`)**：
-   - 從本地實體資料庫精準抽取 2026 全年 7,467 筆訂單，補回 7,377 筆歷史單據至雲端 Vercel 與 KVDB 備援層。
-3. **雲端端點零單快取污染防護 (`app/api/driver/earnings/route.ts`)**：
+2. **歷史單據全量補回雲端與種子數據庫 (`scripts/build_driver_history_seed.cjs` & `lib/driver-history-seed.json`)**：
+   - 從本地實體資料庫精準抽取 2026 全年 7,467 筆訂單，產出種子檔補回雲端 Vercel 與 KVDB 備援層（共 2,336 筆在職外勤人員與近期訂單）。
+3. **永續訂單智慧合併與零單快取污染防護 (`app/api/driver/earnings/route.ts`)**：
+   - 升級 Vercel `POST /api/driver/earnings` 端點為「永續累加智慧合併架構 (Smart Merge)」，徹底杜絕盲目覆蓋造成的月份丟失。
+   - 內嵌歷史訂單種子庫，即使門市同步異常或跨實例冷啟動，雲端與 App 亦 100% 保證歷史業績完整在線。
    - 月份查詢新增「0 筆訂單絕不寫入快取」防護機制，並支援 `_nocache` 與 `no-cache` 即時穿透，徹底消除陳舊 0 筆快取污染。
 
 ### 三、 小龍歷史業績全鏈路核實確認
