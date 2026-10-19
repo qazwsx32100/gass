@@ -3,6 +3,7 @@ import { sendJson, getClientIp } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import { getOptimizedSystemPrompt, classifyQueryComplexity } from './_knowledge-base.js';
 import { extractOrderEntities, formatOrderStateContext } from './line-webhook.js';
+import { recordLineAiChat } from './_line-ai-logger.js';
 
 // 限制公開 AI 詢答頻率：單一 IP 每分鐘最多 12 次請求，保護老闆付費 API 配額不被刷爆
 const aiChatRateLimiter = createBoundedRateLimiter({
@@ -132,6 +133,21 @@ export default async function handler(req, res) {
       preferredModel: model || 'gemini-3.8-flash',
       strategy: 'round-robin',
       mode: complexityMode
+    });
+
+    const isOrderIntent = /叫瓦斯|訂瓦斯|送瓦斯|送一桶|送兩桶|瓦斯沒了|換瓦斯/i.test(userQuery);
+
+    // 非阻塞持久化記錄至 AI 對話歷史中心（讓老闆隨時在看板查閱官網即時問答）
+    recordLineAiChat({
+      lineUserId: `web:${clientIp}`,
+      userName: '官網訪客',
+      userMessage: userQuery,
+      aiReply: result.text,
+      aiResult: result,
+      isOrderIntent,
+      status: 'success'
+    }).catch(err => {
+      console.warn('[LineAiLogger] 官網 AI 對話記錄非致命錯誤:', err.message);
     });
 
     return sendJson(res, 200, {

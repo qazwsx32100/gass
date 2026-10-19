@@ -222,4 +222,31 @@ test('KnowledgeBase & AI-Chat: Dynamic prompt injection and line entity extracti
   assert.ok(dynamicPrompt.includes('無電梯'));
 });
 
+test('KnowledgeBase & AI-Chat: Smell troubleshooting match and website user mask', async () => {
+  const { matchBestFaq } = await import('../api/_knowledge-base.js');
+  const { maskLineUserId, isAuthorizedToViewLogs } = await import('../api/line-ai-logs.js');
+
+  // 1. 測試煙味、焦味自我排查匹配
+  const smellMatched = matchBestFaq('煮飯時瓦斯爐有煙味和焦味');
+  assert.ok(smellMatched, 'Smell query must match knowledge base');
+  assert.equal(smellMatched.category, '瓦斯爐故障');
+  assert.ok(smellMatched.standardAnswer.includes('風門'), 'Answer must explain damper adjustment');
+  assert.ok(smellMatched.standardAnswer.includes('瓦斯即將見底'), 'Answer must explain odorant when cylinder is nearly empty');
+
+  // 2. 測試官網訪客與 LINE 使用者 ID 遮罩呈現
+  assert.equal(maskLineUserId('web:203.0.113.195'), '🌐 官網訪客 (203.0.113.195)');
+  assert.equal(maskLineUserId('web:unknown'), '🌐 官網訪客 (unknown)');
+  assert.ok(maskLineUserId('U12345678901234567890').includes('...'));
+
+  // 3. 測試授權中包含 Telegram Token
+  process.env.TELEGRAM_BOT_TOKEN = 'test-telegram-token-12345';
+  const tgReq = {
+    method: 'GET',
+    headers: {},
+    query: { key: 'test-telegram-token-12345' }
+  };
+  assert.equal(isAuthorizedToViewLogs(tgReq), true);
+  delete process.env.TELEGRAM_BOT_TOKEN;
+});
+
 

@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 🔍 AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收） [ver: 20261019_ai_audit_and_optimization]
+* **變更類型**：AI 查閱對話 (ai-dialogue-audit) / 官網對話持久化 (web-ai-logging) / 題庫同步擴充 (kb-smell-enrichment)
+* **核心成果**：
+  * **官網 AI 對話全面持久化入庫**：在 `api/ai-chat.js` 整合 `recordLineAiChat`，使官網訪客的每一筆提問、AI 生成回覆、耗費 Token 與延遲時間均自動存入資料庫，標註 `web:${clientIp}` 來源，杜絕任何問答死角。
+  * **AI 對話紀錄中心看板升級**：`api/line-ai-logs.js` 新增官網訪客標籤與 IP 脫敏遮罩（`🌐 官網訪客 (IP)`），並於合法管理金鑰中納入 `TELEGRAM_BOT_TOKEN`，實現老闆在手機 Telegram 上一鍵免密直達看板查閱。
+  * **煙味/焦味/燃燒異味排查題庫三方同步**：於 `api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md` 與 桌面鏡像同步增補風門調控（純藍火）、見底臭劑濃度說明與排氣安全指南。
+  * **全專案 200 項測試驗證**：新增知識庫異味匹配與看板訪客遮罩測試，全套 200 項自動化測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/19 - ⚡ 外勤 App 派單提醒「方案 A：前景／背景互斥分流」架構實裝（徹底消除提醒跳兩次與聲音打架） [ver: 20261019_1301_auto_release]
 * **變更類型**：架構分流 (architecture-dispatch) / 聲音互斥 (sound-exclusive) / 防重複排重 (deduplication)
 * **核心成果**：

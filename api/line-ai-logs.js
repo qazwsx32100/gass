@@ -16,6 +16,7 @@ const lineLogsAuthFailLimiter = createBoundedRateLimiter({
 export function maskLineUserId(uid) {
   const s = String(uid || '').trim();
   if (!s || s === 'unknown') return '未知';
+  if (s.startsWith('web:')) return `🌐 官網訪客 (${s.slice(4)})`;
   if (s.length <= 10) return `${s.slice(0, 3)}***`;
   return `${s.slice(0, 6)}...${s.slice(-4)}`;
 }
@@ -42,7 +43,8 @@ export function isAuthorizedToViewLogs(req) {
   const validSecrets = [
     process.env.ADMIN_SESSION_SECRET,
     process.env.ERP_SYNC_SECRET,
-    process.env.TELEGRAM_WEBHOOK_SECRET
+    process.env.TELEGRAM_WEBHOOK_SECRET,
+    process.env.TELEGRAM_BOT_TOKEN
   ].filter(Boolean);
 
   if (providedKey && validSecrets.length > 0) {
