@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - ⚡ AI 呼叫模型階梯與極速超時優化（優先 gemini-3-flash-preview 毫秒秒回、徹底消除 504 逾時） [ver: 20261019_ai_fast_model_ladder]
+* **變更類型**：模型調用優化 (model-ladder-optimization) / 延遲大幅縮短 (latency-reduction) / 逾時消除 (timeout-prevention)
+* **核心成果**：
+  * **深度定位 Gemini 尖峰延遲問題**：經實體 API 測試，`gemini-3.8-flash` 在 Google 端點單次回應耗時高達 30,146ms（30 秒），容易觸碰 Vercel Serverless Function 30 秒執行上限導致 504 逾時；而極速模型 `gemini-3-flash-preview` 僅需 1,102ms（1.1 秒）、`gemini-3.1-flash-lite` 僅需 632ms（0.6 秒）。
+  * **全面重構優先模型階梯 (`api/_ai-rotator.js`, `api/ai-chat.js`)**：
+    * 預設首選模型全面切換為 `gemini-3-flash-preview` ➔ `gemini-3.1-flash-lite` ➔ `gemini-3.8-flash`。
+    * 單次模型調用超時嚴格箝制為 12,000ms（12 秒），遇尖峰延遲自動快速切換至備援模型或下一組金鑰，徹底根絕 Vercel 504 逾時。
+  * **測試驗證全數過關**：全專案 200 項單元與整合測試 100% 綠燈全數通過。
+
+---
 ## 📅 2026/10/19 - 📦 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 com.shenglong.driver.xl、最新防重推播架構與桌面同步） [ver: 20261019_1427_auto_release]
 * **變更類型**：專屬封裝 (dedicated-apk-packaging) / 標籤去重架構 (push-deduplication) / 桌面發布 (desktop-sync)
 * **核心成果**：

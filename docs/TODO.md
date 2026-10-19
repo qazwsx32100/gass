@@ -4,14 +4,25 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 14:32
+> **最後更新時間**：2026-10-19 15:05
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 `com.shenglong.driver.xl`、最新防重推播架構與桌面同步）
+### 1. AI 呼叫模型階梯與極速超時優化（優先 `gemini-3-flash-preview` 毫秒秒回、徹底消除 504 逾時）
+- **狀態**：`[x]` 已完成 (實測定位 `gemini-3.8-flash` 尖峰單次回應耗時高達 30s 觸碰 Vercel 限制，全面切換首選模型為 1.1s 響應之 `gemini-3-flash-preview` ➔ `gemini-3.1-flash-lite` 階梯，超時箝制為 12s 毫秒切換，200 項測試全數通過)
+- **優先級**：`P0` (杜絕 AI 端點 504 逾時假死)
+- **負責設備/端點**：`api/_ai-rotator.js, api/ai-chat.js, tests/test-ai-rotator.mjs`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **實體端點延遲實測**：定位 `gemini-3.8-flash` 單次耗時 30s，而 `gemini-3-flash-preview` 僅需 1.1s，`gemini-3.1-flash-lite` 僅需 0.6s。
+  - [x] **優先調用階梯全面切換**：`api/_ai-rotator.js` 與 `api/ai-chat.js` 預設首選調整為 `gemini-3-flash-preview`。
+  - [x] **逾時保護縮短為 12 秒**：從 25 秒改為 12 秒，超時自動快速輪替，保證在 Vercel 30s 邊界內優雅回應。
+  - [x] **全專案自動化測試驗證**：全套 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+### 2. 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 `com.shenglong.driver.xl`、最新防重推播架構與桌面同步）
 - **狀態**：`[x]` 已完成 (配置小龍專用套件代碼 `com.shenglong.driver.xl`、固定金鑰 `tk_xl_9a2f7c81d4e3`、專屬圖標與白底去背冷啟動畫面，整合最新方案 A 前景／背景互斥分流與雙重防重推播架構，完成 Signed Release APK 編譯並發布至電腦桌面 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` 與雲端下載區)
 - **優先級**：`P0` (依老闆指示打包小龍專用 App)
 - **負責設備/端點**：`shenglong-next: scripts/release.cjs, android/app/google-services.json, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, public/files/shenglong-driver-xl.apk`

@@ -159,7 +159,7 @@ export async function callAiWithFailover({
   messages = [],
   systemInstruction = '',
   temperature = 0.7,
-  preferredModel = 'gemini-3.8-flash',
+  preferredModel = 'gemini-3-flash-preview',
   strategy = 'round-robin',
   mode = 'fast'
 }) {
@@ -197,12 +197,10 @@ export async function callAiWithFailover({
       : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
     let candidateModels = isOpenAi ? ['gpt-4o-mini'] : Array.from(new Set([
-      preferredModel || 'gemini-3.8-flash',
-      'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-3-flash-preview'
+      preferredModel || 'gemini-3-flash-preview',
+      'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash'
     ])).filter(Boolean);
 
     let accountSucceeded = false;
@@ -220,7 +218,7 @@ export async function callAiWithFailover({
             messages: fullMessages,
             temperature
           })
-        }, 25000);
+        }, 12000);
 
         const latencyMs = Date.now() - attemptStart;
 

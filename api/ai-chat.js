@@ -130,7 +130,7 @@ export default async function handler(req, res) {
       messages: Array.isArray(messages) ? messages : [],
       systemInstruction: finalSystemInstruction ? String(finalSystemInstruction).slice(0, 32000) : undefined,
       temperature: safeTemperature,
-      preferredModel: model || 'gemini-3.8-flash',
+      preferredModel: model || 'gemini-3-flash-preview',
       strategy: 'round-robin',
       mode: complexityMode
     });

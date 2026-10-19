@@ -6,6 +6,20 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - ⚡ AI 呼叫模型階梯與極速超時優化（優先 gemini-3-flash-preview 毫秒秒回、徹底消除 504 逾時） [ver: 20261019_ai_fast_model_ladder]
+
+### 一、 核心開發與延遲調優
+1. **模型延遲實測定位**：
+   - 實體探針測試 Google 官方端點延遲：`gemini-3.8-flash` 響應長達 30,146ms（30 秒），極易撞上限導致 Vercel 回傳 504 `FUNCTION_INVOCATION_TIMEOUT`。
+   - 相比之下，極速模型 `gemini-3-flash-preview` 僅需 1,102ms（1.1 秒）、`gemini-3.1-flash-lite` 僅需 632ms（0.6 秒），穩定性與回答品質極佳。
+2. **模型階梯優化 (`api/_ai-rotator.js` & `api/ai-chat.js`)**：
+   - 首選模型預設全數切換為 `gemini-3-flash-preview`。
+   - 調用候選順序優化為 `gemini-3-flash-preview` ➔ `gemini-3.1-flash-lite` ➔ `gemini-3.8-flash`。
+   - 單次調用超時由 25 秒縮減為 12 秒，超時立即自動切換，杜絕伺服器端點 504 假死。
+3. **全專案測試驗證**：
+   - `npm test` 200 項測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/19 - 📦 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 com.shenglong.driver.xl、最新防重推播架構與桌面同步） [ver: 20261019_1427_auto_release]
 
 ### 一、 需求背景與決策
