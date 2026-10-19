@@ -2483,8 +2483,20 @@
         };
       }
 
-      // 3. 漏氣緊急 SOP
-      if (q.includes('漏氣') || q.includes('味道') || q.includes('瓦斯味') || q.includes('臭味') || q.includes('安全') || q.includes('緊急')) {
+      // 3. 煙味 / 焦味 / 燃燒異味排查
+      if (q.includes('煙') || q.includes('烟') || q.includes('焦味') || q.includes('燒焦') || q.includes('異味') || q.includes('刺鼻') || q.includes('油煙') || q.includes('黑煙')) {
+        return {
+          text: `<strong>💨 聞到煙味、焦味或燃燒異味自我排查指南：</strong><br />
+          1. <strong>瓦斯燃燒不完全（黑煙/煙味）：</strong>若瓦斯爐火焰偏紅或偏黃，代表進氣氧氣不足產生黑煙與廢氣煙味，請左右撥動爐底金屬「風門」調回純藍火。<br />
+          2. <strong>瓦斯即將用盡（殘存臭劑氣味）：</strong>瓦斯快見底時，瓶底高濃度加臭劑燃燒會散發較明顯異味，換新桶即可完全消除。<br />
+          3. <strong>熱水器排氣不良：</strong>若在陽台或室內聞到廢氣煙味，請立即關閉熱水器並開窗通風，檢查排氣管線是否通暢。<br />
+          4. <strong>安全第一：</strong>若伴隨濃烈瓦斯味或電線焦味，請立即順時針關閉瓦斯角閥，致電盛隆 02-2972-5559 免費到府檢測！`,
+          image: './images/stove-flame-damper.jpg'
+        };
+      }
+
+      // 4. 漏氣緊急 SOP
+      if (q.includes('漏氣') || q.includes('味道') || q.includes('瓦斯味') || q.includes('臭味') || q.includes('安全') || q.includes('緊急') || q.includes('漏')) {
         return {
           text: `<strong>⚠️ 瓦斯漏氣緊急應變 4 步驟 SOP（請務必嚴格遵守）：</strong><br />
           1. <strong>順時針關閉鋼瓶角閥：</strong>立即切斷瓦斯氣源供應。<br />
@@ -2495,7 +2507,7 @@
         };
       }
 
-      // 4. 桶裝瓦斯 vs 天然瓦斯
+      // 5. 桶裝瓦斯 vs 天然瓦斯
       if (q.includes('天然') || q.includes('度數') || q.includes('換算') || q.includes('比較') || q.includes('省錢') || q.includes('熱值')) {
         return {
           text: `<strong>📊 桶裝瓦斯 (LPG) vs 天然瓦斯 (NG) 換算指南：</strong><br />
@@ -2506,8 +2518,8 @@
         };
       }
 
-      // 5. 規格與尺寸
-      if (q.includes('規格') || q.includes('尺寸') || q.includes('重量') || q.includes('高度') || q.includes('幾公斤') || q.includes('容量')) {
+      // 6. 規格與尺寸
+      if (q.includes('規格') || q.includes('尺寸') || q.includes('重量') || q.includes('高度') || q.includes('幾公斤') || q.includes('容量') || q.includes('公斤')) {
         return {
           text: `<strong>🛢️ 盛隆合格瓦斯鋼瓶規格一覽：</strong><br />
           • <strong>4kg 輕便型：</strong>高約 42cm，泡茶露營專用。<br />
@@ -2519,8 +2531,8 @@
         };
       }
 
-      // 6. 配送時段與費用
-      if (q.includes('配送') || q.includes('時間') || q.includes('運費') || q.includes('多久') || q.includes('營業時間') || q.includes('假日')) {
+      // 7. 配送時段與費用
+      if (q.includes('配送') || q.includes('時間') || q.includes('運費') || q.includes('多久') || q.includes('營業時間') || q.includes('假日') || q.includes('送達')) {
         return {
           text: `<strong>🚚 盛隆配送服務與時效說明：</strong><br />
           • <strong>專車配送時間：</strong>每日 08:00 – 21:00（建議於 20:30 前預約）。<br />
@@ -2530,18 +2542,28 @@
         };
       }
 
-      // 7. 通用題庫關鍵字模糊搜尋 (從 allFaqs 尋找最佳答案)
+      // 8. 通用題庫關鍵字模糊搜尋 (從 allFaqs 尋找最佳答案)
       if (typeof allFaqs !== 'undefined' && Array.isArray(allFaqs)) {
         let bestMatch = null;
         let maxScore = 0;
-        const keywords = q.split(/[\s,，、。？?！!]+/);
+        const cleanQ = q.replace(/[\s,，、。？?！!]+/g, '');
+        const keywords = q.split(/[\s,，、。？?！!]+/).filter(Boolean);
+        if (cleanQ && !keywords.includes(cleanQ)) keywords.push(cleanQ);
 
         allFaqs.forEach(faq => {
           let score = 0;
+          const qText = (faq.q || '').toLowerCase();
+          const aText = (faq.a || '').toLowerCase();
+
+          // 短語直中高分
+          if (cleanQ && qText.includes(cleanQ)) score += 10;
+          if (cleanQ && aText.includes(cleanQ)) score += 4;
+
           keywords.forEach(kw => {
-            if (kw && faq.q.toLowerCase().includes(kw)) score += 3;
-            if (kw && faq.a.toLowerCase().includes(kw)) score += 1;
+            if (kw && qText.includes(kw)) score += 3;
+            if (kw && aText.includes(kw)) score += 1;
           });
+
           if (score > maxScore) {
             maxScore = score;
             bestMatch = faq;
