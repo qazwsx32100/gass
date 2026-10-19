@@ -4,12 +4,34 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 17:45
+> **最後更新時間**：2026-10-19 18:05
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
+
+### 1. 外送 App 訂單現場「狀況回報」無法輸入中文徹底根除（Capacitor 原生輸入連接釋放、IME 注音/拼音組字保護、全域定時節流與快捷晶片）
+- **狀態**：`[x]` 已完成 (深度定位外勤人員在 App「狀況回報」補充說明無法輸入中文的四大病因：① `capacitor.config` 內啟用 `captureInput: true` 暴力攔截 Android WebView 鍵盤連線，造成繁中注音/拼音 IME 組字無法提交；② `fetchFieldReports` 隨 1.0 秒輪詢頻繁執行且無快照比對，無條件觸發根元件重繪，直接洗掉正在輸入的注音暫存緩衝區；③ Android 視窗缺乏 `windowSoftInputMode="adjustResize"` 導致軟鍵盤彈出時擠壓位移；④ 單行 input 元件缺乏 IME 組字事件保護 (`compositionstart/end`)。現已將 `captureInput` 設為 `false`、加入視窗自動縮放、全面升級多行 `<textarea>` 搭配注音組字保護、新增彈窗填寫期間後台靜默暫緩與 30 秒節流、並加裝 7 組常用狀況快捷晶片一鍵填入，雙外送人員 Signed Release APK 編譯發布至桌面與 GitHub)
+- **優先級**：`P0` (依老闆回饋「app 訂單 裡的狀況回報 無法輸入中文」全面徹底修復)
+- **負責設備/端點**：`shenglong-next: capacitor.config.ts, scripts/release.cjs, android/app/src/main/assets/capacitor.config.json, AndroidManifest.xml, app/driver/page.tsx, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **Capacitor 原生輸入連接釋放 (`capacitor.config.ts` & `release.cjs`)**：將 `captureInput` 徹底改為 `false`，釋放 Android 原生 WebView 的 Chromium 輸入法連接（InputConnection），允許注音、拼音、倉頡與語音輸入法正常傳遞文字。
+  - [x] **Android 視窗軟鍵盤自適應縮放 (`AndroidManifest.xml`)**：在 `MainActivity` 加入 `android:windowSoftInputMode="adjustResize"`，確保鍵盤彈出時介面平順推升，絕不遮擋輸入焦點或造成文字框漂移。
+  - [x] **後台輪詢重繪暫緩與 30 秒節流 (`app/driver/page.tsx`)**：
+    1. 當狀況回報彈窗開啟中，`fetchFieldReports` 立即暫緩背景拉取，防止背景輪詢重繪打斷使用者的注音組字狀態。
+    2. 加入快照比對機制，若回報資料無實質變更則絕對不呼叫 `setFieldReports`。
+    3. 在 `fetchOrders` 內將現場回報拉取加上 30 秒冷卻節流，消除每秒重繪隱患。
+  - [x] **中文 IME 注音/拼音組字保護與多行體驗 (`app/driver/page.tsx`)**：
+    1. 實裝 `onCompositionStart` 與 `onCompositionEnd` 監聽器，確保注音組字尚未完成前保護 React state，選定字詞後精準提交。
+    2. 升級為舒適多行 `<textarea>`，並停用多餘的自動校正干擾（`autoCorrect="off"`、`spellCheck={false}`）。
+    3. 新增即時清空按鈕，方便外勤人員快速重打。
+  - [x] **7 大常用狀況快捷晶片一鍵填入 (`app/driver/page.tsx`)**：
+    - 在輸入框下方新增 `+ 放門口/梯間`、`+ 放一樓管理室`、`+ 電鈴壞改電聯`、`+ 客人稍後付款`、`+ 管線老舊需留意`、`+ 走樓梯送達`、`+ 無人在家` 等一鍵填入快捷晶片，戴手套或趕時間時 0 秒快速填寫。
+  - [x] **雙外送人員 Signed Release APK 全量編譯發布**：
+    - 小龍專用 APK (`盛隆外送_小龍專用.apk`) 與 游柏林專用 APK (`盛隆外送_游柏林專用.apk`) 發布至 `C:\Users\懶\Desktop\sl\`。
+    - 全庫 200 項單元測試 100% 綠燈通過，GitHub 雙軌自動提交推送完成。
 
 ### 1. 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障）
 - **狀態**：`[x]` 已完成 (深度排查出通知跳兩次的四個根本成因：① Vercel Serverless 多實例無法共享記憶體快取導致派單 API 與同步 API 雙重觸發 FCM；② 原生輪詢待命服務與 FCM 接收服務因高頻併發無執行緒鎖而同時通過已通知檢查；③ 原生通知 Builder 標題與 Tag 不一致導致 Android 系統視為不同通知建立兩張卡片且未設 `setOnlyAlertOnce`；④ 前端網頁端未設防抖觸發並發 fetch。現已實裝 60 秒分散式/記憶體 TTL 防重鎖、原生 `tryAcquireNotificationLock` 原子防重閘門、統一標籤 `order_<id>` / ID / `setOnlyAlertOnce(true)`、前端 1 秒防抖與正規化，雙外送人員 Signed Release APK 編譯發布至桌面與 GitHub)

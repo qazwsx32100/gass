@@ -6,6 +6,26 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - ✏️ 外送 App 訂單現場「狀況回報」無法輸入中文徹底根除（Capacitor 原生輸入連接釋放、IME 注音/拼音組字保護、全域定時節流與快捷晶片） [ver: 20261019_1801_auto_release]
+* **變更類型**：輸入法相容性修復 (ime-composition-fix) / 原生鍵盤連線解鎖 (keyboard-input-unlock) / 重繪節流保護 (render-throttle-shield) / 快捷填寫體驗 (quick-chips)
+* **核心成果**：
+  * **深度診斷繁體中文無法輸入之四大病因**：
+    1. **Capacitor 攔截原生鍵盤**：`captureInput: true` 暴力劫持 Android WebView 的 InputConnection，導致注音/拼音 IME 組字無法提交。
+    2. **每秒無條件全頁重繪**：`fetchFieldReports` 隨訂單輪詢每秒執行且無快照比對，無條件觸發 `setFieldReports` 重繪全頁，洗掉正在輸入中的注音組字暫存。
+    3. **視窗軟鍵盤缺少 adjustResize**：鍵盤開啟時視窗未自適應縮放，導致文字框焦點位移。
+    4. **缺乏 IME 組字生命週期保護**：React 控制元件在未選字狀態下即時回寫 value，打斷輸入法候選字條。
+  * **全面架構升級與修復**：
+    * `capacitor.config.ts`、`scripts/release.cjs` 與 `assets/capacitor.config.json` 徹底改為 `captureInput: false`，交回 Android 原生 Chromium IME 管線。
+    * `AndroidManifest.xml` 新增 `android:windowSoftInputMode="adjustResize"`，軟鍵盤平順推升視窗。
+    * `app/driver/page.tsx` 新增狀況回報彈窗開啟時後台靜默暫緩、資料快照比對防重繪、以及 30 秒節流。
+    * 升級多行舒適 `<textarea>`，並加裝 `onCompositionStart/End` 注音拼音組字事件保護。
+    * 增設 7 組常用狀況快捷晶片（放門口/梯間、放一樓管理室、電鈴壞改電聯、客人稍後付款、管線老舊需留意、走樓梯送達、無人在家），戴手套即可一鍵秒填。
+  * **全量編譯發布與驗證**：
+    * `npm test` 200 項測試 100% 綠燈通過。
+    * 小龍專用 APK (`盛隆外送_小龍專用.apk`) 與 游柏林專用 APK (`盛隆外送_游柏林專用.apk`) 發布至 `C:\Users\懶\Desktop\sl\`。
+    * 代碼自動推送至 GitHub main 分支，Vercel 上線完成。
+
+---
 ## 📅 2026/10/19 - 🔔 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障） [ver: 20261019_1740_auto_release]
 * **變更類型**：通知去重強化 (notification-deduplication) / 原生原子閘門 (native-atomic-lock) / 伺服端防重 (server-push-guard) / 系統通知摺疊 (system-tray-folding)
 * **核心成果**：

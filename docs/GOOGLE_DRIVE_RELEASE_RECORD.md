@@ -6,6 +6,40 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - ✏️ 外送 App 訂單現場「狀況回報」無法輸入中文徹底根除（Capacitor 原生輸入連接釋放、IME 注音/拼音組字保護、全域定時節流與快捷晶片） [ver: 20261019_1801_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆反映：「app 訂單 裡的狀況回報 無法輸入中文」。
+2. **問題深度定位（四大病因診斷）**：
+   - **Capacitor 暴力攔截原生鍵盤連線**：`capacitor.config` 原設定 `captureInput: true`，導致 Capacitor 底層攔截了 Android WebView 與系統輸入法（IME）的 InputConnection，繁中注音/拼音組字階段的未完成字詞無法傳入並被攔截丟失。
+   - **高頻輪詢重繪沖掉組字暫存**：`fetchFieldReports` 隨著每 1 秒高頻訂單輪詢執行，且原先無快照比對，無條件呼叫 `setFieldReports` 引發全頁重繪，直接洗掉正在輸入的注音/拼音暫存緩衝區。
+   - **視窗未設軟鍵盤自適應**：Android Activity 缺少 `android:windowSoftInputMode="adjustResize"`，軟鍵盤開啟時介面未自適應縮放，導致文字框漂移。
+   - **缺乏 IME 組字事件保護**：單行 input 在 React 控制元件下，每次 keystroke 觸發 re-render 導致 Android 輸入法候選字條被強制中斷。
+
+### 二、 系統全面修復與體驗升級
+1. **Capacitor 原生輸入連接釋放 (`capacitor.config.ts` & `release.cjs`)**：
+   - 將 `captureInput` 改為 `false`，徹底解除 Capacitor 對輸入法的硬性攔截，完整交回 Android WebView 原生 Chromium IME 管線處理。
+2. **Android 視窗軟鍵盤自適應縮放 (`AndroidManifest.xml`)**：
+   - 在 `MainActivity` 加入 `android:windowSoftInputMode="adjustResize"`，確保鍵盤開啟時平順推升視窗，絕不遮擋輸入焦點。
+3. **彈窗開啟期間背景重繪靜默暫緩與 30 秒節流 (`app/driver/page.tsx`)**：
+   - 狀況回報彈窗開啟期間，`fetchFieldReports` 立即靜默暫緩，防止後台重繪打斷中文組字。
+   - 實裝快照比對機制，資料無實質更動時絕不觸發 state 更新。
+   - 在訂單輪詢中將現場回報拉取擴展為 30 秒節流。
+4. **繁中 IME 注音/拼音組字保護與多行舒適文字框 (`app/driver/page.tsx`)**：
+   - 實裝 `onCompositionStart` 與 `onCompositionEnd` 監聽保護，注音組字完成選字後才精準提交。
+   - 升級為舒適多行 `<textarea>`，並關閉多餘自動校正干擾。
+5. **7 大常用狀況快捷晶片一鍵填入 (`app/driver/page.tsx`)**：
+   - 內建 `+ 放門口/梯間`、`+ 放一樓管理室`、`+ 電鈴壞改電聯`、`+ 客人稍後付款`、`+ 管線老舊需留意`、`+ 走樓梯送達`、`+ 無人在家` 等快捷晶片，一鍵即刻填入，外勤人員無需費時打字。
+
+### 三、 發布與測試驗證
+1. **全專案單元與回歸測試**：`npm test` 200 項測試 100% 綠燈通過。
+2. **雙外送人員 Signed Release APK 發布**：
+   - 小龍專用：`C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` (4.91 MB)
+   - 游柏林專用：`C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` (4.88 MB)
+3. **雙軌代碼自動推送**：`shenglong-next` 提交 `b3cec2f` 並推送至 GitHub main 分支，Vercel 線上自動部署完成。
+
+---
 ## 📅 2026/10/19 - 🔔 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障） [ver: 20261019_1740_auto_release]
 
 ### 一、 需求背景與決策
