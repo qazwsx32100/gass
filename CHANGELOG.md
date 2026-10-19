@@ -6,6 +6,21 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 👑 確立最高執行指令（全系統連動影響預判、強制全面測試驗證、預留擴充條款） [ver: 20261019_supreme_directives]
+* **變更類型**：頂層規範建立 (supreme-directives) / 架構防護準則 (cross-system-impact) / 測試鐵律 (mandatory-testing)
+* **核心成果**：
+  * **最高執行指令 1 - 全系統連動影響預判 (Cross-System Ripple & Impact Analysis)**：
+    * 任何更動或功能開發前，必須試想與評估是否會波及其他子系統（例如：動到會員系統時可能連動訂單系統、庫存系統、派單系統、LINE AI 客服、Telegram 特助、會計報表等）。
+    * 所有連動到的系統一律列入評估與防護範圍，變更前必須完成「潛在受波及系統清單」與「相容性防護計畫」。
+  * **最高執行指令 2 - 做的所有事情都必須先測試 (Mandatory Testing & Verification First)**：
+    * 做的所有事情都必須先測試，未經測試驗證絕對不允許交付或上線。
+    * 更動前進行測試評估或編寫測試案例；更動後全量驗證受連動影響模組與整體測試套件（198 項測試 100% 綠燈）。
+  * **最高執行指令 3 - 待增加 (Dynamic Expansion Reserved)**：
+    * 預留擴充槽位，隨時根據老闆最高指示增補更新。
+  * **AI 代理環境自動加載 (`GEMINI.md`) 與全專案規範固化 (`PROJECT_RULES.md`)**：
+    * 建立根目錄 `GEMINI.md`，使 Antigravity AI 代理人於每一次對話輪次與操作前自動載入並強制遵守該最高執行指令。
+
+---
 ## 📅 2026/10/17 - 🛡️ 全系統安全性能與穩定度全面重檢（9大安全維度、198項自動化測試 100% 綠燈、線上實體穿透探針） [ver: 20261017_security_audit]
 * **變更類型**：安全性能審計 (security-audit) / 穿透防禦驗收 (penetration-test) / 穩定性測試 (stability-assurance)
 * **核心成果**：
