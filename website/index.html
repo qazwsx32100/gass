@@ -1213,7 +1213,7 @@
             </p>
           </div>
           <div class="pt-3 border-t border-slate-200 text-xs text-slate-600 space-y-1">
-            <div>⏰ <strong>配送時段：</strong>每日 08:00 - 21:00（全年無休）</div>
+            <div>⏰ <strong>配送時段：</strong>每日 08:00–21:00（盡量在 20:30 前下單）</div>
             <div>⚡ <strong>直達區域：</strong>三重全區免運，最快 20~40 分鐘送達</div>
             <div>📋 <strong>發票開立：</strong>支援統編抬頭（門市統一開立隨車送達）</div>
           </div>
@@ -2288,7 +2288,13 @@
           const res = await fetch('/api/cms');
           if (res.ok) {
             const json = await res.json();
-            if (json.data) cmsConfig = json.data;
+            if (json.data) {
+              cmsConfig = json.data;
+              try {
+                const currentLocal = JSON.parse(localStorage.getItem('shenglong_cms_settings') || '{}');
+                localStorage.setItem('shenglong_cms_settings', JSON.stringify({ ...currentLocal, announcement: json.data.announcement }));
+              } catch (_) {}
+            }
           }
         } catch (_) {
           const local = localStorage.getItem('shenglong_cms_settings');
@@ -2297,12 +2303,16 @@
           }
         }
 
+        const existingBanner = document.getElementById('cmsTopAnnouncementBanner');
+        if (existingBanner) existingBanner.remove();
+
         if (!cmsConfig) return;
 
         // 若啟用頂部公告，於頁面頂部動態插入橫幅
         if (cmsConfig.announcement && cmsConfig.announcement.enabled && cmsConfig.announcement.content) {
           const ann = cmsConfig.announcement;
           const banner = document.createElement('div');
+          banner.id = 'cmsTopAnnouncementBanner';
           let bgClass = 'bg-blue-600 text-white';
           if (ann.type === 'warning') bgClass = 'bg-amber-600 text-white';
           if (ann.type === 'alert') bgClass = 'bg-rose-600 text-white';

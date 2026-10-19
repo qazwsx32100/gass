@@ -6,6 +6,21 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步 [ver: 20261019_disable_announcement_banner]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 官網頂部原顯示測試殘留之 `📢 NORMAL Normal` 藍色橫幅，老闆裁示直接「關閉」。
+2. **多維度防禦與關閉落地**：
+   - **雲端資料庫狀態同步**：透過持久化橋接器直接更新 Supabase 資料庫中的 `app_state.websiteCms.announcement`，將 `enabled` 設為 `false`，內容清空。
+   - **程式預設值與 DOM 清理**：`website/api/cms.js` 預設 state 鎖定 `enabled: false, content: ''`；`website/index.html` 取得最新 CMS 資料時同步更新 `localStorage`，公告關閉時自動移除既有橫幅 DOM。
+   - **測試環境隔離防護**：`tests/multi-angle-security-and-stability.test.mjs` 原型污染測試後自動復原為關閉狀態，防止本地與部署測試時污染記憶體狀態。
+
+### 二、 系統測試與上線驗證
+- **自動化測試覆蓋**：全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+- **線上端點驗證**：線上 `/api/cms` 已即時回傳 `announcement: { enabled: false, ... }`，前台首頁頂部橫幅已完全隱藏。
+
+---
 ## 📅 2026/10/19 - 🔍 AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收） [ver: 20261019_ai_audit_and_optimization]
 
 ### 一、 需求背景與決策

@@ -63,7 +63,7 @@ let cmsState = {
     enabled: false,
     type: 'info',
     title: '盛隆暖心公告',
-    content: '冷氣團來襲居家熱水用量增加，建議提早預約叫瓦斯避免洗澡受凍！'
+    content: ''
   },
   stats: {
     lineClicks: 142,

@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步 [ver: 20261019_disable_announcement_banner]
+* **變更類型**：公告欄關閉 (disable-announcement-banner) / 雲端資料庫狀態同步 (db-cms-sync) / 本地快取防禦 (cache-defense)
+* **核心成果**：
+  * **落實老闆最高指示關閉頂部公告**：透過持久化橋接器更新雲端資料庫（Supabase `app_state.websiteCms.announcement`），將狀態即刻設為 `enabled: false`，消除測試殘留之 `📢 NORMAL Normal` 藍條。
+  * **預設值與本地快取多層防護**：`website/api/cms.js` 預設 state 鎖定 `enabled: false, content: ''`；`website/index.html` 取得最新 CMS 資料時同步更新 `localStorage` 避免離線讀取舊快取，且若公告為關閉狀態則主動從 DOM 移除。
+  * **測試環境隔離防護**：`tests/multi-angle-security-and-stability.test.mjs` 於原型污染與極端測試後，自動執行狀態清理復原，杜絕測試後記憶體污染。
+  * **200 項測試驗收全數通過**：執行 `npm test`，全套 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+---
 ## 📅 2026/10/19 - 🔍 AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收） [ver: 20261019_ai_audit_and_optimization]
 * **變更類型**：AI 查閱對話 (ai-dialogue-audit) / 官網對話持久化 (web-ai-logging) / 題庫同步擴充 (kb-smell-enrichment)
 * **核心成果**：

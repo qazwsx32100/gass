@@ -11,7 +11,19 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收）
+### 1. 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步
+- **狀態**：`[x]` 已完成 (依老闆指示關閉橫幅，更新雲端資料庫狀態為 enabled: false，清理 DOM 節點與前端本地快取防禦，測試環境加入清理隔離，200 項測試全數通過)
+- **優先級**：`P0` (依老闆指示「關閉」)
+- **負責設備/端點**：`website/index.html, website/api/cms.js, tests/multi-angle-security-and-stability.test.mjs`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **雲端資料庫狀態即時更新**：透過持久化橋接將雲端資料庫 `app_state.websiteCms.announcement.enabled` 設為 `false`，內容清空。
+  - [x] **系統預設值防護**：`website/api/cms.js` 預設 CMS state 鎖定 `enabled: false, content: ''`。
+  - [x] **前端 DOM 與 LocalStorage 快取防禦**：`website/index.html` 取得最新 CMS 設定時同步更新 `localStorage`，公告關閉時自動移除既有橫幅 DOM。
+  - [x] **安全測試環境清理隔離**：`tests/multi-angle-security-and-stability.test.mjs` 測試後自動恢復關閉狀態，杜絕記憶體污染。
+  - [x] **全量自動化測試驗證**：全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+### 2. AI 對話全量查閱與多維度深度優化（官網對話入庫、煙味焦味題庫增補、特助一鍵免密看板與200項全綠驗收）
 - **狀態**：`[x]` 已完成 (官網與 LINE 對話全量持久化入庫，看板支援一鍵查閱，題庫增補煙焦味排查，200 項測試全數通過)
 - **優先級**：`P0` (落實老闆指示「幫我查閱並且看是否能夠優化」，實現全渠道 AI 問答透明可追蹤)
 - **負責設備/端點**：`api/ai-chat.js, api/line-ai-logs.js, api/_knowledge-base.js, docs/GAS_CONSUMER_FAQ_300.md`

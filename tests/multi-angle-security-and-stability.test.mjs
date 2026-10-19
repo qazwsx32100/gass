@@ -67,6 +67,13 @@ test('Dimension 1.1: Prototype Pollution & Malformed JSON Protection in CMS API'
   // 驗證全域 Object 原型未遭到任何污染
   assert.equal(Object.prototype.polluted, undefined, 'Global prototype must not be polluted');
   assert.equal(Object.prototype.injected, undefined, 'Constructor prototype must not be polluted');
+
+  // 測試後重置公告為關閉狀態，確保不污染常駐記憶體與前端展示
+  await cmsHandler({
+    method: 'POST',
+    headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+    body: { announcement: { enabled: false, title: '盛隆暖心公告', content: '' } }
+  }, createMockRes());
 });
 
 test('Dimension 1.2: Type Confusion & Extreme Numbers in CMS Prices', async () => {
