@@ -4,12 +4,37 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 15:05
+> **最後更新時間**：2026-10-19 17:45
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
+
+### 1. 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障）
+- **狀態**：`[x]` 已完成 (深度排查出通知跳兩次的四個根本成因：① Vercel Serverless 多實例無法共享記憶體快取導致派單 API 與同步 API 雙重觸發 FCM；② 原生輪詢待命服務與 FCM 接收服務因高頻併發無執行緒鎖而同時通過已通知檢查；③ 原生通知 Builder 標題與 Tag 不一致導致 Android 系統視為不同通知建立兩張卡片且未設 `setOnlyAlertOnce`；④ 前端網頁端未設防抖觸發並發 fetch。現已實裝 60 秒分散式/記憶體 TTL 防重鎖、原生 `tryAcquireNotificationLock` 原子防重閘門、統一標籤 `order_<id>` / ID / `setOnlyAlertOnce(true)`、前端 1 秒防抖與正規化，雙外送人員 Signed Release APK 編譯發布至桌面與 GitHub)
+- **優先級**：`P0` (依老闆回饋「app 通知系統 還是會跳出兩次通知」全面徹底修復)
+- **負責設備/端點**：`shenglong-next: lib/web-push.ts, app/api/today-orders/route.ts, DriverOrderService.java, MyFirebaseMessagingService.java, MainActivity.java, app/driver/page.tsx, public/sw.js, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **伺服端跨容器防重鎖全面擴充 (`lib/web-push.ts` & `today-orders/route.ts`)**：
+    1. 實裝 `isDuplicateOrderPush` 雙軌鎖（記憶體 Map 搭配 60 秒 TTL 與 `turboCache` 備援），阻斷 Serverless 多容器瞬間重複發送。
+    2. 在 `today-orders/route.ts` 巡檢推播前加入 `isDuplicateOrderPush` 檢查，徹底杜絕剛由 `assign/route.ts` 指派的訂單在 1 秒後被定期巡檢二次推播。
+  - [x] **Android 原生原子防重閘門實裝 (`DriverOrderService.java` & `MyFirebaseMessagingService.java`)**：
+    1. 實裝靜態同步方法 `tryAcquireNotificationLock(Context, int orderId)`，以 `ConcurrentHashMap` 與時間戳做為原子臨界區守護，並持久化至 SharedPreferences。
+    2. 原生輪詢待命服務（每 1.5 秒）與 FCM 推播接收服務，無論哪個執行緒先抵達，只有第一個能成功奪得鎖並彈出通知，第二個直接被阻絕，根除 Race Condition。
+  - [x] **Android 通知列完全摺疊與靜音防護 (`NotificationCompat.Builder`)**：
+    1. 統一所有原生推播與輪詢通知之標題為 `📢 派單系統 ｜ 新訂單指派！`。
+    2. 統一通知 Tag 為 `order_<orderId>`，Notification ID 為 `orderId % 100000`。
+    3. 全面加入 `.setOnlyAlertOnce(true)`，確保 Android 系統層級即使收到任何相同 Tag 的通知，也只會在既有卡片上默默更新，絕不重複彈出第二張卡片或二次鳴響震動。
+  - [x] **前端 Web 防抖與字串型別正規化 (`app/driver/page.tsx` & `sw.js`)**：
+    1. 針對 `(window).__onFcmOrderReceived` 加入 1,000ms 防抖鎖，避免高頻重複觸發 `fetchOrders`。
+    2. 全面使用 `Number(o.id)` 進行數值型別正規化，杜絕字串與數字比對失敗造成重複提醒。
+    3. Service Worker 升級至 v18，統一通知標籤與過濾。
+  - [x] **雙外送人員 Signed Release APK 全量編譯發布**：
+    1. 小龍專用 APK (`盛隆外送_小龍專用.apk`) 產出並發布至 `C:\Users\懶\Desktop\sl\`。
+    2. 游柏林專用 APK (`盛隆外送_游柏林專用.apk`) 產出並發布至 `C:\Users\懶\Desktop\sl\`。
+    3. 專案 200 項測試全數通過，GitHub 雙軌自動提交推送完成。
 
 ### 1. 外送人員【小龍】歷史業績全面核實、遺失月份精準補回與雲端 KV/Vercel 全鏈路修復
 - **狀態**：`[x]` 已完成 (深度定位歷史業績異常原因：`sync-stock.cjs` 原先硬編碼滾動 60 天查詢窗口造成 6 月 (63 筆)、7 月 (112 筆) 全失，8 月前半月 (469 筆) 被截斷，且 ODBC 17 UTF-8 輸出被誤以 Big5 解碼導致姓名錯亂；現已全面擴展同步範圍至 365 天、優化編碼相容性、補回 7,377 筆歷史單據至雲端，小龍 6~10 月共 1,649 筆訂單、2,290 支瓦斯、162,750 元運費已 100% 精準修復對齊)

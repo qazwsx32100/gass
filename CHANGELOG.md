@@ -6,6 +6,34 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 🔔 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障） [ver: 20261019_1740_auto_release]
+* **變更類型**：通知去重強化 (notification-deduplication) / 原生原子閘門 (native-atomic-lock) / 伺服端防重 (server-push-guard) / 系統通知摺疊 (system-tray-folding)
+* **核心成果**：
+  * **深度定位重複跳出通知之四重病因**：
+    1. **伺服端跨容器防重失效**：`assign/route.ts` 與 `today-orders/route.ts` 運行在獨立 Vercel 容器，記憶體快取互不相通，指派後 1 秒內再次觸發 FCM。
+    2. **原生雙引擎併發競態**：輪詢待命服務與 FCM 接收服務因各自背景執行緒缺乏跨緒互斥鎖，高頻下同時通過 `isOrderNotified`。
+    3. **通知標籤與標題不一致**：兩側產生不同標題與 Tag，Android 系統視為不同通知建立兩張卡片，且未設 `setOnlyAlertOnce`。
+    4. **前端 Web 頻繁抖動**：`__onFcmOrderReceived` 無防抖造成連鎖並發 fetchOrders，且數值與字串型別偶發不一致。
+  * **伺服端跨容器 60 秒防重鎖 (`lib/web-push.ts` & `today-orders/route.ts`)**：
+    * 擴充 `isDuplicateOrderPush` 雙軌鎖（記憶體 Map 搭配 60 秒 TTL 與 `turboCache` 備援），阻斷 Serverless 多容器瞬間重複發送。
+    * 在 `today-orders/route.ts` 巡檢推播前加入 `isDuplicateOrderPush` 阻斷，剛指派之單據絕不二次觸發 FCM。
+  * **Android 原生原子防重閘門 (`DriverOrderService.java` & `MyFirebaseMessagingService.java`)**：
+    * 實裝 `public static synchronized boolean tryAcquireNotificationLock(Context context, int orderId)`，以 `ConcurrentHashMap`（60 秒保護窗）搭配 SharedPreferences 為原子臨界區守護。
+    * 原生輪詢與 FCM 接收無論哪個先抵達，僅首位能成功取得鎖並彈出通知，第二個直接被阻絕退出。
+  * **Android 系統層級完全摺疊與靜音 (`NotificationCompat.Builder`)**：
+    * 統一所有通知之標題為 `📢 派單系統 ｜ 新訂單指派！`。
+    * 統一通知 Tag 為 `order_<orderId>`，Notification ID 為 `orderId % 100000`。
+    * 全面配置 `.setOnlyAlertOnce(true)`，確保 Android 系統層級相同 Tag 僅靜默更新既有卡片，絕不重複鳴響震動。
+  * **前端 Web 防抖與型別正規化 (`app/driver/page.tsx` & `sw.js`)**：
+    * 針對 `(window).__onFcmOrderReceived` 加入 1,000ms 防抖鎖，避免高頻重複觸發 `fetchOrders`。
+    * 全面使用 `Number(o.id)` 進行數值型別正規化，杜絕型別比對失敗。
+    * Service Worker 升級至 v18，統一通知標籤與過濾。
+  * **全量編譯發布與驗證**：
+    * `npm test` 200 項測試 100% 綠燈通過。
+    * 小龍專用 APK (`盛隆外送_小龍專用.apk`) 與 游柏林專用 APK (`盛隆外送_游柏林專用.apk`) 發布至 `C:\Users\懶\Desktop\sl\`。
+    * 代碼自動推送至 GitHub main 分支，Vercel 上線完成。
+
+---
 ## 📅 2026/10/19 - 📊 外送人員【小龍】歷史業績全面核實、遺失月份精準補回與雲端 KV/Vercel 全鏈路修復 [ver: 20261019_driver_history_fix]
 * **變更類型**：業績數據校準 (earnings-reconciliation) / 歷史數據回補 (historical-backfill) / 跨實例快取防護 (cache-shield)
 * **核心成果**：

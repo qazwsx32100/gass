@@ -6,6 +6,41 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 🔔 外送派單通知「雙重彈窗」全鏈路徹底根除（伺服器跨容器防重鎖、原生原子通知閘門、統一通知 Tag/ID 摺疊與前端防抖四重屏障） [ver: 20261019_1740_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆反映：「app 通知系統 還是會跳出兩次通知」。
+2. **問題深度排查（四重重複源頭診斷）**：
+   - **伺服端跨容器防重失效 (Serverless Cross-Instance Race)**：`assign/route.ts`（派單）與 `today-orders/route.ts`（每數秒訂單巡檢）於 Vercel 獨立容器執行，記憶體快取互不相通，一指派訂單後，同步巡檢於 1 秒內再次觸發 FCM 推播。
+   - **原生雙引擎併發競態 (Native Dual-Engine Race Condition)**：`DriverOrderService.java`（背景輪詢，每 1.5 秒）與 `MyFirebaseMessagingService.java`（FCM 網路接收）各自在不同背景執行緒執行，原先 `isOrderNotified` 無跨執行緒同步鎖，導致兩者同時讀取判定為未通知而同時彈窗。
+   - **通知標籤與標題不一致 (Notification Tag & Title Mismatch)**：輪詢通知與 FCM 通知之標題與 Tag 不完全一致，Android 系統層視為不同通知分別建立卡片，且未啟用 `.setOnlyAlertOnce(true)`，造成重複震動鳴響。
+   - **前端 Web 頻繁抖動 (Frontend Race & Typing Mismatch)**：`page.tsx` 中 `__onFcmOrderReceived` 無防抖機制，引發連續並發 fetchOrders，且 `alertedOrderIdsRef` 中數值與字串型別偶發不一致。
+
+### 二、 四重防禦與原子閘門實裝
+1. **伺服端跨容器 60 秒防重鎖 (`lib/web-push.ts` & `today-orders/route.ts`)**：
+   - 擴充 `isDuplicateOrderPush` 雙軌鎖（記憶體 Map 搭配 60 秒 TTL 與 `turboCache` 備援），阻斷 Serverless 多容器瞬間重複發送。
+   - 在 `today-orders/route.ts` 巡檢推播前加入 `isDuplicateOrderPush` 阻斷，剛指派之單據絕不二次觸發 FCM。
+2. **Android 原生原子防重閘門 (`DriverOrderService.java` & `MyFirebaseMessagingService.java`)**：
+   - 實裝 `public static synchronized boolean tryAcquireNotificationLock(Context context, int orderId)`，以 `ConcurrentHashMap`（60 秒保護窗）搭配 SharedPreferences 為原子臨界區守護。
+   - 原生輪詢與 FCM 接收無論哪個先抵達，僅首位能成功取得鎖並彈出通知，第二個直接被阻絕退出。
+3. **Android 系統層級完全摺疊與靜音 (`NotificationCompat.Builder`)**：
+   - 統一所有通知之標題為 `📢 派單系統 ｜ 新訂單指派！`。
+   - 統一通知 Tag 為 `order_<orderId>`，Notification ID 為 `orderId % 100000`。
+   - 全面配置 `.setOnlyAlertOnce(true)`，確保 Android 系統層級相同 Tag 僅靜默更新既有卡片，絕不重複鳴響震動。
+4. **前端 Web 防抖與型別正規化 (`app/driver/page.tsx` & `sw.js`)**：
+   - 針對 `(window).__onFcmOrderReceived` 加入 1,000ms 防抖鎖，避免高頻重複觸發 `fetchOrders`。
+   - 全面使用 `Number(o.id)` 進行數值型別正規化，杜絕型別比對失敗。
+   - Service Worker 升級至 v18，統一通知標籤與過濾。
+
+### 三、 發布與測試驗證
+1. **全專案單元與回歸測試**：`npm test` 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+2. **雙外送人員 Signed Release APK 發布**：
+   - 小龍專用：`C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` (4.91 MB)
+   - 游柏林專用：`C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` (4.88 MB)
+3. **雙軌代碼自動推送**：`shenglong-next` 提交 `083b64c` 並推送至 GitHub main 分支，Vercel 線上自動部署完成。
+
+---
 ## 📅 2026/10/19 - 📊 外送人員【小龍】歷史業績全面核實、遺失月份精準補回與雲端 KV/Vercel 全鏈路修復 [ver: 20261019_driver_history_fix]
 
 ### 一、 需求背景與決策
