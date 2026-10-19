@@ -6,6 +6,15 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 📦 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 com.shenglong.driver.xl、最新防重推播架構與桌面同步） [ver: 20261019_1427_auto_release]
+* **變更類型**：專屬封裝 (dedicated-apk-packaging) / 標籤去重架構 (push-deduplication) / 桌面發布 (desktop-sync)
+* **核心成果**：
+  * **落實老闆最高指示打包小龍專用 App**：配置專用套件代碼 `com.shenglong.driver.xl`、固定認證金鑰 `tk_xl_9a2f7c81d4e3` 與專屬翡翠綠圖示包。
+  * **Firebase 多套件憑證全面對齊**：`android/app/google-services.json` 同步登記 `com.shenglong.driver.xl`，確保原生 FCM 雲端推播通道暢通無阻。
+  * **全鏈路繼承最新方案 A 與防重鎖**：完整整合方案 A 前景／背景互斥分流、30 秒伺服端防重鎖、統一通知 Tag 與 ID 覆蓋機制。
+  * **電腦桌面與雲端雙軌同步**：Signed Release APK (4.91 MB) 已同步至 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` 與雲端下載點 `public/files/shenglong-driver-xl.apk`，並同步推送到 GitHub main 分支。
+
+---
 ## 📅 2026/10/19 - 🛡️ 外送派單多重推播通知徹底根治（統一通知 Tag/ID、30秒防重鎖、SW 前景壓制、排除 Android 重複 WebPush） [ver: 20261019_1413_auto_release]
 * **變更類型**：推播去重 (push-deduplication) / 標籤統一 (notification-tag-unification) / 雙軌隔離 (dual-channel-isolation)
 * **核心成果**：

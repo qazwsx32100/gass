@@ -4,12 +4,24 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 14:19
+> **最後更新時間**：2026-10-19 14:32
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
+
+### 1. 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 `com.shenglong.driver.xl`、最新防重推播架構與桌面同步）
+- **狀態**：`[x]` 已完成 (配置小龍專用套件代碼 `com.shenglong.driver.xl`、固定金鑰 `tk_xl_9a2f7c81d4e3`、專屬圖標與白底去背冷啟動畫面，整合最新方案 A 前景／背景互斥分流與雙重防重推播架構，完成 Signed Release APK 編譯並發布至電腦桌面 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` 與雲端下載區)
+- **優先級**：`P0` (依老闆指示打包小龍專用 App)
+- **負責設備/端點**：`shenglong-next: scripts/release.cjs, android/app/google-services.json, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, public/files/shenglong-driver-xl.apk`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **發布總控自動化升級 (`scripts/release.cjs`)**：升級腳本支援外送人員參數化（`node scripts/release.cjs xl`），自動切換 applicationId (`com.shenglong.driver.xl`)、專屬 Token、圖標資源與輸出目標。
+  - [x] **Google Services 多客戶端憑證對齊 (`android/app/google-services.json`)**：將 `com.shenglong.driver.xl` 納入 Firebase 憑證 client 清單，確保原生 FCM 推播無縫對齊。
+  - [x] **Signed Release APK 編譯驗證**：產出 4.91 MB 之 Signed Release APK，完整包含方案 A 前景／背景互斥分流與 30 秒伺服端派單防重鎖。
+  - [x] **桌面專屬目錄同步**：產出至 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk`，並同步至 `public/files/shenglong-driver-xl.apk`。
+  - [x] **雙軌代碼推送**：完成 Git 提交並同步推送至 GitHub main 分支。
 
 ### 1. 外送派單多重推播通知徹底根治（統一通知 Tag/ID、30秒防重鎖、SW 前景壓制、排除 Android 重複 WebPush）
 - **狀態**：`[x]` 已完成 (深度定位「跳三次通知」根本原因，實裝 30 秒伺服端派單防重鎖、Web Push 手機端互斥隔離、Service Worker 前台壓制與固定 Tag、原生 FCM 與輪詢服務統一通知 Tag/ID 與已通知排重檢驗，200 項測試全數通過，完成最新 Signed APK 編譯發布至桌面與 GitHub 雙軌自動同步)

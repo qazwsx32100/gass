@@ -6,6 +6,22 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 📦 外送人員【小龍】專用 Signed Release APK 打包與發布（套件 com.shenglong.driver.xl、最新防重推播架構與桌面同步） [ver: 20261019_1427_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆明確指示為外送人員小龍打包專用 APK。
+2. **多維度配置與安全封裝**：
+   - **專屬套件與金鑰配置**：套件代碼鎖定 `com.shenglong.driver.xl`，登入金鑰自動綁定 `tk_xl_9a2f7c81d4e3`，杜絕手動輸入錯誤。
+   - **Firebase 多套件憑證**：`android/app/google-services.json` 同步登記 `com.shenglong.driver.xl`，確保原生 FCM 雲端推播通道暢通。
+   - **專屬圖標與冷啟動畫面**：注入專屬翡翠綠圖示包與純白底去背鋼瓶冷啟動 Splash Screen。
+   - **繼承最新防重與方案 A 架構**：完整納入 30 秒伺服端派單防重鎖、方案 A 前景／背景互斥分流、通知標籤與 ID 統一機制。
+
+### 二、 系統測試與上線驗證
+- **編譯產出**：產出 4.91 MB 之 Signed Release APK，自動發布至 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` 與雲端下載點 `public/files/shenglong-driver-xl.apk`。
+- **雙軌代碼同步**：GitHub main 分支同步更新完成。
+
+---
 ## 📅 2026/10/19 - 🛡️ 外送派單多重推播通知徹底根治（統一通知 Tag/ID、30秒防重鎖、SW 前景壓制、排除 Android 重複 WebPush） [ver: 20261019_1413_auto_release]
 
 ### 一、 需求與問題核心
