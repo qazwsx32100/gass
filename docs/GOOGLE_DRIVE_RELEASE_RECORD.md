@@ -6,6 +6,21 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - ⏰ AI 系統營業時間標示全面標準化（08:00–21:00（盡量在 20:30 前下單）） [ver: 20261019_ai_business_hours_standardization]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆明確指示：「ai系統 營業時間 都這樣標示 08:00–21:00（盡量在 20:30 前下單）」。
+2. **多維度同步落實**：
+   - **門市守則統一 (`api/_knowledge-base.js`)**：`SHENGLONG_STORE_RULES.businessHours` 與 `orderCutoffNotice` 全面更新為 `08:00–21:00（盡量在 20:30 前下單）`。
+   - **AI 客服提示詞對齊 (`getOptimizedSystemPrompt`)**：基本資訊、服務區域與第 6 條重要業務規範統一代換為 `08:00–21:00（盡量在 20:30 前下單）`。
+   - **常見問答 300 題同步 (`docs/GAS_CONSUMER_FAQ_300.md` & 桌面鏡像)**：配送時程規則與 Q21~Q23 回覆統一代換。
+   - **官網常見問題與前台展示對齊 (`website/faqs-data.js`, `website/index.html`)**：官網配送時段與常見問答全面對齊。
+
+### 二、 系統測試與上線驗證
+- **自動化測試覆蓋**：更新 `tests/knowledge-base.test.mjs` 營業時間字串與 Prompt 生成斷言，全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+---
 ## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步 [ver: 20261019_disable_announcement_banner]
 
 ### 一、 需求背景與決策

@@ -4,14 +4,26 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-17 11:52
+> **最後更新時間**：2026-10-19 13:54
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步
+### 1. AI 系統營業時間標示全面標準化（08:00–21:00（盡量在 20:30 前下單））
+- **狀態**：`[x]` 已完成 (依老闆指示將 AI 系統各處營業時間統一代換標示為「08:00–21:00（盡量在 20:30 前下單）」，全鏈路知識庫、System Prompt、FAQ 300、官網常見問題與測試套件 200 項測試 100% 綠燈通過)
+- **優先級**：`P0` (依老闆指示「ai系統 營業時間 都這樣標示 08:00–21:00（盡量在 20:30 前下單）」)
+- **負責設備/端點**：`api/_knowledge-base.js, docs/GAS_CONSUMER_FAQ_300.md, website/faqs-data.js, website/index.html, tests/knowledge-base.test.mjs`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] **門市營運規則標準化 (`SHENGLONG_STORE_RULES`)**：將 `businessHours` 與 `orderCutoffNotice` 全面更新為 `08:00–21:00（盡量在 20:30 前下單）`。
+  - [x] **AI 客服 System Prompt 對齊 (`getOptimizedSystemPrompt`)**：將官方基本資訊、服務區域與常見問答標準指引之營業時間統一代換為 `08:00–21:00（盡量在 20:30 前下單）`。
+  - [x] **知識庫題庫三方同步 (`docs/GAS_CONSUMER_FAQ_300.md` & 桌面鏡像)**：配送時程規則與 Q21~Q23 回覆營業時間統一代換。
+  - [x] **官網端點與常見問題對齊 (`website/faqs-data.js`, `website/index.html`)**：官網配送時段與問答全面同步為 `08:00–21:00（盡量在 20:30 前下單）`。
+  - [x] **自動化測試覆蓋與驗證**：更新並擴充 `tests/knowledge-base.test.mjs` 針對營業時間格式之嚴格斷言，全專案 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+### 2. 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步
 - **狀態**：`[x]` 已完成 (依老闆指示關閉橫幅，更新雲端資料庫狀態為 enabled: false，清理 DOM 節點與前端本地快取防禦，測試環境加入清理隔離，200 項測試全數通過)
 - **優先級**：`P0` (依老闆指示「關閉」)
 - **負責設備/端點**：`website/index.html, website/api/cms.js, tests/multi-angle-security-and-stability.test.mjs`

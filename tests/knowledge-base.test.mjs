@@ -10,7 +10,7 @@ import {
 
 test('KnowledgeBase: Store rules metadata integrity', () => {
   assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-5559');
-  assert.ok(SHENGLONG_STORE_RULES.businessHours.includes('08:00 ~ 21:00'));
+  assert.ok(SHENGLONG_STORE_RULES.businessHours.includes('08:00–21:00（盡量在 20:30 前下單）'));
   assert.ok(SHENGLONG_STORE_RULES.paymentMethod.includes('現金'));
   assert.ok(SHENGLONG_STORE_RULES.emergencyLeakSteps.length >= 4);
   assert.ok(SHENGLONG_STORE_RULES.residualGasPolicy.includes('不退殘氣費'));
@@ -199,6 +199,10 @@ test('KnowledgeBase & AI-Chat: Dynamic prompt injection and line entity extracti
   assert.ok(leakPrompt.includes('盛隆緊急安全提醒'), 'Gas leak query must contain emergency safety alert');
   assert.ok(leakPrompt.includes('關閉鋼瓶角閥'), 'Must include valve closure SOP');
   assert.ok(leakPrompt.includes('02-2972-5559'), 'Must include store contact phone');
+
+  // 2.1 測試營業時間提示詞標示格式
+  const hoursPrompt = getOptimizedSystemPrompt('請問營業時間到幾點？', 'fast', '');
+  assert.ok(hoursPrompt.includes('08:00–21:00（盡量在 20:30 前下單）'), 'Must format business hours strictly as 08:00–21:00（盡量在 20:30 前下單）');
 
   // 3. 測試殘氣與秤重規定 -> 嚴格約束無現場秤重退費
   const residualQuery = '請問剩下的瓦斯可以秤重退錢嗎？';

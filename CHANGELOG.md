@@ -6,6 +6,17 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - ⏰ AI 系統營業時間標示全面標準化（08:00–21:00（盡量在 20:30 前下單）） [ver: 20261019_ai_business_hours_standardization]
+* **變更類型**：營運時間標準化 (business-hours-standardization) / 知識庫全鏈路同步 (kb-sync) / 測試覆蓋 (testing-verification)
+* **核心成果**：
+  * **落實老闆最高指示統一代換標示**：將 AI 系統、LINE AI 客服、知識庫與官網之營業時間全面統一代換標示為「`08:00–21:00（盡量在 20:30 前下單）`」。
+  * **門市營運守則標準化 (`api/_knowledge-base.js`)**：更新 `SHENGLONG_STORE_RULES.businessHours` 與 `orderCutoffNotice`，使 AI 在任何問答情境均提供統一口徑。
+  * **System Prompt 全面對齊 (`getOptimizedSystemPrompt`)**：更新基本資訊與第 6 條服務區域與營業時間指引，杜絕不同模板間之格式落差。
+  * **常見問答 300 題三方同步 (`docs/GAS_CONSUMER_FAQ_300.md` & 桌面鏡像)**：配送時程規則與 Q21~Q23 回覆營業時間統一代換。
+  * **官網常見問題與前台展示同步 (`website/faqs-data.js`, `website/index.html`)**：官網配送時段與問答全面同步為 `08:00–21:00（盡量在 20:30 前下單）`。
+  * **200 項測試驗收全數通過**：更新 `tests/knowledge-base.test.mjs` 嚴格斷言，全套 200 項測試 100% 綠燈通過（200 pass, 0 fail）。
+
+---
 ## 📅 2026/10/19 - 🚫 官網頂部即時公告橫幅（Top Announcement Banner）預設關閉與全端防禦同步 [ver: 20261019_disable_announcement_banner]
 * **變更類型**：公告欄關閉 (disable-announcement-banner) / 雲端資料庫狀態同步 (db-cms-sync) / 本地快取防禦 (cache-defense)
 * **核心成果**：
