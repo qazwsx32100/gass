@@ -579,6 +579,26 @@
       pointer-events: auto;
       visibility: visible;
     }
+
+    /* ===== 長輩關懷大字模式 (Elder Mode: 字級放大 120%、高對比) ===== */
+    body.elder-mode {
+      font-size: 19px !important;
+    }
+    body.elder-mode p, body.elder-mode li, body.elder-mode div.text-xs, body.elder-mode div.text-sm {
+      font-size: 1.2em !important;
+      line-height: 1.75 !important;
+    }
+    body.elder-mode h1 { font-size: 3rem !important; line-height: 1.25 !important; }
+    body.elder-mode h2 { font-size: 2.3rem !important; }
+    body.elder-mode h3 { font-size: 1.7rem !important; }
+    body.elder-mode button, body.elder-mode input, body.elder-mode select, body.elder-mode textarea {
+      font-size: 1.15em !important;
+    }
+    body.elder-mode a[href^="tel:"], body.elder-mode a[href*="line.me"] {
+      padding-top: 0.85rem !important;
+      padding-bottom: 0.85rem !important;
+      font-size: 1.15rem !important;
+    }
   </style>
 </head>
 
@@ -625,6 +645,11 @@
       </nav>
 
       <div class="flex items-center gap-2">
+        <button id="elderModeBtn" onclick="toggleElderMode()" class="flex items-center gap-1 text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg transition-all shadow-2xs" title="切換為長輩清晰大字模式">
+          <span>👵</span>
+          <span id="elderModeText" class="hidden sm:inline">大字模式</span>
+        </button>
+
         <a href="tel:+886229725559" class="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-brand-accent bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors">
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
           02-2972-5559
@@ -637,6 +662,11 @@
       </div>
     </div>
   </header>
+
+  <!-- ========== 長輩清晰大字提示橫幅 ========== -->
+  <div id="elderBanner" class="hidden bg-amber-400 text-slate-950 font-black px-4 py-2.5 text-center text-sm sm:text-base sticky top-16 z-30 shadow-md border-b border-amber-500">
+    👵 已開啟長輩清晰大字模式：預約瓦斯可直接加大字體加 LINE 或直接撥打電話 <a href="tel:+886229725559" class="underline font-black text-blue-900 ml-1">02-2972-5559</a>
+  </div>
 
   <!-- ========== HERO ========== -->
   <section id="hero" class="bg-white border-b border-slate-200">
@@ -1374,7 +1404,7 @@
             <div class="flex items-center justify-between mt-2 px-1 text-[11px] text-slate-500">
               <span>💡 支援任意關鍵字即時比對問題與答案</span>
               <span id="faqCountBadge" class="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                探索全部 110 題
+                探索全部 100+ 題
               </span>
             </div>
           </div>
@@ -2505,6 +2535,29 @@
   <!-- ========== 核心互動邏輯 ========== -->
   <script>
     // ==========================================
+    // 0. 長輩關懷大字模式 (Elder-Friendly Mode: 字級放大 120%、高對比)
+    // ==========================================
+    function toggleElderMode(forceState) {
+      const isElder = forceState !== undefined 
+        ? forceState 
+        : !document.body.classList.contains('elder-mode');
+      
+      document.body.classList.toggle('elder-mode', isElder);
+      const banner = document.getElementById('elderBanner');
+      const text = document.getElementById('elderModeText');
+
+      if (banner) {
+        banner.classList.toggle('hidden', !isElder);
+      }
+      if (text) {
+        text.innerText = isElder ? '一般字體' : '大字模式';
+      }
+      try {
+        localStorage.setItem('shenglong_elder_mode', isElder ? 'true' : 'false');
+      } catch (_) {}
+    }
+
+    // ==========================================
     // 1. 即時配送時速速查 (Delivery Speed Check)
     // ==========================================
     window.speedData = {
@@ -2732,7 +2785,14 @@
 
     // 初始化載入
     document.addEventListener('DOMContentLoaded', function() {
-      // 初始化配送時速預設顯示（菜寮）
+      // 1. 初始化長輩大字模式
+      try {
+        if (localStorage.getItem('shenglong_elder_mode') === 'true') {
+          toggleElderMode(true);
+        }
+      } catch (_) {}
+
+      // 2. 初始化配送時速預設顯示（菜寮）
       if (typeof checkDeliverySpeed === 'function') {
         checkDeliverySpeed('cailiao');
       }
