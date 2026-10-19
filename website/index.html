@@ -1421,8 +1421,8 @@
       <input type="text" id="aiChatInput" placeholder="請輸入您的瓦斯或安全疑問..."
              onkeydown="if(event.key==='Enter') submitAiChat()"
              class="flex-1 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-100" />
-      <button type="button" onclick="submitAiChat()"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs flex-shrink-0">
+      <button type="button" id="aiChatSendBtn" onclick="submitAiChat()"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-xs flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
         發送
       </button>
     </div>
@@ -2372,8 +2372,11 @@
     }
 
     // ==========================================
-    // 5. 全站浮動 AI 智慧瓦斯諮詢管家
+    // 5. 全站浮動 AI 智慧瓦斯諮詢管家 (同源串接 LINE 雲端大語言模型)
     // ==========================================
+    let aiChatHistory = [];
+    let isAiChatPending = false;
+
     function toggleAiChat() {
       const drawer = document.getElementById('aiChatDrawer');
       if (!drawer) return;
@@ -2390,15 +2393,156 @@
       }
     }
 
-    function askAiQuestion(qText) {
+    function formatAiMarkdown(rawText) {
+      if (!rawText) return '';
+      // 1. 基本 HTML 特殊字元跳脫防禦 XSS
+      let formatted = escapeHtmlText(rawText);
+
+      // 2. 粗體語法 **文字** -> <strong>文字</strong>
+      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+      // 3. 處理列表項目 (* 或 - 開頭)
+      formatted = formatted.replace(/^[*-]\s+(.+)$/gm, '• $1');
+
+      // 4. 換行符號轉 <br />
+      formatted = formatted.replace(/\n\n+/g, '<br /><br />').replace(/\n/g, '<br />');
+
+      return formatted;
+    }
+
+    function detectAiHelperImage(queryText) {
+      const q = (queryText || '').toLowerCase();
+      if (q.includes('熱水器') || q.includes('忽冷忽熱') || q.includes('水溫') || q.includes('洗澡')) {
+        return './images/heater-troubleshoot.jpg';
+      }
+      if (q.includes('風門') || q.includes('紅火') || q.includes('黃火') || q.includes('黑鍋') || q.includes('瓦斯爐') || q.includes('煙') || q.includes('焦味')) {
+        return './images/stove-flame-damper.jpg';
+      }
+      if (q.includes('漏氣') || q.includes('瓦斯味') || q.includes('臭味') || q.includes('緊急') || q.includes('避險')) {
+        return './images/gas-leak-sop.jpg';
+      }
+      if (q.includes('規格') || q.includes('尺寸') || q.includes('重量') || q.includes('幾公斤') || q.includes('鋼瓶大小')) {
+        return './images/cylinder-sizes-comparison.jpg';
+      }
+      if (q.includes('天然') || q.includes('度數') || q.includes('換算') || q.includes('比較')) {
+        return './images/gas-consumption-comparison.jpg';
+      }
+      return null;
+    }
+
+    function showAiTypingIndicator() {
+      const body = document.getElementById('aiChatBody');
+      if (!body) return;
+      const indicator = document.createElement('div');
+      indicator.id = 'aiTypingIndicator';
+      indicator.className = 'flex items-start gap-2.5 fade-in';
+      indicator.innerHTML = `
+        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+          🤖
+        </div>
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs text-slate-500 text-xs flex items-center gap-2">
+          <div class="flex gap-1 items-center">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.15s"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.3s"></span>
+          </div>
+          <span class="text-[11px] font-medium text-slate-600">盛隆 AI 瓦斯管家思考中...</span>
+        </div>
+      `;
+      body.appendChild(indicator);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function hideAiTypingIndicator() {
+      const indicator = document.getElementById('aiTypingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    async function askAiQuestion(qText) {
+      if (!qText || isAiChatPending) return;
+
       appendChatMessage('user', qText);
-      const answerObj = matchAiAnswer(qText);
-      setTimeout(() => {
-        appendChatMessage('bot', answerObj.text, answerObj.image, answerObj.actions);
-      }, 350);
+      aiChatHistory.push({ role: 'user', content: qText });
+
+      // 保留最近 8 則歷史訊息以維護對話上下文，同時避免 Payload 過大
+      if (aiChatHistory.length > 8) {
+        aiChatHistory = aiChatHistory.slice(-8);
+      }
+
+      isAiChatPending = true;
+      const sendBtn = document.getElementById('aiChatSendBtn');
+      const inputEl = document.getElementById('aiChatInput');
+      if (sendBtn) sendBtn.disabled = true;
+      if (inputEl) inputEl.disabled = true;
+
+      showAiTypingIndicator();
+
+      let botReplyHtml = null;
+      let botImage = detectAiHelperImage(qText);
+
+      try {
+        // 第一順位：直連 ERP 雲端大模型端點 (https://erp-weld-three-96.vercel.app/api/ai-chat，無中間層代理延遲)
+        // 第二順位：經由官網同源 API (/api/ai-chat，Vercel 重寫至 ERP)
+        const requestPayload = {
+          prompt: qText,
+          messages: aiChatHistory
+        };
+
+        const controller1 = new AbortController();
+        const t1 = setTimeout(() => controller1.abort(), 18000);
+
+        let res = await fetch('https://erp-weld-three-96.vercel.app/api/ai-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestPayload),
+          signal: controller1.signal
+        }).catch(() => null);
+
+        clearTimeout(t1);
+
+        if (!res || !res.ok) {
+          const controller2 = new AbortController();
+          const t2 = setTimeout(() => controller2.abort(), 18000);
+          res = await fetch('/api/ai-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestPayload),
+            signal: controller2.signal
+          }).catch(() => null);
+          clearTimeout(t2);
+        }
+
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && data.ok && data.reply) {
+            botReplyHtml = formatAiMarkdown(data.reply);
+            aiChatHistory.push({ role: 'assistant', content: data.reply });
+          }
+        }
+      } catch (err) {
+        console.warn('[AI Assistant] 雲端 LLM 暫時離線，自動切換至在地專業知識庫:', err);
+      } finally {
+        hideAiTypingIndicator();
+        isAiChatPending = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (inputEl) {
+          inputEl.disabled = false;
+          inputEl.focus();
+        }
+      }
+
+      // 若雲端大語言模型成功回傳，呈現智慧生成回覆；若網路異常或限流，優雅降級至在地知識庫
+      if (botReplyHtml) {
+        appendChatMessage('bot', botReplyHtml, botImage);
+      } else {
+        const fallback = matchAiAnswer(qText);
+        aiChatHistory.push({ role: 'assistant', content: fallback.text.replace(/<[^>]+>/g, '') });
+        appendChatMessage('bot', fallback.text, fallback.image || botImage);
+      }
     }
 
     function submitAiChat() {
+      if (isAiChatPending) return;
       const input = document.getElementById('aiChatInput');
       const val = input?.value.trim();
       if (!val) return;

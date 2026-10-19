@@ -79,7 +79,7 @@ SYNC_SECRET = os.environ.get(
     os.environ.get("ERP_SYNC_SECRET", "shenglong-internal-secure-sync-secret-2026"),
 )
 SQL_SERVER = os.environ.get("SQL_SERVER", ".\\SQLEXPRESS")
-SQL_DATABASE = os.environ.get("SQL_DATABASE", "gas_station_ShengLong")
+SQL_DATABASE = os.environ.get("SQL_DATABASE", "ShengLong_Inspection")
 SQL_DRIVER = os.environ.get("SQL_ODBC_DRIVER", "{ODBC Driver 17 for SQL Server}")
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -92,7 +92,9 @@ TELEGRAM_ORDER_CHAT_ID = os.environ.get(
 def get_db_connection():
     """建立 SQL Server 連線，優先使用目標庫，若不存在則退回檢查庫"""
     dbs_to_try = [SQL_DATABASE]
-    if SQL_DATABASE != "ShengLong_Inspection":
+    if SQL_DATABASE == "ShengLong_Inspection":
+        dbs_to_try.append("gas_station_ShengLong")
+    else:
         dbs_to_try.append("ShengLong_Inspection")
 
     last_err = None

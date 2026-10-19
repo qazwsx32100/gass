@@ -1,6 +1,12 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/api/ai-chat",
+      "destination": "https://erp-weld-three-96.vercel.app/api/ai-chat"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

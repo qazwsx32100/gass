@@ -197,10 +197,12 @@ export async function callAiWithFailover({
       : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
     let candidateModels = isOpenAi ? ['gpt-4o-mini'] : Array.from(new Set([
-      preferredModel || 'gemini-3-flash-preview',
-      'gemini-3-flash-preview',
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash'
+      preferredModel || 'gemini-3.8-flash',
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-3-flash-preview'
     ])).filter(Boolean);
 
     let accountSucceeded = false;

@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/19 - 🤖 官網 AI 智慧管家全面對齊 LINE 官方帳號同源大語言模型（Gemini 輪調＋備援防線＋動態知識庫注入） [ver: 20261019_ai_llm_alignment]
+* **變更類型**：AI 架構升級 (ai-llm-alignment) / 提示詞與知識庫同源 (knowledge-sync) / 雙重備援與安全降級 (resilience-upgrade)
+* **核心成果**：
+  * **實現全站同源大語言模型**：依老闆指示「都是以 LINE 的大語言模型為主」，官網 AI 諮詢小幫手徹底揮別單機死板規則，全面由雲端 Gemini 3/2.5/1.5 及 OpenAI 容錯轉移之大語言模型驅動。
+  * **動態注入 20 大類知識庫與訂單要素**：後端 `/api/ai-chat` 與 LINE Webhook 100% 共享相同的知識庫系統提示詞、雙模（快速 fast / 深度專家 expert）意圖分流機制與訂單狀態辨識。
+  * **流暢互動體驗**：前端加入打字思考中脈衝動畫（`#aiTypingIndicator`）、安全 Markdown 自動排版、自動識別安全圖解（熱水器、風門、防漏氣、鋼瓶規格等）。
+  * **雙重線路代理與在地安全降級**：優先透過 `/api/ai-chat`（Vercel Rewrite），故障時自動切換直連 ERP 端點，超時或離線時優雅降級至在地知識庫。
+  * **零回歸測試驗證**：新增知識庫與 AI-Chat 同源一致性測試，全套 199 項測試 100% 綠燈通過。
+
+---
 ## 📅 2026/10/19 - 🌐 官方品牌形象站營運架構校正（精簡非必要模組、保護會員系統、FAQ整合為單一即時檢索知識庫） [ver: 20261019_website_refinement]
 * **變更類型**：網站營運優化 (website-refinement) / 流程收斂 (flow-alignment) / 知識庫單一化 (faq-unification)
 * **核心成果**：

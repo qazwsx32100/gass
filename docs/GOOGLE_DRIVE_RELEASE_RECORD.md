@@ -6,6 +6,26 @@
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
 ---
+## 📅 2026/10/19 - 🤖 官網 AI 智慧管家全面對齊 LINE 官方帳號同源大語言模型（Gemini 輪調＋備援防線＋動態知識庫注入） [ver: 20261019_ai_llm_alignment]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 針對提問「網頁的 AI 回答系統跟 LINE 的 AI 回答系統是一樣的嗎？」，老闆明確指示：「我想要都是以 LINE 的大語言模型為主」。
+   - 官網原本主要由前端本地關鍵字規則配對，無法達成如同 LINE 端的多輪自然語言對話、細膩排查與在地化人情味。
+2. **同源核心架構設計**：
+   - 後端 `/api/ai-chat` 深度整合 `_knowledge-base.js` 與 `line-webhook.js`，動態注入盛隆 20 大類官方知識庫、實體訂單狀態機與雙模（fast/expert）技術提示詞。
+   - 保留 Gemini 三帳號真循環輪調（Round-Robin）與 OpenAI 備援防線，確保高可用與不中斷服務。
+3. **官網體驗與彈性升級**：
+   - 加入非同步通訊、打字思考動畫指示器 (`#aiTypingIndicator`)、安全 Markdown 排版 (`formatAiMarkdown`) 與安全圖解自動辨識。
+   - 具備雙重線路代理（優先 `/api/ai-chat` Vercel Rewrite，次選直連 ERP 端點），若發生斷網或極端狀況則無縫優雅降級至在地知識庫。
+
+### 二、 系統測試與上線驗證
+- **自動化測試覆蓋**：新增知識庫與 AI-Chat 動態提示詞及訂單要素狀態機一致性測試，全套 199 項測試 100% 通過（199 pass, 0 fail）。
+- **正式發布上線**：
+  - 官網：https://shenglong-gas.vercel.app
+  - ERP 雲端端點：https://erp-weld-three-96.vercel.app
+
+---
 ## 📅 2026/10/19 - 🌐 官方品牌形象站營運架構校正（精簡非必要模組、保護會員系統、FAQ整合為單一即時檢索知識庫） [ver: 20261019_website_refinement]
 
 ### 一、 調整背景與營運定位

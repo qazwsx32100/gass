@@ -177,4 +177,49 @@ test('KnowledgeBase: Few-shot examples and orderStateContext injection', async (
   assert.ok(updateEntities.address.includes('正義北路88號'));
 });
 
+test('KnowledgeBase & AI-Chat: Dynamic prompt injection and line entity extraction consistency', async () => {
+  const {
+    getOptimizedSystemPrompt,
+    classifyQueryComplexity,
+    SHENGLONG_STORE_RULES
+  } = await import('../api/_knowledge-base.js');
+  const { extractOrderEntities, formatOrderStateContext } = await import('../api/line-webhook.js');
+
+  // 1. 測試熱水器忽冷忽熱/故障 -> 正確辨識為 expert 深度專家模式
+  const heaterQuery = '熱水器忽冷忽熱怎麼自我排查？';
+  const heaterMode = classifyQueryComplexity(heaterQuery);
+  assert.equal(heaterMode, 'expert');
+  const heaterPrompt = getOptimizedSystemPrompt(heaterQuery, heaterMode, '');
+  assert.ok(heaterPrompt.includes('深度專家診斷與邏輯推理指導'), 'Heater query must inject expert diagnostic guidelines');
+  assert.ok(heaterPrompt.includes('熱水器'), 'Must match relevant knowledge base entry');
+
+  // 2. 測試聞到瓦斯味/疑似漏氣 -> 最高安全防線與緊急避險四步驟
+  const leakQuery = '家裡廚房好像聞到瓦斯味，該怎麼辦？';
+  const leakPrompt = getOptimizedSystemPrompt(leakQuery, 'expert', '');
+  assert.ok(leakPrompt.includes('盛隆緊急安全提醒'), 'Gas leak query must contain emergency safety alert');
+  assert.ok(leakPrompt.includes('關閉鋼瓶角閥'), 'Must include valve closure SOP');
+  assert.ok(leakPrompt.includes('02-2972-5559'), 'Must include store contact phone');
+
+  // 3. 測試殘氣與秤重規定 -> 嚴格約束無現場秤重退費
+  const residualQuery = '請問剩下的瓦斯可以秤重退錢嗎？';
+  const residualPrompt = getOptimizedSystemPrompt(residualQuery, 'fast', '');
+  assert.ok(residualPrompt.includes('無現場秤重服務，亦不退殘氣費'), 'Residual gas policy must be strictly enforced');
+
+  // 4. 測試多輪對話訂單要素整合
+  const orderHistory = [
+    { role: 'user', content: '請問叫瓦斯有送三重嗎？' },
+    { role: 'assistant', content: '有的，三重全區專車免費配送！請提供地址與規格。' }
+  ];
+  const orderInput = '我要送新北市三重區重新路二段10號3樓沒電梯，一桶20公斤，電話0912345678';
+  const extracted = extractOrderEntities(orderHistory, orderInput);
+  const stateContext = formatOrderStateContext(extracted);
+  const dynamicPrompt = getOptimizedSystemPrompt(orderInput, 'fast', stateContext);
+
+  assert.equal(extracted.isComplete, true);
+  assert.ok(stateContext.includes('訂單要素已齊全'));
+  assert.ok(dynamicPrompt.includes('重新路二段10號'));
+  assert.ok(dynamicPrompt.includes('20公斤'));
+  assert.ok(dynamicPrompt.includes('無電梯'));
+});
+
 

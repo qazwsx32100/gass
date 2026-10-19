@@ -1,6 +1,8 @@
 import { callAiWithFailover } from './_ai-rotator.js';
 import { sendJson, getClientIp } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
+import { getOptimizedSystemPrompt, classifyQueryComplexity } from './_knowledge-base.js';
+import { extractOrderEntities, formatOrderStateContext } from './line-webhook.js';
 
 // 限制公開 AI 詢答頻率：單一 IP 每分鐘最多 12 次請求，保護老闆付費 API 配額不被刷爆
 const aiChatRateLimiter = createBoundedRateLimiter({
@@ -100,14 +102,36 @@ export default async function handler(req, res) {
       }
     }
 
-    const safeTemperature = Math.max(0, Math.min(1.0, Number(temperature) || 0.7));
+    const userQuery = prompt
+      ? String(prompt).trim()
+      : (Array.isArray(messages) && messages.length > 0
+          ? String(messages[messages.length - 1]?.content || messages[messages.length - 1]?.text || '').trim()
+          : '');
+
+    // 自動與 LINE AI 客服對齊：若未帶 systemInstruction，動態組裝盛隆官方知識庫與訂單要素上下文
+    let finalSystemInstruction = systemInstruction;
+    let complexityMode = 'fast';
+
+    if (!finalSystemInstruction) {
+      complexityMode = classifyQueryComplexity(userQuery);
+      const extracted = extractOrderEntities(messages, userQuery);
+      const orderStateContext = formatOrderStateContext(extracted);
+      finalSystemInstruction = getOptimizedSystemPrompt(userQuery, complexityMode, orderStateContext);
+    }
+
+    const isExpert = complexityMode === 'expert';
+    const safeTemperature = temperature !== undefined
+      ? Math.max(0, Math.min(1.0, Number(temperature) || 0.7))
+      : (isExpert ? 0.3 : 0.6);
 
     const result = await callAiWithFailover({
       prompt: prompt ? String(prompt).slice(0, MAX_PROMPT_LENGTH) : undefined,
       messages: Array.isArray(messages) ? messages : [],
-      systemInstruction: systemInstruction ? String(systemInstruction).slice(0, 32000) : undefined,
+      systemInstruction: finalSystemInstruction ? String(finalSystemInstruction).slice(0, 32000) : undefined,
       temperature: safeTemperature,
-      preferredModel: model
+      preferredModel: model || 'gemini-3.8-flash',
+      strategy: 'round-robin',
+      mode: complexityMode
     });
 
     return sendJson(res, 200, {

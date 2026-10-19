@@ -11,7 +11,20 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
-### 1. 官方品牌形象站營運架構校正（精簡非必要模組、保護會員系統、FAQ整合為單一即時檢索知識庫）
+### 1. 官網 AI 智慧瓦斯諮詢管家升級（同源串接 LINE 官方大語言模型、雙重備援、動態提示詞與在地知識庫安全降級）
+- **狀態**：`[x]` 已完成 (官網與 LINE 全面同源大語言模型，199 項測試全數綠燈，已部署上線)
+- **優先級**：`P0` (實現老闆指示「以 LINE 的大語言模型為主」，全站智慧回答標準 100% 一致)
+- **負責設備/端點**：`api/ai-chat.js, website/index.html, website/vercel.json (https://shenglong-gas.vercel.app)`
+- **完成日期**：2026/10/19
+- **完成項目**：
+  - [x] 後端 API (`api/ai-chat.js`) 動態對齊 LINE AI 客服核心：若未自帶 systemInstruction，自動注入 20 大類盛隆官方知識庫、訂單要素狀態機與雙模（fast/expert）提示詞。
+  - [x] 後端自動調用真・循環輪調（Round-Robin）與容錯轉移機制（Gemini 3/2.5/1.5 -> OpenAI 兜底）。
+  - [x] 官網前端 (`website/index.html`) 全面升級非同步呼叫：新增打字思考動畫（`#aiTypingIndicator`）、安全 Markdown 排版 (`formatAiMarkdown`)、即時防重複發送防禦。
+  - [x] 設定雙重線路代理：優先透過 `/api/ai-chat`（Vercel Rewrite），故障時自動切換直連 ERP 端點，超時或離線時優雅降級至在地知識庫。
+  - [x] 自動化測試全量驗證：新增知識庫與 AI-Chat 同源一致性測試，全專案 199 項測試 100% 綠燈通過（199 pass, 0 fail）。
+  - [x] 生產環境發布上線：完成官網 `https://shenglong-gas.vercel.app` 與 ERP `https://erp-weld-three-96.vercel.app` 部署。
+
+### 2. 官方品牌形象站營運架構校正（精簡非必要模組、保護會員系統、FAQ整合為單一即時檢索知識庫）
 - **狀態**：`[x]` 已完成 (移除網頁下單精靈、殘氣試算、商用特快車及上方重複FAQ，保留長輩大字模式，198項測試通過並部署上線)
 - **優先級**：`P0` (落實店內「無現場秤重退殘氣」規定，確保客戶訂購一律收斂至 LINE 會員系統)
 - **負責設備/端點**：`website/index.html, website/faqs-data.js (https://shenglong-gas.vercel.app)`

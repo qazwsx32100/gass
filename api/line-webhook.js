@@ -250,7 +250,7 @@ export default async function handler(req, res) {
           messages,
           systemInstruction: getOptimizedSystemPrompt(userText, complexityMode, orderStateContext),
           temperature: isExpert ? 0.3 : 0.6,
-          preferredModel: 'gemini-3-flash-preview',
+          preferredModel: 'gemini-3.8-flash',
           strategy: 'round-robin',
           mode: complexityMode
         });
