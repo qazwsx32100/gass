@@ -2388,6 +2388,12 @@
 
     function detectAiHelperImage(queryText) {
       const q = (queryText || '').toLowerCase();
+      if (q.includes('放開') || q.includes('放手') || q.includes('熄火') || q.includes('熱電偶') || q.includes('感應針')) {
+        return './images/stove-thermocouple-troubleshoot.jpg';
+      }
+      if (q.includes('強制排氣') || q.includes('陽台') || q.includes('氣密窗') || q.includes('鐵窗') || q.includes('鐵欄杆') || q.includes('曬衣服') || q.includes('fe')) {
+        return './images/forced-exhaust-water-heater.jpg';
+      }
       if (q.includes('熱水器') || q.includes('忽冷忽熱') || q.includes('水溫') || q.includes('洗澡')) {
         return './images/heater-troubleshoot.jpg';
       }
@@ -2579,6 +2585,28 @@
 
     function matchAiAnswer(query) {
       const q = (query || '').toLowerCase();
+
+      // 0.1 瓦斯爐手放開立刻熄火 (熱電偶感應針)
+      if (q.includes('放手') || q.includes('放開') || (q.includes('熄火') && (q.includes('瓦斯爐') || q.includes('立刻') || q.includes('馬上'))) || q.includes('熱電偶') || q.includes('感應針')) {
+        return {
+          text: `<strong>🍳 瓦斯爐手一放開立刻熄火・自我排查指南：</strong><br />
+          1. <strong>熱電偶熄火安全針積碳：</strong>爐頭旁細細的金屬針為熱電偶安全感應針，若被油垢或湯汁碳渣覆蓋，將無法正常導熱感應微電流，放手即斷氣。<br />
+          2. <strong>居家 3 步驟清潔：</strong>關閉瓦斯靜待爐頭冷卻 ➔ 使用乾布或細砂紙輕拭感應針清除黑垢 ➔ 點火時下壓旋鈕停留 3～5 秒待加熱穩定再放手。<br />
+          3. <strong>專業技師檢修：</strong>若火已燒紅感應針超過 10 秒仍秒熄，代表熱電偶或內部安全電磁閥老化，請聯絡盛隆 02-2972-5559 安排檢修！`,
+          image: './images/stove-thermocouple-troubleshoot.jpg'
+        };
+      }
+
+      // 0.2 強制排氣型熱水器法規與陽台通風
+      if (q.includes('強制排氣') || q.includes('fe') || (q.includes('陽台') && (q.includes('窗') || q.includes('鐵窗') || q.includes('鐵欄杆') || q.includes('曬衣服')))) {
+        return {
+          text: `<strong>🚿 強制排氣型熱水器（FE式）安裝法規指南：</strong><br />
+          1. <strong>陽台通風受阻依法必裝：</strong>只要陽台有裝設鋁門窗、氣密窗、防盜鐵窗、鐵欄杆、曬滿衣物或通風不良，依消防法規強制一律必須安裝「強制排氣型熱水器（FE式）」，將廢氣抽排至戶外！<br />
+          2. <strong>⚠️ 鐵欄杆曬衣物致命盲點：</strong>即使陽台沒裝玻璃窗，只要鐵欄杆曬滿衣服阻擋氣流，法規與實務上同樣屬於非開放空間，嚴禁安裝傳統屋外型（RF式），以免一氧化碳倒灌室內中毒！<br />
+          3. <strong>安全諮詢：</strong>如有陽台環境評估或安裝疑問，歡迎隨時撥打盛隆門市 02-2972-5559。`,
+          image: './images/forced-exhaust-water-heater.jpg'
+        };
+      }
 
       // 1. 熱水器故障排查
       if (q.includes('熱水器') || q.includes('點不著') || q.includes('忽冷忽熱') || q.includes('水溫') || q.includes('洗澡')) {
