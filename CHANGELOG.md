@@ -5,6 +5,14 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/20 - ⏱️ 官網路段時速速查「前方無排單・專車直達」文案與排單備註精準優化（落實方案二、防範客訴與預期落差） [ver: 20261020_1405_speed_note]
+* **變更類型**：官網體驗優化 (website-ux-enhancement) / 客戶預期管理 (expectation-management) / 排單防爭議文案 (queue-notice-clarification)
+* **核心成果**：
+  * **主標籤文案精確化**：將原本「專車最快送達」調整為「前方無排單・專車直達」，明確定義預估時長（如 15 ~ 20 分鐘）為無前置排單之點對點直達車程。
+  * **次標補充排單依序送達**：新增小字備註「（若有排單依序送達）」，體貼提醒尖峰時段或用餐洗澡熱門時段需依單號順序派車，有效防範客人將最快車程誤解為保證到達時間所衍生的催單與客訴。
+  * **跨螢幕響應式與換行防護**：加入 `whitespace-nowrap` 與精確字級比例（10px 與 9.5px），確保手機小螢幕與電腦寬螢幕皆能緊湊且不跑版地並排顯示。
+  * **全量回歸測試驗證**：執行全庫單元與整合測試，200 項測試 100% 全數通過，Vercel 官網同步上線。
+
 ---
 ## 📅 2026/10/20 - 📝 監控中心今日訂單隨點即改備註（資料備註雙向同步舊ERP+地址標籤全端聯動）與司機回報通知中心 [ver: 20261020_1210_auto_release]
 * **變更類型**：訂單備註隨點即改 (inline-remark-editing) / 舊ERP雙向同步 (legacy-erp-sync) / 隱私權限硬隔離 (privacy-isolation) / 司機現場回報通知中心 (field-report-notification-center)
