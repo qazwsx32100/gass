@@ -6,6 +6,16 @@
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
 ---
+## 📅 2026/10/20 - 📝 監控中心今日訂單隨點即改備註（資料備註雙向同步舊ERP+地址標籤全端聯動）與司機回報通知中心 [ver: 20261020_1210_auto_release]
+* **變更類型**：訂單備註隨點即改 (inline-remark-editing) / 舊ERP雙向同步 (legacy-erp-sync) / 隱私權限硬隔離 (privacy-isolation) / 司機現場回報通知中心 (field-report-notification-center)
+* **核心成果**：
+  * **資料備註 🔒 隨點即改與舊 ERP 雙向打通**：卡片上點擊資料備註即可直接行內編輯，儲存即時更新 SQL Server `dbo.gas_oders.oder_remarks`，舊 ERP 重新整理即可同步見到。
+  * **資安與隱私權限硬隔離**：外送員 API (`/api/driver/orders`)、外送 App (`/driver`)、LINE 派工文字複製 (`handleCopyDispatchList`) 嚴格屏蔽 `dataRemark`，保證內部機密絕不外洩。
+  * **地址備註 📍 現場標籤全端聯動**：支援快速選取常用標籤 `["備1", "備2", "單", "外", "拖", "電鈴壞", "放門口", "爬樓梯", "貨梯"]` 及自訂輸入，即時同步至司機 App 卡片綠色標籤與 LINE 派工文字【備1 單】。
+  * **監控中心 🔔 司機現場回報通知中心**：司機由 `/driver` 回報現場標籤時，透過 SSE 毫秒級推播至監控中心頂部 Toast 橫幅與 📢 司機回報抽屜，支援「一鍵採納為地址備註」。
+  * **單元測試與雙軌全量驗證**：新增 `tests/order-remarks.test.mjs` 驗證資料讀寫與隱私隔離，全庫 200 項單元測試 100% 通過，Vercel Production 生效。
+
+---
 ## 📅 2026/10/19 - 🔕 外送 App「鈴聲設定」彈窗刪除多餘靜音按鈕（權威收斂至頂部派單鈴聲總開關、8款抗噪鈴聲純淨清單、雙員 Signed APK 發布） [ver: 20261019_1832_auto_release]
 * **變更類型**：介面純淨化 (ui-streamline) / 鈴聲設定權威歸一 (sound-switch-unification) / 雙員 APK 發布 (dual-driver-apk-release)
 * **核心成果**：

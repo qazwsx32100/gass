@@ -11,6 +11,18 @@
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
 
+### 1. 監控調度中心「訂單備註隨點即改」（資料備註雙向同步舊 ERP + 地址標籤全端聯動）與司機現場回報通知中心
+- **狀態**：`[x]` 已完成 (依老闆指示落地「修改資料備註」與「修改地址備註（備1、單、拖等）」：① 資料備註 🔒 隨點即改，毫秒級直接雙向寫入舊 ERP `dbo.gas_oders.oder_remarks`，外送 App 與 LINE 派工單硬隔離絕對不可見；② 地址備註 📍 隨點即改，附帶常見現場標籤晶片快速選取與自訂標籤，全聯動同步至外送員 App 卡片與 LINE 派工文字；③ 監控中心建置「🔔 司機現場回報通知中心」，外勤司機回報現場狀況時毫秒級推播浮動 Toast，調度員可一鍵採納為訂單地址備註，零延遲全鏈路閉環)
+- **優先級**：`P0` (依老闆指示「我要的是可以修改資料備註 和 地址備註，資料備註隨點即改就好，地址備註司機與LINE可見但看不到資料備註，並希望有通知中心」)
+- **負責設備/端點**：`shenglong-next: app/operations/page.tsx, lib/order-remarks.ts, app/api/today-orders/remarks/route.ts, app/api/today-orders/route.ts, app/api/driver/orders/route.ts, app/driver/page.tsx, lib/events-broker.ts, app/api/customer/field-report/route.ts, tests/order-remarks.test.mjs`
+- **完成日期**：2026/10/20
+- **完成項目**：
+  - [x] **資料備註 🔒 隨點即改與舊 ERP 雙向打通**：卡片上點擊資料備註即可直接行內編輯，儲存即時更新 SQL Server `dbo.gas_oders.oder_remarks`，舊 ERP 重新整理即可同步見到。
+  - [x] **資安與隱私權限硬隔離**：外送員 API (`/api/driver/orders`) 與外送 App (`/driver`)、LINE 派工文字複製 (`handleCopyDispatchList`) 嚴格屏蔽 `dataRemark`，確保內部機密不外洩。
+  - [x] **地址備註 📍 現場標籤全端聯動**：支援快速勾選 `["備1", "備2", "單", "外", "拖", "電鈴壞", "放門口", "爬樓梯", "貨梯"]` 及自訂輸入，即時同步至司機 App 卡片綠色標籤與 LINE 派工文字【備1 單】。
+  - [x] **監控中心 🔔 司機現場回報通知中心**：司機由 `/driver` 回報現場標籤時，透過 SSE 毫秒級推播至監控中心頂部 Toast 橫幅與 📢 司機回報抽屜，支援「一鍵採納為地址備註」。
+  - [x] **單元測試與雙軌全量驗證**：新增 `tests/order-remarks.test.mjs` 驗證資料讀寫與隱私隔離，全庫 200 項單元測試 100% 通過，Vercel Production 生效。
+
 ### 1. 外送 App 訂單現場「狀況回報」無法輸入中文徹底根除（Capacitor 原生輸入連接釋放、IME 注音/拼音組字保護、全域定時節流與快捷晶片）
 - **狀態**：`[x]` 已完成 (深度定位外勤人員在 App「狀況回報」補充說明無法輸入中文的四大病因：① `capacitor.config` 內啟用 `captureInput: true` 暴力攔截 Android WebView 鍵盤連線，造成繁中注音/拼音 IME 組字無法提交；② `fetchFieldReports` 隨 1.0 秒輪詢頻繁執行且無快照比對，無條件觸發根元件重繪，直接洗掉正在輸入的注音暫存緩衝區；③ Android 視窗缺乏 `windowSoftInputMode="adjustResize"` 導致軟鍵盤彈出時擠壓位移；④ 單行 input 元件缺乏 IME 組字事件保護 (`compositionstart/end`)。現已將 `captureInput` 設為 `false`、加入視窗自動縮放、全面升級多行 `<textarea>` 搭配注音組字保護、新增彈窗填寫期間後台靜默暫緩與 30 秒節流、並加裝 7 組常用狀況快捷晶片一鍵填入，雙外送人員 Signed Release APK 編譯發布至桌面與 GitHub)
 - **優先級**：`P0` (依老闆回饋「app 訂單 裡的狀況回報 無法輸入中文」全面徹底修復)
