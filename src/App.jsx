@@ -71,9 +71,13 @@ function App() {
     }
   };
 
-  const handleSelectTab = (tab) => {
+  const handleSelectTab = async (tab) => {
     setActiveTab(tab);
     setIsMobileNavOpen(false);
+    if (['reports', 'inputs', 'shareholderZone'].includes(tab) && isSupabaseConnected() && getCloudSessionToken()) {
+      const pulled = await pullSupabaseToLocal();
+      if (pulled) setDbVersion(prev => prev + 1);
+    }
   };
 
   useEffect(() => {
