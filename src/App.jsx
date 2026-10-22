@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, LogOut, Menu, X } from 'lucide-react';
 import { initializeDB, cleanupInactiveCompanies, getCompanies, getShareholders, getAdminDisplayName, getCurrentDevice, verifyLogin, updatePassword, USER_ROLES, createDailyBackupIfNeeded } from './db/storage';
-import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, syncLocalToSupabase } from './db/supabaseService';
+import { clearCloudSessionToken, getCloudSessionToken, getLastCloudSyncError, initSupabaseSync, isSupabaseConnected, loginViaCloud, pullSupabaseToLocal, syncLocalToSupabase } from './db/supabaseService';
 import { getAllowedTabsForUser } from './utils/permissions';
 import { setMonitoringContext, setMonitoringUser } from './monitoring';
 import UniversalTableDetails from './components/UniversalTableDetails';
@@ -344,6 +344,21 @@ function App() {
       showToast(error?.error || '資料尚未同步到雲端，請稍後再試。', 'error');
     }
     return supabaseSynced;
+  };
+
+  const handleCloudRefresh = async () => {
+    if (!isSupabaseConnected() || !getCloudSessionToken()) {
+      showToast('目前尚未連線到雲端，請重新登入。', 'error');
+      return;
+    }
+    const pulled = await pullSupabaseToLocal();
+    if (pulled) {
+      setDbVersion(prev => prev + 1);
+      showToast('☁️ 已重新載入雲端資料，財報將使用最新資料。', 'success');
+    } else {
+      const error = getLastCloudSyncError();
+      showToast(error?.error || '雲端資料重新載入失敗，請稍後再試。', 'error');
+    }
   };
 
   // Shareholders & Companies Lookups
@@ -750,6 +765,16 @@ function App() {
                 </span>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleCloudRefresh}
+              className="btn btn-secondary btn-sm sidebar-logout-button"
+              title="重新載入雲端資料"
+              aria-label="重新載入雲端資料"
+            >
+              ↻
+            </button>
 
             <button 
               type="button"
