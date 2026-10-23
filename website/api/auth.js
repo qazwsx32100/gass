@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 
-const JWT_SECRET = process.env.ADMIN_SESSION_SECRET || 'shenglong-gas-admin-session-secret-2026';
 const PASSWORD_SALT = process.env.ADMIN_PASSWORD_SALT || 'shenglong_gas_secure_salt_2026';
 const ADMIN_DEFAULT_PW = process.env.ADMIN_DEFAULT_PASSWORD || '';
 const MAX_LOGIN_BODY_BYTES = 16 * 1024; // 16 KB
@@ -84,11 +83,13 @@ function base64UrlDecode(str) {
 }
 
 export function createToken(payload) {
+  const jwtSecret = process.env.ADMIN_SESSION_SECRET?.trim();
+  if (!jwtSecret) throw new Error('ADMIN_SESSION_SECRET is not configured');
   const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60); // 7 days default
   const body = base64UrlEncode(JSON.stringify({ exp, ...payload }));
   const signature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', jwtSecret)
     .update(`${header}.${body}`)
     .digest('base64')
     .replace(/=/g, '')
@@ -98,13 +99,15 @@ export function createToken(payload) {
 }
 
 export function verifyToken(token) {
+  const jwtSecret = process.env.ADMIN_SESSION_SECRET?.trim();
+  if (!jwtSecret) return null;
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
   if (parts.length !== 3) return null;
   const [header, body, signature] = parts;
 
   const expectedSig = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', jwtSecret)
     .update(`${header}.${body}`)
     .digest('base64')
     .replace(/=/g, '')
@@ -151,6 +154,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  if (!process.env.ADMIN_SESSION_SECRET?.trim()) {
+    return res.status(503).json({ success: false, error: '管理登入服務尚未完成安全設定' });
   }
 
   // GET: Verify existing token
