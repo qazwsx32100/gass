@@ -37,9 +37,14 @@ test('rejects backup reports without the dedicated token', async () => {
 test('stores an authorized verified backup report', async () => {
   const originalFetch = global.fetch;
   const originalToken = process.env.SYSTEM_STATUS_REPORT_TOKEN;
+  const originalStorageUrl = process.env.SHENGLONG_OPERATIONS_KV_URL;
+  const originalStorageToken = process.env.SHENGLONG_OPERATIONS_KV_TOKEN;
   const writes = [];
   process.env.SYSTEM_STATUS_REPORT_TOKEN = 'expected-backup-token';
+  process.env.SHENGLONG_OPERATIONS_KV_URL = 'https://private.example/functions/v1/operations-kv';
+  process.env.SHENGLONG_OPERATIONS_KV_TOKEN = 'test-storage-token';
   global.fetch = async (url, options = {}) => {
+    assert.equal(options.headers['x-operations-kv-token'], 'test-storage-token');
     if (!options.method) {
       return new Response(JSON.stringify({ lastSuccessAt: '2026-08-29T13:00:00.000Z' }), {
         status: 200,
@@ -72,6 +77,7 @@ test('stores an authorized verified backup report', async () => {
 
     assert.equal(response.statusCode, 200);
     assert.equal(writes.length, 1);
+    assert.equal(writes[0].url, 'https://private.example/functions/v1/operations-kv/backup_status_v1');
     assert.equal(writes[0].body.healthy, true);
     assert.equal(writes[0].body.verified, true);
     assert.equal(writes[0].body.lastSuccessAt, '2026-08-30T01:00:00.000Z');
@@ -79,5 +85,9 @@ test('stores an authorized verified backup report', async () => {
     global.fetch = originalFetch;
     if (originalToken === undefined) delete process.env.SYSTEM_STATUS_REPORT_TOKEN;
     else process.env.SYSTEM_STATUS_REPORT_TOKEN = originalToken;
+    if (originalStorageUrl === undefined) delete process.env.SHENGLONG_OPERATIONS_KV_URL;
+    else process.env.SHENGLONG_OPERATIONS_KV_URL = originalStorageUrl;
+    if (originalStorageToken === undefined) delete process.env.SHENGLONG_OPERATIONS_KV_TOKEN;
+    else process.env.SHENGLONG_OPERATIONS_KV_TOKEN = originalStorageToken;
   }
 });

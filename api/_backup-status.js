@@ -2,8 +2,16 @@ import crypto from 'node:crypto';
 import { captureServerException } from './_monitoring.js';
 import { sendJson } from './_auth.js';
 
-const KV_BACKUP_STATUS_URL = 'https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/backup_status_v1';
-const KV_STATUS_LOGS_URL = 'https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/system_logs_v1';
+const privateStorageUrl = (key) => {
+  const endpoint = String(process.env.SHENGLONG_OPERATIONS_KV_URL || '').replace(/\/$/, '');
+  if (!endpoint || !/^[a-z0-9_]+$/.test(key)) {
+    throw new Error('Private operations storage is not configured.');
+  }
+  return `${endpoint}/${key}`;
+};
+
+const KV_BACKUP_STATUS_URL = () => privateStorageUrl('backup_status_v1');
+const KV_STATUS_LOGS_URL = () => privateStorageUrl('system_logs_v1');
 
 const safeEqual = (received, expected) => {
   const actualBuffer = Buffer.from(String(received || ''));
@@ -28,8 +36,14 @@ const asNonNegativeNumber = (value, fallback = 0) => {
 };
 
 const fetchJson = async (url, options = {}) => {
+  const token = String(process.env.SHENGLONG_OPERATIONS_KV_TOKEN || '').trim();
+  if (!token) throw new Error('Private operations storage token is not configured.');
   const response = await fetch(url, {
     ...options,
+    headers: {
+      ...options.headers,
+      'x-operations-kv-token': token
+    },
     signal: AbortSignal.timeout(10000)
   });
   if (!response.ok) {
@@ -48,7 +62,7 @@ const writeJson = async (url, value) => {
 
 const loadPreviousStatus = async () => {
   try {
-    const status = await fetchJson(KV_BACKUP_STATUS_URL, { cache: 'no-store' });
+    const status = await fetchJson(KV_BACKUP_STATUS_URL(), { cache: 'no-store' });
     return status && typeof status === 'object' ? status : {};
   } catch {
     return {};
@@ -58,7 +72,7 @@ const loadPreviousStatus = async () => {
 const addFailureLog = async (status) => {
   let logs = [];
   try {
-    const stored = await fetchJson(KV_STATUS_LOGS_URL, { cache: 'no-store' });
+    const stored = await fetchJson(KV_STATUS_LOGS_URL(), { cache: 'no-store' });
     if (Array.isArray(stored)) logs = stored;
   } catch {}
 
@@ -79,7 +93,7 @@ const addFailureLog = async (status) => {
     message: status.message,
     suggestedAction: '請確認每小時備份工作、磁碟空間與 SQL Server 是否正常。'
   };
-  await writeJson(KV_STATUS_LOGS_URL, [errorLog, ...logs].slice(0, 50));
+  await writeJson(KV_STATUS_LOGS_URL(), [errorLog, ...logs].slice(0, 50));
 };
 
 export default async function handler(req, res) {
@@ -111,7 +125,7 @@ export default async function handler(req, res) {
       message: asString(body.message, 500) || (healthy ? '備份檢查成功。' : '備份檢查失敗。')
     };
 
-    await writeJson(KV_BACKUP_STATUS_URL, status);
+    await writeJson(KV_BACKUP_STATUS_URL(), status);
     if (!healthy) await addFailureLog(status);
 
     return sendJson(res, 200, { ok: true, backupStatus: status });
