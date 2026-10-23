@@ -4,7 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+process.env.ADMIN_LOGIN_ENABLED = 'true';
 process.env.ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'test-admin-secret-2026';
+process.env.ADMIN_PASSWORD_SALT = process.env.ADMIN_PASSWORD_SALT || 'shenglong_gas_secure_salt_2026';
 
 import { hashPassword, createToken, verifyToken, loginLimiter } from '../website/api/auth.js';
 import { verifyLineSignature } from '../api/line-webhook.js';
