@@ -4,12 +4,25 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-19 18:05
+> **最後更新時間**：2026-10-23 09:27
 
 ---
 
 ## 🚀 一、 進行中項目 (In Progress)
 > 當前正在實作、調試、或等待最後發布/配置驗證的任務
+
+### 1. 外送員 App 鈴聲與音量機制重構：落實方案 A（絕對尊重手機系統音量與 App 開關，杜絕強制打擾）
+- **狀態**：`[x]` 已完成 (依老闆拍板「方案 A：絕對尊重手機與 App 開關，杜絕強制打擾」全面落地：① Android 原生層建立統一音訊與靜音策略守護中樞 `SoundPolicy.java`；② 徹底拔除 6 大強制 `am.setStreamVolume` 拉滿音量之硬編碼；③ 嚴格偵測手機系統靜音/震動模式（`RINGER_MODE_SILENT` / `RINGER_MODE_VIBRATE`），靜音時 100% 杜絕任何鈴聲與語音，僅保留螢幕懸浮卡片與口袋震動；④ 嚴格遵守 App「關閉鈴聲」總開關，前台新單進來時前奏鈴聲與真人語音 100% 安靜；⑤ 新增「騎車戶外自動最大音量」開關（預設關閉 `false`，可由使用者自主啟用）；⑥ 通過全庫 200 項測試，雙外送人員 Signed Release APK 編譯完成並發布至桌面 `C:\Users\懶\Desktop\sl\` 與 GitHub)
+- **優先級**：`P0` (依老闆指示「我按掉手機app內建的關閉鈴聲、手機內建的的關閉鈴聲、app內建的關閉鈴聲，訂單來時 會強制開啟聲音，討論一下 方案a」全面落地)
+- **負責設備/端點**：`shenglong-next: android/app/src/main/java/com/shenglong/driver/SoundPolicy.java, MainActivity.java, DriverOrderService.java, MyFirebaseMessagingService.java, OrderVoiceSpeaker.java, app/driver/page.tsx, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/23
+- **完成項目**：
+  - [x] **建立統一音訊策略守護中樞 (`SoundPolicy.java`)**：集中控管鈴聲發聲、真人語音播報、震動與音量提升權限。
+  - [x] **原生 4 大模組改造**：`MainActivity.java`、`DriverOrderService.java`、`MyFirebaseMessagingService.java`、`OrderVoiceSpeaker.java` 全面改受 `SoundPolicy` 守護。
+  - [x] **手機系統靜音絕對保護**：偵測到手機為靜音或震動模式時，絕不強開聲音、絕不拉高音量。
+  - [x] **App 內開關雙重阻斷**：前端 `audioEnabledRef.current === false` 時，前奏音樂與真人語音雙軌徹底靜音。
+  - [x] **騎車戶外自動最大音量開關**：預設為關閉 (`false`)，提供戶外騎車需求者自主選用。
+  - [x] **雙外送人員 Release APK 發布**：成功編譯小龍與游柏林專用 APK 至桌面 `C:\Users\懶\Desktop\sl\`，GitHub 雙軌同步。
 
 ### 1. 官網常見問題題庫與 AI 客服全面深度升級（換行排版優化、上游分裝成本調整、配送行政區限制、出車取消工錢、非恆溫熱水器徵兆、雙題去重、手動切換雙接器與雙專業高解析圖解）
 - **狀態**：`[x]` 已完成 (依老闆指示全面落實：① 價格差異原因 ① 和 ② 強制 `<br>` 換行排版，所有條列解釋點全面嚴格換行；② 牌價調整機制加入「上游分裝場的進氣、運輸、人力成本調整」；③ 叫瓦斯免低消服務精準限定「三重區本身以及周邊的台北、蘆洲地區」；④ 訂單取消條款明訂「若師傅在路上出車或已送達現場需支付 100 元車馬工錢補貼」；⑤ 瓦斯快用完判斷加入「傳統非恆溫熱水器快沒瓦斯洗澡水會忽冷忽熱」；⑥ 徹底刪除冬天消耗速度與快用完之兩處重複題庫（110題收斂去重為108題）；⑦ 瓦斯爐放手秒熄火新增「熱電偶安全感應針結構與自主排查」高解析專業圖解 (`stove-thermocouple-troubleshoot.jpg`)；⑧ 強制排氣熱水器陽台加窗新增「陽台加裝窗戶/鐵欄杆/曬衣法規判定與 FE 對照」高解析專業圖解 (`forced-exhaust-water-heater.jpg`)；⑨ 餐飲店家尖峰防斷氣同步推薦「雙瓶自動切換閥」與「手動切換雙接器」；⑩ 全聯動同步三方題庫與知識庫，全庫 200 項測試 100% 通過)

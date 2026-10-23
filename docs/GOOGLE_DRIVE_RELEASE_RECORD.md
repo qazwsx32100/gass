@@ -5,7 +5,52 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
-## 📅 2026/10/20 - 📚 官網常見問題題庫與 AI 客服全面深度升級（換行排版優化、上游分裝成本調整、配送行政區限制、出車取消工錢、非恆溫熱水器徵兆、雙題去重、手動切換雙接器與雙專業高解析圖解） [ver: 20261020_1605_faq_upgrade]
+## 📅 2026/10/23 - 🔕 外送員 App 鈴聲與音量機制重構：落實方案 A（絕對尊重手機系統音量與 App 開關，杜絕強制打擾） [ver: 20261023_0922_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆提出討論：「目前是我按掉手機app內建的關閉鈴聲、手機內建的的關閉鈴聲、app內建的關閉鈴聲，訂單來時 會強制開啟聲音，討論一下」。
+   - 與老闆討論三種方案（方案 A：絕對尊重手機與 App 開關，杜絕強制打擾；方案 B：區分騎車戶外與室內安靜情境；方案 C：定時或排班時段自動策略）。
+   - 老闆明確拍板：「方案a」。
+
+### 二、 核心問題根因診斷
+1. **暴力拉大音量硬編碼（6 處漏洞）**：
+   - `MainActivity.java`、`DriverOrderService.java`、`MyFirebaseMessagingService.java`、`OrderVoiceSpeaker.java` 等處皆在收到推播或輪詢新單時，無條件呼叫 `am.setStreamVolume` 把 STREAM_MUSIC、STREAM_ALARM、STREAM_NOTIFICATION 強制拉到 100%。
+2. **語音朗讀缺乏 App 鈴聲開關連動**：
+   - 前台 `sendOrderNotification` 僅檢查 `voiceAnnouncementEnabled`，未連動 `audioEnabledRef.current`，導致外勤人員關閉鈴聲後，前奏不響但真人語音卻依舊以最大聲播報。
+3. **未偵測手機系統靜音/震動模式**：
+   - 原代碼未檢驗 `am.getRingerMode()`，在使用者開會、就寢或調為靜音時強行拉大音量播報，破壞手機原生勿擾防線。
+
+### 三、 核心改造與技術成果
+1. **統一音訊與靜音策略守護中樞 (`SoundPolicy.java`)**：
+   - 新增 `com.shenglong.driver.SoundPolicy`，統攬全系統聲音決策。
+   - `isPhoneSilentOrVibrate(Context)`：嚴格檢驗 `RINGER_MODE_SILENT` 或 `RINGER_MODE_VIBRATE`。
+   - `isAppSoundDisabled(Context)`：精確辨識 App 內是否被關閉鈴聲。
+   - `isRingtoneAllowed(Context)`：綜合判定前奏鈴聲是否允許發聲。
+   - `isVoiceAllowed(Context)`：綜合判定真人語音朗讀是否允許發聲。
+   - `shouldBoostVolume(Context)`：嚴格要求「手機非靜音」且「使用者明確開啟戶外最大音量」方可提升音量。
+   - `safeBoostVolume(Context)`：安全提升音量，靜音模式下絕對 0 操作、0 干擾。
+2. **原生 4 大模組全面收斂改造**：
+   - `MainActivity.java`：`boostVolume`、`playLoudNativeTone`、`showNotificationWithId` 全面受 `SoundPolicy` 守護；新增 `@JavascriptInterface` 的 `setAutoBoostVolume(boolean)` 與 `setAlertSettingsV2`。
+   - `DriverOrderService.java`：背景輪詢時，`safeBoostVolume` 與 `isVoiceAllowed` 守護，手機靜音時純震動或亮屏，絕不出聲。
+   - `MyFirebaseMessagingService.java`：雲端 FCM 推播抵達時，依 `SoundPolicy` 嚴格判定，手機靜音模式下 100% 靜音。
+   - `OrderVoiceSpeaker.java`：原生 TTS 播報前先經 `SoundPolicy.isVoiceAllowed` 攔截，關閉鈴聲或手機靜音時直接 return。
+3. **前端介面與開關雙向同步 (`app/driver/page.tsx`)**：
+   - `speakOrderVoice` 函式開頭加入 `if (!audioEnabledRef.current) return;` 雙重保險。
+   - 新單到達與測試觸發點同步加上 `audioEnabledRef.current && voiceAnnouncementEnabledRef.current` 條件。
+   - 鈴聲設定彈窗新增「區塊 3.5：🏍️ 騎車戶外自動最大音量」獨立卡片（預設關閉 `false`，可自主開啟）。
+   - 頂部鈴聲開關說明更新，清楚標示「🛡️ 完全靜音：新單抵達時鈴聲與語音 100% 不響，不調整手機音量」。
+   - 初始化與儲存設定時，透過 `setAlertSettingsV2` 與 `setAutoBoostVolume` 向 AndroidBridge 雙向精確同步。
+
+### 四、 驗證與發布
+- **全庫測試**：`npm test` 200 項單元與整合測試 100% 綠燈通過。
+- **TypeScript 語法檢驗**：`npx tsc --noEmit` 0 錯誤、0 警告。
+- **雙外送人員 Signed Release APK 生成**：
+  - `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` (4,915,090 bytes)
+  - `C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk` (4,880,718 bytes)
+- **雲端同步**：代碼已推送到 GitHub main 分支，Vercel 生產環境自動部署上線。
+
+---
 
 ### 一、 需求背景與決策
 1. **老闆最高指示落實**：

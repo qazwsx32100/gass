@@ -5,7 +5,19 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
-## 📅 2026/10/20 - 📚 官網常見問題題庫與 AI 客服全面深度升級（換行排版優化、上游分裝成本調整、配送行政區限制、出車取消工錢、非恆溫熱水器徵兆、雙題去重、手動切換雙接器與雙專業高解析圖解） [ver: 20261020_1605_faq_upgrade]
+## 📅 2026/10/23 - 🔕 外送員 App 鈴聲與音量機制重構：落實方案 A（絕對尊重手機系統音量與 App 開關，杜絕強制打擾） [ver: 20261023_0922_auto_release]
+* **變更類型**：音訊策略架構重構 (sound-policy-architecture) / 尊重手機靜音勿擾模式 (ringer-mode-respect) / 鈴聲語音雙重靜音保險 (dual-silence-guard) / 戶外最大音量可選化 (optional-outdoor-boost) / 雙員 Signed APK 發布 (dual-driver-apk-release)
+* **核心成果**：
+  * **統一音訊策略守護中樞 (`SoundPolicy.java`)**：新建原生策略類別，集中攔截所有聲音發聲點、語音播報點與音量拉滿點。
+  * **手機系統靜音絕對保護**：偵測到手機為靜音或震動模式時（`RINGER_MODE_SILENT` / `RINGER_MODE_VIBRATE`），100% 阻斷任何聲音播放，絕不強制提升音量，僅保留震動與螢幕卡片。
+  * **App 內開關雙重阻斷**：前端 `audioEnabledRef.current === false` 時，前奏音樂與真人語音播報雙軌徹底靜音，不呼叫任何底層發聲與音量操作。
+  * **騎車戶外自動最大音量開關**：預設為關閉 (`false`)，尊重手機原本設定，僅在外送員自主開啟且手機非靜音時才提升音量。
+  * **全量測試與 APK 發布**：
+    * `npm test` 全庫 200 項測試 100% 綠燈通過。
+    * 小龍專用 APK (`盛隆外送_小龍專用.apk` 4.9MB) 與 游柏林專用 APK (`盛隆外送_游柏林專用.apk` 4.8MB) 成功編譯並發布至桌面 `C:\Users\懶\Desktop\sl\`。
+    * 代碼自動推送到 GitHub main 分支，雲端 Vercel 自動部署完成。
+
+---
 * **變更類型**：題庫排版優化 (faq-typography) / 營運規則精準化 (operating-policy-update) / 題庫去重 (faq-deduplication) / 專業安全圖解發布 (safety-infographics) / 三方知識庫同步 (tri-sync)
 * **核心成果**：
   * **價格差異解析強制換行**：針對「為什麼每家瓦斯行的價格會不一樣？」，將 ① 營運與法規成本 與 ② 售後服務品質 嚴格換行排版；全庫所有包含 ①、②、③ 之條列解釋統一加入 `<br>` 換行，閱讀層次分明。
