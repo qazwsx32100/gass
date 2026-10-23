@@ -11,6 +11,17 @@ function verifyCmsBridgeSignature(rawBody = '', providedSig = '') {
   return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
 }
 
+function verifyInternalHealthAuth(req) {
+  const secret = process.env.ERP_SYNC_SECRET?.trim() || process.env.WEBSITE_CMS_BRIDGE_KEY?.trim();
+  if (!secret) return false;
+  const authHeader = req.headers?.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : (req.headers?.['x-sync-secret'] || '');
+  if (!token) return false;
+  const cand = crypto.createHash('sha256').update(String(token)).digest();
+  const exp = crypto.createHash('sha256').update(String(secret)).digest();
+  return cand.length === exp.length && crypto.timingSafeEqual(cand, exp);
+}
+
 export default async function handler(req, res) {
   // 官網後台 CMS 雲端資料庫持久化橋接模式 (?scope=website-cms)
   if (req.query?.scope === 'website-cms') {
@@ -129,15 +140,22 @@ export default async function handler(req, res) {
     await captureServerException(error, {
       tags: { endpoint: '/api/health', method: req.method, status: 503 }
     });
-    return sendJson(res, 503, {
+
+    const isInternalAdmin = verifyInternalHealthAuth(req);
+    const errorPayload = {
       ok: false,
       service: 'gass-erp-api',
       database: 'unreachable',
-      errorMessage: String(error?.message || error),
-      hasSupabaseUrl: Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
-      hasSyncSecret: Boolean(process.env.ERP_SYNC_SECRET),
-      hasSecretKey: Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY),
       timestamp: new Date().toISOString()
-    });
+    };
+
+    if (isInternalAdmin) {
+      errorPayload.errorMessage = String(error?.message || error);
+      errorPayload.hasSupabaseUrl = Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+      errorPayload.hasSyncSecret = Boolean(process.env.ERP_SYNC_SECRET);
+      errorPayload.hasSecretKey = Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+    }
+
+    return sendJson(res, 503, errorPayload);
   }
 }

@@ -21,16 +21,18 @@
   - [x] **全庫型別與回歸測試 100% 通過**：`npx tsc --noEmit` 0 錯誤，單元測試通過。
 
 ### 2. 全系統安全防護與 API 架構全面深度優化（全鏈路資安強化、安全標頭防禦、權限校驗、API 輸入淨化與 DoS 限流防護）
-- **狀態**：[ ] 進行中 (依老闆最高指示「全面優化 安全、api」，針對 gass 與 shenglong-next 雙軌 API 展開地毯式安全審計與架構硬化)
-- **優先級**：P0 (老闆最高決策指令)
-- **負責設備/端點**：gass/api/*, gass/website/api/*, shenglong-next/app/api/*, vercel.json
+- **狀態**：`[x]` 已完成 (依老闆最高指示「全面優化 安全、api」，針對 gass 與 shenglong-next 雙軌 API 完成全鏈路深度安全加固與架構硬化：① `api/health.js` 杜絕資訊外洩，公開 503 回應隱藏資料庫連線錯誤、內部環境變數旗標；② `today-orders/remarks/route.ts` 徹底實施 BOLA/IDOR 防禦，未授權訪客阻絕存取，外勤人員自動脫敏遮蔽 `dataRemark`，僅管理調度端可存取與修改；③ `customer/field-report/route.ts` 補齊外勤與管理鑑權、輸入過濾與 Base64 檔案大小上限 (<= 500KB)；④ `driver/location/route.ts` 導入容量受限記憶體限流 (Bounded Map, 上限 2000 筆杜絕記憶體洩漏與 DoS)；⑤ `vercel.json` 與 `next.config.ts` 補齊全域 A+ 安全標頭 (HSTS, CSP, X-Content-Type-Options, Permissions-Policy) 並關閉 `X-Powered-By` 指紋；⑥ 徹底清洗代碼庫中之禁詞，零回歸測試保證：全庫 201 項單元與整合測試 100% 通過、TypeScript 編譯 0 錯誤、Next.js Production Build 100% 通過)
+- **優先級**：`P0` (老闆最高決策指令)
+- **負責設備/端點**：`gass/api/health.js`, `gass/tests/web-and-api-security.test.mjs`, `shenglong-next/app/api/today-orders/remarks/route.ts`, `shenglong-next/app/api/customer/field-report/route.ts`, `shenglong-next/app/api/driver/location/route.ts`, `shenglong-next/app/api/driver/orders/route.ts`, `shenglong-next/lib/driver-session.ts`, `shenglong-next/next.config.ts`, `shenglong-next/vercel.json`
+- **完成日期**：2026/10/23
 - **完成項目**：
-  - [ ] 1. 全 API 權限校驗與身份認證強化 (IDOR/BOLA 防範、Timing-Safe 比較)
-  - [ ] 2. 全面輸入淨化與防注入 (XSS, Prototype Pollution, Control Chars, ReDoS)
-  - [ ] 3. 高頻爆破與 DoS 阻斷服務防禦 (Rate Limiting, Payload Size Limit)
-  - [ ] 4. 嚴格安全標頭防禦 (CSP, HSTS, X-Content-Type-Options, Frame-Options)
-  - [ ] 5. 敏感資訊與錯誤防洩露 (Zero Information Leakage, Safe Error Masking)
-  - [ ] 6. 全量測試驗證 (200項測試全綠、0 回歸)
+  - [x] **1. 全 API 權限校驗與身份認證強化**：訂單備註與現場回報嚴格驗證 Session / Bearer / 外勤憑證，外勤端遮蔽 `dataRemark`。
+  - [x] **2. 全面輸入淨化與防注入**：XSS、不可見控制字元過濾、門牌地理邊界過濾、電話字元過濾。
+  - [x] **3. 高頻爆破與 DoS 阻斷服務防禦**：定位速率限制器改為 Bounded Map（2,000 筆上限與過期自動清理），防止記憶體洩漏與 DoS；Base64 圖片限制 500KB。
+  - [x] **4. 嚴格安全標頭防禦**：`vercel.json` 與 `next.config.ts` 注入 A+ 安全標頭（HSTS preload, CSP, nosniff, SAMEORIGIN, Permissions-Policy），關閉 `poweredByHeader`。
+  - [x] **5. 敏感資訊與錯誤防洩露**：`api/health.js` 匿名異常時隱藏資料庫錯誤字串與私鑰探測欄位，僅授權管理員可調閱診斷。
+  - [x] **6. 禁詞全量清理**：所有錯誤提示與註解全面落實「外勤人員」，零禁詞違規。
+  - [x] **7. 全量測試驗證**：gass 201 項測試 100% 通過（新增健康檢查防洩露單元測試）、shenglong-next Next.js Production Build 100% 通過、TypeScript 0 錯誤。
 
 ### 1. 監控調度總中心「手機版車隊地圖按鈕橫列重疊修復」與「送貨狀態待派工/配送中/已送達即時聯動核算」
 - **狀態**：`[x]` 已完成 (深度修復兩大核心痛點：① 手機版螢幕寬度窄導致 `🛵 今日派工戰情` 標題與 `[🗺️ 車隊大地圖] [📥 CSV] [📋 複製 Line]` 4 顆按鈕並排擠壓重疊，全面重構為垂直雙層佈局（第一層置頂標題與 SSE 毫秒串流徽章，第二層專屬大拇指滑動快捷橫排），徹底消除任何重疊；② 深入貫通「待派工、配送中、已送達」三態即時計算邏輯：待派工（未指派司機）、配送中（已派工給外勤，正在配送路上）、已送達（司機手機點擊「完成送達」`driverStatus === 'finished'` 或門市主機已收款結單 `payed === 'Y'`），並在今日訂單 API 全鏈路附加 `driverStatus`，讓監控中心能秒級精準呈現配送進度)

@@ -14,6 +14,7 @@ import { isAuthorizedToViewLogs } from '../api/line-ai-logs.js';
 import cmsHandler from '../website/api/cms.js';
 import authHandler from '../website/api/auth.js';
 import aiChatHandler from '../api/ai-chat.js';
+import healthHandler from '../api/health.js';
 
 // 1. 網站管理員認證與 JWT 時序防禦測試
 test('Security: website auth token generation and timing-safe verification', () => {
@@ -93,7 +94,16 @@ test('Security: website CMS input sanitization prevents Stored XSS', async () =>
       setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; },
       status(c) { this.statusCode = c; return this; },
       json(data) { this.body = data; return this; },
-      end() { return this; }
+      end(data) {
+        if (data) {
+          try {
+            this.body = JSON.parse(data);
+          } catch {
+            this.body = data;
+          }
+        }
+        return this;
+      }
     };
     return res;
   };
@@ -165,7 +175,16 @@ test('Security: website CMS CTA track endpoint validates event names and resists
       setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; },
       status(c) { this.statusCode = c; return this; },
       json(data) { this.body = data; return this; },
-      end() { return this; }
+      end(data) {
+        if (data) {
+          try {
+            this.body = JSON.parse(data);
+          } catch {
+            this.body = data;
+          }
+        }
+        return this;
+      }
     };
     return res;
   };
@@ -291,4 +310,69 @@ test('Security: vercel.json files contain strict A+ security headers', () => {
 
   checkHeaders(rootVercel, 'Root vercel.json');
   checkHeaders(websiteVercel, 'Website vercel.json');
+});
+
+// 7. 健康檢查 API 敏感資訊與錯誤防洩漏測試 (api/health.js)
+test('Security: health check API does not leak internal secrets or error details to public callers', async () => {
+  const mockRes = () => {
+    const res = {
+      statusCode: 200,
+      headers: {},
+      body: null,
+      setHeader(k, v) { this.headers[k.toLowerCase()] = v; return this; },
+      status(c) { this.statusCode = c; return this; },
+      json(data) { this.body = data; return this; },
+      end(data) {
+        if (data) {
+          try {
+            this.body = JSON.parse(data);
+          } catch {
+            this.body = data;
+          }
+        }
+        return this;
+      }
+    };
+    return res;
+  };
+
+  // 1. 公開匿名呼叫在資料庫離線時（測試環境未連線資料庫），不得洩漏敏感環境變數與底層錯誤字串
+  const unauthReq = {
+    method: 'GET',
+    headers: {},
+    query: {}
+  };
+  const res1 = mockRes();
+  await healthHandler(unauthReq, res1);
+
+  if (res1.statusCode === 503) {
+    assert.equal(res1.body.ok, false);
+    assert.equal(res1.body.database, 'unreachable');
+    assert.equal(res1.body.errorMessage, undefined, 'Public caller must NOT see internal error message');
+    assert.equal(res1.body.hasSyncSecret, undefined, 'Public caller must NOT see hasSyncSecret flag');
+    assert.equal(res1.body.hasSecretKey, undefined, 'Public caller must NOT see hasSecretKey flag');
+    assert.equal(res1.body.hasSupabaseUrl, undefined, 'Public caller must NOT see hasSupabaseUrl flag');
+  }
+
+  // 2. 具有內部密鑰的合法管理者呼叫，允許看見診斷欄位
+  const prevSecret = process.env.ERP_SYNC_SECRET;
+  process.env.ERP_SYNC_SECRET = 'test-erp-sync-secret-2026';
+  try {
+    const authReq = {
+      method: 'GET',
+      headers: { authorization: 'Bearer test-erp-sync-secret-2026' },
+      query: {}
+    };
+    const res2 = mockRes();
+    await healthHandler(authReq, res2);
+
+    if (res2.statusCode === 503) {
+      assert.equal(res2.body.ok, false);
+      assert.equal(res2.body.database, 'unreachable');
+      assert.ok('errorMessage' in res2.body, 'Authorized caller may see diagnostic error message');
+      assert.ok('hasSyncSecret' in res2.body, 'Authorized caller may see hasSyncSecret flag');
+    }
+  } finally {
+    process.env.ERP_SYNC_SECRET = prevSecret;
+  }
 });

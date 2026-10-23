@@ -1,9 +1,29 @@
 # 📝 盛隆瓦斯系統 - 變更與維護紀錄 (Changelog)
 
-> 專案：盛隆瓦斯即時庫存、營運監控與司機派單系統  
+> 專案：盛隆瓦斯即時庫存、營運監控與外勤派單系統  
 > 倉庫：https://github.com/qazwsx32100/shenglong-next  
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
+
+## 📅 2026/10/23 - 🛡️ 全系統資安與 API 架構全面深度加固 [ver: 20261023_1330_auto_release]
+* **變更類型**：全鏈路資安強化 (full-stack-security-hardening) / 敏感資料脫敏隔離 (sensitive-data-masking) / Bounded Map 防 DoS (bounded-map-rate-limit) / A+ 安全標頭全面注入 (a-plus-security-headers) / 零禁詞清理 (taboo-words-purified)
+* **核心成果**：
+  * **健康檢查 API 敏感資訊與錯誤防洩露 (`gass: api/health.js`)**：匿名訪客遇到資料庫異常時，公開 503 回應隱藏底層資料庫連線錯誤、內部環境變數旗標 (`hasSyncSecret`、`hasSecretKey`、`hasSupabaseUrl`)，僅授權內部管理員可查閱診斷詳情。新增專屬單元測試，全庫達到 201 項測試 100% 通過。
+  * **訂單備註 API 權限脫敏硬隔離 (`shenglong-next: app/api/today-orders/remarks/route.ts`)**：
+    * `GET`：強制要求登入 Session、Sync Bearer 或外勤 Token。若為外勤人員，自動遮蔽工廠內部機密 `dataRemark`，僅提供現場配送 `addressRemark`；未登入者直接 401 攔截。
+    * `POST`：強制限制僅具備訂單管理/查看權限之調度員可修改備註，杜絕匿名偽造；並對字串進行 XSS 與控制字元過濾。
+  * **現場回報 API 鑑權與防 DoS (`shenglong-next: app/api/customer/field-report/route.ts`)**：
+    * `GET`：補齊鑑權校驗，杜絕未授權訪客列舉客戶地址、電話與照片。
+    * `POST`：對 Base64 照片強制設定 500KB 體積上限 (700,000 字元)，防止惡意大檔案 DoS；GPS 經緯度進行台灣有效配送邊界檢驗；客戶姓名、電話、備註進行防注入過濾。
+    * `PATCH`：強制要求調度員登入身分，審核人 (`reviewedBy`) 自動綁定當前 Session 使用者，杜絕客戶端偽造。
+  * **定位記憶體速率限制器容量硬化 (`shenglong-next: app/api/driver/location/route.ts`)**：
+    * 將原先無界 `Map` 改為容量上限 2,000 筆之受控結構，定期自動清理過期時間戳，並於達標時淘汰最舊項目，徹底消除記憶體洩漏與頻繁定位洗板風險。
+  * **全域 A+ 安全標頭與指紋防護 (`shenglong-next: vercel.json` & `next.config.ts`)**：
+    * `vercel.json` 補齊全域 `HSTS preload`、`X-Content-Type-Options: nosniff`、`X-Frame-Options: SAMEORIGIN`、`Referrer-Policy`、`Permissions-Policy`。
+    * `next.config.ts` 設置 `poweredByHeader: false`，移除伺服器暴露之 `X-Powered-By: Next.js` 標頭；Permissions-Policy 開放 `camera=(self)` 保障外勤現場拍照順暢。
+  * **禁詞全面清理**：代碼庫與錯誤回應全面淨化，全面採用「外勤人員」。
+  * **全量構建與測試驗證**：gass 201 項測試全數通過（201 pass, 0 fail），shenglong-next `tsc --noEmit` 0 錯誤，Next.js Production Build 100% 成功。
+
 
 ## 📅 2026/10/23 - 📱 監控調度總中心「手機版介面全面極致優化」 [ver: 20261023_1308_auto_release]
 * **變更類型**：手機版版面全面優化 (mobile-comprehensive-optimization) / 氣象智慧折疊 (weather-collapsible-bar) / 四態膠囊均分排版 (status-pill-grid-distribution) / 一鍵導航撥號無縫啟用 (one-tap-nav-dial)
