@@ -5,6 +5,12 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/23 - 📱 監控調度總中心「手機版車隊地圖按鈕橫列重疊修復」與「送貨狀態待派工/配送中/已送達即時聯動核算」 [ver: 20261023_1100_auto_release]
+* **變更類型**：手機版版面優化 (mobile-layout-optimization) / 圖文擠壓重疊防護 (overlap-prevention) / 送貨狀態精準計算 (delivery-status-sync)
+* **核心成果**：
+  * **手機版按鈕列獨立分層**：重構 `app/operations/page.tsx` 派工橫幅，將 `🛵 今日派工戰情` 標題列與 `[🗺️ 車隊大地圖] [📥 CSV] [📋 複製 Line]` 快捷按鈕列改為垂直雙層佈局，手機版第二排獨立橫向滑動，徹底根除重疊遮擋問題。
+  * **打通已送達狀態計算**：在 `app/api/today-orders/route.ts` 附加司機 App 回報狀態 (`driverStatus`) 與舊 ERP 結帳收現標記 (`payed === 'Y'`)，使監控中心能精準分類「待派工」、「配送中」與「已送達」。
+
 ## 2026/10/23 - 官網管理登入與 CMS 橋接安全修補（已發布）
 - 依指示停用目前未使用的官網管理登入；移除程式內共用密碼雜湊及固定密碼鹽值，管理後台寫入須重新配置後才可啟用。
 - 官網 CMS 與 ERP 寫入橋接改用兩端相同的安全環境密鑰，移除程式內固定密鑰。
