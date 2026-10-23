@@ -20,7 +20,6 @@ const ALLOWED_ANNOUNCE_TYPES = new Set(['info', 'warning', 'alert']);
 const MAX_CMS_BODY_BYTES = 64 * 1024; // 64 KB
 
 const CMS_BRIDGE_URL = process.env.WEBSITE_CMS_BRIDGE_URL || 'https://erp-weld-three-96.vercel.app/api/health?scope=website-cms';
-const CMS_BRIDGE_SECRET = process.env.WEBSITE_CMS_BRIDGE_KEY || 'shenglong-cms-supabase-bridge-v1-2026';
 const IS_TEST_ENV = process.env.NODE_ENV === 'test' || process.execArgv.includes('--test');
 
 let lastCloudSyncAt = 0;
@@ -138,9 +137,11 @@ async function syncFromCloud(force = false) {
 
 async function pushToCloud(payloadObj) {
   if (IS_TEST_ENV) return false;
+  const bridgeSecret = process.env.WEBSITE_CMS_BRIDGE_KEY?.trim();
+  if (!bridgeSecret) return false;
   try {
     const rawBody = JSON.stringify(payloadObj);
-    const sig = crypto.createHmac('sha256', CMS_BRIDGE_SECRET).update(rawBody).digest('hex');
+    const sig = crypto.createHmac('sha256', bridgeSecret).update(rawBody).digest('hex');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6000);
     const response = await fetch(CMS_BRIDGE_URL, {

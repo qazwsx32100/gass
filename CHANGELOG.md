@@ -5,6 +5,11 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 2026/10/23 - 官網管理登入與 CMS 橋接安全修補（已發布）
+- 依指示停用目前未使用的官網管理登入；移除程式內共用密碼雜湊及固定密碼鹽值，管理後台寫入須重新配置後才可啟用。
+- 官網 CMS 與 ERP 寫入橋接改用兩端相同的安全環境密鑰，移除程式內固定密鑰。
+- 正式部署：ERP `dpl_7RD4DqP3SJVFYsP32aBqtzSUoN6V`、官網 `dpl_AdxHqY6nfcWppgEtsobFaPzEw1ua`。公開首頁 200、CMS 讀取 200 且雲端 persisted=true、舊密鑰 401、登入 503、未授權 CMS 寫入 401。點擊寫入未用假事件測試，待真實流量確認。
+
 ## 📅 2026/10/23 - 🔕 外送員 App 鈴聲與音量機制重構：落實方案 A（絕對尊重手機系統音量與 App 開關，杜絕強制打擾） [ver: 20261023_0922_auto_release]
 * **變更類型**：音訊策略架構重構 (sound-policy-architecture) / 尊重手機靜音勿擾模式 (ringer-mode-respect) / 鈴聲語音雙重靜音保險 (dual-silence-guard) / 戶外最大音量可選化 (optional-outdoor-boost) / 雙員 Signed APK 發布 (dual-driver-apk-release)
 * **核心成果**：

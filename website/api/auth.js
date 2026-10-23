@@ -1,9 +1,13 @@
 import crypto from 'crypto';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 
-const PASSWORD_SALT = process.env.ADMIN_PASSWORD_SALT || 'shenglong_gas_secure_salt_2026';
-const ADMIN_DEFAULT_PW = process.env.ADMIN_DEFAULT_PASSWORD || '';
 const MAX_LOGIN_BODY_BYTES = 16 * 1024; // 16 KB
+
+function isAdminLoginEnabled() {
+  return process.env.ADMIN_LOGIN_ENABLED === 'true' &&
+    Boolean(process.env.ADMIN_SESSION_SECRET?.trim()) &&
+    Boolean(process.env.ADMIN_PASSWORD_SALT?.trim());
+}
 
 // 限制 5 分鐘內單一 IP 最多 30 次，單一帳號最多 6 次登入失敗
 export const loginLimiter = createBoundedRateLimiter({
@@ -22,24 +26,22 @@ export function getClientIp(req) {
 
 // 單向不可逆鹽值加密函數 (HMAC-SHA256)
 export function hashPassword(pw) {
+  const salt = process.env.ADMIN_PASSWORD_SALT?.trim();
+  if (!salt) throw new Error('ADMIN_PASSWORD_SALT is not configured');
   return crypto
-    .createHmac('sha256', PASSWORD_SALT)
+    .createHmac('sha256', salt)
     .update(String(pw || '').trim())
     .digest('hex');
 }
 
-const BANNED_WEAK_PASSWORDS = new Set(['1234', '6789', '0000', '1111', '8888', '123456', 'password', 'admin']);
-
-// 帳號資訊清單：所有密碼均為高強度不可逆雜湊密文 (Hashes)，移除所有 1234/6789 簡易預設密碼
+// 帳號識別資訊保留；各人的密碼雜湊僅從部署環境設定讀取。
 const USERS = [
   {
     id: 'SH001',
     name: '主管理員',
     email: 'qazwsx32100@gmail.com',
     aliases: ['qazwsx32100@gmail.com', 'admin', '主管理員'],
-    passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
-    ],
+    passwordHashes: [process.env.ADMIN_PASSWORD_HASH_SH001].filter(Boolean),
     role: 'admin'
   },
   {
@@ -47,9 +49,7 @@ const USERS = [
     name: '周子傑',
     email: 'zijie@shenglonggas.com',
     aliases: ['zijie@shenglonggas.com', '周子傑'],
-    passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
-    ],
+    passwordHashes: [process.env.ADMIN_PASSWORD_HASH_SH002].filter(Boolean),
     role: 'manager'
   },
   {
@@ -57,16 +57,10 @@ const USERS = [
     name: '林曄鏵',
     email: 'yehua@shenglonggas.com',
     aliases: ['yehua@shenglonggas.com', '林曄鏵'],
-    passwordHashes: [
-      '5092f081c6f2b8a96bc61fbeda2175de1431516660c4a5ef084bfb75c1b16d91'
-    ],
+    passwordHashes: [process.env.ADMIN_PASSWORD_HASH_SH003].filter(Boolean),
     role: 'manager'
   }
 ];
-
-if (ADMIN_DEFAULT_PW && !BANNED_WEAK_PASSWORDS.has(ADMIN_DEFAULT_PW.trim().toLowerCase())) {
-  USERS[0].passwordHashes.push(hashPassword(ADMIN_DEFAULT_PW));
-}
 
 function base64UrlEncode(str) {
   return Buffer.from(str)
@@ -83,6 +77,7 @@ function base64UrlDecode(str) {
 }
 
 export function createToken(payload) {
+  if (!isAdminLoginEnabled()) throw new Error('Admin login is disabled');
   const jwtSecret = process.env.ADMIN_SESSION_SECRET?.trim();
   if (!jwtSecret) throw new Error('ADMIN_SESSION_SECRET is not configured');
   const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -99,6 +94,7 @@ export function createToken(payload) {
 }
 
 export function verifyToken(token) {
+  if (!isAdminLoginEnabled()) return null;
   const jwtSecret = process.env.ADMIN_SESSION_SECRET?.trim();
   if (!jwtSecret) return null;
   if (!token || typeof token !== 'string') return null;
@@ -156,8 +152,8 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (!process.env.ADMIN_SESSION_SECRET?.trim()) {
-    return res.status(503).json({ success: false, error: '管理登入服務尚未完成安全設定' });
+  if (!isAdminLoginEnabled()) {
+    return res.status(req.method === 'GET' ? 401 : 503).json({ success: false, error: '管理登入目前未啟用' });
   }
 
   // GET: Verify existing token

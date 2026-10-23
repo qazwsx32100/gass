@@ -2,11 +2,10 @@ import crypto from 'node:crypto';
 import { captureServerException } from './_monitoring.js';
 import { fetchAppState, saveAppState, getClientIp, sendJson } from './_auth.js';
 
-const CMS_BRIDGE_SECRET = process.env.WEBSITE_CMS_BRIDGE_KEY || 'shenglong-cms-supabase-bridge-v1-2026';
-
 function verifyCmsBridgeSignature(rawBody = '', providedSig = '') {
-  if (!providedSig) return false;
-  const expected = crypto.createHmac('sha256', CMS_BRIDGE_SECRET).update(String(rawBody)).digest('hex');
+  const secret = process.env.WEBSITE_CMS_BRIDGE_KEY?.trim();
+  if (!secret || !providedSig) return false;
+  const expected = crypto.createHmac('sha256', secret).update(String(rawBody)).digest('hex');
   const bufA = Buffer.from(String(providedSig));
   const bufB = Buffer.from(expected);
   return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);

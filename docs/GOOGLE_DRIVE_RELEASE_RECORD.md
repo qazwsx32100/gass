@@ -5,6 +5,10 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 2026/10/23 - 官網登入與 CMS 串接安全修補（已發布）
+
+依老闆確認，目前官網管理登入未使用，先停用登入及後台設定寫入。移除共用密碼雜湊、固定密碼鹽值及官網至 ERP 橋接的固定寫入密鑰；橋接改以兩個 Vercel 專案的安全環境設定供應同一組密鑰。ERP 部署 `dpl_7RD4DqP3SJVFYsP32aBqtzSUoN6V`、官網部署 `dpl_AdxHqY6nfcWppgEtsobFaPzEw1ua`。驗證公開首頁 200、CMS 讀取 200 且雲端 persisted=true、舊橋接密鑰 401、管理登入 503、未授權 CMS 寫入 401。為避免污染營業統計，未製造假點擊；點擊寫入待真實事件確認。
+
 ## 📅 2026/10/23 - 🔕 外送員 App 鈴聲與音量機制重構：落實方案 A（絕對尊重手機系統音量與 App 開關，杜絕強制打擾） [ver: 20261023_0922_auto_release]
 
 ### 一、 需求背景與決策
