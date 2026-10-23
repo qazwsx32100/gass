@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+process.env.ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'test-admin-secret-2026';
+
 // 引入受測模組
 import { createToken, verifyToken, hashPassword, loginLimiter, getClientIp } from '../website/api/auth.js';
 import { createBoundedRateLimiter } from '../website/api/_rateLimit.js';

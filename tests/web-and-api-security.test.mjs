@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+
+process.env.ADMIN_SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'test-admin-secret-2026';
+
 import { hashPassword, createToken, verifyToken, loginLimiter } from '../website/api/auth.js';
 import { verifyLineSignature } from '../api/line-webhook.js';
 import { isAuthorizedToViewLogs } from '../api/line-ai-logs.js';
