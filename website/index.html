@@ -77,6 +77,10 @@
     }
   </script>
 
+  <!-- ===== Performance Resource Hints ===== -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+  <link rel="dns-prefetch" href="https://line.me" />
+
   <!-- ===== Google Font ===== -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
@@ -1042,7 +1046,7 @@
           <img src="./images/cylinder-sizes-comparison.jpg" 
                alt="台灣標準瓦斯鋼瓶規格高度尺寸全覽對照圖 4kg 10kg 16kg 20kg 50kg - 盛隆瓦斯行" 
                class="w-full h-auto object-cover hover:scale-[1.01] transition-transform duration-300" 
-               loading="lazy" />
+               loading="lazy" decoding="async" />
         </div>
         <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500 pt-3.5 border-t border-slate-200/80">
           <span>💡 備註：鋼瓶高度與直徑為含防護提把及底座之標準規格尺寸，各製造廠可能有 ±2cm 之正常公差。</span>
@@ -2203,7 +2207,7 @@
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> 專業圖解說明</span>
                     <span class="text-blue-600 font-semibold">盛隆瓦斯安全圖鑑</span>
                   </div>
-                  <img src="${faq.image}" alt="${faq.q}" class="w-full h-auto object-cover" loading="lazy" />
+                  <img src="${faq.image}" alt="${faq.q}" class="w-full h-auto object-cover" loading="lazy" decoding="async" />
                 </div>
               ` : ''}
             </div>
@@ -2557,7 +2561,7 @@
             <div>${text}</div>
             ${image ? `
               <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 mt-2">
-                <img src="${image}" alt="盛隆安全圖解" class="w-full h-auto object-cover" loading="lazy" />
+                <img src="${image}" alt="盛隆安全圖解" class="w-full h-auto object-cover" loading="lazy" decoding="async" />
               </div>
             ` : ''}
             <div class="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5">

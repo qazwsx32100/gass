@@ -5,36 +5,41 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
-## 📅 2026/10/23 - 🛡️ 全系統資安與 API 架構全面深度加固 [ver: 20261023_1330_auto_release]
+## 📅 2026/10/23 - 🛡️ 全系統安全性能與 API 串接全面深度極致優化 [ver: 20261023_1350_auto_release]
 
 ### 一、 需求背景與決策
 1. **老闆最高指示落實**：
-   - 老闆指示：「全面優化 安全、api」。
-2. **全系統全鏈路安全審計與架構加固**：
+   - 老闆指示：「全面優化 安全性能、api串接 還有其他你覺得要優化的項目，不要動到目前原本的東西 只優化」。
+2. **全系統跨庫無破壞性架構升級**：
+   - **Telegram 通訊 API 高可用容錯降級 (`gass: api/_telegram.js`)**：
+     - 引進 3,950 字元截斷保護並自動附加截斷說明，徹底防範訊息過長遭 Telegram API 400 Bad Request 拒收丟單。
+     - 導入 Markdown 語法實體解析錯誤退避重試（自動降級為純文字 Plain Text 二次發送），確保派單與系統告警 100% 抵達不遺失。
+   - **AI 詢答與 Webhook 深度防護 (`gass: api/ai-chat.js` & `api/line-webhook.js`)**：
+     - `ai-chat.js` 引入優雅 JSON 捕捉，非法 JSON 字串請求回傳親和 400 Bad Request（杜絕伺服器拋出 500）；攔截 Prototype Pollution 原型鏈屬性污染與 Null Byte 控制字元。
+     - `line-webhook.js` 限制單次 Webhook 事件批次上限為 10 筆（`slice(0, 10)`），阻絕惡意批量封包消耗雲端函數執行時限。
+   - **官網效能預加載與非同步渲染 (`gass: website/index.html`)**：
+     - 注入 `preconnect` (Tailwind CDN) 與 `dns-prefetch` (LINE)，消除首屏 CSS 解析延遲。
+     - 全量圖片配置 `decoding="async"` 配合既有 `loading="lazy"`，避免主執行緒圖片解碼卡頓。
+   - **本地資料庫檔案系統鎖死防護 (`shenglong-next: lib/sqlserver.ts`)**：
+     - 暫存查詢目錄刪除注入防禦性 `.catch(() => {})`，防範 Windows 本機防毒或索引服務暫態檔案鎖定引發未捕獲例外。
    - **健康檢查 API 敏感資訊與錯誤防洩露 (`gass: api/health.js`)**：
-     - 遇到資料庫連線中斷或異常時，針對公開匿名探測隱藏具體資料庫連線字串、錯誤細節及 `hasSyncSecret`、`hasSecretKey`、`hasSupabaseUrl` 等私鑰存在旗標。
-     - 僅在呼叫者附帶內部管理驗證（Bearer Sync Secret）時提供診斷資訊。
-     - 新增防洩漏單元測試，全庫單元與整合測試達 201 項全數通過。
+     - 匿名異常時隱藏資料庫連線錯誤、內部環境變數旗標，僅授權內部管理員可查閱診斷詳情。新增專屬單元測試。
    - **訂單備註 API 權限隔離與脫敏 (`shenglong-next: app/api/today-orders/remarks/route.ts`)**：
-     - `GET`：強制要求登入 Session、Sync Bearer 或外勤 Token。若為外勤人員，遮蔽工廠內部機密 `dataRemark`，僅提供現場配送 `addressRemark`；未登入者直接 401 攔截。
-     - `POST`：強制限制僅具備管理調度權限者可修改備註，杜絕匿名偽造；並對字串進行 XSS 與控制字元過濾。
+     - 外勤人員自動遮蔽機密 `dataRemark`，僅提供配送 `addressRemark`；未登入者 401 攔截；調度員修改具備防注入過濾。
    - **現場狀況回報 API 鑑權與防 DoS (`shenglong-next: app/api/customer/field-report/route.ts`)**：
-     - `GET`：補齊外勤或調度鑑權，杜絕未授權訪客列舉客戶地址、電話與照片。
-     - `POST`：對 Base64 照片強制設定 500KB 體積上限 (700,000 字元)，防止惡意大檔案 DoS；GPS 經緯度進行台灣有效配送邊界檢驗；客戶姓名、電話、備註進行防注入過濾。
-     - `PATCH`：強制要求調度員登入身分，審核人 (`reviewedBy`) 自動綁定當前 Session 使用者，杜絕客戶端偽造。
+     - 補齊鑑權校驗；Base64 照片限制 500KB 上限 (700,000 字元)；台灣經緯度邊界檢驗；字串防注入過濾。
    - **定位速率限制器容量硬化 (`shenglong-next: app/api/driver/location/route.ts`)**：
-     - 將原先無界 `Map` 改為容量上限 2,000 筆之受控結構，定期自動清理過期時間戳，並於達標時淘汰最舊項目，徹底消除記憶體洩漏與頻繁定位洗板風險。
+     - Bounded Map 2,000 筆上限與過期自動清理。
    - **全域 A+ 安全標頭與指紋防護 (`shenglong-next: vercel.json` & `next.config.ts`)**：
-     - `vercel.json` 補齊全域 `HSTS preload`、`X-Content-Type-Options: nosniff`、`X-Frame-Options: SAMEORIGIN`、`Referrer-Policy`、`Permissions-Policy`。
-     - `next.config.ts` 設置 `poweredByHeader: false`，移除伺服器暴露之 `X-Powered-By: Next.js` 標頭；Permissions-Policy 開放 `camera=(self)` 保障外勤現場拍照順暢。
-   - **禁詞全面清理**：代碼庫與錯誤回應全面淨化，全面採用「外勤人員」。
+     - HSTS preload、nosniff、SAMEORIGIN、Permissions-Policy，關閉 `poweredByHeader`。
+   - **禁詞全面清理**：代碼庫與錯誤回應全面淨化為「外勤人員」。
 3. **驗證與交付**：
    - `gass` 201 項測試 100% 通過（201 pass, 0 fail）。
    - `shenglong-next` `npx tsc --noEmit` 0 錯誤、0 警告。
    - Next.js 完整 Production Build 編譯成功。
    - GitHub 雙軌自動同步推送至 main。
 
----  
+---
 
 ## 📅 2026/10/23 - 📱 監控調度總中心「手機版介面全面極致優化」 [ver: 20261023_1308_auto_release]
 

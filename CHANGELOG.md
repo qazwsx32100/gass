@@ -5,24 +5,32 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
-## 📅 2026/10/23 - 🛡️ 全系統資安與 API 架構全面深度加固 [ver: 20261023_1330_auto_release]
-* **變更類型**：全鏈路資安強化 (full-stack-security-hardening) / 敏感資料脫敏隔離 (sensitive-data-masking) / Bounded Map 防 DoS (bounded-map-rate-limit) / A+ 安全標頭全面注入 (a-plus-security-headers) / 零禁詞清理 (taboo-words-purified)
+## 📅 2026/10/23 - 🛡️ 全系統安全性能與 API 串接全面深度極致優化 [ver: 20261023_1350_auto_release]
+* **變更類型**：全鏈路資安強化 (full-stack-security-hardening) / 敏感資料脫敏隔離 (sensitive-data-masking) / Telegram API 彈性重試 (telegram-api-resilience) / Webhook 防 DoS 批次限額 (webhook-batch-limit) / 畸形 JSON 與原型鏈污染防禦 (safe-json-prototype-guard) / 前端預加載與非同步解碼 (frontend-preload-hints) / Windows 暫存檔案鎖定保護 (windows-file-lock-guard) / 零禁詞清理 (taboo-words-purified)
 * **核心成果**：
-  * **健康檢查 API 敏感資訊與錯誤防洩露 (`gass: api/health.js`)**：匿名訪客遇到資料庫異常時，公開 503 回應隱藏底層資料庫連線錯誤、內部環境變數旗標 (`hasSyncSecret`、`hasSecretKey`、`hasSupabaseUrl`)，僅授權內部管理員可查閱診斷詳情。新增專屬單元測試，全庫達到 201 項測試 100% 通過。
+  * **Telegram 通訊 API 高可用容錯降級 (`gass: api/_telegram.js`)**：
+    * 建立 3,950 字元截斷保護並自動附加截斷備註，徹底防範訊息過長遭 Telegram API 400 Bad Request 拒收。
+    * 導入 Markdown 語法實體解析錯誤退避重試（自動降級為純文字 Plain Text 二次發送），確保派單與系統告警 100% 抵達不丟失。
+  * **AI 詢答與 Webhook 深度防護 (`gass: api/ai-chat.js` & `api/line-webhook.js`)**：
+    * `ai-chat.js` 引入優雅 JSON 捕捉，非法 JSON 字串請求回傳親和 400 Bad Request（杜絕伺服器拋出 500）；攔截 Prototype Pollution 原型鏈屬性污染與 Null Byte 控制字元。
+    * `line-webhook.js` 限制單次 Webhook 事件批次上限為 10 筆（`slice(0, 10)`），阻絕惡意批量封包消耗雲端函數執行時限。
+  * **官網效能預加載與非同步渲染 (`gass: website/index.html`)**：
+    * 注入 `preconnect` (Tailwind CDN) 與 `dns-prefetch` (LINE)，消除首屏 CSS 解析延遲。
+    * 全量圖片配置 `decoding="async"` 配合既有 `loading="lazy"`，避免主執行緒圖片解碼卡頓。
+  * **本地資料庫檔案系統鎖死防護 (`shenglong-next: lib/sqlserver.ts`)**：
+    * 暫存查詢目錄刪除注入防禦性 `.catch(() => {})`，防範 Windows 本機防毒或索引服務暫態檔案鎖定引發未捕獲例外。
+  * **健康檢查 API 敏感資訊與錯誤防洩露 (`gass: api/health.js`)**：匿名訪客遇到資料庫異常時，公開 503 回應隱藏底層資料庫連線錯誤、內部環境變數旗標 (`hasSyncSecret`、`hasSecretKey`、`hasSupabaseUrl`)，僅授權內部管理員可查閱診斷詳情。新增專屬單元測試。
   * **訂單備註 API 權限脫敏硬隔離 (`shenglong-next: app/api/today-orders/remarks/route.ts`)**：
-    * `GET`：強制要求登入 Session、Sync Bearer 或外勤 Token。若為外勤人員，自動遮蔽工廠內部機密 `dataRemark`，僅提供現場配送 `addressRemark`；未登入者直接 401 攔截。
-    * `POST`：強制限制僅具備訂單管理/查看權限之調度員可修改備註，杜絕匿名偽造；並對字串進行 XSS 與控制字元過濾。
+    * `GET`：強制要求登入 Session、Sync Bearer 或外勤 Token。外勤人員自動遮蔽機密 `dataRemark`，僅提供配送 `addressRemark`；未登入者 401 攔截。
+    * `POST`：限制調度員修改，杜絕匿名偽造，執行防注入過濾。
   * **現場回報 API 鑑權與防 DoS (`shenglong-next: app/api/customer/field-report/route.ts`)**：
-    * `GET`：補齊鑑權校驗，杜絕未授權訪客列舉客戶地址、電話與照片。
-    * `POST`：對 Base64 照片強制設定 500KB 體積上限 (700,000 字元)，防止惡意大檔案 DoS；GPS 經緯度進行台灣有效配送邊界檢驗；客戶姓名、電話、備註進行防注入過濾。
-    * `PATCH`：強制要求調度員登入身分，審核人 (`reviewedBy`) 自動綁定當前 Session 使用者，杜絕客戶端偽造。
-  * **定位記憶體速率限制器容量硬化 (`shenglong-next: app/api/driver/location/route.ts`)**：
-    * 將原先無界 `Map` 改為容量上限 2,000 筆之受控結構，定期自動清理過期時間戳，並於達標時淘汰最舊項目，徹底消除記憶體洩漏與頻繁定位洗板風險。
-  * **全域 A+ 安全標頭與指紋防護 (`shenglong-next: vercel.json` & `next.config.ts`)**：
-    * `vercel.json` 補齊全域 `HSTS preload`、`X-Content-Type-Options: nosniff`、`X-Frame-Options: SAMEORIGIN`、`Referrer-Policy`、`Permissions-Policy`。
-    * `next.config.ts` 設置 `poweredByHeader: false`，移除伺服器暴露之 `X-Powered-By: Next.js` 標頭；Permissions-Policy 開放 `camera=(self)` 保障外勤現場拍照順暢。
-  * **禁詞全面清理**：代碼庫與錯誤回應全面淨化，全面採用「外勤人員」。
-  * **全量構建與測試驗證**：gass 201 項測試全數通過（201 pass, 0 fail），shenglong-next `tsc --noEmit` 0 錯誤，Next.js Production Build 100% 成功。
+    * `GET`：補齊鑑權校驗，杜絕未授權訪客列舉客戶資料。
+    * `POST`：Base64 照片限制 500KB 上限 (700,000 字元)；台灣經緯度邊界檢驗；字串防注入過濾。
+    * `PATCH`：調度員審核人綁定當前 Session，防客戶端偽造。
+  * **定位記憶體速率限制器容量硬化 (`shenglong-next: app/api/driver/location/route.ts`)**：Bounded Map 2,000 筆上限與過期自動清理。
+  * **全域 A+ 安全標頭與指紋防護 (`shenglong-next: vercel.json` & `next.config.ts`)**：HSTS preload、nosniff、SAMEORIGIN、Permissions-Policy，關閉 `poweredByHeader`。
+  * **禁詞全面清理**：代碼庫與錯誤回應全面淨化為「外勤人員」。
+  * **全量構建與測試驗證**：gass 201 項測試 100% 通過（201 pass, 0 fail），shenglong-next `tsc --noEmit` 0 錯誤，Next.js Production Build 100% 成功。
 
 
 ## 📅 2026/10/23 - 📱 監控調度總中心「手機版介面全面極致優化」 [ver: 20261023_1308_auto_release]

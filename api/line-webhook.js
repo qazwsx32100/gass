@@ -189,7 +189,9 @@ export default async function handler(req, res) {
     }
   }
 
-  const events = req.body?.events || [];
+  const rawEvents = Array.isArray(req.body?.events) ? req.body.events : [];
+  // 防禦批次攻擊：單次 Webhook 批次上限 10 筆，防範惡意偽造洪水攻擊耗盡算力
+  const events = rawEvents.slice(0, 10);
 
   // 立刻回覆 200 給 LINE 平台避免超時，背景非同步處理訊息
   sendJson(res, 200, { ok: true, count: events.length });

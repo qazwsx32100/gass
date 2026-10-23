@@ -239,6 +239,30 @@ test('Security: ai-chat rejects oversized prompts to protect paid token quota', 
   assert.equal(res.statusCode, 400);
   assert.equal(res.body.ok, false);
   assert.ok(res.body.error.includes('提問內容過長'), 'Oversized prompt must be rejected');
+
+  // 畸形 JSON 字串防護 (應回傳 400 Bad Request 而非 500)
+  const malformedReq = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{"prompt": "broken json without closing brace'
+  };
+  const malformedRes = mockRes();
+  await aiChatHandler(malformedReq, malformedRes);
+  assert.equal(malformedRes.statusCode, 400);
+  assert.equal(malformedRes.body.ok, false);
+  assert.ok(malformedRes.body.error.includes('非合法 JSON 格式'));
+
+  // Null Byte 注入防護
+  const nullByteReq = {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: { prompt: '叫瓦斯\x00惡意字元' }
+  };
+  const nullByteRes = mockRes();
+  await aiChatHandler(nullByteReq, nullByteRes);
+  assert.equal(nullByteRes.statusCode, 400);
+  assert.equal(nullByteRes.body.ok, false);
+  assert.ok(nullByteRes.body.error.includes('Null Byte'));
 });
 
 // 4. LINE Webhook 簽章與時序安全防護測試 (api/line-webhook.js)

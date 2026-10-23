@@ -56,15 +56,29 @@ export default async function handler(req, res) {
     });
   }
 
+  let body;
   try {
-    const body = typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}');
+    body = typeof req.body === 'object' && req.body !== null ? req.body : JSON.parse(req.body || '{}');
+  } catch (_parseErr) {
+    return sendJson(res, 400, { ok: false, error: '請求內容非合法 JSON 格式，請檢核後重試。' });
+  }
+
+  // 拒絕原型鏈污染 (Prototype Pollution) 惡意屬性
+  if (body && typeof body === 'object') {
+    if (Object.prototype.hasOwnProperty.call(body, '__proto__') || Object.prototype.hasOwnProperty.call(body, 'constructor')) {
+      try { delete body.__proto__; } catch {}
+      try { delete body.constructor; } catch {}
+    }
+  }
+
+  try {
     const {
       prompt,
       messages = [],
       systemInstruction,
       temperature = 0.7,
       model = 'gemini-3.8-flash'
-    } = body;
+    } = body || {};
 
     if (!prompt && (!Array.isArray(messages) || messages.length === 0)) {
       return sendJson(res, 400, { ok: false, error: '請提供 prompt 或 messages 參數' });
