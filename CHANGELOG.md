@@ -5,6 +5,15 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/23 - 📱 監控調度總中心「手機版介面全面極致優化」 [ver: 20261023_1308_auto_release]
+* **變更類型**：手機版版面全面優化 (mobile-comprehensive-optimization) / 氣象智慧折疊 (weather-collapsible-bar) / 四態膠囊均分排版 (status-pill-grid-distribution) / 一鍵導航撥號無縫啟用 (one-tap-nav-dial)
+* **核心成果**：
+  * **氣象模組智慧折疊**：在手機端預設折疊為 1 行精簡狀態列（`🌤️ 新北三重 31.4°C (晴時多雲) ｜ 🔥 尖峰 12:00 ｜ 氣象分析 ▾`），節省約 170px 垂直高度，訂單一進來即刻映入眼簾，點擊隨時展開氣溫出貨對比圖與數據表。
+  * **四態快篩膠囊四等分排版**：`全部叫貨`、`🛵 待派工`、`🚚 配送中`、`✅ 已送達` 在手機版採用均勻四等分彈性排版 (`flex: 1`)，在各型號手機上完全齊平不換行、100% 杜絕截斷。
+  * **訂單卡片一鍵導航與撥號全面啟用**：手機版卡片直接整合 `🗺️ 導航` 與 `📞 撥號` 按鈕，調度員或司機單手點擊直接撥打電話或開啟 Google Maps。
+  * **頂部操作橫排美化**：隱藏橫向滑動條（`scrollbar-width: none`），操作更滑順；搜尋框自適應全寬，司機快篩按鈕整齊排列。
+  * **正式部署**：Vercel Production (`dpl_E5WRz4xLMtR4UXBBR1PNNeL7L1BU`) 已成功上線。
+
 ## 📅 2026/10/23 - 📱 監控調度總中心「手機版車隊地圖按鈕橫列重疊修復」與「送貨狀態待派工/配送中/已送達即時聯動核算」 [ver: 20261023_1100_auto_release]
 * **變更類型**：手機版版面優化 (mobile-layout-optimization) / 圖文擠壓重疊防護 (overlap-prevention) / 送貨狀態精準計算 (delivery-status-sync)
 * **核心成果**：
