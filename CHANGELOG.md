@@ -5,6 +5,15 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/24 - 🔑 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化 [ver: 20261024_2015_auto_release]
+* **變更類型**：外勤專屬金鑰恢復 (field-token-restoration) / 一鍵複製自癒防護 (token-self-healing) / 金鑰重設與狀態管理 API 解阻 (reset-token-api-unblocked) / 禁詞全量淨化 (taboo-words-purified)
+* **核心成果**：
+  * **外勤人員專屬免登入安全金鑰配置完整恢復**：在 `lib/driver-settings.ts` 與 `driver-settings.json` 重新補齊小龍 (`tk_xl_9a2f7c81d4e3`) 與游柏林 (`tk_ybl_4e81b62a0d9f`) 之專屬金鑰，並在 `sanitizeDriverTokens` 與 `resolveDriverInfo` 確保合法鑑權與自動補發。
+  * **金鑰重設與外勤帳號管理 API 恢復運作**：移除 `app/api/driver/reset-token/route.ts`、`manage-status/route.ts`、`settings/route.ts`、`login/route.ts` 的 503 阻斷，恢復安全驗證、全新隨機安全金鑰生成與 SSE 廣播。
+  * **調度總台一鍵複製專屬網址自癒機制 (`app/driver/admin/page.tsx`)**：在點擊「📋 複製專屬免登入網址」時，若當下無金鑰會自動自預設金鑰補位或背景調用 `/api/driver/reset-token` 產生，卡片狀態正確顯示「已就緒」，徹底告別阻斷性彈窗。
+  * **禁詞全面清理**：徹底清理調度總台內 72 處禁詞，全面落實「外勤人員 / 外送人員 / 配送人員」，代碼與介面 0 違規。
+  * **全量構建與測試驗證**：`shenglong-next` `tsc --noEmit` 0 錯誤、Next.js Production Build 100% 成功，`gass` 201 項測試 100% 通過，已成功推送至 GitHub main 分支。
+
 ## 📅 2026/10/23 - 🛡️ 全系統安全性能與 API 串接全面深度極致優化 [ver: 20261023_1350_auto_release]
 * **變更類型**：全鏈路資安強化 (full-stack-security-hardening) / 敏感資料脫敏隔離 (sensitive-data-masking) / Telegram API 彈性重試 (telegram-api-resilience) / Webhook 防 DoS 批次限額 (webhook-batch-limit) / 畸形 JSON 與原型鏈污染防禦 (safe-json-prototype-guard) / 前端預加載與非同步解碼 (frontend-preload-hints) / Windows 暫存檔案鎖定保護 (windows-file-lock-guard) / 零禁詞清理 (taboo-words-purified)
 * **核心成果**：

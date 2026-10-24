@@ -4,9 +4,26 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-23 09:27
+> **最後更新時間**：2026-10-24 20:15
 
 ---
+
+### 1. 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化
+- **狀態**：`[x]` 已完成 (依老闆反映「手機點擊複製專屬免登入網址彈出尚未設定金鑰、卡片顯示尚未配置」全面修復：
+  ① **專屬安全金鑰配置恢復**：於 `lib/driver-settings.ts` 與 `driver-settings.json` 完整補齊小龍 (`tk_xl_9a2f7c81d4e3`) 與游柏林 (`tk_ybl_4e81b62a0d9f`) 之專屬金鑰，並在 `sanitizeDriverTokens` 與 `resolveDriverInfo` 確保合法鑑權與自動補發。
+  ② **金鑰管理與重設 API 恢復運作**：移除 `app/api/driver/reset-token/route.ts`、`manage-status/route.ts`、`settings/route.ts`、`login/route.ts` 的 503 阻斷，恢復安全驗證、全新隨機安全金鑰生成與 SSE 廣播。
+  ③ **調度總台一鍵複製自癒防護 (`app/driver/admin/page.tsx`)**：在 `handleCopyDriverLink` 導入自癒容錯，若當下記憶體無金鑰，自動自預設金鑰回退或調用 `/api/driver/reset-token` 補發，杜絕阻斷彈窗；卡片狀態正確顯示「已就緒」。
+  ④ **禁詞全量淨化**：徹底清理調度總台內 72 處禁詞，全面落實「外勤人員 / 外送人員 / 配送人員」，代碼與介面 0 違規。
+  ⑤ **全量構建與回歸驗證**：`shenglong-next` `npx tsc --noEmit` 0 錯誤、Next.js Production Build 100% 成功，`gass` 201 項測試 100% 通過，已推送到 GitHub main 分支)
+- **優先級**：`P0` (老闆即時截圖回饋修復)
+- **負責設備/端點**：`shenglong-next: lib/driver-settings.ts, driver-settings.json, app/api/driver/reset-token/route.ts, app/api/driver/settings/route.ts, app/api/driver/manage-status/route.ts, app/api/driver/login/route.ts, app/driver/admin/page.tsx`
+- **完成日期**：2026/10/24
+- **完成項目**：
+  - [x] 小龍與游柏林專屬免登入安全金鑰完整恢復與長效配置。
+  - [x] 重設金鑰與狀態管理 API 解除阻斷並強化安全鑑權。
+  - [x] 外勤調度總台一鍵複製專屬網址具備智慧自癒與防呆容錯。
+  - [x] 消除調度總台全部 72 處禁詞，代碼與介面 100% 淨化。
+  - [x] `tsc` 0 錯誤、Next.js Production Build 成功、全庫 201 項單元測試 100% 通過。
 
 
 ### 1. 監控調度總中心「手機版介面全面極致優化（氣象一鍵收折、四態膠囊均分排版、一鍵撥號導航、搜尋列全寬適配）」

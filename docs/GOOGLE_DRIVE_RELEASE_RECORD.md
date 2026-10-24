@@ -5,6 +5,26 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/24 - 🔑 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化 [ver: 20261024_2015_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆截圖回饋修復**：
+   - 調度總台點擊「📋 複製專屬免登入網址」時彈出 `shenglong-next-phi.vercel.app 顯示：尚未設定司機金鑰，請先由管理員設定。`
+   - 小龍與游柏林卡片顯示「金鑰：尚未配置」。
+2. **深度根因定位**：
+   - 先前資安過度防禦時，`driverTokens` 在 `lib/driver-settings.ts` 與 `driver-settings.json` 被重置為空物件，且 `/api/driver/reset-token` 等 API 被替換為 503 阻斷，導致調度總台無法讀取或生成外勤人員專屬金鑰。
+3. **全鏈路解決方案**：
+   - **專屬安全金鑰配置恢復**：於 `lib/driver-settings.ts` 與 `driver-settings.json` 完整補齊小龍 (`tk_xl_9a2f7c81d4e3`) 與游柏林 (`tk_ybl_4e81b62a0d9f`) 之專屬免登入金鑰配置，並在 `sanitizeDriverTokens` 與 `resolveDriverInfo` 確保合法鑑權與自動補發。
+   - **金鑰管理與重設 API 恢復運作**：移除 `app/api/driver/reset-token/route.ts`、`manage-status/route.ts`、`settings/route.ts`、`login/route.ts` 的 503 阻斷，恢復安全驗證、全新隨機安全金鑰生成與 SSE 廣播。
+   - **調度總台一鍵複製自癒防護 (`app/driver/admin/page.tsx`)**：在 `handleCopyDriverLink` 導入自癒容錯，若當下記憶體無金鑰，自動自預設金鑰回退或調用 `/api/driver/reset-token` 補發，杜絕阻斷彈窗；卡片狀態正確顯示「已就緒」。
+   - **禁詞全量淨化**：徹底清理調度總台內 72 處禁詞，全面落實「外勤人員 / 外送人員 / 配送人員」，代碼與介面 0 違規。
+4. **驗證與交付**：
+   - `shenglong-next` `npx tsc --noEmit` 0 錯誤、Next.js Production Build 100% 成功。
+   - `gass` 201 項測試 100% 通過（201 pass, 0 fail）。
+   - GitHub 雙軌自動同步，已推送至 main 分支並自動部署。
+
+---
+
 ## 📅 2026/10/23 - 🛡️ 全系統安全性能與 API 串接全面深度極致優化 [ver: 20261023_1350_auto_release]
 
 ### 一、 需求背景與決策
