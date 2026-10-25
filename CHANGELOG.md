@@ -5,6 +5,14 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - 🗺️ 車隊地圖返回導航功能建置（頂部返回鍵、直通 ERP/戰情室按鈕與手機浮動快速返回膠囊） [ver: 20261025_1815_auto_release]
+* **變更類型**：車隊地圖返回導航 (customer-map-back-navigation) / 頂部雙向直通 (topbar-erp-operations-link) / 手機浮動快速返回膠囊 (mobile-floating-back-pill) / 戰情室大地圖返回 (operations-map-return-button)
+* **核心成果**：
+  * **車隊地圖全方位返回導航 (`customer-map/page.tsx`)**：頂部導覽列最左側（Logo 前方）增設醒目高對比「⬅️ 返回」實體按鈕，智慧支援歷史上一頁與 `/erp` 回退；右上動作區增設直達「🏢 盛隆 ERP」與「🚀 派工戰情室」按鈕。
+  * **手機端浮動返回膠囊**：以最高層級 `z-[9999]` 配置常駐浮動按鈕（包含「⬅️ 返回上一頁」與「🏢 回 ERP」、「🚀 戰情室」），解決在手機地圖全螢幕瀏覽與縮放時無法返回的痛點。
+  * **調度戰情室車隊地圖返回功能 (`operations/page.tsx`)**：在戰情室「🗺️ 車隊大地圖」標籤頁標題右側配置「⬅️ 返回派工中心」按鈕，快速切換回訂單列表。
+  * **全系統回歸驗證**：TypeScript 0 錯誤、全庫 201 項測試 100% 通過，Vercel Production 生產環境完成部署。
+
 ## 📅 2026/10/25 - 👑 盛隆營運 ERP (BOSS 專用 APK) 五大核心問題徹底重構與體驗優化 [ver: 20261025_1805_auto_release]
 * **變更類型**：ERP 純淨無外連 (erp-standalone-decouple) / 彈窗層級提升與防遮擋 (modal-zindex-elevation) / 客戶全域查詢離線備援 (customer-lookup-fallback) / 下單彈窗破框與牌價修復 (order-modal-overflow-pricing) / 來電開單預設通話紀錄 (call-center-today-history) / 全新 APK 簽名 (android-apk-signed-build)
 * **核心成果**：
