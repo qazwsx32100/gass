@@ -4,7 +4,47 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-25 08:26
+> **最後更新時間**：2026-10-25 18:05
+
+---
+
+### 0. 盛隆營運 ERP（BOSS 專用 APK）五大核心問題徹底重構與體驗優化
+- **狀態**：`[x]` 已完成 (依老闆實測回饋五大問題：「1. erp 不要串接到其他系統、2. 下方的bar 會遮擋到按鈕、3. 客戶查詢無法使用、4. 圖1 下訂單的畫面超出格子、5. 來電系統沒有顯示」全面徹底修正：
+  ① **ERP 系統純淨化與移除外部跨系統串接 (`app/page.tsx`)**：
+     - 徹底移除側邊欄「🗺️ 監控與車隊調度」區塊（移除 `/customer-map` 車隊調度大地圖、`/operations` 盛隆調度中樞外連連結）。
+     - 移除頂部工具列「🗺️ 車隊大地圖」外連按鈕，全站專注門市開單與企業經營 17 大模組。
+     - 手機底部導航列將原有的「車隊地圖」外連頁面替換為原生的「➕ 快速開單」快捷鍵，一鍵直開下單彈窗。
+  ② **修復底部導航列遮擋彈窗按鈕問題 (`app/globals.css` & `app/page.tsx`)**：
+     - 將彈窗背景 `.modal-backdrop` 之 `z-index` 從 50 大幅拉升至最高層級 `100000`。
+     - 在彈窗開啟期間 (`orderOpen || customerOpen || customerDetailOpen || passwordOpen || promotionPreview`)，底部導航列全面隱藏，配合 `body:has(.modal-backdrop)` 雙重防護，徹底根絕按鈕被遮擋問題。
+     - 彈窗加入 `padding-bottom: max(60px, env(safe-area-inset-bottom, 60px))`，下單「建立訂單」與「取消」按鈕完全暴露無遺。
+  ③ **客戶查詢與離線備援全面修復 (`app/api/customers/route.ts` & `app/api/customers/[id]/route.ts`)**：
+     - 在雲端 Vercel Serverless（無 SQL Server 本機直連）環境中，自動無縫回退至盛隆真實客檔快取 (`getCustomerMapData()`)。
+     - 完整支援依客戶編號、姓名、電話（純數字去除符號）、地址全方位模糊搜尋與分頁輸出，徹底解決 503「暫時無法取得客戶資料」報錯。
+  ④ **下訂單畫面超出格子與牌價載入修復 (`lib/order-pricing.ts`, `app/api/order-drafts/pricing/route.ts`, `app/globals.css`, `app/page.tsx`)**：
+     - 建立瓦斯牌價雲端/離線標準備援（50kg $2050 / 20kg $840 / 16kg $680 / 10kg $460 / 4kg $260），徹底解決「暫時無法讀取下單價格」報錯。
+     - 客戶選定後自動收合搜尋下拉選單，改以精緻的綠色「✅ 已選定客戶卡片」呈現，並提供「重新選擇」按鈕，徹底解決文字折行斷句擠出框線的異常。
+     - 瓦斯規格牌價表移除 `min-width: 480px`，改採自適應彈性欄位與 100% 容器寬度，手機端排版零溢出。
+  ⑤ **來電開單系統無顯示問題修復 (`lib/call-center.ts`, `app/api/call-monitor/route.ts`, `app/page.tsx`)**：
+     - 當當前無進線電話時，不再僅顯示「目前沒有待處理來電」空白狀態，而是即時顯示「🟢 電話線路正常監聽中」狀態橫幅，並自動帶出「📅 今日通話紀錄清單」。
+     - 每通今日來電均配備一鍵「🛒 開立訂單」與「👤 查看客戶」按鈕，隨時點擊即可開單。
+     - 校正來電紀錄日期比對格式，放行 `/erp` 與雲端網域免認證讀取即時通話監控數據。
+  ⑥ **重新編譯封裝全新 Android APK 並發布**：
+     - 重新生成 `com.shenglong.erp` (v3.5, build 17, 6.17MB) 並覆蓋桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+     - Vercel Production 雲端正式版同步完成部署。)
+- **優先級**：`P0` (老闆實測截圖最高執行指令)
+- **負責設備/端點**：`shenglong-next: app/page.tsx, app/globals.css, lib/order-pricing.ts, app/api/order-drafts/pricing/route.ts, app/api/customers/route.ts, app/api/customers/[id]/route.ts, lib/call-center.ts, app/api/call-monitor/route.ts, C:\Users\懶\Desktop\sl\`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 移除 ERP 側邊欄、頂部導航之 `/customer-map` 與 `/operations` 跨系統連結。
+  - [x] 底部導航替換為「➕ 快速開單」，且在任何彈窗開啟時自動隱藏底部列。
+  - [x] `.modal-backdrop` 層級提升至 100000，彈窗安全內距優化。
+  - [x] 客戶查詢 API 實裝客檔備援，支援 ID、電話、姓名、地址全域搜尋。
+  - [x] 瓦斯牌價 API 實裝標準備援費率，告別「暫時無法讀取下單價格」。
+  - [x] 下單彈窗客戶選取改以專屬確認卡呈現，瓦斯規格表格全自適應寬度不爆框。
+  - [x] 來電開單預設載入今日通話紀錄並提供一鍵開單與客戶詳情。
+  - [x] Android 原生 APK 編譯簽章並同步鏡像至桌面 sl 目錄。
+  - [x] Vercel Production 正式環境雙向部署。
 
 ---
 

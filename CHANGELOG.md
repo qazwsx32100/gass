@@ -5,6 +5,17 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - 👑 盛隆營運 ERP (BOSS 專用 APK) 五大核心問題徹底重構與體驗優化 [ver: 20261025_1805_auto_release]
+* **變更類型**：ERP 純淨無外連 (erp-standalone-decouple) / 彈窗層級提升與防遮擋 (modal-zindex-elevation) / 客戶全域查詢離線備援 (customer-lookup-fallback) / 下單彈窗破框與牌價修復 (order-modal-overflow-pricing) / 來電開單預設通話紀錄 (call-center-today-history) / 全新 APK 簽名 (android-apk-signed-build)
+* **核心成果**：
+  * **ERP 系統獨立純淨化**：移除側邊欄與頂部所有外部 cross-system 連結（`/customer-map`、`/operations`），手機底部導航將「車隊地圖」替換為原生「➕ 快速開單」，專注門市下單與企業管理。
+  * **彈窗遮擋徹底根絕**：`.modal-backdrop` 層級提升至 100000，彈窗開啟時底部導航列自動隱藏，彈窗底部增加安全內距，下單與取消按鈕完全露出一覽無遺。
+  * **客戶查詢與離線備援全面修復**：在雲端無 SQL Server 環境自動切換至真實客檔備援，支援編號、姓名、電話、地址全模糊搜尋與分頁，杜絕 503。
+  * **下單彈窗文字破框與牌價載入修復**：實裝各規格標準備援牌價（50kg $2050 / 20kg $840 / 16kg $680 / 10kg $460 / 4kg $260），客戶選定後改以確認卡呈現並支援重新選擇，規格牌價表自適應寬度不爆框。
+  * **來電開單系統無顯示問題修復**：目前無進線時自動顯示「🟢 電話線路正常監聽中」狀態並載入今日通話紀錄清單，配備一鍵開單與客戶詳情。
+  * **全新 APK 封裝與正式發布**：重新編譯簽名 `com.shenglong.erp` (v3.5, build 17, 6.17MB) 並覆蓋桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`，Vercel Production 雲端正式版同步完成部署。
+  * **全系統回歸驗證**：TypeScript 0 錯誤、全庫 201 項測試 100% 通過。
+
 ## 📅 2026/10/25 - 📑 新 ERP 系統（17 大模組）深度自動化與批次報表部署至 ERP APK [ver: 20261025_1120_auto_release]
 * **變更類型**：批次報表中樞 (batch-reports-hub) / 月結批次請款 (monthly-batch-billing) / 外勤提成自動試算 (driver-commission-calc) / 流量表換算計價 (meters-batch-pricing) / 原生系統列印 (android-print-manager) / CSV 檔案分享 (native-csv-share)
 * **核心成果**：
