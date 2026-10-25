@@ -5,6 +5,34 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/25 - 📞 盛隆營運 ERP「來電中心 / 來電接單」即時通流打通與手機端卡片佈局優化 [ver: 20261025_2005_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示**：
+   - 老闆反映：「來電狀況還是空白的」，並提供手機端截圖顯示待處理 0 通、已辨識客戶 0 通，下方通話清單整片空白。
+2. **全鏈路修復工程方案**：
+   - ① **解除已處理來電過濾清空問題 (`lib/call-center.ts`)**：
+     - 原先 `getCloudCallCenterResult` 將 `ORDERED` 與 `NO_ORDER` 狀態之通話自活躍通話清單中過濾剔除。當今日進線的 23 通電話全數接聽或結案後，活躍通話變為空陣列 `[]`，前端因而呈現完全無資料的空白狀態。
+     - 全面優化為整合當日全部進線通話快取，完整保留歷史紀錄。
+   - ② **四級快取回退安全通道 (`fetchCallMonitorPayloadSafe`)**：
+     - 解決雲端 Lambda 實例間記憶體未共享與 KVDB 頻率限制 (429) 問題，依序以 `globalThis.__callMonitorCache` ➔ 內部 `/api/call-monitor` ➔ `operationsKvFetch` ➔ 全域 Fetch 四道安全防線回退，秒級串通門市 `sync-stock.cjs` 守護進程。
+   - ③ **手機端指標卡片 2x2 緊湊網格重構 (`app/globals.css`)**：
+     - 手機版原本單欄堆疊 4 張指標卡，單卡最小高度達 164px，共吃掉逾 600px 垂直高度，將通話清單推擠至可視範圍之外。
+     - 改寫為 2x2 緊湊精緻網格佈局（高度縮減至 ~120px），即時露出完整的來電通話清單。
+   - ④ **極速一鍵開單與通話卡片升級 (`app/page.tsx`)**：
+     - 來電卡片直覺呈現通話狀態（綠色已開單 / 藍色通話完成 / 閃爍接聽中）、進線電話、客戶姓名與門市備註。
+     - 配備快捷按鈕：⚡ 快速開單 / 再次開單、👤 查看客戶、📞 一鍵撥號、📋 複製號碼。
+     - 整合狀態篩選（全部 / 已開單 / 免開單）與搜尋框，前端 4 秒智慧輪詢即時更新。
+   - ⑤ **Android APK 重新打包與同步**：
+     - 重新編譯封裝 `shenglong-erp.apk` (6.17 MB)，並更新至桌面 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`、`盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+3. **驗證與交付**：
+   - `shenglong-next` TypeScript 型別檢查 `npx tsc --noEmit` 0 錯誤。
+   - Gass 核心測試全量 201 / 201 100% 通過（0 失敗，0 回歸）。
+   - Vercel Production 正式環境部署生效（`dpl_gvy2hU6ah3MdCgFmn6bYwZaa92Vx`）。
+   - `https://shenglong-next-phi.vercel.app/api/call-monitor` 線上即時驗證通話數據完整返回（今日進線 23 通）。
+
+---
+
 ## 📅 2026/10/25 - 📱 盛隆 LINE 會員系統三大核心升級（後端跳出通知、LINE聊天室對話推播、會員中心常用地址管理） [ver: 20261025_1955_auto_release]
 
 ### 一、 需求背景與決策

@@ -4,7 +4,36 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-25 19:55
+> **最後更新時間**：2026-10-25 20:05
+
+---
+
+### 0. 盛隆營運 ERP「來電接單 / 來電中心」即時通流打通與手機端卡片佈局優化
+- **狀態**：`[x]` 已完成 (依老闆最新反饋「來電狀況還是空白的」徹底排查與解決三大核心癥結：
+  ① **解除已處理來電過濾清空問題 (`lib/call-center.ts`)**：
+     - 原邏輯將 `ORDERED` 與 `NO_ORDER` 狀態之來電自活躍清單過濾剔除，當今日 23 通來電全數接聽或開單後，來電列表直接變為空陣列 `[]`，導致畫面整片空白。
+     - 改為整合即時進線快取，保留完整通話紀錄，確保今日每一通來電均如實呈現。
+  ② **打通四級高可靠快取回退管道 (`fetchCallMonitorPayloadSafe`)**：
+     - 解決雲端 Lambda 實例獨立快取與 KVDB 頻率限制 (429) 問題，依序以 `globalThis.__callMonitorCache` ➔ 內部 `/api/call-monitor` ➔ `operationsKvFetch` ➔ 全域 Fetch 形成 4 重安全屏障，秒級連動門市 `sync-stock.cjs` 守護進程。
+  ③ **手機端指標卡片 2x2 緊湊佈局防推擠 (`app/globals.css`)**：
+     - 手機版原單欄卡片單張高達 164px，4 張卡片佔據逾 600px 垂直高度將清單擠出可視區域；現重構為 2x2 精緻自適應網格（高度僅約 120px），清單一目了然。
+  ④ **一鍵極速開單與客戶整合卡片 (`app/page.tsx`)**：
+     - 來電卡片直覺顯示通話狀態（綠色已開單 / 藍色通話完成 / 閃爍接聽中）、進線電話、客戶姓名與門市備註。
+     - 配備快捷動作鍵：⚡ 快速開單 / 再次開單、👤 客戶詳情、📞 一鍵撥號、📋 號碼複製。
+     - 整合狀態篩選（全部 / 已開單 / 免開單）與關鍵字即時搜尋，支援每 4 秒輪詢動態更新。
+  ⑤ **全自動 APK 打包與同步交付**：
+     - 重新編譯封裝 `shenglong-erp.apk` (6.17 MB)，並同步更新至桌面 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`、`盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`，嚴格遵守桌面 sl 目錄專屬規範。)
+- **優先級**：`P0` (老闆即時指令)
+- **負責設備/端點**：`shenglong-next: app/page.tsx, app/globals.css, lib/call-center.ts, sync-stock.cjs; Gass: scripts/build-all-apks.cjs`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 修復 `lib/call-center.ts` 活躍通話過濾導致已結案通話全部消失變空白的邏輯。
+  - [x] 建立四級快取回退 `fetchCallMonitorPayloadSafe`，無縫串聯門市進線即時資料流。
+  - [x] 重構手機端指標卡為 2x2 緊湊網格，徹底杜絕畫面被指標卡佔滿推擠。
+  - [x] 來電中心配備 1-click「⚡ 快速開單 / 再次開單」、「👤 客戶詳情」、「📞 撥號」按鈕。
+  - [x] 支援來電狀態篩選標籤（全部 / 已開單 / 免開單）與搜尋框。
+  - [x] 重新打包編譯 `shenglong-erp.apk` 並更新至桌面 `C:\Users\懶\Desktop\sl`。
+  - [x] TypeScript 0 錯誤、全庫 201 項測試 100% 通過、Vercel 雲端正式發布。
 
 ---
 
