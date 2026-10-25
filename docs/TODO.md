@@ -8,6 +8,25 @@
 
 ---
 
+### 0. 盛隆新 ERP（BOSS 專用 APK）編譯封裝與路徑定向修復（shenglong-erp.apk 直連 /erp 企業 17 大模組）
+- **狀態**：`[x]` 已完成 (依老闆指示「ERP 系統是 https://shenglong-next-phi.vercel.app/erp，但是盛隆營運 ERP (shenglong-erp.apk) 連到監控中心，來做吧」執行全面定向與 APK 重構：
+  ① **Middleware 路由防護與回跳修復 (`middleware.ts`)**：將 `/erp` 納入受保護路徑並正確帶上 `returnUrl=/erp`，避免未登入時被預設導向 `/operations` 派工戰情中心。
+  ② **ERP 專屬 Activity 驗證 (`ErpMainActivity.java`)**：鎖定首頁為 `https://shenglong-next-phi.vercel.app/erp`，關閉外勤背景定位與接單服務，提供 BOSS 純淨企業管理視圖。
+  ③ **自動化封裝腳本校準 (`scripts/build-all-apks.cjs`)**：更新 `com.shenglong.erp` 封裝設定，首頁直連 `/erp`，主 Activity 指向 `ErpMainActivity`。
+  ④ **Android 原生 APK 編譯與簽章**：執行 Gradle AssembleDebug、zipalign 與 apksigner，生成全新 `shenglong-erp.apk` (v3.5, build 17, 6.1MB)。
+  ⑤ **桌面與軟體下載中心同步**：APK 產出至 `c:\shenglong-next\public\files\shenglong-erp.apk` 並同步鏡像複製到桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`，軟體下載中心清晰指引 `/erp` 門市下單與企業管理。
+  ⑥ **全系統回歸驗證與雲端部署**：`npx tsc --noEmit` 0 錯誤、全庫 201 項單元測試全數通過，已推送至 GitHub 與 Vercel Production)
+- **優先級**：`P0` (老闆最高決策指令)
+- **負責設備/端點**：`shenglong-next: middleware.ts, scripts/build-all-apks.cjs, ErpMainActivity.java, public/files/shenglong-erp.apk, C:\Users\懶\Desktop\sl\`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 更新 `middleware.ts` 確保 `/erp` 登入後正確回跳至 `/erp`。
+  - [x] 校準 `scripts/build-all-apks.cjs` 之 `com.shenglong.erp` 配置。
+  - [x] 執行 Gradle 編譯並完成簽名封裝 `shenglong-erp.apk`。
+  - [x] 複製 APK 至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+  - [x] Vercel 生產環境發布與 GitHub main 分支同步。
+  - [x] 全庫單元測試驗收零回歸。
+
 ### 0. 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 即時庫存資料斷流與 404/權限問題)
 - **狀態**：`[x]` 已完成 (依老闆指示「監控中心有庫存資料 但沒有傳到這裡 幫我修復 https://shenglong-next.vercel.app/gas-stock」與兩台主機協同作業全面修復：
   ① **雙軌雲端推播補齊 (`sync-stock.cjs`)**：將 `shenglong-next.vercel.app` 與 `shenglong-next-phi.vercel.app` 同步列入推播目標清單，確保店面主機最新庫存同時灌入兩大網域。

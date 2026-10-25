@@ -5,6 +5,29 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/25 - 👑 盛隆新 ERP (BOSS 專屬 APK) 編譯封裝與路徑定向重構 [ver: 20261025_0845_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆指示與定位**：
+   - 老闆澄清：「ERP 系統是 https://shenglong-next-phi.vercel.app/erp 是這一個，但是盛隆營運 ERP (shenglong-erp.apk) 是幫我連到監控中心，來做吧」。
+   - 確認盛隆新 ERP 為直通 17 大模組之門市營業與總裁核心中樞（客戶、訂單、氣摺、爐具、抄表、鋼瓶、庫存、應收、月結、考勤、報表等），絕不能導向 `/operations` 派工戰情中心。
+2. **深度根因定位**：
+   - ① **舊版 APK 封裝 URL 缺陷**：早期 `shenglong-erp.apk` 封裝時首頁設為 `/login`，而登入頁 `app/login/page.tsx` 預設回跳 fallback 寫死 `returnUrl = "/operations"`，導致登入後被導向派工戰情中心。
+   - ② **路由中介軟體缺漏**：`middleware.ts` 內未將 `/erp` 列入 `isProtectedPath`，無法在未登入時自動附加 `returnUrl=/erp` 查詢參數。
+3. **全鏈路解決方案**：
+   - **直連 /erp 專屬 Activity (`ErpMainActivity.java`)**：鎖定首頁為 `https://shenglong-next-phi.vercel.app/erp`，重載 `getMainDriverUrl()`，並在啟動時關閉 `DriverOrderService` 外勤定位與接單服務，給予 BOSS 純淨的企業營運操作介面。
+   - **路由保護與回跳修復 (`middleware.ts`)**：加入 `pathname.startsWith("/erp")`，保障登入後精準回跳 `/erp`。
+   - **原生 Android 簽章打包**：透過 `build-all-apks.cjs` 進行 Gradle AssembleDebug、zipalign 與 apksigner（V1 + V2 + V3 完整安全簽章），產出全新 `com.shenglong.erp` (v3.5, build 17, 6.1MB)。
+   - **桌面 `sl` 與下載中心即時鏡像**：遵循桌面專屬規範，產出至 `c:\shenglong-next\public\files\shenglong-erp.apk` 並鏡像同步至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+4. **驗證與交付**：
+   - `aapt dump badging` 驗證包名 `com.shenglong.erp`、啟動 Activity `com.shenglong.driver.ErpMainActivity`、標籤 `盛隆營運ERP`。
+   - `shenglong-next` `npx tsc --noEmit` 0 錯誤、0 警告。
+   - `gass` 201 項測試 100% 通過（201 pass, 0 fail）。
+   - GitHub 雙軌自動同步，已推送至 main 分支並發布。
+
+---
+
+
 ## 📅 2026/10/25 - ⚡ 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 數據同步與公開權限) [ver: 20261025_0830_auto_release]
 
 ### 一、 需求背景與決策

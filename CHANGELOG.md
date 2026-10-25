@@ -5,6 +5,16 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - 👑 盛隆新 ERP (BOSS 專屬 APK) 編譯封裝與路徑定向重構 [ver: 20261025_0845_auto_release]
+* **變更類型**：新 ERP 首頁鎖定 (erp-direct-route) / 路由中間件定向修復 (middleware-erp-protection) / Android 原生簽名編譯 (android-apk-signed-build) / 桌面與下載中心同步 (desktop-sl-sync)
+* **核心成果**：
+  * **直連企業 17 大模組首頁 (`ErpMainActivity.java` & `build-all-apks.cjs`)**：修復過去 `shenglong-erp.apk` 登入後被導向 `/operations` 派工戰情中心之問題，重新將 `ErpMainActivity` 鎖定為 `https://shenglong-next-phi.vercel.app/erp`，並關閉外勤背景接單常駐服務，專供 BOSS 直掌客戶、訂單、氣摺、爐具、抄表、鋼瓶、庫存、應收、月結、考勤、報表等企業模組。
+  * **路由防護與回跳參數修復 (`middleware.ts`)**：將 `/erp` 納入受保護路徑並預設附帶 `returnUrl=/erp`，徹底杜絕登入後被預設 fallback 轉跳到 `/operations`。
+  * **Android 原生簽名封裝**：執行 Gradle AssembleDebug、zipalign 與 apksigner（V1 + V2 + V3 完整簽名），產出全新 `com.shenglong.erp` (v3.5, build 17, 6.1MB)。
+  * **桌面 `sl` 與下載中心即時鏡像**：遵循桌面專屬規範，產出至 `c:\shenglong-next\public\files\shenglong-erp.apk` 並鏡像同步至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+  * **全系統回歸驗證**：TypeScript 型別 0 錯誤、全庫 201 項單元測試全數通過，代碼已同步至 GitHub main 分支與 Vercel Production。
+
+
 ## 📅 2026/10/25 - ⚡ 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 數據同步與公開權限) [ver: 20261025_0830_auto_release]
 * **變更類型**：雙軌推播端點補齊 (dual-track-vercel-sync) / 庫存看板免登入公開化 (public-stock-auth-unblock) / 萬用重定向容錯 (stock-url-redirects) / 雙軌心跳 (dual-heartbeat)
 * **核心成果**：
