@@ -5,6 +5,15 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - 👑 盛隆營運 ERP「下單、作廢、修改」三大核心訂單功能修復與雙向佇列貫通 [ver: 20261025_1940_auto_release]
+* **變更類型**：ERP 快速下單打通 (erp-order-creation) / 訂單作廢修復 (erp-order-void-cancel) / 訂單規格與金額修改 (erp-order-edit-pricing) / 舊系統鏡像鎖解除 (remove-mirror-mode-lock) / 雲端與門市 SQL Server 雙向佇列 (dispatch-queue-bidirectional)
+* **核心成果**：
+  * **解除鏡像唯讀鎖定**：徹底刪除代碼庫中遺留之 `.hourly-mirror-mode` 標記檔，解除 `user.mirrorMode` 對訂單修改與作廢的強制攔截（原顯示「目前為舊系統即時鏡像模式」與 403 報錯）。
+  * **ERP 快速下單全面打通 (`order-drafts/route.ts`)**：雲端 Vercel 環境建置直接下單與排程佇列機制（`dispatch_queue_v1`），自動注入 `today_orders` 快取，開單完成秒級直出，指派獨立單號 `SL-{orderId}`；直連 SQL Server 失敗時自動優雅降級為安全佇列寫入，由 `sync-stock.cjs` 守護進程自動執行 `INSERT INTO dbo.gas_oders` 寫入門市舊系統。
+  * **訂單作廢功能修復 (`orders/route.ts` & `sync-stock.cjs`)**：修復 Vercel 環境回傳缺少 `{ order: ... }` 包裹層導致前端誤判「配送異動失敗」之問題；作廢操作即時自雲端今日訂單移除，並由 `enqueueOrderAction("cancel")` 排入佇列，`sync-stock.cjs` 自動執行 `UPDATE dbo.gas_oders SET disable = 'Y', disable_date = ...`，舊系統與雲端雙向秒級同步；作廢成功後自動關閉詳情彈窗並自動觸發訂單列表無縫刷新 (`onOrderChanged()`)。
+  * **訂單修改功能修復 (`orders/[id]/route.ts` & `sync-stock.cjs`)**：修復雲端讀取訂單詳情（`GET /api/orders/[id]`）因直接連線本機 LocalDB 失敗報錯 503 的問題，建立從 `today_orders` 快取的智慧解析回退；修復訂單修改（`PATCH /api/orders/[id]`），支援動態規格數量、金額、備註、配送員異動，雲端自動排入 `enqueueOrderAction("edit")`，`sync-stock.cjs` 自動執行 `UPDATE dbo.gas_oders` 寫入門市舊系統。
+  * **全系統回歸驗證**：TypeScript 0 錯誤、全庫 201 項測試 100% 通過，Vercel Production 生產環境完成部署。
+
 ## 📅 2026/10/25 - 🗺️ 車隊地圖返回導航功能建置（頂部返回鍵、直通 ERP/戰情室按鈕與手機浮動快速返回膠囊） [ver: 20261025_1815_auto_release]
 * **變更類型**：車隊地圖返回導航 (customer-map-back-navigation) / 頂部雙向直通 (topbar-erp-operations-link) / 手機浮動快速返回膠囊 (mobile-floating-back-pill) / 戰情室大地圖返回 (operations-map-return-button)
 * **核心成果**：

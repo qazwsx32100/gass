@@ -4,7 +4,36 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-25 18:15
+> **最後更新時間**：2026-10-25 19:40
+
+---
+
+### 0. 盛隆營運 ERP「下單、作廢、修改」三大核心訂單功能修復與雙向佇列貫通
+- **狀態**：`[x]` 已完成 (依老闆最高指示「erp 系統 無法下單、作廢、修改」進行端到端全通路修復：
+  ① **解除歷史舊系統鏡像唯讀鎖定 (`.hourly-mirror-mode`)**：
+     - 徹底刪除代碼庫中遺留之 `.hourly-mirror-mode` 標記檔，解除 `user.mirrorMode` 對「修改訂單」與「作廢訂單」的強制封鎖（原顯示「目前為舊系統即時鏡像模式」與 403 報錯）。
+  ② **ERP 快速下單全面打通 (`app/api/order-drafts/route.ts` & `app/page.tsx`)**：
+     - 雲端 Vercel 環境建置直接下單與排程佇列機制（`dispatch_queue_v1`），自動注入 `today_orders` 快取，開單完成秒級直出，並指派獨立單號 `SL-{orderId}`。
+     - 本機與地端雙軌直連：當直連 SQL Server 失敗時自動優雅降級為安全佇列寫入，由 `sync-stock.cjs` 守護進程自動執行 `INSERT INTO dbo.gas_oders` 寫入店面門市系統。
+  ③ **訂單作廢功能修復 (`app/api/orders/route.ts` & `sync-stock.cjs`)**：
+     - 修復 Vercel 環境返回 JSON 格式缺少 `{ order: ... }` 包裹層導致前端誤判「配送異動失敗」之致命 Bug。
+     - 作廢操作即時自雲端今日訂單移除，並由 `enqueueOrderAction("cancel")` 排入佇列，`sync-stock.cjs` 自動執行 `UPDATE dbo.gas_oders SET disable = 'Y', disable_date = ...`，舊系統與雲端雙向秒級同步。
+     - 作廢成功後自動關閉詳情彈窗並自動觸發訂單列表無縫刷新 (`onOrderChanged()`)。
+  ④ **訂單修改功能修復 (`app/api/orders/[id]/route.ts` & `sync-stock.cjs`)**：
+     - 修復雲端讀取訂單詳情（`GET /api/orders/[id]`）因直接連線本機 LocalDB 失敗報錯 503 的問題，建立從 `today_orders` 快取的智慧解析回退。
+     - 修復訂單修改（`PATCH /api/orders/[id]`），支援動態規格數量、金額、備註、配送員異動，雲端自動排入 `enqueueOrderAction("edit")`，`sync-stock.cjs` 自動執行 `UPDATE dbo.gas_oders` 寫入門市舊系統。
+  ⑤ **全系統相容性測試與驗證**：
+     - 201 項單元與整合測試全數通過（201 passed, 0 failed, 0 regressions），TypeScript 編譯 0 錯誤，Vercel 生產環境即時佈署生效。)
+- **優先級**：`P0` (老闆核心營運指令)
+- **負責設備/端點**：`shenglong-next: app/api/orders/[id]/route.ts, app/api/orders/route.ts, app/api/order-drafts/route.ts, lib/dispatch-queue.ts, sync-stock.cjs, app/page.tsx`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 移除 `.hourly-mirror-mode` 鏡像唯讀鎖，恢復所有合法帳號的改單與作廢權限。
+  - [x] 修復 `/api/order-drafts` 雲端環境 503 崩潰問題，支援雲端直出訂單與非同步佇列。
+  - [x] 修復 `/api/orders` PATCH 作廢回傳資料結構，並實作雙向作廢同步。
+  - [x] 修復 `/api/orders/[id]` GET/PATCH 訂單詳情與修改功能，打通與地端 SQL Server 雙向同步。
+  - [x] `sync-stock.cjs` 守護進程擴充支援 `create`、`edit`、`cancel` 雲端指令排程處理。
+  - [x] 201 項測試 100% 通過與 Vercel 雲端正式機部署。
 
 ---
 
