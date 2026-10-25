@@ -5,6 +5,29 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/25 - ⚡ 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 數據同步與公開權限) [ver: 20261025_0830_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆指示修復**：
+   - 老闆反映：「監控中心有庫存資料 但沒有傳到這裡 幫我修復 https://shenglong-next.vercel.app/gas-stock」以及訪問 `shenglong-next.vercel.app/gas.stock` 出現 404。
+   - 與另一台店面主機同軌協同作業修復。
+2. **深度根因定位**：
+   - ① **推播端點漏配**：`sync-stock.cjs` 的 `VERCEL_SYNC_URLS`、`VERCEL_STATUS_URLS`、`VERCEL_ORDERS_URLS`、`VERCEL_CALL_MONITOR_URLS` 原先僅設定 `shenglong-next-phi.vercel.app`，導致主機即時庫存只推送到 `-phi` 網域，`shenglong-next.vercel.app` 始終收不到推播，卡在昨日離線快取。
+   - ② **看板權限誤設保護**：`middleware.ts` 內將 `/gas-stock` 列入 `isProtectedPath`，外部訪客或 Cookie 過期時被強制重定向至 `/login` 登入頁。
+   - ③ **網址防呆缺失**：輸入小數點 `/gas.stock` 或 `/gas_stock` 時缺少 301 轉址，觸發 Next.js 404 Not Found。
+   - ④ **中介軟體跳轉干擾**：`middleware.ts` 原有網域轉址會攔截所有 `shenglong-next.vercel.app` 請求，造成 API POST 推播可能遺失。
+3. **全鏈路解決方案**：
+   - **雙軌推播全量啟用 (`sync-stock.cjs`)**：同步納入 `https://shenglong-next-phi.vercel.app` 與 `https://shenglong-next.vercel.app`，店面主機庫存與狀態雙向推送到各大雲端端點。
+   - **庫存看板免登入公開化 (`middleware.ts`)**：自 `isProtectedPath` 移除 `/gas-stock`，恢復為免登入公開即時看板；放行 `/api/*` 與看板路徑防止被 308 攔截。
+   - **萬用網址重定向容錯 (`next.config.ts`)**：配置 `/gas.stock` 與 `/gas_stock` 永久轉向 `/gas-stock`。
+   - **心跳雙軌發送 (`heartbeat-emitter.cjs`)**：心跳同步送達兩大雲端網域。
+4. **驗證與交付**：
+   - `shenglong-next` `npx tsc --noEmit` 0 錯誤、0 警告。
+   - `gass` 201 項測試 100% 通過（201 pass, 0 fail）。
+   - GitHub 雙軌自動同步，已推送至 main 分支並自動部署。
+
+---  
+
 ## 📅 2026/10/24 - 🔑 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化 [ver: 20261024_2015_auto_release]
 
 ### 一、 需求背景與決策

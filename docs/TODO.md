@@ -4,9 +4,27 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-24 20:15
+> **最後更新時間**：2026-10-25 08:26
 
 ---
+
+### 0. 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 即時庫存資料斷流與 404/權限問題)
+- **狀態**：`[x]` 已完成 (依老闆指示「監控中心有庫存資料 但沒有傳到這裡 幫我修復 https://shenglong-next.vercel.app/gas-stock」與兩台主機協同作業全面修復：
+  ① **雙軌雲端推播補齊 (`sync-stock.cjs`)**：將 `shenglong-next.vercel.app` 與 `shenglong-next-phi.vercel.app` 同步列入推播目標清單，確保店面主機最新庫存同時灌入兩大網域。
+  ② **庫存看板權限解除 (`middleware.ts`)**：將 `/gas-stock` 從 `isProtectedPath` 移除，恢復免登入外部公開看板；放行 `/api/*` 與看板路徑防止轉址攔截。
+  ③ **網址容錯與防呆重定向 (`next.config.ts`)**：加入 `/gas.stock` 與 `/gas_stock` 301 永久重定向至 `/gas-stock`。
+  ④ **心跳雙軌發送 (`heartbeat-emitter.cjs`)**：主機心跳雙向直達兩大端點。
+  ⑤ **全量構建與零回歸測試**：Next.js Production Build 驗證與 201 項單元測試全數通過後發布)
+- **優先級**：`P0` (老闆即時指令)
+- **負責設備/端點**：`shenglong-next: sync-stock.cjs, middleware.ts, next.config.ts, heartbeat-emitter.cjs`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 補齊 `sync-stock.cjs` 雙軌推播端點 (`shenglong-next.vercel.app` & `shenglong-next-phi.vercel.app`)。
+  - [x] 解除 `middleware.ts` 對 `/gas-stock` 之登入限制，並保護 API 請求不受 308 跳轉干擾。
+  - [x] 在 `next.config.ts` 加入 `/gas.stock` $\to$ `/gas-stock` 301 重定向。
+  - [x] 更新 `heartbeat-emitter.cjs` 雙軌推播。
+  - [x] 執行 TypeScript 型別檢查與單元測試全量驗收。
+  - [x] 雙軌推送 GitHub main 並更新紀錄。
 
 ### 1. 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化
 - **狀態**：`[x]` 已完成 (依老闆反映「手機點擊複製專屬免登入網址彈出尚未設定金鑰、卡片顯示尚未配置」全面修復：

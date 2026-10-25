@@ -5,6 +5,16 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - ⚡ 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 數據同步與公開權限) [ver: 20261025_0830_auto_release]
+* **變更類型**：雙軌推播端點補齊 (dual-track-vercel-sync) / 庫存看板免登入公開化 (public-stock-auth-unblock) / 萬用重定向容錯 (stock-url-redirects) / 雙軌心跳 (dual-heartbeat)
+* **核心成果**：
+  * **雙軌推播全量啟用 (`sync-stock.cjs`)**：同步將 `https://shenglong-next.vercel.app` 與 `https://shenglong-next-phi.vercel.app` 列入 `VERCEL_SYNC_URLS`、`VERCEL_STATUS_URLS`、`VERCEL_ORDERS_URLS`、`VERCEL_CALL_MONITOR_URLS`，店面主機最新鋼瓶進銷存數據同時推播至兩大網域，徹底解決未推播導致離線紅燈問題。
+  * **看板權限解除限制 (`middleware.ts`)**：自 `isProtectedPath` 移除 `/gas-stock`，恢復為免登入外部公開看板；放行 `/api/*` 與看板路徑防止被 308 攔截。
+  * **萬用網址重定向容錯 (`next.config.ts`)**：配置 `/gas.stock` 與 `/gas_stock` 301 永久轉向 `/gas-stock`，徹底防範小數點 404 Not Found。
+  * **心跳雙軌發送 (`heartbeat-emitter.cjs`)**：主機心跳同步發送至兩大雲端端點。
+  * **全量構建與零回歸驗證**：TypeScript 型別檢查 0 錯誤、全庫 201 項單元測試 100% 通過。
+
+
 ## 📅 2026/10/24 - 🔑 外勤人員專屬免登入安全金鑰自動配置、一鍵複製自癒機制與調度總台用語全面淨化 [ver: 20261024_2015_auto_release]
 * **變更類型**：外勤專屬金鑰恢復 (field-token-restoration) / 一鍵複製自癒防護 (token-self-healing) / 金鑰重設與狀態管理 API 解阻 (reset-token-api-unblocked) / 禁詞全量淨化 (taboo-words-purified)
 * **核心成果**：
