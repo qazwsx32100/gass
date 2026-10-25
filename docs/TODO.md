@@ -8,6 +8,33 @@
 
 ---
 
+### 0. 新 ERP 系統（17 大模組）深度自動化與批次報表部署至 ERP APK（月結批次請款、外勤提成自動試算、流量表換算計價、盤點月報與原生 Android 列印/PDF/CSV 分享）
+- **狀態**：`[x]` 已完成 (依老闆指示「新 ERP 系統（17 大模組）深度自動化與批次報表（持續演進，幫我部屬到 erp apk裡面）」全面實作落地：
+  ① **前端批次報表中樞 (`app/components/BatchReportsView.tsx`)**：建立 4 大企業旗艦批次模組：
+     - 📑 **月結帳單批次請款**：全戶前期未收、本期瓦斯、爐具彙總，一鍵整批產出 A4 請款單（支援原生另存 PDF 與列印）及對帳清冊 CSV。
+     - 🛵 **外勤提成與考勤試算**：全體外送人員 50kg/20kg/16kg/10kg/4kg 各規格鋼瓶出貨統計、總重量、代收款項與可自訂提成單價秒級試算，支援列印提成表與匯出 CSV。
+     - ⚡ **流量表抄表換算與批次計價**：大樓/營業用瓦斯表度數差額自動依膨脹係數換算瓦斯公斤重，自動計價並批次列印繳費通知單。
+     - 📊 **進銷存盤點與營運月報**：30 天營運總額、總送貨桶數、各規格實體庫存盤點表一鍵匯出與列印。
+     - 🖥️ **全螢幕列印預覽與另存 PDF 彈窗**：App 內全螢幕無障礙預覽，直通手機系統列印。
+  ② **ERP 17 大模組導航與快捷入口 (`app/page.tsx`)**：加入 `batch-reports` 專屬導航與標籤頁，頂部工具列提供快速直達按鈕。
+  ③ **Android 原生 PrintManager 列印與 CSV 分享中樞 (`MainActivity.java` & `ErpMainActivity.java`)**：
+     - 原生串接 `android.print.PrintManager` 與 `createPrintDocumentAdapter`，讓手機 APK 點擊列印直接喚起 Android 系統列印（支援「另存為 PDF」至本機或直接 Wi-Fi/藍牙印表機列印）。
+     - 原生實裝 `AndroidBridge.shareCsv`，匯出報表可直通 LINE、Google 雲端硬碟、郵件或本機檔案。
+     - 確保 WebView 視窗與多頁面導航支援。
+  ④ **Android 原生 APK 編譯、簽名與桌面同步**：全新封裝 `com.shenglong.erp` (v3.5, build 17, 6.17MB) 並複製至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+  ⑤ **全系統回歸驗證與雲端部署**：TypeScript 0 錯誤、全庫 201 項單元測試 100% 通過，已發布至 GitHub 與 Vercel Production)
+- **優先級**：`P0` (老闆最高決策指令)
+- **負責設備/端點**：`shenglong-next: app/components/BatchReportsView.tsx, app/page.tsx, MainActivity.java, ErpMainActivity.java, public/files/shenglong-erp.apk, C:\Users\懶\Desktop\sl\`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 建立 `app/components/BatchReportsView.tsx` 4 大模組與全螢幕預覽。
+  - [x] 在 `app/page.tsx` 整合 `batch-reports` 導航、權限與頂部快捷鍵。
+  - [x] 在 Android 原生端加入 `PrintManager` (支援另存 PDF) 與 `shareCsv` 分享橋接。
+  - [x] 執行 Android 原生 APK 編譯與安全簽名。
+  - [x] 複製至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+  - [x] 雙軌推送 GitHub 與 Vercel Production 正式環境。
+  - [x] 全量測試驗收通過。
+
 ### 0. 盛隆新 ERP（BOSS 專用 APK）編譯封裝與路徑定向修復（shenglong-erp.apk 直連 /erp 企業 17 大模組）
 - **狀態**：`[x]` 已完成 (依老闆指示「ERP 系統是 https://shenglong-next-phi.vercel.app/erp，但是盛隆營運 ERP (shenglong-erp.apk) 連到監控中心，來做吧」執行全面定向與 APK 重構：
   ① **Middleware 路由防護與回跳修復 (`middleware.ts`)**：將 `/erp` 納入受保護路徑並正確帶上 `returnUrl=/erp`，避免未登入時被預設導向 `/operations` 派工戰情中心。

@@ -5,6 +5,23 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/25 - 📑 新 ERP 系統（17 大模組）深度自動化與批次報表部署至 ERP APK [ver: 20261025_1120_auto_release]
+* **變更類型**：批次報表中樞 (batch-reports-hub) / 月結批次請款 (monthly-batch-billing) / 外勤提成自動試算 (driver-commission-calc) / 流量表換算計價 (meters-batch-pricing) / 原生系統列印 (android-print-manager) / CSV 檔案分享 (native-csv-share)
+* **核心成果**：
+  * **深度自動化與批次報表中樞 (`BatchReportsView.tsx`)**：
+    * **月結請款**：全戶前期未收、本期瓦斯、爐具彙總，一鍵「整批產出 A4 請款單 (另存 PDF/列印)」及對帳清冊 CSV。
+    * **外勤提成**：全體外送人員 50kg/20kg/16kg/10kg/4kg 各規格鋼瓶出貨統計、總重量、代收款項與可自訂提成單價秒級試算，支援列印提成表與匯出 CSV。
+    * **流量表換算**：大樓/營業用瓦斯表度數差額自動依膨脹係數換算瓦斯公斤重，自動計價並批次列印繳費通知單。
+    * **盤點月報**：30 天營運總額、總送貨桶數、各規格實體庫存盤點表一鍵匯出與列印。
+    * **全螢幕預覽彈窗**：App 內全螢幕無障礙預覽，直通手機系統列印。
+  * **ERP 17 大模組導航與快捷入口 (`app/page.tsx`)**：加入 `batch-reports` 專屬導航與標籤頁，頂部工具列提供快速直達按鈕。
+  * **Android 原生 PrintManager 列印與 CSV 分享中樞 (`MainActivity.java` & `ErpMainActivity.java`)**：
+    * 原生串接 `android.print.PrintManager` 與 `createPrintDocumentAdapter`，讓手機 APK 點擊列印直接喚起 Android 系統列印（支援「另存為 PDF」至本機或直接 Wi-Fi/藍牙印表機列印）。
+    * 原生實裝 `AndroidBridge.shareCsv`，匯出報表可直通 LINE、Google 雲端硬碟、郵件或本機檔案。
+  * **Android 原生 APK 編譯、簽名與桌面同步**：全新封裝 `com.shenglong.erp` (v3.5, build 17, 6.17MB) 並複製至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`。
+  * **全系統回歸驗證**：TypeScript 0 錯誤、全庫 201 項單元測試 100% 通過，代碼已發布至 GitHub 與 Vercel Production。
+
+
 ## 📅 2026/10/25 - 👑 盛隆新 ERP (BOSS 專屬 APK) 編譯封裝與路徑定向重構 [ver: 20261025_0845_auto_release]
 * **變更類型**：新 ERP 首頁鎖定 (erp-direct-route) / 路由中間件定向修復 (middleware-erp-protection) / Android 原生簽名編譯 (android-apk-signed-build) / 桌面與下載中心同步 (desktop-sl-sync)
 * **核心成果**：
