@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sendSystemNotification, requestNotificationPermission, getNotificationPermission } from '../utils/notificationService';
+import { sendSystemNotification, requestNotificationPermission, getNotificationPermission, playNotificationChime } from '../utils/notificationService';
 import SystemDiagnosticsModal from '../components/SystemDiagnosticsModal';
 
 export default function OrdersDispatchView({
@@ -84,6 +84,9 @@ export default function OrdersDispatchView({
     };
 
     onAddOrder?.(newOrder);
+
+    // 播放提示音 (Audio Chime)
+    playNotificationChime();
 
     // 觸發系統跳出通知 (Web Notification)
     sendSystemNotification({

@@ -4,7 +4,37 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-25 19:40
+> **最後更新時間**：2026-10-25 19:55
+
+---
+
+### 0. 盛隆 LINE 會員系統三大核心升級（後端跳出通知、LINE聊天室對話推播、會員中心常用地址管理）
+- **狀態**：`[x]` 已完成 (依老闆最新需求全面實作與驗證：
+  ① **後端畫面彈出通知**：
+     - 今日叫貨看板 (`shenglong-next: app/today-orders/page.tsx`) 與調度台 (`Gass: src/pages/OrdersDispatchView.jsx`) 整合 Web Notification 桌面推播、Audio Chime 提示音、以及畫面頂部即時彈出通知橫幅 (Toast Banner)，新單抵達秒級提醒調度員。
+  ② **LINE 對話框同步顯示**：
+     - 串接 LINE Messaging API (`pushLineCustomerMessage`)，客戶在 LINE 聊天室中即時收到訂單完整明細與狀態變更通知：下單成功即時推播、師傅在 Telegram 按下接單時同步推播「已確認接單出車」、客戶線上取消時推播取消通知。
+  ③ **會員中心增加「常用地址管理」**：
+     - LINE LIFF 會員中心實裝完整常用地址管理卡片清單、⭐ 預設地址徽章、一鍵設為預設、軟刪除防呆（至少保留一筆地址不可刪除）、折疊式新增地址表單（支援新北/台北行政區、道路選單、重劃區自訂道路、段巷弄號樓）。
+     - Google Sheets `地址` 表即時雙向連動，下單頁地址選單自動動態更新。
+  ④ **測試驗證全數通過**：
+     - LINE LIFF 基本與安全測試 25 / 25 100% 通過。
+     - Gass 核心測試 201 / 201 100% 通過。
+     - shenglong-next TypeScript 編譯 0 錯誤。)
+- **優先級**：`P0` (老闆核心用戶體驗與調度指令)
+- **負責設備/端點**：`shenglong-line-sync: web/api/index.js, web/public/app.js, web/public/index.html, web/public/styles.css; shenglong-next: app/today-orders/page.tsx; Gass: src/pages/OrdersDispatchView.jsx`
+- **完成日期**：2026/10/25
+- **完成項目**：
+  - [x] 後端與即時看板收到新訂單時觸發 Web Notification 桌面推播與 Audio Chime。
+  - [x] 後端看板頂部浮動橫幅彈出新訂單詳情。
+  - [x] LINE Messaging API 推播下單成功通知至客戶 LINE 聊天室。
+  - [x] Telegram 師傅接單雙向連動推播「已確認接單出車」至客戶 LINE 聊天室。
+  - [x] 線上取消訂單推播「訂單已取消」至客戶 LINE 聊天室。
+  - [x] 會員中心常用地址管理卡片清單與「⭐ 預設地址」標籤。
+  - [x] 會員中心一鍵設為預設地址端點與前端 UI。
+  - [x] 會員中心常用地址安全刪除（防呆：至少保留一筆地址）。
+  - [x] 會員中心新增常用地址（結構化下拉與重劃區自訂道路）。
+  - [x] 25 / 25 LIFF 測試通過，201 / 201 Gass 測試通過，TypeScript 0 錯誤。
 
 ---
 

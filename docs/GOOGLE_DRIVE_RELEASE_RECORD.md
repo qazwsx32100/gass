@@ -5,6 +5,28 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/25 - 📱 盛隆 LINE 會員系統三大核心升級（後端跳出通知、LINE聊天室對話推播、會員中心常用地址管理） [ver: 20261025_1955_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示**：
+   - 「後端 跳出畫面時 ，希望可以跳出通知」
+   - 「line 對話也要顯示」
+   - 「建議升級項目（可在會員中心增加「地址管理」） 加入」
+2. **全鏈路修復工程方案**：
+   - ① **後端畫面彈出通知**：
+     - 在今日叫貨看板 (`shenglong-next: app/today-orders/page.tsx`) 與調度台 (`Gass: src/pages/OrdersDispatchView.jsx`) 整合 Web Notification 桌面推播、Audio Chime 提示音、以及畫面頂部即時彈出通知橫幅 (Toast Banner)，新單抵達秒級提醒調度員。
+   ② **LINE 對話框同步顯示**：
+     - 串接 LINE Messaging API (`pushLineCustomerMessage`)，客戶在 LINE 聊天室中即時收到訂單完整明細與狀態變更通知：下單成功即時推播、師傅在 Telegram 按下接單時同步推播「已確認接單出車」、客戶線上取消時推播取消通知。
+   ③ **會員中心增加「常用地址管理」**：
+     - LINE LIFF 會員中心實裝完整常用地址管理卡片清單、⭐ 預設地址徽章、一鍵設為預設、軟刪除防呆（至少保留一筆地址不可刪除）、折疊式新增地址表單（支援新北/台北行政區、道路選單、重劃區自訂道路、段巷弄號樓）。
+     - Google Sheets `地址` 表即時雙向連動，下單頁地址選單自動動態更新。
+3. **驗證與交付**：
+   - LINE LIFF 基本與安全測試 25 / 25 100% 通過。
+   - Gass 核心測試 201 / 201 100% 通過。
+   - `shenglong-next` TypeScript 型別檢查 `npx tsc --noEmit` 0 錯誤。
+
+---
+
 ## 📅 2026/10/25 - 👑 盛隆營運 ERP「下單、作廢、修改」三大核心訂單功能修復與雙向佇列貫通 [ver: 20261025_1940_auto_release]
 
 ### 一、 需求背景與決策
