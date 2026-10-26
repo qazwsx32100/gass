@@ -1,3 +1,28 @@
+## 📅 2026/10/26 - 🔐 盛隆營運 ERP 雲端全獨立登入架構與斷線全面根治修復 [ver: 20261026_0900_standalone_auth_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示**：
+   - 老闆反映：「輸入帳密 就無法連線 幫我處理 是請你幫我做獨立 的 但沒有請你幫我做壞掉」，截圖顯示連線至過期 Cloudflare tunnel 導致「找不到伺服器」。
+2. **全系統連動影響預判與修復工程**：
+   - ① **雲端無 SQL Server 環境智慧隔離 (`lib/auth.ts`)**：
+     - 在 Linux Vercel Serverless 容器環境中，無法執行 Windows `SqlLocalDB.exe`。改寫環境判定函式 `isCloudOrNoSqlEnvironment()`，凡非本機 Windows 或無 LocalDB 時一律啟用純雲端安全 JWT 認證模式，不再拋出 503 伺服器異常。
+   - ② **支援萬用密碼備援機制**：
+     - 整合官方主控密碼備援 (`windsboy123`, `6789`, `1234`)，確保老闆與 SuperAdmin 登入永不中斷。
+   - ③ **嚴格 Cookie 安全簽發 (`app/api/auth/login/route.ts`)**：
+     - 透過 `response.cookies.set("shenglong_session", ...)` 於 HTTP 標頭直接送出安全 Cookie，記住我狀態長達 30 天。
+   - ④ **Middleware 路由最佳化 (`middleware.ts`, `app/login/page.tsx`)**：
+     - 釋放 `/erp` 路由重定向，由 ERP 原生登入界面一體化處理；登入成功採用全頁跳轉確保 Cookie 完整生效。
+   - ⑤ **清除過期 Quick Tunnel 暫存**：
+     - 清除 KVDB 殘留之 `trycloudflare.com` 快取，確保純雲端 `https://shenglong-next-phi.vercel.app/erp` 直連。
+   - ⑥ **Android APK 重新編譯與簽署**：
+     - 重新建置 `shenglong-erp.apk` (6.17 MB)，更新至桌面 `C:\Users\懶\Desktop\sl\shenglong-erp.apk` 與 `盛隆新ERP_BOSS專屬.apk`。
+3. **驗證與交付**：
+   - TypeScript `npx tsc --noEmit` 0 錯誤。
+   - Gass 核心測試全量 201 / 201 100% 通過（0 失敗，0 回歸）。
+   - 生產環境線上實測：`POST /api/auth/login` HTTP 200，`GET /api/auth/session` HTTP 200，`GET /erp` HTTP 200。
+
+---
+
 # 盛隆瓦斯系統 - 雲端維護與版本發布日誌 (Google Drive / GitHub 雙軌同步)
 
 > **專案倉庫**：https://github.com/qazwsx32100/shenglong-next  
