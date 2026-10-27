@@ -4,7 +4,36 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-27 13:25
+> **最後更新時間**：2026-10-27 18:20
+
+---
+
+### 0. 監控中心「嚴格日期錨定」與「Asia/Taipei 台灣時區全面強制鎖定」實裝上線
+- **狀態**：`[x]` 已完成 (依老闆最高指示：「監控中心增加嚴格日期錨定：當天無電話時直接顯示『今日尚無來電』，不再自動倒退抓 10/25。全面強制鎖定 Asia/Taipei 台灣時區：替換所有 toISOString().slice(0,10)，改為以台灣時間（UTC+8）為唯一基準，杜絕每天早上 8 點前看昨天資料的問題」全面落實)
+  - 🔍 **核心原因分析與修復策略**：
+    1. **杜絕歷史日期回退 (10/25)**：
+       - `lib/call-center.ts` 中移除原 SQL Server `SELECT @businessDate = MAX(call_date) FROM dbo.Waiting;`，強制鎖定今日：`DECLARE @businessDate char(10) = CONVERT(char(10), GETDATE(), 111);`。
+       - `getCloudCallCenterResult()` 與 `/api/call-monitor/route.ts` 增加嚴格日期檢核：若當日無來電或雲端快取尚為歷史日期，視為今日尚無來電，回傳空清單，杜絕倒退抓取 10/25 來電。
+       - `app/components/CallMonitorView.tsx` 前端日期預設強制為台灣今日 `getTaipeiDateString(new Date(), "-")`，禁止舊快照覆蓋。當日無來電時，畫面清晰呈現 📞 **「今日尚無來電」** 與 **「系統持續監聽通話線路中，進線將自動推播」**。
+    2. **全面強制鎖定 Asia/Taipei 台灣時區 (UTC+8)**：
+       - 創建全系統統一台灣時區工具 `c:\shenglong-next\lib\taiwan-time.ts`，並擴充 `c:\Gass\src\utils\taiwanDate.js`。
+       - 徹底替換兩大倉庫中所有 `toISOString().slice(0, 10)`、`toISOString().slice(0, 7)` 與 `toISOString().split('T')[0]`，全面改為以台灣時間（UTC+8）為唯一基準，杜絕每日上午 8 點前看昨天資料的問題。
+       - 受影響並全面升級檔案涵蓋：
+         - `shenglong-next`: `lib/call-center.ts`, `app/api/call-monitor/route.ts`, `app/components/CallMonitorView.tsx`, `app/api/calendar/route.ts`, `app/api/calls/history/route.ts`, `app/api/dashboard/route.ts`, `app/api/inventory/route.ts`, `app/api/legacy-errors/route.ts`, `app/api/orders/[id]/route.ts`, `app/api/orders/route.ts`, `app/api/telegram/daily-report/route.ts`, `app/customer-map/page.tsx`, `app/driver/page.tsx`, `app/gas-stock/page.tsx`, `app/operations/page.tsx`, `app/page.tsx`, `app/public-stock/page.tsx`, `lib/heartbeat-night.ts`, `lib/legacy-observations.ts`, `sync-stock.cjs`。
+         - `Gass`: `src/utils/taiwanDate.js`, `src/utils/orderCentral.js`, `src/pages/OrdersDispatchView.jsx`, `src/pages/SettingsView.jsx`, `src/utils/gasIntake.js`, `src/utils/financials.js`, `src/utils/stateIntegrity.js`, `src/components/GasCustomerMapPanel.jsx`, `tests/taiwan-date.test.mjs`。
+  - **交付成果**：
+    - [x] 完成 `lib/taiwan-time.ts` 工具模組，支援 `getTaipeiDateString`, `getTaipeiYearMonth`, `getTaipeiDateTimeString`, `getTaipeiMonthRange`, `isTaipeiToday`。
+    - [x] 修復 `lib/call-center.ts` 與 `/api/call-monitor/route.ts` 嚴格日期錨定。
+    - [x] 修復 `CallMonitorView.tsx` 空狀態呈現 📞「今日尚無來電」。
+    - [x] 替換全系統雙倉庫共 30+ 處 `toISOString().slice` 與 `split('T')[0]`。
+    - [x] `npx tsc --noEmit` 0 錯誤通過。
+    - [x] Gass 201 項全量測試 100% 通過（201 pass, 0 fail）。
+    - [x] Next.js 正式環境 Production Build 成功通過。
+    - [x] Vercel 生產環境成功發布上線 (`https://shenglong-next-phi.vercel.app`)。
+    - [x] 實機驗證線上 API：`businessDate: 2026/10/27`，無任何昨日或 10/25 洩漏。
+    - [x] Android 原生 APK 全套重新編譯與安全簽名：`盛隆新ERP_戰情調度中樞.apk`、`shenglong-erp.apk`、`盛隆新ERP_BOSS專屬.apk`，並安全同步至 `C:\Users\懶\Desktop\sl\`。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/27 18:20
 
 ---
 

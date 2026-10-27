@@ -1,3 +1,5 @@
+import { getTaiwanDateString } from './taiwanDate.js';
+
 /**
  * 盛隆瓦斯 - 訂單調度中心與事件同步服務 (Order Central)
  * 支援 BossApp 調度、DriverApp 司機工作台與跨視窗即時 BroadcastChannel / Storage 廣播。
@@ -170,7 +172,7 @@ export const saveCentralOrders = (orders) => {
  */
 export const addCentralOrder = (orderData) => {
   const orders = getCentralOrders();
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const dateStr = getTaiwanDateString().replace(/-/g, '');
   const orderId = `SL-${dateStr}-${String(orders.length + 1).padStart(2, '0')}`;
 
   const newOrder = {

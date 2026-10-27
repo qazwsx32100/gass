@@ -1,3 +1,5 @@
+import { getTaiwanDateString } from './taiwanDate.js';
+
 const GAS_CYLINDER_STATUSES = new Set([
   'empty',
   'full',
@@ -282,7 +284,7 @@ const addAssetDepreciationEntries = (entries, asset, today) => {
   }
 };
 
-export const buildJournalSnapshot = (state = {}, today = new Date().toISOString().slice(0, 10)) => {
+export const buildJournalSnapshot = (state = {}, today = getTaiwanDateString()) => {
   const entries = [];
 
   for (const item of asArray(state.incomes).filter(row => row.status === 'approved')) {

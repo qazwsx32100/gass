@@ -1,3 +1,10 @@
+## [2026-10-27] - 監控中心嚴格日期錨定 ✕ Asia/Taipei 台灣時區全面強制鎖定
+- **監控中心嚴格日期錨定**：移除 `SELECT @businessDate = MAX(call_date) FROM dbo.Waiting;`，強制鎖定今日：`DECLARE @businessDate char(10) = CONVERT(char(10), GETDATE(), 111);`。當天無電話時直接顯示 📞「今日尚無來電」，不再自動倒退抓 10/25。
+- **全面強制鎖定 Asia/Taipei 台灣時區**：創建統一 `lib/taiwan-time.ts` 工具並升級 `src/utils/taiwanDate.js`，雙倉庫替換所有 `toISOString().slice(0,10)`、`toISOString().slice(0,7)` 與 `toISOString().split('T')[0]`，改為以台灣時間（UTC+8）為唯一基準，徹底杜絕每天早上 8 點前看昨天資料的問題。
+- **全系統連動防護**：涉及兩大倉庫 25+ 處日期切片，全量單元與整合測試 201/201 全數通過，Next.js Production Build 通過。
+- **Vercel 生產環境上線**：成功部署至 `https://shenglong-next-phi.vercel.app`。
+- **APK 與雙軌同步**：重新編譯 Android 原生 APK 並同步覆蓋至 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`、`盛隆新ERP_戰情調度中樞.apk` 與 `盛隆新ERP_BOSS專屬.apk`。
+
 ## [2026-10-27] - 監控中心「歷史訂單紀錄」與「每筆訂單異動時間軸」雙軌上線 ✕ 資料汙染徹底淨化
 - **歷史訂單紀錄專屬分頁**：監控中心 (`/operations`) 派工分頁新增子切換「今日即時派工」與「歷史訂單紀錄」，支援任意日期查詢、自帶 4 大戰情 KPI 看板（單數、瓶數、金額、應收未付）、司機運力統計排行與多維自適應篩選。
 - **每筆訂單異動時間軸**：所有訂單卡片配備「📜 歷程」按鈕，垂直時間軸完整追蹤建單、派工、送達、收款、改價、改量、作廢等變更前後 Diff 對比。

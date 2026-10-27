@@ -1,3 +1,32 @@
+## 📅 2026/10/27 - 🌐 監控中心嚴格日期錨定 ✕ Asia/Taipei 台灣時區全面強制鎖定 [ver: 20261027_1820_taipei_timezone_strict_anchor_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆決策落實**：
+   - 決策項目：
+     - **監控中心嚴格日期錨定**：當天無電話時直接顯示「今日尚無來電」，不再自動倒退抓 10/25。
+     - **全面強制鎖定 Asia/Taipei 台灣時區**：替換所有 `toISOString().slice(0,10)`，改為以台灣時間（UTC+8）為唯一基準，杜絕每天早上 8 點前看昨天資料的問題。
+2. **核心問題診斷與修復**：
+   - **歷史日期回退 (10/25) 根因**：
+     - `lib/call-center.ts` 中 SQL Server 查詢曾包含 `SELECT @businessDate = MAX(call_date) FROM dbo.Waiting;`，當今天尚未有來電時，SQL 語句自動倒退抓取最後有紀錄的歷史日期 (10/25)，進而導致整個監控中心與派工連鎖載入 10/25 舊資料。
+     - 改寫為宣告嚴格今日錨定：`DECLARE @businessDate char(10) = CONVERT(char(10), GETDATE(), 111);`。
+     - 雲端備援 API (`/api/call-monitor/route.ts`) 與 `getCloudCallCenterResult()` 增設日期錨定檢核，若載入資料為歷史日期，立即回傳空清單，視為今日尚無來電。
+     - `CallMonitorView.tsx` 前端清單為空時，展示 📞 **「今日尚無來電」** 與 **「系統持續監聽通話線路中，進線將自動推播」**。
+   - **UTC 跨日洩漏全面根除**：
+     - Vercel 雲端採用 UTC 零時區，每日上午 08:00 前 `new Date().toISOString().slice(0, 10)` 會取得前一日日期。
+     - 建立權威時間工具模組 `lib/taiwan-time.ts` 與 `src/utils/taiwanDate.js`，雙倉庫全面改用 `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" })` 作為唯一時間基準。
+3. **影響範圍與全面升級**：
+   - `shenglong-next`: `lib/call-center.ts`, `app/api/call-monitor/route.ts`, `app/components/CallMonitorView.tsx`, `app/api/calendar/route.ts`, `app/api/calls/history/route.ts`, `app/api/dashboard/route.ts`, `app/api/inventory/route.ts`, `app/api/legacy-errors/route.ts`, `app/api/orders/[id]/route.ts`, `app/api/orders/route.ts`, `app/api/telegram/daily-report/route.ts`, `app/customer-map/page.tsx`, `app/driver/page.tsx`, `app/gas-stock/page.tsx`, `app/operations/page.tsx`, `app/page.tsx`, `app/public-stock/page.tsx`, `lib/heartbeat-night.ts`, `lib/legacy-observations.ts`, `sync-stock.cjs`。
+   - `Gass`: `src/utils/taiwanDate.js`, `src/utils/orderCentral.js`, `src/pages/OrdersDispatchView.jsx`, `src/pages/SettingsView.jsx`, `src/utils/gasIntake.js`, `src/utils/financials.js`, `src/utils/stateIntegrity.js`, `src/components/GasCustomerMapPanel.jsx`, `tests/taiwan-date.test.mjs`。
+4. **驗證與交付結果**：
+   - `npx tsc --noEmit` 0 錯誤通過。
+   - Gass 201 項全量測試 100% 通過（201 pass, 0 fail）。
+   - Next.js 正式環境 Production Build 成功通過。
+   - Vercel 生產環境成功發布上線 (`https://shenglong-next-phi.vercel.app`)。
+   - 實機驗證線上 API：`businessDate: 2026/10/27`，無任何昨日或 10/25 洩漏。
+   - Android 原生 APK 全套重新編譯與安全簽名：`盛隆新ERP_戰情調度中樞.apk`、`shenglong-erp.apk`、`盛隆新ERP_BOSS專屬.apk`，並安全同步至 `C:\Users\懶\Desktop\sl\`。
+
+---
+
 ## 📅 2026/10/27 - 📜 監控中心「歷史訂單紀錄」與「每筆訂單異動時間軸」雙軌上線 ✕ 資料汙染徹底淨化 (阿韋 ➔ 稍後輸入 & 跨日時區校正) [ver: 20261027_1330_order_history_and_timeline_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

@@ -1,3 +1,5 @@
+import { getTaiwanYearMonthString } from './taiwanDate.js';
+
 const GAS_SPECS = [50, 20, 16, 10, 4];
 
 const toNumber = (value) => {
@@ -105,7 +107,7 @@ export const getMonthlyGasIntakeView = (purchases = [], selectedYearMonth = '') 
   const months = summarizeMonthlyGasIntake(purchases);
   const selectedMonth = isYearMonth(selectedYearMonth)
     ? selectedYearMonth
-    : months[0]?.yearMonth || new Date().toISOString().slice(0, 7);
+    : months[0]?.yearMonth || getTaiwanYearMonthString();
   const current = months.find(month => month.yearMonth === selectedMonth) || emptyMonth(selectedMonth);
   const previousMonth = previousYearMonth(selectedMonth);
   const previous = months.find(month => month.yearMonth === previousMonth) || emptyMonth(previousMonth);

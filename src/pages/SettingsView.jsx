@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { getTaiwanDateString, getTaiwanYearMonthString } from '../utils/taiwanDate.js';
 import {
   getCompanies, saveCompanies,
   cleanupInactiveCompanies,
@@ -213,7 +214,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   });
   const [periodLockForm, setPeriodLockForm] = useState({
     companyId: companies[0]?.id || '',
-    yearMonth: new Date().toISOString().slice(0, 7),
+    yearMonth: getTaiwanYearMonthString(),
     remarks: '',
     expectedRevenue: '',
     expectedExpenses: '',
@@ -222,7 +223,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
   const closeReadiness = useMemo(() => {
     void triggerRefresh;
     const companyId = periodLockForm.companyId || companies[0]?.id || '';
-    const yearMonth = periodLockForm.yearMonth || new Date().toISOString().slice(0, 7);
+    const yearMonth = periodLockForm.yearMonth || getTaiwanYearMonthString();
     if (!companyId || !yearMonth) {
       return { score: 0, pendingRows: [], unbalancedEntries: [], approvedWithoutAttachment: [], taxableWithoutInvoice: [] };
     }
@@ -885,7 +886,7 @@ export default function SettingsView({ triggerRefresh, onDataChange, showToast, 
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `BusinessPilot_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `BusinessPilot_Backup_${getTaiwanDateString()}.json`;
     link.click();
     showToast('備份檔已匯出。', 'success');
   };

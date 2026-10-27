@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getTaiwanDateString } from '../utils/taiwanDate.js';
 import { sendSystemNotification, requestNotificationPermission, getNotificationPermission, playNotificationChime } from '../utils/notificationService';
 import SystemDiagnosticsModal from '../components/SystemDiagnosticsModal';
 
@@ -159,7 +160,7 @@ export default function OrdersDispatchView({
     try {
       const itemsText = (order.items || []).map(i => `${i.name} × ${i.quantity}`).join(', ');
       const success = await onConvertToIncome?.({
-        date: new Date().toISOString().slice(0, 10),
+        date: getTaiwanDateString(),
         amount: Number(order.total) || 0,
         accountCode: '4101', // 瓦斯銷貨收入
         accountName: '瓦斯銷貨收入',

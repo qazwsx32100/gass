@@ -9,7 +9,7 @@ import { selectMonthlyOperatingRevenueEntries } from './operatingRevenue';
 import { isManualGasCostExpenseEntry, isShareholderDistributionEntry, isSystemEstimatedExpenseEntry } from './expensePolicy';
 import { calculateDividendReserve } from './dividendReserve';
 import { isEffectiveForReport } from './reportEligibility';
-import { getTaiwanDateString } from './taiwanDate';
+import { getTaiwanDateString, getTaiwanYearMonthString } from './taiwanDate.js';
 
 const CASH_LEDGER_START_DATE = '2026-07-01';
 
@@ -285,7 +285,7 @@ export const getSupplierPayableSummary = (companyId, asOfDate = getTaiwanDateStr
   }).sort((a, b) => b.payableTotal - a.payableTotal);
 };
 
-export const getCustomerStatement = (companyId, customerId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getCustomerStatement = (companyId, customerId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const customer = getCustomers().find(item => item.companyId === companyId && item.id === customerId);
   if (!customer) return { customer: null, rows: [], total: 0, unpaidTotal: 0 };
   const rows = getIncomes()
@@ -301,7 +301,7 @@ export const getCustomerStatement = (companyId, customerId, periodType = 'month'
   };
 };
 
-export const getSupplierStatement = (companyId, supplierId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getSupplierStatement = (companyId, supplierId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const supplier = getSuppliers().find(item => item.companyId === companyId && item.id === supplierId);
   if (!supplier) return { supplier: null, rows: [], total: 0, unpaidTotal: 0 };
   const rows = getExpenses()
@@ -392,7 +392,7 @@ export const buildBankReconciliation = ({ companyId, bankId, statementDate, stat
   };
 };
 
-export const calculateAssetDepreciation = (asset, asOfDate = new Date().toISOString().split('T')[0]) => {
+export const calculateAssetDepreciation = (asset, asOfDate = getTaiwanDateString()) => {
   const cost = Number(asset.acquisitionCost || 0);
   const residual = Number(asset.residualValue || 0);
   const usefulLifeMonths = Number(asset.usefulLifeMonths || 0);
@@ -413,7 +413,7 @@ export const calculateAssetDepreciation = (asset, asOfDate = new Date().toISOStr
   };
 };
 
-export const getFixedAssetSummary = (companyId, asOfDate = new Date().toISOString().split('T')[0]) => {
+export const getFixedAssetSummary = (companyId, asOfDate = getTaiwanDateString()) => {
   const assets = getFixedAssets()
     .filter(asset => asset.companyId === companyId)
     .map(asset => ({ ...asset, depreciation: calculateAssetDepreciation(asset, asOfDate) }));
@@ -452,7 +452,7 @@ const pushEntry = (entries, header) => {
   });
 };
 
-export const getJournalEntries = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getJournalEntries = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const storedEntries = getStoredJournalEntries()
     .filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
   if (storedEntries.length > 0) {
@@ -591,7 +591,7 @@ const getPeriodBounds = (periodType, periodVal) => {
   return { startDate: '', endDate: '2099-12-31' };
 };
 
-export const getTrialBalance = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getTrialBalance = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const accounts = new Map();
   getJournalEntries(companyId, periodType, periodVal).forEach((entry) => {
     entry.lines.forEach((line) => {
@@ -627,7 +627,7 @@ export const getTrialBalance = (companyId, periodType = 'month', periodVal = new
   };
 };
 
-export const getGeneralLedger = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getGeneralLedger = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const selectedEntries = getJournalEntries(companyId, periodType, periodVal);
   const storedHeaders = getStoredJournalEntries().filter(item => item.companyId === companyId);
   const storedLines = getStoredJournalLines();
@@ -693,7 +693,7 @@ const cashFlowSectionForEntry = (entry) => {
   return 'operating';
 };
 
-export const getCashFlowStatement = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getCashFlowStatement = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const sections = {
     operating: { label: '營業活動', rows: [], total: 0 },
     investing: { label: '投資活動', rows: [], total: 0 },
@@ -745,7 +745,7 @@ const netSalesAmount = (item) => {
   return item.taxIncluded === false ? amount : amount - taxFromAmount(item);
 };
 
-export const getVatReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getVatReport = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const taxableIncomes = getIncomes().filter(item =>
     item.companyId === companyId &&
     isEffectiveForReport(item) &&
@@ -787,7 +787,7 @@ export const getVatReport = (companyId, periodType = 'month', periodVal = new Da
   };
 };
 
-export const getPayrollReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getPayrollReport = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const salaryRows = getExpenses().filter(item =>
     item.companyId === companyId &&
     isEffectiveForReport(item) &&
@@ -815,7 +815,7 @@ export const getPayrollReport = (companyId, periodType = 'month', periodVal = ne
   };
 };
 
-export const getAuditReadinessReport = (companyId, periodType = 'month', periodVal = new Date().toISOString().slice(0, 7)) => {
+export const getAuditReadinessReport = (companyId, periodType = 'month', periodVal = getTaiwanYearMonthString()) => {
   const entries = getJournalEntries(companyId, periodType, periodVal);
   const incomes = getIncomes().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
   const expenses = getExpenses().filter(item => item.companyId === companyId && isDateInPeriod(item.date, periodType, periodVal));
