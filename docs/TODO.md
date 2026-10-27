@@ -4,7 +4,45 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-25 21:45
+> **最後更新時間**：2026-10-27 13:25
+
+---
+
+### 0. 監控中心「歷史訂單紀錄」與「每筆訂單異動時間軸」雙軌上線 ✕ 資料汙染徹底淨化 (阿韋 ➔ 稍後輸入 & 跨日時區校正)
+- **狀態**：`[x]` 已完成 (依老闆最新最高指示：「監控中心 我想要可以看到 1.歷史訂單紀錄 2.每筆訂單的歷史紀錄 討論一下；放在哪裡：只放監控中心；記哪些變化：全部；保存多久：永久；先做哪一個：一起做；阿韋 4 單 是誰? 資料是否有汙染，有些會找到10/25的資料」全面實施並徹底解決)
+  - 🔍 **核心原因分析與汙染診斷**：
+    1. **「阿韋 4 單」汙染源徹底查明**：
+       - `sync-stock.cjs` 與 `app/api/driver/earnings/route.ts` 中之司機模糊別名配對存在漏洞：`if (driverName.includes('輸')) return '阿韋'`。
+       - 舊系統未派工訂單之欄位字串為「**稍後輸入**」，因帶有「**輸**」字，在後端自動同步時被誤判並汙染成司機「阿韋」，導致 115/10/26 原本未派工的 4 筆訂單（361359、361362、361369、361386）在統計時被誤算給「阿韋」。
+       - 經核對底層真實資料：當日外送由小龍負責 28 單，門市自取 1 單，稍後輸入 4 單，合計 33 單、46 瓶、營業額 $30,640 元，現場當日完全無「阿韋」出勤。
+    2. **跨日 10/25 資料洩漏診斷**：
+       - Vercel 雲端環境採用 UTC 零時區，每日上午 08:00 前若呼叫 `new Date().toISOString().slice(0, 10)`，取得之日期會落在昨日 (10/25)。
+       - 全面引入 `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei" })` 強制鎖定台灣時間。
+  - 🛠️ **全新功能研發與核心改動**：
+    1. **歷史訂單紀錄專屬分頁 (`app/components/OperationsOrderHistoryView.tsx` & `/api/operations/order-history`)**：
+       - 監控中心 (`/operations`)「派工」分頁內建子切換：`[ 🛵 今日即時派工 ]` ｜ `[ 📜 歷史訂單紀錄 ]`，兼顧即時作戰與歷史調閱，不汙染 ERP 其他模組。
+       - 支援任何日期查詢（內建快捷按鈕：今日、昨日、前天、本月首日，自選日曆支援西元與民國年解析）。
+       - 4 大戰情 KPI 卡片：總訂單數、總瓶數、總營收金額、應收未付金額。
+       - 司機運力統計排行：即時統計各司機當日出貨單數、總支數、總金額與出貨佔比。
+       - 多維度自適應篩選：司機下拉篩選、款項狀態篩選（全部/已付款/未付款/欠款/月結）、客戶姓名/電話/地址/單號即時搜尋。
+    2. **每筆訂單完整異動時間軸 (`app/components/OrderTimelineModal.tsx` & `/api/operations/order-timeline`)**：
+       - 即時派工與歷史訂單卡片均配備「📜 歷程」按鈕，隨點即開時間軸 Modal。
+       - 永久追蹤與記錄：建單成立 (CREATED)、外送指派 (DISPATCH)、更換司機 (DRIVER_CHANGED)、規格瓶數更動 (ITEMS_CHANGED)、價格修改 (PRICE_CHANGED)、配送送達 (DELIVERED)、款項收訖/欠款/月結 (PAYMENT_CHANGED)、作廢/復原 (VOIDED / RESTORED)、地址與備註修改 (NOTE_CHANGED)。
+       - 門市本機守護進程 `sync-stock.cjs` 內建即時 Diff 引擎，異動即刻寫入本機 `data/order_audit_history.jsonl` 永久保存 (Append-Only)，並同步推播至雲端 KV 快取。
+    3. **司機名稱正規化與汙染阻斷**：
+       - `sync-stock.cjs`、`app/api/driver/earnings/route.ts` 與 `app/api/operations/order-history/route.ts` 徹底移除「輸」字比對，若出現歷史快取「阿韋」或「韋」自動校正為「稍後輸入」。
+  - **交付成果**：
+    - [x] 完成 `app/api/operations/order-history` 與 `app/api/operations/order-timeline` API。
+    - [x] 完成 `OperationsOrderHistoryView.tsx` 與 `OrderTimelineModal.tsx` 組件。
+    - [x] 整合至 `c:\shenglong-next\app\operations\page.tsx`。
+    - [x] 修復 `sync-stock.cjs` 誤判「輸」字規則，建立本地永久異動日誌 `data/order_audit_history.jsonl`。
+    - [x] 成功部署至 Vercel Production (`https://shenglong-next-phi.vercel.app/operations`)。
+    - [x] 線上真實驗證：115/10/26 歷史訂單 33 單完全無「阿韋」，小龍 28 單、自取 1 單、稍後輸入 4 單，時間軸事件正確合成與呈現。
+    - [x] 全套 201 項自動化測試全數通過（201 passed, 0 fail）。
+    - [x] 重新封裝 Android APK 並同步至 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`、`盛隆新ERP_戰情調度中樞.apk` 與 `盛隆新ERP_BOSS專屬.apk`。
+- **優先級**：`P0` (老闆最高決策指令)
+- **負責端點**：`shenglong-next: app/operations/page.tsx, app/components/OperationsOrderHistoryView.tsx, app/components/OrderTimelineModal.tsx, app/api/operations/*, sync-stock.cjs`
+- **完成日期**：2026/10/27
 
 ---
 
