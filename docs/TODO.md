@@ -8,7 +8,29 @@
 
 ---
 
-### 0. 監控中心「嚴格日期錨定」與「Asia/Taipei 台灣時區全面強制鎖定」實裝上線
+### 0. 外勤人員專用 App 全功能一致性升級（小龍與游柏林功能對齊、原生常駐服務自適應金鑰修正、雙版本自動同步編譯）
+- **狀態**：`[x]` 已完成 (依老闆指示「小龍的app 功能也要跟 游柏林的功能一樣，只要前端司機app都要一致」全面落地：
+  ① **原生背景輪詢與定位常駐服務動態適配 (`DriverOrderService.java` & `MainActivity.java`)**：拔除原先硬編碼游柏林金鑰（`tk_ybl_4e81b62a0d9f`），升級為依據 Package Name (`com.shenglong.driver.xl` / `com.shenglong.driver.ybl`) 或已儲存 Token 動態解析，小龍專用 App 正式擁有獨立的背景接單輪詢、定位即時回報與 0ms 喚醒機制。
+  ② **前端登入預選與通知權限 Intent 修復 (`app/driver/page.tsx`)**：
+     - `selectedDriver` 支援從 URL、localStorage 或 AndroidBridge 套件名稱智慧預選，小龍開啟 App 不再預設被選為游柏林。
+     - 通知設定與應用程式權限備援跳轉依當前外勤人員身分動態對應 Package Name，杜絕小龍 App 跳轉至游柏林設定之問題。
+     - 初始化增加 AndroidBridge 原生金鑰自癒機制，即使進入純路徑 `/driver` 亦可自動獲取合法金鑰直接登入。
+  ③ **App 下載頁面文案對齊 (`app/download-driver/page.tsx`)**：小龍與游柏林專用版文案規格一致化（純白冷啟動去背鋼瓶、原生推播、一鍵配送導航）。
+  ④ **一鍵發布自動化雙軌編譯 (`scripts/release.cjs`)**：升級發布腳本支援預設自動連續編譯小龍與游柏林兩套 Release APK，同步輸出至桌面 `C:\Users\懶\Desktop\sl` 與 `public/files` 下載專區。
+  ⑤ **全量編譯與測試驗證**：雙版本 Signed Release APK 編譯成功，TypeScript 0 錯誤，全庫 201 項單元測試 100% 通過)
+- **優先級**：`P0` (依老闆「小龍的app 功能也要跟 游柏林的功能一樣，只要前端司機app都要一致」最高執行指令)
+- **負責設備/端點**：`shenglong-next: android/app/src/main/java/com/shenglong/driver/MainActivity.java, DriverOrderService.java, app/driver/page.tsx, app/download-driver/page.tsx, scripts/release.cjs, C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk, C:\Users\懶\Desktop\sl\盛隆外送_游柏林專用.apk`
+- **完成日期**：2026/10/27
+- **完成項目**：
+  - [x] Android 原生層 `MainActivity.java` 消除寫死游柏林金鑰，增加 `resolveDefaultDriverToken` 與橋接 API。
+  - [x] Android 原生層 `DriverOrderService.java` 實裝 `resolveCurrentToken`，小龍專用 App 背景輪詢與定位全面獨立運作。
+  - [x] 前端 `app/driver/page.tsx` 登入預選、金鑰自癒與權限 Intent 動態包名切換。
+  - [x] 下載頁 `app/download-driver/page.tsx` 文案與功能特點統一一致。
+  - [x] 發布總控 `scripts/release.cjs` 升級為雙外勤人員全自動編譯簽名發布。
+  - [x] 成功產出小龍與游柏林雙專用 Signed Release APK 至桌面 `C:\Users\懶\Desktop\sl\`。
+  - [x] 全庫型別檢驗與單元測試 201 項全通，GitHub 雙軌同步完成。
+
+### 1. 監控中心「嚴格日期錨定」與「Asia/Taipei 台灣時區全面強制鎖定」實裝上線
 - **狀態**：`[x]` 已完成 (依老闆最高指示：「監控中心增加嚴格日期錨定：當天無電話時直接顯示『今日尚無來電』，不再自動倒退抓 10/25。全面強制鎖定 Asia/Taipei 台灣時區：替換所有 toISOString().slice(0,10)，改為以台灣時間（UTC+8）為唯一基準，杜絕每天早上 8 點前看昨天資料的問題」全面落實)
   - 🔍 **核心原因分析與修復策略**：
     1. **杜絕歷史日期回退 (10/25)**：

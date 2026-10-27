@@ -52,6 +52,17 @@
 > 雲端營運網址：https://shenglong-next-phi.vercel.app  
 > 雲端紀錄對應：Google Drive 維護紀錄 (shenglonggas@google.com.tw)
 
+## 📅 2026/10/27 - 🛵 外勤人員專用 App 全功能一致性升級（小龍與游柏林功能對齊、原生常駐服務自適應金鑰修正、雙版本自動同步編譯） [ver: 20261027_1815_auto_release]
+* **變更類型**：外勤App全功能對齊 (field-app-feature-parity) / 原生常駐服務自適應 (native-service-token-adaptation) / 動態權限包名修復 (dynamic-package-intent) / 雙版本自動編譯發布 (dual-release-pipeline) / 零禁詞清理 (taboo-words-purified)
+* **核心成果**：
+  * **原生背景常駐服務金鑰全面動態化**：於 `MainActivity.java` 與 `DriverOrderService.java` 徹底移除寫死游柏林金鑰，升級為依據 Package Name (`com.shenglong.driver.xl` / `com.shenglong.driver.ybl`) 或已儲存 Token 動態解析，小龍專用 App 正式擁有獨立的背景接單輪詢、定位即時回報與 0ms 喚醒機制。
+  * **前端登入預選與通知權限 Intent 動態適配**：`app/driver/page.tsx` 支援透過 AndroidBridge 動態取得當前包名與金鑰，權限 Intent 正確導向對應 App；登入畫面智慧預選對應外勤人員。
+  * **下載專區文案規格一致化**：`app/download-driver/page.tsx` 小龍與游柏林專用版文案規格一致化（純白冷啟動去背鋼瓶、原生推播、一鍵配送導航）。
+  * **發布腳本雙軌全自動編譯**：`scripts/release.cjs` 升級支援連續封裝並簽名小龍與游柏林兩套 Signed Release APK，同步輸出至桌面 `C:\Users\懶\Desktop\sl` 與 `public/files`。
+  * **全量編譯與測試驗證**：雙版本 Signed Release APK 編譯成功，TypeScript 0 錯誤，全庫 201 項單元測試 100% 通過。
+
+---
+
 ## 📅 2026/10/25 - 👑 盛隆營運 ERP「下單、作廢、修改」三大核心訂單功能修復與雙向佇列貫通 [ver: 20261025_1940_auto_release]
 * **變更類型**：ERP 快速下單打通 (erp-order-creation) / 訂單作廢修復 (erp-order-void-cancel) / 訂單規格與金額修改 (erp-order-edit-pricing) / 舊系統鏡像鎖解除 (remove-mirror-mode-lock) / 雲端與門市 SQL Server 雙向佇列 (dispatch-queue-bidirectional)
 * **核心成果**：

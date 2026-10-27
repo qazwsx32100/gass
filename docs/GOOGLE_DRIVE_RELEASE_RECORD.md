@@ -95,6 +95,28 @@
 > **老闆最高權限 ID**：Telegram `8862712587` (SuperAdmin 唯一硬鎖定)  
 > **軍師機器人**：[@shenlong_advisor_bot](https://t.me/shenlong_advisor_bot) (Token: `8626638239:AAE...`)  
 
+## 📅 2026/10/27 - 🛵 外勤人員專用 App 全功能一致性升級（小龍與游柏林功能對齊、原生常駐服務自適應金鑰修正、雙版本自動同步編譯） [ver: 20261027_1815_auto_release]
+
+### 一、 需求背景與決策
+1. **老闆最高指示落實**：
+   - 老闆指示：「小龍的app 功能也要跟 游柏林的功能一樣，只要前端司機app都要一致」。
+2. **深度根因與差異排查**：
+   - **原生常駐服務金鑰硬編碼**：原先 `MainActivity.java` 與 `DriverOrderService.java` 硬編碼了游柏林金鑰（`tk_ybl_4e81b62a0d9f`），導致小龍專用 App 啟動或自啟動時，原生背景輪詢與定位服務被強制指向游柏林，使小龍無法正常接收背景訂單推播與定位回報。
+   - **前端權限跳轉包名硬編碼**：`app/driver/page.tsx` 中的通知與應用權限跳轉寫死 `com.shenglong.driver.ybl`，小龍端點擊權限修復時無法正確開啟小龍專用 App 設定。
+   - **登入預選與金鑰自癒**：未登入時預設固定為游柏林，且缺少原生金鑰自癒機制。
+   - **發布腳本單軌問題**：`scripts/release.cjs` 原先預設僅編譯游柏林，易造成兩端版本與功能演進脫鉤。
+3. **全鏈路解決方案**：
+   - **原生常駐服務動態解析**：`MainActivity.java` 與 `DriverOrderService.java` 導入 `resolveDefaultDriverToken` 與 `resolveCurrentToken`，依據 Package Name (`com.shenglong.driver.xl` / `com.shenglong.driver.ybl`) 與本機持久化 Token 動態切換，小龍專用 App 正式擁有獨立的背景接單輪詢、定位即時回報與 0ms 喚醒機制。
+   - **前端動態包名與金鑰自癒**：`app/driver/page.tsx` 支援透過 AndroidBridge 動態取得當前包名與金鑰，權限 Intent 正確導向對應 App；登入畫面智慧預選。
+   - **自動化雙版本編譯與發布**：發布總控升級支援連續封裝並簽名小龍與游柏林兩套 Signed Release APK，同步輸出至桌面 `C:\Users\懶\Desktop\sl` 與 `public/files`。
+4. **驗證與交付**：
+   - 雙版本 Release APK 編譯完成並通過驗證。
+   - `shenglong-next` TypeScript 0 錯誤、Next.js Production Build 通過。
+   - `gass` 全量 201 項單元與整合測試 100% 通過。
+   - GitHub 雙軌自動同步。
+
+---
+
 ## 📅 2026/10/25 - 📞 盛隆營運 ERP「來電中心 / 來電接單」即時通流打通與手機端卡片佈局優化 [ver: 20261025_2005_auto_release]
 
 ### 一、 需求背景與決策
