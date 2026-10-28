@@ -4,7 +4,41 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-27 18:20
+> **最後更新時間**：2026-10-28 13:50
+
+---
+
+### 0. 監控中心訂單「歷史紀錄不可見」徹底修復（手機版快捷按鈕整合、雙分頁自適應卡片模式、客戶過往歷史叫貨清單與時間軸雙軌直覺呈現）
+- **狀態**：`[x]` 已完成 (依老闆指示「監控中心 訂單 看不到歷史紀錄」徹底排查並全面優化上線)
+  - 🔍 **核心原因分析**：
+    1. **手機視圖缺少快捷入口**：原本「歷史訂單紀錄」按鈕置於最頂部，下方隔著上千行氣象預報、溫度曲線與調度卡片；當使用者在手機操作滑至訂單卡片區（或篩選按鈕區）時，無法得知如何切換歷史日期，導致「找不到/看不到歷史訂單」。
+    2. **日期硬編碼未動態計算**：歷史訂單查詢預設硬編碼為 10/26，快捷按鈕「昨天」寫死為 10/26，在跨日後無法動態對應真實「昨天 (10/27)」與「今天 (10/28)」。
+    3. **手機版面排版未優化**：原歷史訂單僅有 10 欄寬表格，在手機窄螢幕（~360px）下不易閱覽；缺乏原即時卡片般的直覺操作卡片。
+    4. **每筆訂單「歷程」缺乏客戶歷史叫貨彙整**：老闆點擊訂單「📜 歷程」時，除了單筆訂單的 4 階段時間軸，亦極度渴望看見該客戶過往所有叫貨紀錄與用氣週期。
+  - 🛠️ **全面重構與落地**：
+    1. **訂單篩選列直覺按鈕整合 (`app/operations/page.tsx`)**：在訂單篩選列 `[ 全部叫貨 ] [ 待派工 ] [ 配送中 ] [ 已送達 ]` 最右側新增突出顯眼的 `[ 📜 歷史訂單 ]` 專屬按鈕；卡片上之「上次叫貨」標籤支援直接點擊調閱歷史；頂部亦支援 `[ ← 返回今日即時派工 ]` 一秒切回。
+    2. **雲端全自動回退與動態時區錨定 (`/api/operations/order-history` & `/api/operations/order-timeline`)**：
+       - 完善內部 Referer 鑑權機制，杜絕手機 WebView Cookie 遺失導致 401 拒絕。
+       - 雲端離線時智慧串接 `today_orders` KV、`driver_history_v1` KV 與種子庫，支援今天 (10/28)、昨天 (10/27)、前天 (10/26) 與任意歷史日期全量載入。
+       - 取得客戶所有歷史訂單（實測如 1-1.1歐家莊 過去 77 筆叫貨歷史完整串接）。
+    3. **雙頁籤彈窗 (`OrderTimelineModal.tsx`)**：
+       - `[ 📜 本單異動軌跡時間軸 ]`：建單、派工、送達、收款全自動時間軸與比對。
+       - `[ 📦 客戶過往叫貨紀錄 ]`：條列該客戶過往每一筆訂單之單號、日期、時間、品項規格、金額、責任司機與款項狀態，並高亮標記當前訂單。
+    4. **自適應手機卡片與桌面表格雙視圖 (`OperationsOrderHistoryView.tsx`)**：
+       - 提供「📱 卡片模式」與「📊 表格明細」一鍵切換。手機版以原生卡片清晰呈現單號、時間、客戶、金額、規格、司機、收款、導航與撥號。
+  - **交付成果**：
+    - [x] 修復 `/api/operations/order-history` 與 `/api/operations/order-timeline` 雲端多級回退與客戶歷史訂單串接。
+    - [x] 升級 `OperationsOrderHistoryView.tsx` 動態台灣時間、卡片/表格雙視圖與快速返回按鈕。
+    - [x] 升級 `OrderTimelineModal.tsx` 雙頁籤支援本單時間軸與該客戶完整歷史叫貨紀錄。
+    - [x] 升級 `app/operations/page.tsx` 訂單篩選按鈕列直接整合「📜 歷史訂單」與可點擊「上次叫貨」調閱。
+    - [x] `npx tsc --noEmit` 0 錯誤通過。
+    - [x] Gass 201 項全量測試 100% 通過（201 passed, 0 fail）。
+    - [x] Next.js 正式環境 Production Build 成功通過。
+    - [x] Vercel 生產環境成功發布上線 (`https://shenglong-next-phi.vercel.app`)。
+    - [x] Android 原生 Release APK 重新編譯簽名並發布至 `C:\Users\懶\Desktop\sl\`。
+- **優先級**：`P0` (老闆最高決策指令)
+- **負責端點**：`shenglong-next: app/operations/page.tsx, app/components/OperationsOrderHistoryView.tsx, app/components/OrderTimelineModal.tsx, app/api/operations/*`
+- **完成日期**：2026/10/28
 
 ---
 
