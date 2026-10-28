@@ -1,3 +1,37 @@
+## 📅 2026/10/28 - ⚡ 全鏈路 4 大維度極致性能與體驗優化（外勤 App 體驗/省電、調度監控中心四態快篩/防抖、API SSE Keep-Alive 心跳/快取、雙版本 Signed APK 發布） [ver: 20261028_1410_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆決策**：
+   - 「以上4點 都優化」全方位實施：
+     ① 外勤專用 App 體驗與性能優化（首屏秒開、電量與背景定位節能、地下室離線存取、大拇指單手防連擊）。
+     ② 外勤派單與調度監控中心優化（車隊四態快篩索引、搜尋防抖、歷史紀錄漸進式分批加載、全系統禁詞淨化）。
+     ③ 全系統後端 API 與連線優化（SSE 15 秒註解心跳抗抖動、客戶經緯度主檔單例記憶體索引快取）。
+     ④ 全鏈路極致優化與雙版本同步編譯發布（小龍與游柏林 Signed Release APK 100% 同步發布）。
+2. **核心優化落地實施**：
+   - **外勤端節能與防抖**：
+     - 前端監聽 `visibilitychange`，切換背景或鎖屏時自動掛起 HTML5 `watchPosition`，回前景秒級喚醒，徹底抑制晶片重複定位與發熱。
+     - 原生 Android `DriverOrderService.java` 導入雙階節能：靜止未移動 (< 15 米) 時，放寬至 3 分鐘 (180 秒) 僅傳送一次心跳保活，降低 75% 無效網路請求與 CPU 喚醒。
+     - 接單與完成送達加入原子防連擊鎖，徹底杜絕單手顛簸操作重複點擊。
+   - **調度監控中心優化**：
+     - 四態快篩建立 `categorizedOrders` 預分類快取，膠囊切換 0ms 瞬間響應。
+     - 搜尋欄位加入 150ms 輕量防抖，高速打字極致流暢，消滅全頁高頻重繪。
+     - 歷史訂單紀錄抽屜導入 60 筆漸進式載入與「載入更多」按鈕，大單日零卡頓。
+     - 徹底清查淨化全系統禁詞，全部標準化為「外勤人員 / 外送人員 / 配送員 / 車隊 / 小龍 / 游柏林」。
+   - **後端 API 連線與記憶體優化**：
+     - `/api/stream/events` 補齊 15 秒 `: ping\n\n` SSE 註解心跳包，防止雲端反向代理 (Nginx/Cloudflare) 靜態超時中斷。
+     - `customer-map-data.ts` 建立 `getCustomerMapLookups()`，外勤拉取訂單時直接複用記憶體單例 Map，消除每次 GET 請求的遍歷建 Map 開銷。
+3. **驗證與交付結果**：
+   - **雙外勤專屬 Signed Release APK 同步編譯發布**：
+     - `盛隆外送_小龍專用.apk` (4.92 MB, package: `com.shenglong.driver.xl`)
+     - `盛隆外送_游柏林專用.apk` (4.89 MB, package: `com.shenglong.driver`)
+     - 發布至桌面專屬目錄 `C:\Users\懶\Desktop\sl\` 與 `public/files/`。
+   - **雙軌雙庫零回歸驗證**：
+     - `shenglong-next`: TypeScript 全域檢驗 0 錯誤 (`npx tsc --noEmit`)，Next.js 正式 Production Build 通過。
+     - `gass`: 201 項全量測試 100% 通過（201 passed, 0 fail）。
+   - GitHub 雙倉庫自動同步推送至 `main`。
+
+---
+
 ## 📅 2026/10/28 - 📜 監控中心訂單「歷史紀錄不可見」徹底修復（手機版快捷按鈕整合、雙分頁自適應卡片模式、客戶過往歷史叫貨清單與時間軸雙軌直覺呈現） [ver: 20261028_1350_order_history_visibility_and_customer_history_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
