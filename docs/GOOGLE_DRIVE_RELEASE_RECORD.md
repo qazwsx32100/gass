@@ -1,3 +1,33 @@
+## 📅 2026/10/29 - 📶 外勤專用 App「地下室離線應急自癒模式」徹底消滅小綠人報錯（斷網 0ms 秒開本機離線派單、出地下室 1 秒自動自癒切回線上、雙版本 Signed APK 發布） [ver: 20261029_2006_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 提供斷網報錯截圖：「如圖 沒有網路會這樣 討問一下 -> 好 我們來做」。
+2. **核心問題診斷**：
+   - 外勤人員在地下室、電梯等訊號盲區開啟 App 時，Android WebView 嘗試進行 DNS 查詢失敗，拋出 `net::ERR_NAME_NOT_RESOLVED`。
+   - 原生邏輯曾嘗試二次載入，但因 `loadDataWithBaseURL` 傳遞之 `historyUrl` 與失敗網址衝突，且非同步執行序被 Chromium 錯誤頁截胡，導致噴出小綠人「網頁無法使用」。
+3. **功能升級與架構重構**：
+   - **開屏啟動離線秒開 (`MainActivity.java`)**：
+     - 在 `onCreate` 檢驗網路狀態，若啟動瞬間無網路 (`!isNetworkAvailable`)，直接調用 `showOfflinePage`，0ms 載入本機資產 `file:///android_asset/offline.html`，徹底繞過網路棧與 DNS，開屏絕不白屏。
+   - **主框架斷網即刻攔截 (`setupSafeWebViewClient`)**：
+     - 在 `onReceivedError` 攔截主框架所有連線失敗事件，立即同步停止載入並切換至本機離線應急頁，不讓 Chromium 預設錯誤頁有任何機會渲染。
+   - **地下室離線派單檢視與通話導航 (`offline.html`)**：
+     - 自動讀取本機快取的今日派單，清晰展示客戶姓名、地址、瓦斯規格、金額。
+     - 支援離線點擊直接撥打電話、開啟 Google Maps 導航。
+     - 點擊「🔄 檢查網路並重新連線」時若仍無網路，按鈕即時提示「📶 目前仍無網路訊號，走至戶外將自動連線」，絕不切入白屏。
+   - **走出地下室自動自癒切回線上**：
+     - Android 原生 `registerNetworkCallback` 監聽網路連線恢復 (`onAvailable`)，一走出地下室連上 4G/5G，系統自動將頁面平滑載入雲端最新版，外勤人員免手動重啟 App。
+4. **驗證與交付結果**：
+   - `shenglong-next`: `npx tsc --noEmit` 0 錯誤通過，Next.js Production Build 通過。
+   - `gass`: 201 項全量測試 100% 通過（201 pass, 0 fail）。
+   - 雙版本最新 Signed Release APK 重新編譯發布：
+     - `盛隆外送_小龍專用.apk` (4.92 MB)
+     - `盛隆外送_游柏林專用.apk` (4.89 MB)
+     - 發布至桌面專屬目錄 `C:\Users\懶\Desktop\sl\`。
+   - GitHub 雙倉庫自動同步推送至 `main`。
+
+---
+
 ## 📅 2026/10/28 - ⚡ 全鏈路 4 大維度極致性能與體驗優化（外勤 App 體驗/省電、調度監控中心四態快篩/防抖、API SSE Keep-Alive 心跳/快取、雙版本 Signed APK 發布） [ver: 20261028_1410_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
