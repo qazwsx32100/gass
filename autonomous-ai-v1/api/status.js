@@ -1,0 +1,1 @@
+export default function handler(req,res){res.setHeader('Cache-Control','no-store');if(req.method!=='GET')return res.status(405).json({ok:false,error:'method_not_allowed'});return res.status(200).json({ok:true,service:'shenglong-autonomous-ai-v1',mode:'demo-readonly',liveDataConnected:false,agentExecutionEnabled:false,requiresHumanApproval:true,version:'1.0.0'});}
