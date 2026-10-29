@@ -1,3 +1,8 @@
+## [Unreleased] - 2026-10-29
+
+### Fixed
+- **監控中心膠囊按鈕溢出修復**：修正手機版 `/operations` 訂單狀態篩選按鈕列（全部叫貨、待派工、配送中、已送達、歷史訂單）因強制 `flex: 1` 擠壓導致文字溢出邊框之問題；升級為自適應流動滾動膠囊列 (`flexShrink: 0` + `overflowX: "auto"` + `scrollbarWidth: "none"`)，文字與數量徽章 100% 完美置中包覆。
+
 ## [2026-10-29] - 📶 外勤專用 App 地下室離線應急自癒模式上線 (消滅 net::ERR_NAME_NOT_RESOLVED 小綠人報錯)
 - **地下室斷網 0ms 秒開**：開屏若處於無網路狀態，直接以原生資產協定 `file:///android_asset/offline.html` 瞬時秒開，絕不向外部網路發起無效 DNS 請求，徹底消滅小綠人「網頁無法使用」錯誤。
 - **主框架連線錯誤同步攔截**：在 `setupSafeWebViewClient` 內攔截主頁面錯誤，立即同步展示離線應急介面，禁止 Chromium 原生錯誤頁截胡渲染。
