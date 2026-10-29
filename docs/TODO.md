@@ -26,6 +26,28 @@
 - **完成日期**：2026/10/29
 
 ---
+### 0. 歷史訂單與時間軸 API 嚴格安全授權加固（徹底廢止 Referer 偽造繞過漏洞）與 10/20~昨日歷史斷層對接
+- **狀態**：`[x]` 已完成 (依老闆指示「繼續」立即實裝 P0 安全防禦與資料斷層修復並全量驗證)
+  - 🔍 **核心原因分析**：
+    - 原 `order-history` 與 `order-timeline` API 中保留了寬鬆的 `isInternalReferer` 規則（若 Referer 帶有 vercel.app 或 / 就放行），導致攻擊者只要偽造 Referer Header 即可未經登入竊取當日或歷史訂單明細。
+    - 客戶歷史離線備援池中先前僅合併了 `today_orders` 與 `driverHistorySeed`（資料截至 10/19），導致 10/20 至昨日的歷史叫貨在離線狀態下產生空窗斷層。
+  - 🛠️ **落地修復實踐**：
+    1. **徹底廢止 Referer 授權繞過**：
+       - 在 `app/api/operations/order-history/route.ts` 與 `app/api/operations/order-timeline/route.ts` 徹底清除 `isInternalReferer` 與無權限的 `Boolean(user)`。
+       - 嚴格鎖定僅允許：(1) 具備 `orders.view` 權限之登入 Session、(2) 官方雙向同步金鑰 Bearer / x-internal-sync-secret、(3) 老闆專屬 SuperAdmin Token (`x-boss-token`)。未授權者一律 401 拒絕存取。
+    2. **補齊 10/20~昨日歷史資料池 (`driver_history_v1`)**：
+       - 在客戶模式的離線備援資料庫中，除了種子池與今日訂單外，同步納入雲端 KV / TurboCache 之 `driver_history_v1`（門市主機近 60 天最新推播單據），100% 消除歷史查詢空窗。
+    3. **前端檢索建議與帳務標示精準化 (`OperationsOrderHistoryView.tsx`)**：
+       - 移除常用標籤中的外勤人員姓名，改為正確的電話、路名、客號檢索引導（如 0912、中正路、民安路、#100）。
+       - 修正欠款標記，離線資料顯示「無未結欠款紀錄」，慣用規格顯示「依歷史訂單紀錄」，杜絕虛假斷言。
+  - **驗證標準**：
+    - [x] Next.js 正式 Turbopack 建置順利通過。
+    - [x] Gass 核心 201 項單元與整合測試 100% 通過（201 passed, 0 fail）。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/29
+
+---
+
 ### 0. 監控中心歷史紀錄全面對接既有客戶搜尋資料庫（2,909戶客戶情報、客戶全量歷史叫貨訂單、單日全店審計保留、毫秒級雙模式切換）
 - **狀態**：`[x]` 已完成 (依老闆指示「監控中心的 歷史紀錄 不完整 跟 連結速度慢 我們不是有做一個 客戶搜尋資料嗎 討論一下 -> 幫我做」全面整合交付)
   - 🔍 **核心痛點分析**：

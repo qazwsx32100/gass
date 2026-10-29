@@ -1,3 +1,25 @@
+## 📅 2026/10/29 - 🛡️ 歷史訂單與時間軸 API 嚴格安全授權加固（徹底廢止 Referer 偽造繞過漏洞）與 10/20~昨日歷史斷層對接 [ver: 20261029_2105_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 梳理架構與閉鎖問題後，老闆指示「繼續」，立即針對 P0 安全隱患與資料斷層進行加固。
+2. **核心問題診斷**：
+   - `order-history` 與 `order-timeline` API 中保留了 `isInternalReferer` 判斷，攻擊者偽造 Referer Header 即可未經授權讀取今日 34 筆訂單個資。
+   - 客戶歷史查詢在離線時僅讀取 `today_orders` 與 `driverHistorySeed`（至 10/19），缺少 10/20 至昨日的中繼歷史。
+3. **落地整合實踐**：
+   - **全面廢止 Referer 授權繞過**：
+     - `order-history/route.ts` 與 `order-timeline/route.ts` 徹底清除 `isInternalReferer` 與無檢驗之 `Boolean(user)`，嚴格強制必須具備 `orders.view` 權限之 Session、Sync Secret 或 Boss Token。
+   - **補齊 10/20~昨日歷史池**：
+     - 客戶模式離線池無縫整合 `driver_history_v1`，徹底補足 60 天滾動最新單據。
+   - **檢索引導與檔案顯示精確化**：
+     - `OperationsOrderHistoryView.tsx` 移除標籤中的外勤司機姓名，替換為電話與路名檢索範例；優化無欠款與慣用規格之顯示文字。
+4. **驗證與交付結果**：
+   - `shenglong-next`: Next.js 正式建置（Turbopack）順利通過。
+   - `gass`: 核心 201 項全量測試 100% 通過（201 pass, 0 fail）。
+   - GitHub 雙軌自動同步推送至 `main`。
+
+---
+
 ## 📅 2026/10/29 - 👤 監控中心歷史紀錄全面對接既有客戶搜尋資料庫（2,909戶客戶情報、客戶全量歷史叫貨訂單、單日全店審計保留、毫秒級雙模式切換） [ver: 20261029_2035_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
