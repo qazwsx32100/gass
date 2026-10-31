@@ -4,7 +4,19 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-31 11:09
+> **最後更新時間**：2026-10-31 11:20
+
+---
+
+### 0. 戰情中心雙軌資料即時核對 (Reconciliation) 鋼瓶規格全量解析、運費試算修復與禁語「司機」全面清除
+- **狀態**：`[x]` 已完成 (排查根除雙軌資料核對中「有效訂單 9 筆但鋼瓶各規格支數與運費全為 0」之病灶，修復後通過全量 225 項測試與 Next.js build 成功編譯)
+  - 🔍 **核心修復明細**：
+    1. **全規格支數與總桶數智能解析器 (`extractOrderBottleSpecs`)**：相容全系統命名變體（`bXX`, `rawXX`, `oder_XXkg`, `bottlesXX`, `qXX`）並具備文字品項正則匹配（如 `20kg x 1`、`20kg x 2`、`50kg`、`16kg`、`10kg`、`4kg`）與實體出貨保底機制，徹底解決雲端核對時 50k/20k/16k/10k/4k 支數與全店總銷量歸零問題。
+    2. **外勤運費精確自動試算 (`earnings`)**：支援外勤人員（小龍、游柏林等）依鋼瓶規格自動計算：50kg 每支 $140、其他規格每支 $70，6 筆單據（7 支 20kg）即時試算出正確運費 $490，杜絕運費顯示 $0 之問題。
+    3. **即時記憶體快取優先穿透 (`turboCache`)**：於雲端核對 API (`/api/operations/reconcile`) 優先讀取記憶體 `today_orders` 快取，無縫銜接門市推播最新單據，避免遠端 KV 延遲或抖動。
+    4. **全介面禁語「司機」全面清除**：依最高指令規範，將 `ReconciliationPanel.tsx` 與 `DailyDriverReconcileModal.tsx` 中所有違規稱謂全面置換為「外勤人員 / 外勤端 / 外送員 / 外送運費」，0 違規殘留。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/31
 
 ---
 
