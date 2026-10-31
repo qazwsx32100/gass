@@ -1,3 +1,25 @@
+## 📅 2026/10/31 - 👑 《盛隆瓦斯數位轉型與七大 AI 智慧中樞總體工程企劃案》Step 3 ～ Step 6 全數實裝完成（全 6 步 100% 閉環達成）[ver: 20261031_1037_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 「我們繼續」（接續已完成之 Step 1 雙向回寫閉環與 Step 2 手機底部三段式 AI 抽屜，執行 Step 3 ～ Step 6 全數工程步驟）
+2. **本次完成之四大核心步驟（Step 3 ～ Step 6）**：
+   - **Step 3：Telegram 總裁戰情室「底部常駐免打字 6 大金剛方塊按鈕 ＋ 一鍵派工回寫」**：
+     - 同步升級 `advisor-bot.cjs`、`sync-stock.cjs`、`api/_telegram.js` (`BOSS_SIX_PILLARS_KEYBOARD`) 與 `api/telegram-webhook.js`。
+     - 將頂部核心按鍵重構為 `3x2` 大拇指方塊按鈕：`📊 今日戰報`、`🚛 司機與庫存現況`、`🎯 業務催單與防拔管`、`❄️ 寒流與行銷喚醒`、`💰 財務未收與欠款`、`🚨 異常預警與健檢`。
+     - 於 Telegram 戰報內嵌 `[🛵 全派給 小龍]` / `[🛵 全派給 游柏林]` 互動按鈕，老闆在 Telegram 點一下即可透過 `dispatch_queue_v1` 寫回門市舊 ERP。
+   - **Step 4：七大專職 AI 矩陣路由引擎 (`lib/seven-ai-matrix.ts`)**：
+     - 建立七大專職 AI（秘書👑、營運🛵、客服💬、行銷📣、業務🎯、財務💰、行政🛡️）獨立人設與意圖分流器 `classifySevenAiIntent`，整合進 `/api/ai/advisor` 並於網頁 AI 抽屜氣泡顯示主責 AI 徽章。
+   - **Step 5：雙向回寫與錯誤隔離核心引擎 (`lib/erp-writeback-engine.cjs`)**：
+     - 抽離 `buildDispatchWritebackSql` 模組，統一管理 `cancel`、`edit`、`deliver`/`pay`、`remarks`、`assign`/`accept` 之 `ROWLOCK` 安全 T-SQL 編譯與單筆錯誤隔離。
+   - **Step 6：LINE AI 客服智慧擷取叫貨單 ➔ 調度中心「一鍵審單轉入」閉環**：
+     - 於 `api/line-webhook.js` 新增 `buildLinePendingOrderPayload`，並於 `shenglong-next` 新增 `/api/line-orders/pending` 預備單佇列 API（支援 `capture`、`approve`、`dismiss`）。
+3. **全量測試與驗證結果**：
+   - `shenglong-next` TypeScript 全域型別檢查 0 錯誤；`sync-stock.cjs` 與 `advisor-bot.cjs` 語法驗證通過。
+   - `Gass` 全量自動化測試擴充至 **220 項，100% 全數通過 (Pass: 220, Fail: 0)**。
+
+---
+
 ## 📅 2026/10/31 - 🚀 企劃案 Step 1（雙向回寫門市舊 ERP 閉環）與 Step 2（手機優先底部三段式 AI 抽屜＋免打字快選膠囊）正式實裝上線 [ver: 20261031_1016_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

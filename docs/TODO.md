@@ -4,7 +4,21 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-31 10:16
+> **最後更新時間**：2026-10-31 10:37
+
+---
+
+### 0. 《盛隆瓦斯數位轉型與七大 AI 智慧中樞總體工程企劃案》全六大步驟（Step 1 ～ Step 6）全數落地實裝與驗收完成
+- **狀態**：`[x]` 已完成 (依老闆指示「我們繼續」完成企劃案 Step 3、Step 4、Step 5、Step 6 全鏈路實裝，並通過 220 項全量自動化測試)
+  - 🔍 **全六大步驟完整交付成果**：
+    1. **Step 1（雙向回寫閉環）**：雲端調度台與外勤 App 的「指派/改派司機、確認接單、已送達收現/月結、單據備註、作廢」100% 透過 `dispatch_queue_v1` 與 `ROWLOCK` 1.5 秒自動寫回門市舊 ERP `dbo.gas_oders`，並搭載 `applyPendingDispatchesOverlay` 防閃退樂觀覆蓋層。
+    2. **Step 2（網頁戰情中心：手機優先底部三段式彈性 AI 抽屜＋免打字快選膠囊）**：`AiAdvisorDrawer.tsx` 支援 `collapsed` 懸浮膠囊 / `54vh` 半屏抽屜 / `88vh` 全屏戰情三段手勢切換、8 顆大拇指快選膠囊與對話框內嵌「一鍵派工動作卡」。
+    3. **Step 3（Telegram 總裁戰情室：底部常駐免打字 6 大金剛方塊按鈕＋一鍵派工）**：全面升級 `advisor-bot.cjs`、`sync-stock.cjs`、`api/_telegram.js` 與 `api/telegram-webhook.js`，配置 `3x2` 大拇指方塊鍵盤（`📊 今日戰報`、`🚛 司機與庫存現況`、`🎯 業務催單與防拔管`、`❄️ 寒流與行銷喚醒`、`💰 財務未收與欠款`、`🚨 異常預警與健檢`），並支援在 Telegram 內一鍵將待派工訂單指派給小龍或游柏林、直接回寫舊 ERP。
+    4. **Step 4（七大專職 AI 矩陣路由引擎）**：建立 `lib/seven-ai-matrix.ts`（秘書、營運、客服、行銷、業務、財務、行政 AI），串接 `/api/ai/advisor` 智慧意圖分流，並在 `AiAdvisorDrawer.tsx` 對話氣泡頂部顯示當前主責 AI 徽章。
+    5. **Step 5（雙向回寫與錯誤隔離核心模組）**：建立 `lib/erp-writeback-engine.cjs`（`buildDispatchWritebackSql`），將 T-SQL 雙向回寫語句生成、防注入跳脫與單筆故障隔離模組化，確保舊系統資料庫零死鎖。
+    6. **Step 6（LINE AI 客服智慧擷取叫貨單 ➔ 調度中心一鍵審單轉入閉環）**：升級 `api/line-webhook.js`（`buildLinePendingOrderPayload`）與新增 `app/api/line-orders/pending/route.ts`，當 LINE AI 集齊客戶地址、樓層、規格、電話時，自動同步至調度中心預備佇列（`line_pending_orders_v1`）支援一鍵核准派工。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/31
 
 ---
 

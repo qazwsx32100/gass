@@ -136,6 +136,27 @@ export function extractOrderEntities(messages = [], currentText = '') {
 /**
  * 格式化訂單狀態要素上下文提示詞
  */
+/**
+ * 建立同步至調度中心 (/api/line-orders/pending) 之預備叫貨單結構 (Step 6 雙向閉環)
+ */
+export function buildLinePendingOrderPayload(extracted, userText = '', lineUserId = '') {
+  if (!extracted || !extracted.isComplete) return null;
+  const specText = String(extracted.spec || '20kg × 1桶');
+  const qtyMatch = specText.match(/×\s*(\d+)桶/);
+  const quantity = qtyMatch ? Number(qtyMatch[1]) || 1 : 1;
+  return {
+    action: 'capture',
+    phone: extracted.phone || '',
+    address: extracted.address || '',
+    floor: extracted.floor || '',
+    spec: specText,
+    quantity,
+    rawText: String(userText || '').trim(),
+    lineUserId: String(lineUserId || '').trim(),
+    customerName: 'LINE 智慧擷取客戶',
+  };
+}
+
 export function formatOrderStateContext(extracted) {
   if (!extracted || (!extracted.address && !extracted.floor && !extracted.spec && !extracted.phone)) {
     return '';
@@ -286,6 +307,16 @@ export default async function handler(req, res) {
           if (isConfigured && orderChatId) {
             let tgMsg = '';
             if (extracted.isComplete) {
+              if (process.env.SHENGLONG_SYNC_LINE_ORDERS === '1' || process.env.VERCEL) {
+                const pendingPayload = buildLinePendingOrderPayload(extracted, userText, userId);
+                if (pendingPayload) {
+                  fetchWithTimeout('https://shenglong-next-phi.vercel.app/api/line-orders/pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingPayload)
+                  }, 3000).catch(() => {});
+                }
+              }
               tgMsg = `🎉 *【LINE 客服 - 完整訂單要素已齊全派工】*\n────────────────────────\n👤 *客戶電話*：\`${extracted.phone}\`\n📍 *配送地址*：${extracted.address || '未提供'} ${extracted.floor ? `(${extracted.floor})` : ''}\n⛽ *預訂規格*：${extracted.spec}\n💵 *收款方式*：現場現金\n\n💬 *客戶最新訊息*：\n「${userText}」\n\n🤖 *AI 已確認回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁立即確認並備妥車趟！_`;
             } else {
               tgMsg = `🔔 *【LINE 客服 - 叫瓦斯訊息提示】*\n────────────────────────\n👤 *客戶內容*：\n${userText}\n\n🤖 *AI 已自動回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁注意是否有地址與訂購需求！_`;

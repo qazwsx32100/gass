@@ -255,3 +255,17 @@ ${content}
     replyMarkup: { inline_keyboard: keyboard }
   });
 };
+
+
+/**
+ * 👑 老闆免打字底部常駐 6 大金剛方塊按鈕 (Step 3)
+ */
+export const BOSS_SIX_PILLARS_KEYBOARD = {
+  keyboard: [
+    [{ text: '📊 今日戰報' }, { text: '🚛 司機與庫存現況' }],
+    [{ text: '🎯 業務催單與防拔管' }, { text: '❄️ 寒流與行銷喚醒' }],
+    [{ text: '💰 財務未收與欠款' }, { text: '🚨 異常預警與健檢' }]
+  ],
+  resize_keyboard: true,
+  persistent: true
+};

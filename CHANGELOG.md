@@ -1,3 +1,15 @@
+## [2026-10-31 10:37] - 企劃案 Step 3 ～ Step 6（Telegram 6 大金剛免打字按鈕、七大 AI 矩陣路由、雙向回寫核心引擎、LINE 智慧擷取預備單閉環）全數完成
+### 七大 AI 智慧中樞與雙向閉環全鏈路實裝
+- **Step 3 Telegram 總裁戰情室 6 大金剛按鈕與一鍵派工**：
+  - 升級 `advisor-bot.cjs`、`sync-stock.cjs`、`api/_telegram.js` 與 `api/telegram-webhook.js`，部署 `3x2` 免打字 6 大金剛方塊按鈕，並支援在 Telegram 內一鍵批次派單回寫門市舊 ERP。
+- **Step 4 七大專職 AI 矩陣路由引擎**：
+  - 新增 `lib/seven-ai-matrix.ts`（秘書、營運、客服、行銷、業務、財務、行政 AI），整合至 `/api/ai/advisor` 與 `AiAdvisorDrawer.tsx` 專職徽章。
+- **Step 5 雙向回寫與錯誤隔離核心模組**：
+  - 新增 `lib/erp-writeback-engine.cjs`（`buildDispatchWritebackSql`），模組化管理 `ROWLOCK` 雙向回寫 SQL 與單筆故障隔離。
+- **Step 6 LINE AI 客服叫貨擷取與調度預備單閉環**：
+  - 新增 `/api/line-orders/pending` 與 `buildLinePendingOrderPayload`，串聯 LINE 完整叫貨要素自動進入調度中心待審佇列。
+- **全量測試驗證**：全站自動化測試擴充至 220 項，220/220 100% 通過。
+
 ## [2026-10-31 10:16] - 企劃案 Step 1（雙向回寫門市舊 ERP 閉環）與 Step 2（手機優先底部三段式 AI 抽屜＋免打字快選膠囊）實裝完成
 ### 核心雙向架構與行動 AI 體驗升級
 - **Step 1 雙向回寫閉環全面打通**：

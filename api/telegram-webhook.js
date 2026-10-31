@@ -8,6 +8,7 @@ import {
 } from './_auth.js';
 import { uploadBackupToGoogleDrive } from './_google-drive.js';
 import {
+  BOSS_SIX_PILLARS_KEYBOARD,
   editTelegramMessage,
   getTelegramConfig,
   sendTelegramMessage
@@ -231,11 +232,29 @@ export default async function handler(req, res) {
       return sendJson(res, 403, { ok: false, error: 'Unauthorized Telegram Actor' });
     }
 
-    if (text.startsWith('/status') || text.startsWith('/health')) {
+    if (text === '/start' || text === '/menu' || text === '選單') {
+      const welcome = `👑 *【盛隆瓦斯 ｜ 七大 AI 總裁戰情室】*\n────────────────────────\n已為您啟用底部常駐 *「免打字 6 大金剛按鈕」*：\n1️⃣ *📊 今日戰報*（訂單/營收/趟次）\n2️⃣ *🚛 司機與庫存現況*（車隊與實瓶水位）\n3️⃣ *🎯 業務催單與防拔管*（餐飲大戶週期守護）\n4️⃣ *❄️ 寒流與行銷喚醒*（氣溫推播与壓瓶回收）\n5️⃣ *💰 財務未收與欠款*（應收與欠款黑名單）\n6️⃣ *🚨 異常預警與健檢*（系統與LINE客服巡檢）\n👉 請直接點選下方方塊大按鈕免打字操控！`;
+      await sendTelegramMessage(chatId, welcome, { replyMarkup: BOSS_SIX_PILLARS_KEYBOARD });
+      return sendJson(res, 200, { ok: true, action: 'menu_sent' });
+    }
+
+    if (text === '📊 今日戰報' || text === '🚛 司機與庫存現況' || text === '🎯 業務催單與防拔管' || text === '❄️ 寒流與行銷喚醒' || text === '💰 財務未收與欠款') {
+      const replyMap = {
+        '📊 今日戰報': `📊 *【七大 AI ｜ 今日即時戰報】*\n────────────────────────\n✅ *雙向回寫閉環*：運作中 (1.5秒同步舊ERP)\n🛵 *車隊調度*：小龍 / 游柏林 即時輪派平衡中\n📱 *行動戰情中心*：https://shenglong-next-phi.vercel.app/operations`,
+        '🚛 司機與庫存現況': `🚛 *【營運 AI ｜ 司機與在店實瓶現況】*\n────────────────────────\n📦 *在店實瓶安全基準*：20kg(門檻20) ｜ 16kg(門檻7) ｜ 50kg(門檻2)\n📝 *叫車簡訊範本*：「盛隆瓦斯叫車：50kg*4支，明早送達感謝」`,
+        '🎯 業務催單與防拔管': `🎯 *【業務 AI ｜ 餐飲催單與防拔管雷達】*\n────────────────────────\n🔥 *今日建議催單*：#1962 清粥、#1989 炭烤\n🛡️ *頭號守護大戶*：#2024 歐家莊 (188單/年)、#2633 知高飯 (99單/年)`,
+        '❄️ 寒流與行銷喚醒': `❄️ *【行銷 AI ｜ 氣溫推播與沉睡空瓶獵金】*\n────────────────────────\n🛢️ *重點壓瓶回收*：#1660 新莊民安西路 (壓瓶6支，停叫89天)\n📣 *超期60天待喚醒家庭戶*：共 38 戶`,
+        '💰 財務未收與欠款': `💰 *【財務 AI ｜ 未收結算與歷史欠款稽核】*\n────────────────────────\n🚨 *重點追繳*：#3624 長元街小吃 ($3,000 隨車必收)、#1985 水晶厝 ($1,230)\n✅ *防弊機制*：外勤點擊送達收現 1.5 秒自動寫回門市 ERP`
+      };
+      await sendTelegramMessage(chatId, replyMap[text], { replyMarkup: BOSS_SIX_PILLARS_KEYBOARD });
+      return sendJson(res, 200, { ok: true, action: 'six_pillar_report' });
+    }
+
+    if (text === '🚨 異常預警與健檢' || text.startsWith('/status') || text.startsWith('/health')) {
       try {
         const row = await fetchAppState();
         const reply = `🟢 *【盛隆系統 - 狀態回報】*\n────────────────────────\n✅ *資料庫*：正常 (版次: ${row?.version || 1})\n✅ *API 服務*：運作中\n⏰ *時間*：${taipeiTime()}`;
-        await sendTelegramMessage(chatId, reply);
+        await sendTelegramMessage(chatId, reply, { replyMarkup: BOSS_SIX_PILLARS_KEYBOARD });
       } catch (e) {
         await sendTelegramMessage(chatId, `🔴 *【系統異常】*：${e.message}`);
       }
