@@ -8,6 +8,17 @@
 
 ---
 
+### 0. 全天候螢幕恆亮與程式不中斷雙軌鎖定（Windows 主機永不關閉螢幕/休眠 + 外勤 Android App 原生 `FLAG_KEEP_SCREEN_ON` 與 `PARTIAL_WAKE_LOCK` 背景常駐）
+- **狀態**：`[x]` 已完成 (依老闆指示「我要讓螢幕 不要關閉 一直跑程式」完成電腦主機與外勤手機 App / 調度中心雙端全天候恆亮與防休眠鎖定)
+  - 🔍 **雙軌全天候恆亮與不中斷機制**：
+    1. **Windows 電腦主機端**：消除原設定插電 60 分鐘自動休眠 (`HIBERNATEIDLE`) 與 20 分鐘關閉硬碟 (`DISKIDLE`) 之病灶，將螢幕、睡眠、休眠、硬碟、鎖屏逾時全數歸零 (`0x00000000`)；並部署底層 Win32 `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_AWAYMODE_REQUIRED)` 常駐守護進程 (`scripts/keep_screen_awake.ps1` + 開機自啟 `ShengLong_Keep_Screen_Awake.vbs`)。
+    2. **外勤 Android App 與調度中心網頁端**：`MainActivity.java` 與 `AndroidManifest.xml` 強制掛載原生 `FLAG_KEEP_SCREEN_ON` 與 `webView.resumeTimers()`；`DriverOrderService.java` 掛載常駐 `PARTIAL_WAKE_LOCK` 與 `WIFI_MODE_FULL_HIGH_PERF` 高效能網路鎖；`/driver` 與 `/operations` 網頁端每 15 秒與觸控互動自動續約 `Screen Wake Lock`。
+  - 📦 **雙版本 APK 重新編譯與桌面同步**：`C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk` 與 `盛隆外送_游柏林專用.apk` 已同步更新。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/31
+
+---
+
 ### 0. 《盛隆瓦斯數位轉型：現代化雙向閉環工程與七大 AI 智慧中樞總體企劃案》二合一完整整合定案與桌面鏡像交付
 - **狀態**：`[x]` 已完成 (依老闆指示「把ai 系統 和 盛隆瓦斯系統現代化架構重構與雙向閉環工程建議 整合起來 給我分一份 企劃案」全面二合一整合完成)
   - 🔍 **總體企劃案七大章節架構**：

@@ -1,3 +1,14 @@
+## [2026-10-31 10:06] - 全天候螢幕恆亮與程式不中斷雙軌鎖定（Windows 主機防休眠常駐 + 外勤 Android App 原生恆亮與 CPU/WiFi 喚醒鎖）
+### 系統優化與穩定度升級
+- **Windows 主機全天候不關閉螢幕、不休眠**：
+  - 將 `HIBERNATEIDLE`（原插電 60 分鐘自動休眠）、`DISKIDLE`（原 20 分鐘關閉硬碟）、`VIDEOIDLE`、`STANDBYIDLE`、`VIDEOCONLOCK` 與 `UNATTENDSLEEP` 全數設為 `0`（永不關閉/永不休眠）。
+  - 建立並啟動底層 Kernel32 `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_AWAYMODE_REQUIRED)` 常駐守護進程（`scripts/keep_screen_awake.ps1` 與開機自啟 `ShengLong_Keep_Screen_Awake.vbs`），強制保持螢幕恆亮與背景程式 24 小時穩定執行。
+- **外勤 Android App 與調度中心全天候螢幕恆亮與背景防凍結**：
+  - 在 `AndroidManifest.xml` 與 `MainActivity.java`（`onCreate`、`onResume`、`WebView`）掛載原生 `FLAG_KEEP_SCREEN_ON` 與 `resumeTimers()`，開啟 App 時螢幕永不自動熄滅。
+  - 在 `DriverOrderService.java` 掛載常駐 `PARTIAL_WAKE_LOCK` 與 `WIFI_MODE_FULL_HIGH_PERF` 高效能網路鎖，即便手動關屏放口袋，底層 CPU 與網路仍 100% 持續跑輪詢程式不中斷。
+  - 在 `/driver` 與 `/operations` 調度中心網頁端補齊每 15 秒與觸控互動自動續約之 Web `Screen Wake Lock`。
+- **全量測試與雙版本 APK 編譯發布**：TypeScript 0 錯誤、Next.js build 通過、Gass 201 項測試全數通過，雙版本 APK 已同步更新至桌面 `sl` 資料夾。
+
 ## [2026-10-31 09:38] - 《盛隆瓦斯數位轉型：現代化雙向閉環工程與七大 AI 智慧中樞總體企劃案》二合一整合定案
 ### 總體工程企劃案交付
 - **二合一總體企劃案定案**：完整融合「現代化架構重構與雙向閉環工程」與「七大專職 AI 智慧中樞與手機/Telegram 一鍵操控設計」為單一正式企劃案（`docs/SHENGLONG_MASTER_PROJECT_PROPOSAL.md`）。

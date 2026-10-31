@@ -1,3 +1,24 @@
+## 📅 2026/10/31 - 🔆 全天候螢幕恆亮與程式不中斷雙軌鎖定（Windows 主機防休眠 + 外勤 App 原生恆亮與 CPU/WiFi 喚醒鎖）[ver: 20261031_1006_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 「我要讓螢幕 不要關閉 一直跑程式」
+2. **全系統連動影響預判與雙軌根治方案**：
+   - **軌跡一：Windows 主機端（電腦螢幕永不關閉 + 背景程式 24 小時不中斷）**：
+     - 排查發現本機 ASUS 電源計畫原設定 `HIBERNATEIDLE` 為插電 60 分鐘（`0x00000e10`）後自動進入休眠、`DISKIDLE` 為 20 分鐘後關閉硬碟，導致閒置 1 小時後螢幕熄滅且所有背景程式凍結。
+     - 已將 `VIDEOIDLE`、`STANDBYIDLE`、`HIBERNATEIDLE`、`DISKIDLE`、`VIDEOCONLOCK`、`UNATTENDSLEEP`（AC/DC）全數歸零（永不關閉、永不休眠），並關閉螢幕保護鎖定。
+     - 撰寫並啟動底層 Win32 API `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED | ES_AWAYMODE_REQUIRED)` 常駐守護腳本 `scripts/keep_screen_awake.ps1`，並註冊至 Windows 啟動資料夾（`ShengLong_Keep_Screen_Awake.vbs`），開機即自動鎖定螢幕恆亮與系統清醒。
+   - **軌跡二：外勤司機 Android App (`盛隆外送 APK`) 與網頁調度中心 (`/driver`、`/operations`)**：
+     - 在 `AndroidManifest.xml` 與 `MainActivity.java`（`onCreate`、`onResume`、`injectBridge`）強制掛載原生 `WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON`、`webView.setKeepScreenOn(true)` 與 `webView.resumeTimers()`，外勤開啟 App 時手機螢幕 100% 恆亮不熄滅。
+     - 在 `DriverOrderService.java` 新增常駐 `PowerManager.PARTIAL_WAKE_LOCK` 與 `WifiManager.WIFI_MODE_FULL_HIGH_PERF` 高效能網路鎖，確保即使外勤人員手動按電源鍵把螢幕關掉放口袋，底層 CPU 與網路也絕不休眠，每 1.5 秒極速輪詢程式持續運作。
+     - 在 `/driver` 與 `/operations` 網頁端強化 `navigator.wakeLock.request("screen")` 每 15 秒與觸控互動自動續約。
+3. **驗證與交付結果**：
+   - Windows `powercfg` 驗證全項目為 `0x00000000`，背景防休眠進程穩定運行中。
+   - TypeScript 全域型別檢查 0 錯誤、Next.js 正式建置通過、Gass 201 項自動化測試 100% 通過。
+   - 雙版本 Android Signed Release APK（`盛隆外送_小龍專用.apk`、`盛隆外送_游柏林專用.apk`）已重新編譯並同步至老闆桌面 `sl` 資料夾。
+
+---
+
 ## 📅 2026/10/31 - 👑 《盛隆瓦斯數位轉型：現代化雙向閉環工程與七大 AI 智慧中樞總體企劃案》二合一完整定案發布 [ver: 20261031_0938_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
