@@ -4,7 +4,23 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-28 13:50
+> **最後更新時間**：2026-10-31 10:16
+
+---
+
+### 0. 企劃案第一階段（Step 1 雙向回寫閉環）與第二階段（Step 2 網頁戰情中心手機優先底部三段式 AI 抽屜＋免打字快選膠囊）正式實裝完成
+- **狀態**：`[x]` 已完成 (依老闆指示「那我們先執行 第一步 執行完後 再來第二步」依序落地並通過 210 項全量自動化測試)
+  - 🔍 **Step 1：打通雲端調度台與外勤 App 100% 雙向回寫門市舊 ERP (`dbo.gas_oders`)**：
+    1. **升級 `lib/dispatch-queue.ts`**：支援完整雙向動作（`assign`、`accept`、`deliver`、`pay`、`remarks`、`edit`、`cancel`）、批次入列 `enqueueBatchDispatches`，並新增 `applyPendingDispatchesOverlay` 樂觀覆蓋層，徹底消除 1.5 秒同步空窗期「訂單狀態閃退回待派工/未付款」之競態問題。
+    2. **升級 `/api/driver/orders/status`、`/api/driver/orders/assign`、`/api/today-orders/remarks`**：當調度台批次指派/改派司機、或外勤點擊「接單/已送達收現/月結」時，同步寫入雲端 `today_orders` KV 並排入 `dispatch_queue_v1`。
+    3. **升級 `sync-stock.cjs` (`handleCloudDispatches`)**：支援 `ROWLOCK` 原子回寫外勤送達時間 (`de_time`)、付款狀態 (`payed='Y'/'M'/'O'`、`pay_way='C'/'M'`)、欠瓶備註 (`oder_remarks`) 與管理員強制改派司機 (`deliver`)。
+    4. **調度台訂單卡片一鍵操控強化**：於 `/operations` 每張訂單卡片新增 `🛵 派小龍`、`🛵 派柏林`、`✅ 送達收現`、`📝 月結完單` 大拇指一鍵回寫按鈕。
+  - 📱 **Step 2：網頁戰情中心「手機優先底部三段式彈性 AI 抽屜 ＋ 免打字一鍵快選膠囊」實裝**：
+    1. **重構 `AiAdvisorDrawer.tsx` 為三段式底部抽屜 (`collapsed` 懸浮膠囊 ➔ `54vh` 半屏抽屜 ➔ `88vh` 全屏戰情)**，支援手勢上下滑動與一鍵切換，不遮擋背景地圖與訂單。
+    2. **內建 8 大免打字大拇指快選膠囊**：`📊 今日戰報`、`🛵 智能派單建議`、`📦 實瓶庫存與叫車`、`🎯 業務催單雷達`、`📣 行銷與休眠喚醒`、`💰 未收與欠款稽核`、`👑 查歐家莊大戶`、`🔍 同業防拔管雷達`。
+    3. **對話框內嵌「一鍵派工動作卡」與 `/api/ai/advisor` 真實數據穿透**：即時抓取雲端 `today_orders` 與 `stock`，若有待派工訂單直接在 AI 對話氣泡內浮現 `[🛵 全派給 小龍]` / `[🛵 全派給 游柏林]` 雙向回寫按鈕。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/31
 
 ---
 

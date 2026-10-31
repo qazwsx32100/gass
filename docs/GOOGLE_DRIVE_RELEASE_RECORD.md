@@ -1,3 +1,22 @@
+## 📅 2026/10/31 - 🚀 企劃案 Step 1（雙向回寫門市舊 ERP 閉環）與 Step 2（手機優先底部三段式 AI 抽屜＋免打字快選膠囊）正式實裝上線 [ver: 20261031_1016_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 「要執行企劃 要執行幾個步驟 我們來拆解」
+   - 「那我們先執行 第一步 執行完後 再來第二步」
+2. **Step 1：打通雲端與門市舊 ERP (`dbo.gas_oders`) 100% 雙向回寫閉環**：
+   - 根治過去調度台批次派單 (`batch_assign`) 與外勤送達 (`finish`) 僅更新雲端單一實例記憶體、未回寫門市 SQL Server 導致狀態閃退之病灶。
+   - 全面升級 `lib/dispatch-queue.ts`、`/api/driver/orders/status`、`/api/driver/orders/assign`、`/api/today-orders/remarks` 與 `sync-stock.cjs`：外勤點擊已送達收現/月結、或調度台指派/改派司機，1.5 秒內透過 `ROWLOCK` 安全寫回 `dbo.gas_oders`（`deliver`、`payed`、`pay_way`、`de_time`、`oder_remarks`），並搭載 `applyPendingDispatchesOverlay` 樂觀覆蓋層防止同步空窗期閃爍。
+   - 在 `/operations` 每張訂單卡片新增 `🛵 派小龍`、`🛵 派柏林`、`✅ 送達收現`、`📝 月結完單` 一鍵雙向回寫按鈕。
+3. **Step 2：網頁戰情中心「手機優先底部三段式彈性 AI 抽屜 ＋ 大拇指一鍵快選膠囊」**：
+   - 升級 `AiAdvisorDrawer.tsx` 並正式掛載於 `/operations`，支援手機三段式高度（收合膠囊 / `54vh` 半屏預覽 / `88vh` 全屏戰情）與手勢上下滑動。
+   - 內建七大 AI 免打字快選膠囊列，並打通 `/api/ai/advisor` 即時讀取雲端今日訂單與實瓶庫存；當有待派工單據時，AI 對話氣泡內直接生成可點擊執行的 `[🛵 全派給 小龍]` / `[🛵 全派給 游柏林]` 互動動作卡。
+4. **全量測試與驗證結果**：
+   - 新增 `tests/bidirectional-writeback.test.mjs` 雙向閉環與行動 AI 抽屜專項測試。
+   - `shenglong-next` TypeScript 全域型別檢查 0 錯誤；`Gass` 210 項自動化測試 100% 全數通過 (Pass: 210, Fail: 0)。
+
+---
+
 ## 📅 2026/10/31 - 🔆 全天候螢幕恆亮與程式不中斷雙軌鎖定（Windows 主機防休眠 + 外勤 App 原生恆亮與 CPU/WiFi 喚醒鎖）[ver: 20261031_1006_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

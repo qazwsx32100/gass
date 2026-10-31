@@ -1,3 +1,14 @@
+## [2026-10-31 10:16] - 企劃案 Step 1（雙向回寫門市舊 ERP 閉環）與 Step 2（手機優先底部三段式 AI 抽屜＋免打字快選膠囊）實裝完成
+### 核心雙向架構與行動 AI 體驗升級
+- **Step 1 雙向回寫閉環全面打通**：
+  - 擴充 `lib/dispatch-queue.ts` 支援 `assign`、`accept`、`deliver`、`pay`、`remarks`、`edit`、`cancel` 與 `applyPendingDispatchesOverlay` 防閃退樂觀覆蓋層。
+  - 升級 `/api/driver/orders/status`、`/api/driver/orders/assign`、`/api/today-orders/remarks` 與 `sync-stock.cjs`，實現調度台派單/改派、外勤送達收現/月結、單據備註 1.5 秒內自動回寫門市 SQL Server `dbo.gas_oders`。
+  - `/operations` 訂單卡片新增一鍵派單（小龍/游柏林）與一鍵完單（送達收現/月結完單）快捷鈕。
+- **Step 2 手機優先底部三段式彈性 AI 抽屜實裝**：
+  - 升級 `AiAdvisorDrawer.tsx` 為手機優先三段式底部抽屜（收合膠囊 / `54vh` 半屏 / `88vh` 全屏）並掛載至 `/operations`。
+  - 新增 8 顆七大 AI 免打字大拇指快選膠囊與對話內嵌「一鍵派工動作卡」，並升級 `/api/ai/advisor` 串接即時今日訂單與實瓶庫存。
+- **全量測試驗證**：新增 `tests/bidirectional-writeback.test.mjs`，全站 210/210 測試 100% 通過。
+
 ## [2026-10-31 10:06] - 全天候螢幕恆亮與程式不中斷雙軌鎖定（Windows 主機防休眠常駐 + 外勤 Android App 原生恆亮與 CPU/WiFi 喚醒鎖）
 ### 系統優化與穩定度升級
 - **Windows 主機全天候不關閉螢幕、不休眠**：
