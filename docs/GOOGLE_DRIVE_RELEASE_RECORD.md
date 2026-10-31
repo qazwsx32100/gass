@@ -1,3 +1,24 @@
+## 📅 2026/10/31 - 🔔 外勤 App 即時通知跳出徹底修復、新增純震動模式與音量合理化 [ver: 20261031_0945_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆回饋**：
+   - 「1.目前app 沒有辦法即時跳出通知，關掉螢幕、跳出app 還是不會跳出」
+   - 「2.鈴聲 幫我設定 新增震動模式」
+   - 「3.我們已經有戶外模式了，所有鈴聲都不用強制開到最大，選擇戶外模式才要開到最大」
+2. **核心病灶排查與全面優化**：
+   - **消除 FCM 快取死鎖攔截**：定位並排查出 `MyFirebaseMessagingService.java` 第 75 行提前呼叫 `markOrderNotified`，導致緊接著的原子防重鎖 `tryAcquireNotificationLock` 100% 誤判為已通知並 early return，徹底扼殺通知彈出！已移除自殺代碼，恢復流暢通知。
+   - **調度中心批次指派補齊 FCM 推播**：在 `/api/driver/orders/status` 的 `batch_assign` 中補齊 `sendPushToDriver` 發射邏輯，門市一鍵指派外勤人員瞬間立即發射雲端高優先級推播。
+   - **更新 AndroidManifest 預設頻道**：預設通知頻道更新至 `shenglong_dispatch_urgent_v7`。
+   - **新增純震動模式 (安靜不吵人)**：前端 `app/driver/page.tsx` 與 Android 原生層新增 `vibrate_only` 選項，在此模式下靜音不播放任何前奏鈴聲與真人語音，僅觸發多段式強烈長震動。
+   - **音量控制回歸人性化**：通知頻道與 Ringtone 音效通道由強制鬧鐘 (`USAGE_ALARM`) 調整為標準通知音流 (`USAGE_NOTIFICATION`)；取消常態下的一律強制最大音量，僅在明確開啟「戶外模式 (`auto_boost_volume`)」時才調用 `safeBoostVolume` 拉滿音量。
+3. **驗證與發布**：
+   - TypeScript 全域型別檢查通過 (0 錯誤)。
+   - Next.js 16 本地全量打包編譯通過。
+   - Gass 201 項全量測試 100% 通過 (Pass: 201, Fail: 0)。
+   - 雙版本 Android Signed Release APK 自動編譯與鏡像輸出。
+
+---
+
 ## 📅 2026/10/31 - 📘 盛隆瓦斯 AI 智慧中樞與現代化系統架構總整理全書交付（七大專職 AI、手機優先底部彈性抽屜、Telegram 6 大金剛按鈕）[ver: 20261031_0930_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
