@@ -1,3 +1,15 @@
+## [2026-10-31 11:09] - 老闆四大驗收回饋優化（手機版戰情室、唯一指定即時看板 shenglong-next.vercel.app/gas-stock、Telegram 總裁戰情室置頂、七大 AI 點名切換器）
+### 行動戰情體驗與雙向調度全面到位
+- **手機版監控中心 (`/operations`) 戰情室入口**：
+  - 於手機版頂部列、底部大拇指導航列與快捷工具抽屜新增 `🧠 AI戰情室` 與 `📺 戰情室` 按鈕，並完成 Vercel Production 正式部署。
+- **即時庫存看板與 API 唯一傳輸路由**：
+  - `sync-stock.cjs` 之 `VERCEL_SYNC_URLS` 唯一鎖定 `https://shenglong-next.vercel.app/api/gas-stock`，全站外部庫存看板連結統一指向 `https://shenglong-next.vercel.app/gas-stock`。
+- **Telegram 總裁戰情室 (`@shenlong_advisor_bot`) 24/7 雲端化與置頂喚醒**：
+  - 新增 `/api/telegram/advisor` 24/7 雲端 Webhook，更新機器人名稱為 `👑 盛隆總裁戰情室 (盛隆軍師)`，並主動推播訊息至老闆 ID `8862712587` 使其跳至聊天室最頂端。
+- **七大 AI 一鍵點名調動切換器**：
+  - 於 `AiAdvisorDrawer.tsx` 與 Telegram 鍵盤新增「👑 點名調動七大 AI」切換器（秘書、營運、客服、行銷、業務、財務、行政 AI），點選即切換專屬 4 大免打字指令鈕並指定主責 AI。
+- **全量測試驗證**：全站自動化測試擴充至 225 項，225/225 100% 通過。
+
 ## [2026-10-31 10:37] - 企劃案 Step 3 ～ Step 6（Telegram 6 大金剛免打字按鈕、七大 AI 矩陣路由、雙向回寫核心引擎、LINE 智慧擷取預備單閉環）全數完成
 ### 七大 AI 智慧中樞與雙向閉環全鏈路實裝
 - **Step 3 Telegram 總裁戰情室 6 大金剛按鈕與一鍵派工**：

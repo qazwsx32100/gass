@@ -216,3 +216,43 @@ test("Step 6: LINE AI Smart Order Extraction -> Operations Pending Queue Loop", 
     assert.ok(pendingRouteSrc.includes('action === "approve"'), "must support 1-tap order approval");
   });
 });
+
+test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Cloud Webhook & 7-AI Switcher", async (t) => {
+  await t.test("1. Mobile Monitoring Center (/operations) displays AI War Room & TV Wallboard buttons on mobile", () => {
+    const opsSrc = fs.readFileSync("c:/shenglong-next/app/operations/page.tsx", "utf8");
+    assert.ok(opsSrc.includes('isAppExperience ? "AI戰情室" : "七大AI戰情室"'), "mobile header must show AI戰情室");
+    assert.ok(opsSrc.includes('isAppExperience ? "戰情室" : "戰情大螢幕"'), "mobile header must show 戰情室");
+    assert.ok(opsSrc.includes("<span>AI戰情室</span>"), "mobile bottom bar must include AI戰情室 tab");
+  });
+
+  await t.test("2. Stock API sync and public links point exclusively to https://shenglong-next.vercel.app/gas-stock", () => {
+    const syncSrc = fs.readFileSync("c:/shenglong-next/sync-stock.cjs", "utf8");
+    assert.ok(
+      syncSrc.includes('const VERCEL_SYNC_URLS = [\n  "https://shenglong-next.vercel.app/api/gas-stock",\n];'),
+      "sync-stock.cjs VERCEL_SYNC_URLS must only transmit to shenglong-next.vercel.app/api/gas-stock"
+    );
+    assert.ok(
+      syncSrc.includes('const PUBLIC_STOCK_URL = "https://shenglong-next.vercel.app/gas-stock";'),
+      "PUBLIC_STOCK_URL must be https://shenglong-next.vercel.app/gas-stock"
+    );
+
+    const stockPageSrc = fs.readFileSync("c:/shenglong-next/app/gas-stock/page.tsx", "utf8");
+    assert.ok(
+      stockPageSrc.includes("🔗 外部看板：https://shenglong-next.vercel.app/gas-stock"),
+      "gas-stock page report link must use https://shenglong-next.vercel.app/gas-stock"
+    );
+  });
+
+  await t.test("3. Telegram Executive War Room (@shenlong_advisor_bot) 24/7 Cloud Webhook route is ready", () => {
+    const tgAdvisorSrc = fs.readFileSync("c:/shenglong-next/app/api/telegram/advisor/route.ts", "utf8");
+    assert.ok(tgAdvisorSrc.includes('const BOSS_TELEGRAM_ID = "8862712587"'), "must lock to Boss ID 8862712587");
+    assert.ok(tgAdvisorSrc.includes("@shenlong_advisor_bot"), "must reference @shenlong_advisor_bot");
+  });
+
+  await t.test("4. 7-AI Direct Switcher allows 1-tap summoning of all 7 specialist AIs", () => {
+    const drawerSrc = fs.readFileSync("c:/shenglong-next/app/components/AiAdvisorDrawer.tsx", "utf8");
+    assert.ok(drawerSrc.includes("const SEVEN_AI_AGENTS = ["), "must define SEVEN_AI_AGENTS switcher");
+    assert.ok(drawerSrc.includes("const AGENT_CHIPS_MAP"), "must define specialized chips for each of the 7 AIs");
+    assert.ok(drawerSrc.includes("點名調動七大 AI"), "must render 7-AI Direct Switcher bar");
+  });
+});

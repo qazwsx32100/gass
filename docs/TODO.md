@@ -4,7 +4,19 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-31 10:37
+> **最後更新時間**：2026-10-31 11:09
+
+---
+
+### 0. 老闆四大驗收回饋全數優化與雲端生產環境發布完成（手機版戰情室、唯一指定庫存看板 `shenglong-next.vercel.app/gas-stock`、Telegram 總裁戰情室置頂喚醒、七大 AI 一鍵點名調動器）
+- **狀態**：`[x]` 已完成 (依老闆驗收回饋 4 點指示全面升級並通過 225 項自動化測試)
+  - 🔍 **四大驗收升級明細**：
+    1. **手機版監控中心 (`/operations`) 直接顯現「🧠 AI戰情室」與「📺 戰情室」**：解除原本手機版隱藏戰情室限制，於手機頂部導航列、底部大拇指常駐列 (`app-mode-bottom-bar`) 與快捷工具抽屜 (`🧰`) 全面顯現「🧠 AI戰情室」與「📺 戰情室」，並執行 `npx vercel --prod --yes` 部署至雲端正式環境。
+    2. **即時庫存看板與 API 唯一指定傳輸至 `https://shenglong-next.vercel.app/gas-stock`**：將 `sync-stock.cjs` 之 `VERCEL_SYNC_URLS` 改為唯一傳輸至 `["https://shenglong-next.vercel.app/api/gas-stock"]`，並將 `PUBLIC_STOCK_URL`、`/gas-stock` 報表分享連結與 `/operations` 外部庫存看板按鈕全面統一為 `https://shenglong-next.vercel.app/gas-stock`。
+    3. **Telegram 總裁戰情室 (`@shenlong_advisor_bot`) 24/7 雲端 Webhook 與手機置頂喚醒**：建立 `/api/telegram/advisor` 24/7 雲端 Webhook 並綁定至 `@shenlong_advisor_bot`（名稱更新為「👑 盛隆總裁戰情室 (盛隆軍師)」），主動推播即時戰報與常駐鍵盤至老闆 Telegram (`8862712587`) 使其跳至聊天列表第 1 位，並提供一鍵直達連結 `https://t.me/shenlong_advisor_bot`。
+    4. **七大 AI 一鍵點名調動切換器 (`SEVEN_AI_AGENTS` & `AGENT_CHIPS_MAP`)**：於網頁戰情抽屜頂部與 Telegram 常駐鍵盤新增「👑 點名調動七大 AI」切換器（`👑 1.秘書 AI`、`🛵 2.營運 AI`、`💬 3.客服 AI`、`📣 4.行銷 AI`、`🎯 5.業務 AI`、`💰 6.財務 AI`、`🛡️ 7.行政 AI`），點選任一 AI 即自動切換為該 AI 專屬的 4 顆免打字指令鈕並由該 AI 專職呈報。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/10/31
 
 ---
 

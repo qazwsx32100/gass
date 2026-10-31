@@ -1,3 +1,21 @@
+## 📅 2026/10/31 - 🎯 老闆四大驗收回饋全數實裝上線（手機版戰情室、唯一指定 `shenglong-next.vercel.app/gas-stock`、Telegram 總裁戰情室置頂喚醒、七大 AI 點名調動器）[ver: 20261031_1109_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆驗收回饋 4 點指示**：
+   - `1.手機版 監控中心 沒有 戰情室`
+   - `2.即時看板 https://shenglong-next-phi.vercel.app/gas-stock 我想要改成 https://shenglong-next.vercel.app/gas-stock 之後api 都只傳輸到https://shenglong-next.vercel.app/gas-stock`
+   - `3.Telegram 總裁戰情室 找不到 這對話視窗`
+   - `4.我要如何調動 其他的ai？`
+2. **四大項工程改造與全系統連動落實**：
+   - **手機版監控中心 (`/operations`) 戰情室全面顯現**：於手機版頂部控制列、底部大拇指導航列 (`app-mode-bottom-bar`) 與快捷工具 (`🧰`) 增設 `🧠 AI戰情室` 與 `📺 戰情室` 按鈕，並同步執行 `npx vercel --prod --yes` 發布至 Vercel 正式環境。
+   - **即時庫存看板與 API 唯一鎖定 `https://shenglong-next.vercel.app/gas-stock`**：修改 `sync-stock.cjs` 之 `VERCEL_SYNC_URLS = ["https://shenglong-next.vercel.app/api/gas-stock"]` 與 `PUBLIC_STOCK_URL = "https://shenglong-next.vercel.app/gas-stock"`，並同步更新 `app/gas-stock/page.tsx` 與 `app/operations/page.tsx`。
+   - **Telegram 總裁戰情室 (`@shenlong_advisor_bot`) 24/7 雲端 Webhook 與置頂推播**：新增 `app/api/telegram/advisor/route.ts` 並註冊 Telegram Webhook，將 Bot 名稱更新為 `👑 盛隆總裁戰情室 (盛隆軍師)`，主動推播戰報至老闆 ID `8862712587` 使其置頂於 Telegram 第一列，並於 `/operations` 提供一鍵直達連結 `https://t.me/shenlong_advisor_bot`。
+   - **七大 AI 一鍵點名調動器 (`SEVEN_AI_AGENTS`)**：於網頁 `AiAdvisorDrawer.tsx` 頂部及 Telegram 鍵盤增設 7 大 AI 點名按鈕（秘書👑、營運🛵、客服💬、行銷📣、業務🎯、財務💰、行政🛡️），點選即可切換該 AI 專屬 4 大指令並指定該 AI 回覆。
+3. **全量測試與驗證結果**：
+   - `shenglong-next` TypeScript 全域型別檢查 0 錯誤；`Gass` 全量自動化測試擴充至 **225 項，100% 全數通過 (Pass: 225, Fail: 0)**。
+
+---
+
 ## 📅 2026/10/31 - 👑 《盛隆瓦斯數位轉型與七大 AI 智慧中樞總體工程企劃案》Step 3 ～ Step 6 全數實裝完成（全 6 步 100% 閉環達成）[ver: 20261031_1037_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
