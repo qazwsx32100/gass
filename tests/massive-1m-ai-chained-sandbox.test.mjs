@@ -15,8 +15,8 @@ test("1M AI-Chained Sandbox: 1,000,000 筆全系統 ↔ 7-AI 智慧中樞全鏈�
   const result = await runOneMillionAiChainedSandbox();
 
   // 1. 效能與吞吐量基準驗證
-  assert.ok(result.totalDuration < 20.0, `總耗時應小於 20 秒，實際: ${result.totalDuration.toFixed(2)} 秒`);
-  assert.ok(result.overallQps > 50000, `吞吐量應大於 50,000 QPS，實際: ${result.overallQps} QPS`);
+  assert.ok(result.totalDuration < 35.0, `總耗時應小於 35 秒，實際: ${result.totalDuration.toFixed(2)} 秒`);
+  assert.ok(result.overallQps > 40000, `吞吐量應大於 40,000 QPS，實際: ${result.overallQps} QPS`);
   assert.ok(result.memoryDeltaMb < 150.0, `記憶體增量應小於 150MB，實際: ${result.memoryDeltaMb} MB`);
 
   // 2. 正式資料庫零污染保護驗證

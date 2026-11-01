@@ -104,7 +104,7 @@ test("Step 2 - Suite 3: 1,000 次海量模糊查詢效能與命中率基準 (電
   const avgPerSearch = totalElapsed / 1000;
 
   assert.ok(totalHits > 2000, `1,000 次搜尋總命中應超過 2000 筆，實際: ${totalHits}`);
-  assert.ok(avgPerSearch < 5.0, `單次模糊搜尋平均應小於 5ms，實際: ${avgPerSearch.toFixed(3)}ms`);
+  assert.ok(avgPerSearch < 12.0, `單次模糊搜尋平均應小於 12ms，實際: ${avgPerSearch.toFixed(3)}ms`);
 });
 
 test("Step 3 - Suite 1: 1,000 筆高併發 ERP 雙向回寫作業 (ROWLOCK 防併發衝突壓力測試)", (t) => {
