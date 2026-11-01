@@ -256,3 +256,54 @@ test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Clo
     assert.ok(drawerSrc.includes("點名調動七大 AI"), "must render 7-AI Direct Switcher bar");
   });
 });
+
+test("Stage 2 & 3 Deep-Water Engines: Idempotent LINE Order ERP Insert, Marketing/Sales AI Engines, and Micro-Daemons", async (t) => {
+  await t.test("1. erp-writeback-engine.cjs compiles idempotent INSERT INTO dbo.gas_oders for approved LINE orders", () => {
+    const createPlan = buildDispatchWritebackSql({
+      id: "job-line-1",
+      orderId: 991234,
+      action: "create",
+      payload: {
+        lineOrderId: "line_1761955000_ab12",
+        phone: "0912-345-678",
+        address: "三重區文化北路83號",
+        floor: "3樓",
+        spec: "20kg",
+        quantity: 2,
+        driver: "小龍",
+      },
+    });
+    assert.equal(createPlan.logPrefix, "CREATE_LINE_ORDER");
+    assert.ok(createPlan.sql.includes("INSERT INTO dbo.gas_oders"), "must compile INSERT INTO dbo.gas_oders");
+    assert.ok(createPlan.sql.includes("IF NOT EXISTS"), "must include idempotency guard");
+    assert.ok(createPlan.sql.includes("N'小龍'"), "must assign driver on creation");
+
+    const legacyHold = buildDispatchWritebackSql({
+      id: "job-legacy-create",
+      orderId: 100,
+      action: "create",
+      payload: {},
+    });
+    assert.equal(legacyHold.logPrefix, "HOLD_CREATE");
+    assert.equal(legacyHold.skipAck, true);
+  });
+
+  await t.test("2. marketing-sales-engines.ts provides 3-tier retention radar and B2B margin floor calculator", () => {
+    const engineSrc = fs.readFileSync("c:/shenglong-next/lib/marketing-sales-engines.ts", "utf8");
+    assert.ok(engineSrc.includes("export function runMarketingAiEngine"), "must export runMarketingAiEngine");
+    assert.ok(engineSrc.includes("export function runSalesAiEngine"), "must export runSalesAiEngine");
+    assert.ok(engineSrc.includes("breakEvenFloor20kg"), "must compute 20kg break-even floor price");
+    assert.ok(engineSrc.includes("stoveCrossSellPackages"), "must include stove and water heater cross-sell packages");
+  });
+
+  await t.test("3. micro-daemons-manager.cjs defines 3 isolated daemons and 10s rollback guarantee", () => {
+    const req = createRequire(import.meta.url);
+    const { getMicroDaemonsTopology, buildRollbackPlan } = req("c:/shenglong-next/lib/micro-daemons-manager.cjs");
+    const topo = getMicroDaemonsTopology();
+    assert.equal(topo.daemons.length, 3);
+    assert.equal(topo.rollbackGuaranteeSeconds, 10);
+    assert.equal(topo.primaryStockApiTarget, "https://shenglong-next.vercel.app/api/gas-stock");
+    const plan = buildRollbackPlan("verification");
+    assert.equal(plan.targetRtoSeconds, 10);
+  });
+});

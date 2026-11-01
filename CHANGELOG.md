@@ -10,6 +10,16 @@
   - `ReconciliationPanel.tsx` 與 `DailyDriverReconcileModal.tsx` 全面替換為「外勤人員 / 外勤端 / 外送員 / 外送運費」，0 違規殘留。
 - **全量測試驗證**：Gass 225 項測試 100% 通過，Next.js build 成功編譯。
 
+## [2026-11-01 09:50] - 企劃案深水區三大核心引擎實裝（LINE 審單冪等寫入舊 ERP、行銷三級燈號與業務 20kg 保本毛利底線試算器、三大微守護進程隔離架構）
+### 七大 AI 深度武器與雙向閉環全面竣工
+- **LINE AI 待審單一鍵寫入舊 ERP (`INSERT INTO dbo.gas_oders`)**：
+  - 升級 `lib/erp-writeback-engine.cjs`、`sync-stock.cjs`、`/api/line-orders/pending` 與 `AiAdvisorDrawer.tsx`，支援一鍵核准 LINE 叫貨草稿並以 `[LINE#tag]` 冪等防重機制直接寫入 `dbo.gas_oders`。
+- **行銷 AI 與業務 AI 深度實戰引擎 (`lib/marketing-sales-engines.ts`)**：
+  - 新增 `runMarketingAiEngine`（31~60天黃燈、61~90天橘燈 $50 喚醒券、>90天紅燈壓瓶回收＋寒流早鳥 LINE 文案）與 `runSalesAiEngine`（20kg 保本底線價 $568 / VIP 防守價 $660 試算＋快速爐/熱水器/切替器連帶銷售報價），全面接入 `/api/ai/advisor` 與 `/api/telegram/advisor`。
+- **三大微守護進程隔離與 10 秒回滾 (`lib/micro-daemons-manager.cjs`)**：
+  - 建立 `daemon-data-sync`、`daemon-telegram-bot`、`daemon-telephony` 隔離拓撲與 10 秒災難回滾機制。
+- **全量測試驗證**：全站自動化測試擴充至 229 項，229/229 100% 通過。
+
 ## [2026-10-31 11:09] - 老闆四大驗收回饋優化（手機版戰情室、唯一指定即時看板 shenglong-next.vercel.app/gas-stock、Telegram 總裁戰情室置頂、七大 AI 點名切換器）
 ### 行動戰情體驗與雙向調度全面到位
 - **手機版監控中心 (`/operations`) 戰情室入口**：

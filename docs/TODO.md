@@ -4,7 +4,18 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-10-31 11:20
+> **最後更新時間**：2026-11-01 09:41
+
+---
+
+### 0. 企劃案深水區三大核心引擎實裝完成（LINE AI 審單直接 `INSERT INTO dbo.gas_oders` 寫入舊 ERP、行銷 AI 週期三級燈號與業務 AI 保本毛利底線試算器、三大微守護進程隔離架構）
+- **狀態**：`[x]` 已完成 (依老闆指示「我們繼續」完成總體企劃案全三階段深水區工程模組，並通過 229 項全量自動化測試)
+  - 🔍 **三大深水區模組交付明細**：
+    1. **LINE AI 待審單一鍵轉入舊 ERP (`INSERT INTO dbo.gas_oders`) 完整閉環**：升級 `lib/erp-writeback-engine.cjs`、`sync-stock.cjs` 與 `/api/line-orders/pending`，核准時具備 `[LINE#tag]` 冪等防重保護直接寫入 `dbo.gas_oders` 並指派外勤；於 `AiAdvisorDrawer.tsx` 頂部內建 LINE 待審叫貨草稿一鍵核准派工卡（`✅ 核准派小龍` / `✅ 核准派游柏林` / `✕ 略過`）。
+    2. **行銷 AI（三級流失燈號＋寒流早鳥削峰推播）與業務 AI（B2B 20kg 保本毛利底線試算＋爐具/熱水器連帶銷售）實戰引擎**：新增 `lib/marketing-sales-engines.ts`（`runMarketingAiEngine`、`runSalesAiEngine`），精算 20kg 單桶絕對保本底線價（`$568/桶`）與 VIP 年約防守底線價（`$660/桶`），並整合至 `/api/ai/advisor` 與 Telegram 總裁戰情室。
+    3. **三大微守護進程隔離架構與 10 秒災難回滾管理 (`lib/micro-daemons-manager.cjs`)**：定義 `daemon-data-sync` (Port 48995)、`daemon-telegram-bot` (Port 48996)、`daemon-telephony` (Port 48997) 獨立隔離契約與 10 秒無損回滾機制。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/01
 
 ---
 
