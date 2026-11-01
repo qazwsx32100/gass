@@ -1,3 +1,23 @@
+## 📅 2026/11/01 - 🚀 七大 AI 全真數據沙盒演練 (Dry-Run) 全部 AI 聯合實跑與雙軌同步推播（Telegram 總裁戰情室 ＋ 手機網頁戰情室）[ver: 20261101_1005_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆指示與實行決策**：
+   - 老闆指示：「幫我用ai去跑 我們剛剛所做的 要跑之前 我們討論一下要如何實行」
+   - 經與老闆對齊三大實行原則：
+     1. **啟動模式**：先跑一輪「全真數據沙盒演練 (Dry-Run)」，抓取店內真實資料讓七大 AI 全部跑過一次並推播報告驗收，唯讀不改動 ERP 訂單表 (`dbo.gas_oders`)。
+     2. **指揮管道**：雙軌同步（重要戰報與通知直接推播到「Telegram 總裁戰情室」，詳細報表與一鍵核准在「手機網頁戰情室」與 Telegram 都能操作）。
+     3. **作業範圍**：全部七大 AI（秘書、營運、客服、行銷、業務、財務、行政 AI）一起聯合實跑。
+2. **具體交付成果**：
+   - **七大 AI 聯合沙盒演練中樞 (`lib/seven-ai-dryrun-engine.ts`)**：
+     - 讀取店內即時真實訂單 (`today_orders`)、即時在店實瓶庫存 (`stock`) 與 3,934 戶客戶資料庫 (`customers-map.json`)，一次跑完 1~7 號 AI 真實數據報告，並編譯唯讀 `[沙盒模擬 T-SQL 預覽]`（如待派單 `#361582` 推薦指派游柏林之 `UPDATE dbo.gas_oders` 語法預覽），確保 `erpModified: false`。
+   - **雙軌同步推播與一鍵重跑機制 (`/api/ai/advisor`、`/api/telegram/advisor`、`AiAdvisorDrawer.tsx`)**：
+     - 於 Telegram 總裁戰情室 (`@shenlong_advisor_bot`) 常駐鍵盤最頂端新增 `🚀 七大AI全真聯動試跑 (Dry-Run)` 按鈕，並已將第一輪真實數據聯合戰報（Message ID `336`）推播至老闆 Telegram (`8862712587`)。
+     - 於手機網頁戰情室 (`AiAdvisorDrawer.tsx`) 新增 `🚀 一鍵啟動：七大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)` 橫幅按鈕與自動載入演練報告。
+3. **驗證結果**：
+   - `shenglong-next` TypeScript `npx tsc --noEmit` 0 錯誤；`Gass` 全量自動化測試全部通過。
+
+---
+
 ## 📅 2026/11/01 - 🔔 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）[ver: 20261101_1002_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
