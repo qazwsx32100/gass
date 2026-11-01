@@ -1,3 +1,10 @@
+## [2026-11-01 10:33] - 正式啟動「七大 AI 半自動領航實戰模式 (Human-in-the-Loop) ＋ 每日四班全自動巡航排程 (08:00/尖峰/14:30/20:30)」
+### 三級權限護欄與四班自動巡航全面上線
+- **七大 AI 半自動領航與四班排程中樞 (`lib/seven-ai-autopilot-scheduler.ts` & `/api/ai/autopilot/route.ts`)**：
+  - 建立三級權限護欄（🟢 查詢巡檢全自動、🟡 寫入 ERP 強制需老闆一鍵核准、🔴 B2B 議價鎖定 $568 保本底線）與每日四班排程（`🌅 08:00 早安班`、`☀️ 尖峰派單班`、`🌤️ 14:30 拓客班`、`🌙 20:30 晚報班`）。
+- **Telegram 與手機網頁雙軌四班切換 (`advisor-bot.cjs`、`/api/telegram/advisor`、`AiAdvisorDrawer.tsx`)**：
+  - 於 Telegram 常駐鍵盤與網頁戰情室新增四班一鍵切換控制列，並於 `advisor-bot.cjs` 實裝每日 08:00 / 14:30 / 20:30 自動定時巡航推播。
+
 ## [2026-11-01 10:05] - 七大 AI 全真數據沙盒演練 (Dry-Run) 全部 AI 聯合實跑與雙軌同步推播（Telegram 總裁戰情室 ＋ 手機網頁戰情室）
 ### 七大 AI 實戰沙盒演練與雙軌同步全面啟動
 - **七大 AI 聯合沙盒演練中樞 (`lib/seven-ai-dryrun-engine.ts`)**：

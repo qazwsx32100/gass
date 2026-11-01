@@ -330,3 +330,25 @@ test("Seven-AI Joint Dry-Run Sandbox Engine & Dual-Track Sync (Telegram + Mobile
     assert.ok(drawerSrc.includes("七大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)"), "AiAdvisorDrawer must include 1-tap dual-track Dry-Run button");
   });
 });
+
+test("Seven-AI Human-in-the-Loop Production Mode & 4-Shift Auto-Pilot Scheduler", async (t) => {
+  await t.test("1. seven-ai-autopilot-scheduler.ts defines 3-tier permission guardrails and 4 daily shifts", () => {
+    const autoSrc = fs.readFileSync("c:/shenglong-next/lib/seven-ai-autopilot-scheduler.ts", "utf8");
+    assert.ok(autoSrc.includes("THREE_TIER_PERMISSION_GUARDRAILS"), "must define 3-tier permission guardrails");
+    assert.ok(autoSrc.includes("morning_0800"), "must define 08:00 morning shift");
+    assert.ok(autoSrc.includes("peak_realtime"), "must define peak realtime shift");
+    assert.ok(autoSrc.includes("afternoon_1430"), "must define 14:30 afternoon shift");
+    assert.ok(autoSrc.includes("evening_2030"), "must define 20:30 evening shift");
+  });
+
+  await t.test("2. /api/ai/autopilot and advisor-bot.cjs wire up daily 08:00, 14:30, 20:30 automatic shift triggers", () => {
+    const routeSrc = fs.readFileSync("c:/shenglong-next/app/api/ai/autopilot/route.ts", "utf8");
+    assert.ok(routeSrc.includes("executeAutoPilotShift"), "/api/ai/autopilot must execute Auto-Pilot shifts");
+    assert.ok(routeSrc.includes("HUMAN_IN_THE_LOOP_AUTOPILOT"), "must enforce HUMAN_IN_THE_LOOP_AUTOPILOT mode");
+
+    const botSrc = fs.readFileSync("c:/shenglong-next/advisor-bot.cjs", "utf8");
+    assert.ok(botSrc.includes("lastAutoPilot0800Date"), "advisor-bot.cjs must schedule 08:00 shift");
+    assert.ok(botSrc.includes("lastAutoPilot1430Date"), "advisor-bot.cjs must schedule 14:30 shift");
+    assert.ok(botSrc.includes("lastAutoPilot2030Date"), "advisor-bot.cjs must schedule 20:30 shift");
+  });
+});
