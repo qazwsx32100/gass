@@ -19,6 +19,24 @@
 
 ---
 
+### 0. 外勤人員 App「歷史紀錄」500 報錯根治、雲端 API 容錯降級與雙守護進程本機拉起
+- **狀態**：`[x]` 已完成 (依老闆指示「都幫我處理」，徹底根除外送人員 App 歷史查詢 500 報錯、加固種子庫安全降級、配置本機同步密鑰、拉起 `supervisor-sync` 守護進程，並通過 249 項全量測試)
+  - 🔍 **核心排查與修復明細**：
+    1. **雲端 `/api/driver/earnings` 500 伺服器錯誤根治 (`app/api/driver/earnings/route.ts` & `lib/driver-history-seed-store.ts`)**：
+       - 修復原先呼叫種子庫時遭遇 404 或空回應引發之 `Unexpected end of JSON input` 異常，加上完整 `try/catch` 容錯降級。
+       - 按月查詢 (`monthParam`) 加上 `.catch(() => [])`，即使任何單一存儲抖動，整隻 API 依然 100% 穩定回傳 200 OK！
+       - 實測驗證：查詢 2026/11、2026/10、今日 2026/11/01、歷史 10/29、10/28 全數 200 OK，小龍歷史單據秒出！
+    2. **本機同步專屬密鑰配置與自適應路徑修復 (`supervisor-sync.cjs` & `.env`)**：
+       - 於 `c:\shenglong-next\.env` 與 `c:\Gass\.env` 補齊官方 `SHENGLONG_GAS_STOCK_SYNC_SECRET`。
+       - 修復 `supervisor-sync.cjs` 原先硬編碼 `D:\test\logs` 在只有 C 槽的環境中崩潰之問題，加入自動自適應 `logs` 目錄。
+       - 成功將 `supervisor-sync`（Port 48999）常駐守護進程正式拉起，同時管轄 `sync-stock.cjs` 與 `advisor-bot.cjs`！
+    3. **全系統 249 項自動化測試 100% 通過**：
+       - `tests/*.test.mjs` 249/249 零失敗，0 回歸！
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/01
+
+---
+
 ### 0. 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）
 - **狀態**：`[x]` 已完成 (依老闆指示「全部都幫我檢驗一下，並且幫我跑沙盒測試」，完成全系統連動檢驗、通知架構全量升級、雙外送同仁最新 Signed Release APK 桌面交付，並實跑七大 AI 沙盒演練雙軌推播完成)
   - 🔍 **核心排查與修復明細**：

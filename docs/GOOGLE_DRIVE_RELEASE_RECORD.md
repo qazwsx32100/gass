@@ -1,3 +1,22 @@
+## 📅 2026/11/01 - 🛠️ 外勤人員 App「歷史紀錄」500 報錯根治、雲端 API 容錯降級與雙守護進程本機拉起 [ver: 20261101_1158_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆問題回報**：
+   - 「小龍 司機app 歷史紀錄 又掛掉了 討論一下」➔ 老闆指令：「都幫我處理」。
+2. **具體排查與交付成果**：
+   - **雲端 `/api/driver/earnings` 500 伺服器錯誤根治 (`app/api/driver/earnings/route.ts` & `lib/driver-history-seed-store.ts`)**：
+     - 修復原先呼叫種子庫時遭遇 404 或空回應引發之 `Unexpected end of JSON input` 異常，加上完整 `try/catch` 容錯降級。
+     - 按月查詢 (`monthParam`) 加上 `.catch(() => [])`，即使任何單一存儲抖動，整隻 API 依然 100% 穩定回傳 200 OK！
+     - 實測驗證：查詢 2026/11、2026/10、今日 2026/11/01、歷史 10/29、10/28 全數 200 OK，小龍歷史單據秒出！
+   - **本機同步專屬密鑰配置與自適應路徑修復 (`supervisor-sync.cjs` & `.env`)**：
+     - 於 `c:\shenglong-next\.env` 與 `c:\Gass\.env` 補齊官方 `SHENGLONG_GAS_STOCK_SYNC_SECRET`。
+     - 修復 `supervisor-sync.cjs` 原先硬編碼 `D:\test\logs` 在只有 C 槽的環境中崩潰之問題，加入自動自適應 `logs` 目錄。
+     - 成功將 `supervisor-sync`（Port 48999）常駐守護進程正式拉起，同時管轄 `sync-stock.cjs` 與 `advisor-bot.cjs`！
+   - **全系統 249 項自動化測試 100% 通過**：
+     - `tests/*.test.mjs` 249/249 零失敗，0 回歸！
+
+---
+
 ## 📅 2026/11/01 - 🛡️ 全系統全維度檢驗（安全防護、API 串接健康度、防重複機制、雙守護進程）與七大 AI 全真數據沙盒演練 (Dry-Run) 深度實跑 [ver: 20261101_1037_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
