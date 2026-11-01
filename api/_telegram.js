@@ -200,6 +200,24 @@ export const sendErrorAlert = async ({
       { text: '🔄 重新同步資料', callback_data: `act:force_sync:${actionId}` },
       { text: '🧹 清除快取', callback_data: 'act:clear_cache' }
     ]);
+  } else if (errorType === 'writeback') {
+    keyboard.push([
+      { text: '🔄 立即重試此筆', callback_data: `act:retry_writeback:${actionId}` },
+      { text: '⏭️ 移至待查區(DLQ)', callback_data: `act:move_to_dlq:${actionId}` }
+    ]);
+    keyboard.push([
+      { text: '🛠️ 一鍵切回純人工', callback_data: `act:switch_manual:${actionId}` }
+    ]);
+  } else if (errorType === 'leak' || errorType === 'leak_emergency') {
+    keyboard.push([
+      { text: '🚨 啟動全面警報', callback_data: `act:broadcast_leak:${actionId}` },
+      { text: '📞 撥打門市緊急專線', url: 'https://shenglong-next.vercel.app/operations' }
+    ]);
+  } else if (errorType === 'price_anomaly') {
+    keyboard.push([
+      { text: '🛡️ 強制恢復保本價 $568', callback_data: `act:force_price_floor:${actionId}` },
+      { text: '👑 老闆特准過關', callback_data: `act:boss_override_price:${actionId}` }
+    ]);
   } else {
     keyboard.push([
       { text: '🩺 執行系統健檢', callback_data: 'act:diag_system' }
