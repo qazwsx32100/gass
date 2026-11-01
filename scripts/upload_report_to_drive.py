@@ -78,10 +78,8 @@ def main():
     root_dir = Path(__file__).resolve().parent.parent
     md_file = root_dir / "docs" / "LINE_ORDER_INGEST_STAGE2_REPORT.md"
     html_file = root_dir / "public" / "reports" / "stage2.html"
-
-    if not md_file.exists():
-        print(f"[錯誤] 找不到 Markdown 報告檔案: {md_file}")
-        sys.exit(1)
+    arch_file = root_dir / "docs" / "SHENGLONG_AI_SYSTEM_MASTER_ARCHITECTURE.md"
+    release_file = root_dir / "docs" / "GOOGLE_DRIVE_RELEASE_RECORD.md"
 
     try:
         drive = get_drive_service()
@@ -91,17 +89,40 @@ def main():
 
     results = []
 
-    # 1. 上傳 Markdown 版報告
-    res_md = upload_file(
-        drive,
-        md_file,
-        "text/markdown",
-        "盛隆瓦斯_LINE訂單自動匯入舊進銷存系統_階段2專案報告.md"
-    )
-    print(f"✅ Markdown 版上傳成功: {res_md.get('webViewLink')}")
-    results.append(res_md)
+    # 1. 上傳全系統四大架構圖總全書
+    if arch_file.exists():
+        res_arch = upload_file(
+            drive,
+            arch_file,
+            "text/markdown",
+            "盛隆瓦斯_全系統一體化與四大架構圖總全書.md"
+        )
+        print(f"✅ 四大架構圖總全書上傳成功: {res_arch.get('webViewLink')}")
+        results.append(res_arch)
 
-    # 2. 上傳獨立 HTML 網頁版報告
+    # 2. 上傳雲端維護與發布紀錄
+    if release_file.exists():
+        res_rel = upload_file(
+            drive,
+            release_file,
+            "text/markdown",
+            "盛隆瓦斯_雲端維護與發布紀錄.md"
+        )
+        print(f"✅ 雲端維護發布紀錄上傳成功: {res_rel.get('webViewLink')}")
+        results.append(res_rel)
+
+    # 3. 上傳 Markdown 版階段2報告
+    if md_file.exists():
+        res_md = upload_file(
+            drive,
+            md_file,
+            "text/markdown",
+            "盛隆瓦斯_LINE訂單自動匯入舊進銷存系統_階段2專案報告.md"
+        )
+        print(f"✅ Markdown 版上傳成功: {res_md.get('webViewLink')}")
+        results.append(res_md)
+
+    # 4. 上傳獨立 HTML 網頁版報告
     if html_file.exists():
         res_html = upload_file(
             drive,

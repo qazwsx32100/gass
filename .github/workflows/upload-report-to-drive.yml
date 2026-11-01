@@ -1,9 +1,11 @@
-name: Upload Stage 2 Report to Google Drive
+name: Upload Reports and Architecture to Google Drive
 
 on:
   workflow_dispatch:
   push:
     paths:
+      - 'docs/SHENGLONG_AI_SYSTEM_MASTER_ARCHITECTURE.md'
+      - 'docs/GOOGLE_DRIVE_RELEASE_RECORD.md'
       - 'docs/LINE_ORDER_INGEST_STAGE2_REPORT.md'
       - 'public/reports/stage2.html'
 
