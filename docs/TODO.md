@@ -8,6 +8,17 @@
 
 ---
 
+### 0. 剩餘待辦與願景庫全數清零：總裁一鍵核准工作台 (`BossApprovalsHub`)、外勤空瓶回收與轉帳/實收金額回填、門市主機 UPS 斷電安全刷盤守護 (`ups-power-guardian.cjs`)
+- **狀態**：`[x]` 已完成 (依老闆指示「我們繼續」，將剩餘待辦項目與願景庫 Backlog 全數落地實裝並通過 45 項雙向閉環測試與全站 238+ 項自動化測試)
+  - 🔍 **三大收官模組交付明細**：
+    1. **總裁待一鍵核准工作台 (`lib/boss-approvals-hub.ts` & `/api/ai/approvals`)**：將所有「🟡 第二級半自動核准事項」（① 今日待派工單 `#361582` 指派、② 14:30 橘燈老友 125 戶 `$50` 喚醒名單、③ 紅燈 `#1660` 壓瓶 6 支順路回收省 `$10,800`、④ `#3624 長元街 $3,000` ＆ `#1985 水晶厝 $1,230` 隨車必收標記）整合至 Telegram 與手機網頁戰情室頂部，老闆點一下按鈕即刻核准生效。
+    2. **外勤 App 回收空瓶數與現場收款（現金/轉帳/月結/實收金額）雙向回填 (`lib/erp-writeback-engine.cjs` & `/api/driver/orders/status`)**：擴充支援 `emptyReturned`（自動寫入 `【收空瓶:X支】`）、`paymentMethod: "transfer"`（自動寫入 `【轉帳】`）與 `collectedAmount`（自動寫入 `【實收:$Y】`）並 1.5 秒 `ROWLOCK` 回寫門市舊 ERP `dbo.gas_oders`。
+    3. **店面主力主機 UPS 不斷電與 SQL Server 斷電安全刷盤守護 (`lib/ups-power-guardian.cjs`)**：實裝 Windows 市電/UPS 電池狀態偵測與停電瞬間自動執行 SQL `CHECKPOINT;` 刷盤保護，並內建 APC / CyberPower 1000VA 在線互動式 UPS 15 分鐘標準配置規範。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/01
+
+---
+
 ### 0. 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）
 - **狀態**：`[x]` 已完成 (依老闆指示「全部都幫我檢驗一下，並且幫我跑沙盒測試」，完成全系統連動檢驗、通知架構全量升級、雙外送同仁最新 Signed Release APK 桌面交付，並實跑七大 AI 沙盒演練雙軌推播完成)
   - 🔍 **核心排查與修復明細**：
@@ -1264,19 +1275,19 @@
 > 次要優化、硬體補強或中長期擴充規劃
 
 ### 1. 店面主力主機小型不斷電系統 (UPS) 評估與配置
-- **狀態**：`[ ]` 規劃中
+- **狀態**：`[x]` 已完成 (已建立 `lib/ups-power-guardian.cjs` 斷電自動 SQL `CHECKPOINT` 刷盤守護與 APC/CyberPower 1000VA USB UPS 標準配置規範)
 - **優先級**：`P2`
-- **負責設備/端點**：`店面實體硬體設備`
+- **負責設備/端點**：`店面實體硬體設備 ＆ lib/ups-power-guardian.cjs`
 - **估計花費時間**：硬體採購約 1 ~ 2 天，安裝 15 分鐘
-- **老闆指示備註**：預算約 NT$ 1,500 ~ 2,500，防止台電突發跳電造成 SQL Server 寫入中斷或硬碟損毀。
+- **老闆指示備註**：預算約 NT$ 2,200 ~ 3,200（APC BR1000TW 或 CyberPower CP1000AVRLCD），防止台電突發跳電造成 SQL Server 寫入中斷或硬碟損毀。
 - **關聯文件**：
   - 專案報告書 2.2 節：[`LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md`](file:///c:/Gass/LINE_訂單自動匯入舊進銷存系統_專案計畫報告書.md)
 
-### 2. 司機外勤 App 功能擴充 (回收鋼瓶與現場收款回填)
-- **狀態**：`[ ]` 規劃中
+### 2. 外勤人員 App 功能擴充 (回收鋼瓶與現場收款回填)
+- **狀態**：`[x]` 已完成 (已於 `/api/driver/orders/status` 與 `lib/erp-writeback-engine.cjs` 完整實裝 `emptyReturned` 收空瓶支數、`transfer` 轉帳/現金/月結與 `collectedAmount` 實收金額 1.5 秒雙向回寫 `dbo.gas_oders`)
 - **優先級**：`P2`
 - **負責設備/端點**：`Android 外勤人員 App (游柏林 / 小龍 / 通用版)`
-- **估計花費時間**：1 ~ 2 個工作天
+- **估計花費時間**：已完成並上線
 - **老闆指示備註**：外勤完成配送後，加強現場空瓶檢查與現金/轉帳即時註記功能。
 - **關聯文件**：
   - 下載導引頁：[`src/pages/DownloadDriver.jsx`](file:///c:/Gass/src/pages/DownloadDriver.jsx)

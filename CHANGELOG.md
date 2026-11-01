@@ -11,6 +11,15 @@
 - **自動化測試 0 回歸**：
   - `Gass` 235 項測試全數通過 (`pass 235, fail 0`)；`shenglong-next` 車載與通知測試 2 項全數通過 (`pass 2, fail 0`)；TypeScript 編譯 0 錯誤。
 
+## [2026-11-01 11:25] - 剩餘待辦與願景庫全數清零：總裁待核准工作台 (BossApprovalsHub)、外勤收空瓶與轉帳回填、門市主機 UPS 斷電刷盤守護
+### 全看板待辦 100% 清零與收官交付
+- **總裁一鍵核准工作台 (`lib/boss-approvals-hub.ts` & `/api/ai/approvals/route.ts`)**：
+  - 將待派工單 `#361582`、橘燈老友 125 戶 `$50` 喚醒名單、紅燈 `#1660` 壓瓶 6 支順路回收、以及 `#3624 長元街` / `#1985 水晶厝` 隨車必收標記整合為互動式一鍵核准卡片，同步推播至 Telegram 與手機網頁戰情室。
+- **外勤空瓶回收與轉帳/實收金額雙向回填 (`lib/erp-writeback-engine.cjs` & `/api/driver/orders/status/route.ts`)**：
+  - 支援 `emptyReturned`、`paymentMethod: "transfer"` 與 `collectedAmount` 1.5 秒 `ROWLOCK` 雙向寫回門市 `dbo.gas_oders`。
+- **門市主機 UPS 斷電安全刷盤守護 (`lib/ups-power-guardian.cjs`)**：
+  - 實裝市電中斷切換電池時自動執行 SQL `CHECKPOINT;` 刷盤保護與 1000VA USB UPS 標準配置規範。
+
 ## [2026-11-01 11:15] - 校準門市打烊時間 (21:00) 與打烊總裁結算晚報排程 (21:30) 暨正式啟動七大 AI 四班自動巡航
 ### 三級權限護欄與四班自動巡航（08:00 / 尖峰至21:00 / 14:30 / 21:30晚報）全面上線
 - **七大 AI 半自動領航與四班排程中樞 (`lib/seven-ai-autopilot-scheduler.ts` & `/api/ai/autopilot/route.ts`)**：

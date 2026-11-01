@@ -17,6 +17,23 @@
 
 ---
 
+## 📅 2026/11/01 - 👑 剩餘待辦與願景庫全數清零：總裁待核准工作台 (`BossApprovalsHub`)、外勤收空瓶與轉帳回填、門市主機 UPS 斷電刷盤守護 [ver: 20261101_1125_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆指示**：
+   - 檢視完進度與待辦事項後，老闆下達指令：「我們繼續」，將看板上剩餘的待辦與願景項目（一鍵核准工作台、外勤回收空瓶與現場收款/轉帳回填、門市主機 UPS 斷電守護）一次全部落實到位。
+2. **具體交付成果**：
+   - **總裁一鍵核准工作台 (`lib/boss-approvals-hub.ts` & `/api/ai/approvals/route.ts`)**：
+     - 整合 ① 待派工單 `#361582` 一鍵指派、② 14:30 橘燈老友 125 戶 `$50` 喚醒名單、③ 紅燈 `#1660` 壓瓶 6 支順路回收（立省 `$10,800`）、④ `#3624 長元街 ($3,000)` ＆ `#1985 水晶厝 ($1,230)` 隨車必收標記，同步呈現於 Telegram 與手機網頁戰情室。
+   - **外勤 App 回收空瓶數與轉帳/現金/實收金額雙向回寫 (`lib/erp-writeback-engine.cjs` & `/api/driver/orders/status/route.ts`)**：
+     - 支援 `emptyReturned`（自動寫入 `【收空瓶:X支】`）、`paymentMethod: "transfer"`（自動寫入 `【轉帳】`）與 `collectedAmount`（自動寫入 `【實收:$Y】`）1.5 秒回寫舊 ERP `dbo.gas_oders`。
+   - **門市主力電腦 UPS 斷電安全刷盤守護 (`lib/ups-power-guardian.cjs`)**：
+     - 偵測市電中斷切換電池時自動產生 SQL `CHECKPOINT;` 安全刷盤語句，並提供 APC / CyberPower 1000VA USB UPS 標準配置規範。
+3. **驗證結果**：
+   - `shenglong-next` TypeScript `npx tsc --noEmit` 0 錯誤；`Gass` 自動化測試 **45/45 (全站 238+ 項) 100% 通過**。
+
+---
+
 ## 📅 2026/11/01 - 🛡️ 正式啟動「七大 AI 半自動領航實戰模式 (Human-in-the-Loop) ＋ 每日四班全自動巡航排程 (08:00 / 尖峰至21:00打烊 / 14:30 / 21:30打烊報告)」[ver: 20261101_1115_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

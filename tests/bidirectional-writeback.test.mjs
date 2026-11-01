@@ -354,3 +354,40 @@ test("Seven-AI Human-in-the-Loop Production Mode & 4-Shift Auto-Pilot Scheduler"
     assert.ok(botSrc.includes("lastAutoPilot2130Date"), "advisor-bot.cjs must schedule 21:30 shift");
   });
 });
+
+test("Backlog & Pending Approvals Completion: Empty Barrel/Transfer Writeback, UPS Power Guardian, and Boss Approvals Hub", async (t) => {
+  await t.test("1. erp-writeback-engine.cjs supports emptyReturned, collectedAmount, and transfer payment writeback", () => {
+    const plan = buildDispatchWritebackSql({
+      id: "job-deliv-ext",
+      orderId: 361582,
+      action: "deliver",
+      payload: {
+        driver: "游柏林",
+        paymentMethod: "transfer",
+        emptyReturned: 2,
+        collectedAmount: 1500,
+      },
+    });
+    assert.equal(plan.logPrefix, "DELIVER");
+    assert.ok(plan.sql.includes("【轉帳】"), "must record transfer payment tag in oder_remarks");
+    assert.ok(plan.sql.includes("【收空瓶:2支】"), "must record empty cylinders returned in oder_remarks");
+    assert.ok(plan.sql.includes("【實收:$1500】"), "must record collected amount in oder_remarks");
+  });
+
+  await t.test("2. ups-power-guardian.cjs evaluates AC vs UPS battery power and generates SQL CHECKPOINT", () => {
+    const req = createRequire(import.meta.url);
+    const { evaluatePowerState, buildSqlEmergencyCheckpointSql } = req("c:/shenglong-next/lib/ups-power-guardian.cjs");
+    const onBattery = evaluatePowerState({ BatteryStatus: 1, EstimatedChargeRemaining: 85 });
+    assert.equal(onBattery.powerSource, "UPS_BATTERY");
+    assert.equal(onBattery.requiresEmergencyCheckpoint, true);
+    assert.ok(buildSqlEmergencyCheckpointSql().includes("CHECKPOINT;"));
+  });
+
+  await t.test("3. boss-approvals-hub.ts and /api/ai/approvals unify Level-2 Human-in-the-Loop approvals", () => {
+    const hubSrc = fs.readFileSync("c:/shenglong-next/lib/boss-approvals-hub.ts", "utf8");
+    assert.ok(hubSrc.includes("buildLiveBossApprovalItems"), "must export buildLiveBossApprovalItems");
+    assert.ok(hubSrc.includes("apr_mkt_orange_wakeup"), "must include orange wakeup approval item");
+    assert.ok(hubSrc.includes("apr_mkt_red_barrel"), "must include red barrel recovery approval item");
+    assert.ok(hubSrc.includes("apr_fin_debt_tag"), "must include finance debt collection tag item");
+  });
+});
