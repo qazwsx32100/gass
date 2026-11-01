@@ -1,3 +1,29 @@
+## 📅 2026/11/01 - 🧩 盛隆全系統第一階段 (P0 核心) 共用元件化全面落地（SharedOrderCard、SharedGasSpecBadges、SharedAddressAction 抽離與多端全面對齊）[ver: 20261101_1405_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆最高指示**：
+   - 「幫我檢測一下 盛隆全部的系統目前有什麼功能 可以用共用元件」
+   - 「幫我處理」
+2. **具體落地與驗收成果**：
+   - **瓦斯規格大字超級膠囊 `<SharedGasSpecBadges>`**：
+     - 全站統一規格色標與高對比視覺語言：50kg(紫)、20kg(招牌綠)、16kg(蔚藍)、10kg(亮橘)、4kg(粉紅)。
+     - 支援 `extractOrderSpecs` 結構化資料自動解析與備援文字智能萃取，烈日或反光下一眼秒辨識。
+   - **超大門牌與獨立樓層高對比膠囊 `<SharedAddressAction>`**：
+     - 18px 超大門牌 + 獨立反白樓層膠囊 `[ 4樓 ]` + 40px 一鍵直達導航與電話撥號按鈕。
+     - 非三重區醒目標註警告，客戶姓名旁直出 `[查歷史]` 快捷標籤。
+   - **盛隆統一全系統多態共用訂單卡片 `<SharedOrderCard>`**：
+     - 支援 `operations` (監控中心)、`history` (歷史庫)、`driver` (外勤同仁)、`compact` (緊湊列表) 四大視圖多態性。
+     - 整合小龍、游柏林、稍後輸入 3 態派工按鈕，即時雙向寫入舊 ERP `dbo.gas_oders` 的 `deliver = '稍後輸入'`。
+     - 整合送達收現、月結完單按鈕、異動軌跡、全歷史跳轉與微型折疊現場標籤編輯面板。
+   - **全端模組無痛升級落地**：
+     - `app/operations/page.tsx` 手機版訂單全面採用 `<SharedOrderCard variant="operations" />`，消除 800+ 行重複代碼。
+     - `app/components/OperationsOrderHistoryView.tsx` 客戶叫貨歷程全面改用 `<SharedOrderCard variant="history" />`。
+     - `app/driver/page.tsx` 外勤同仁訂單卡片無縫升級導入 `<SharedGasSpecBadges>`，並全面杜絕「司機」禁語。
+   - **全系統 280 項測試 100% 全數通過**：
+     - 新增 `tests/shared-components.test.mjs` 6 項單元測試，全站 280 項回歸測試全部綠燈 (`pass 280, fail 0`)，零回歸、零破壞。
+
+---
+
 ## 📅 2026/11/01 - 🛡️ 盛隆瓦斯 全系統緊急容錯降級、熔斷自癒、死亡信件待查區 (DLQ) 與硬性業務紅線全面加強 [ver: 20261101_1320_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
