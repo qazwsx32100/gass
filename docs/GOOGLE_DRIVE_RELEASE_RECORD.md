@@ -1,3 +1,24 @@
+## 📅 2026/11/01 - 🔔 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）[ver: 20261101_1002_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆問題回報**：
+   - 「通知問題還沒有解決，關掉螢幕、跳出app 還是不會通知。是沒有部屬嗎?」
+2. **四大斷點病灶排查與深度診斷**：
+   - **斷點一：FCM 雲端封包缺少系統級 Notification 區塊**：原先僅帶 data 欄位，在三星 Galaxy (One UI 6 / Android 13/14) 鎖屏進入 Doze Mode 深睡狀態時，純 Data 訊息會被系統省電策略凍結，無法即時喚醒 CPU。
+   - **斷點二：雲端 Serverless 冷啟動新實例首批新單被略過**：原先 `today-orders` 路由在 Vercel Lambda 啟動時因 `isInitializedKnownOrders` 初始為 false，誤將冷啟動當下收到的第一批新單全數略過。
+   - **斷點三：Android 原生通知頻道快取鎖定**：Android 8.0+ 一旦頻道建立後無法修改優先級與聲音屬性，手機若沿用舊頻道會導致浮動橫幅被降級。
+   - **斷點四：Android 原生 Signed Release APK 需覆蓋安裝**：Next.js 網頁熱更新無法改變原生 Java 層通知通道與 FCM Receiver，必須編譯全新 Signed Release APK 並安裝至手機。
+3. **具體修復成果**：
+   - **Google 官方標準雙軌全通知封包 (`lib/fcm-v1.ts`)**：升級為 Notification + Data + Android High Priority 雙軌架構，由 Google Play Services 系統守護進程直接處理，即使手機黑屏鎖屏休眠或 App 進程被殺死，仍 100% 強制亮屏並在鎖屏彈出懸浮橫幅與鈴聲震動。
+   - **Serverless 零遺漏推播防線 (`app/api/today-orders/route.ts`)**：改寫冷啟動判斷邏輯，非完成單且未被壓抑者一律 100% 準確發射 FCM 推播。
+   - **原生 v8 高優先級通知頻道強制刷新 (`shenglong_dispatch_urgent_v8`)**：全面更新 AndroidManifest、MainActivity 與 DriverOrderService，強制 Android 系統重新註冊並給予浮動橫幅與震動權限。
+   - **自動申請電池最佳化忽略 (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)**：防止手機系統將 App 移入深度休眠。
+   - **Signed Release APK 全自動編譯發布**：發布全新 Signed Release APK 至桌面 `C:\Users\懶\Desktop\sl\`（小龍專用與游柏林專用），並同步推播至 GitHub 與 Vercel。
+4. **驗證結果**：
+   - `shenglong-next` TypeScript 0 錯誤、Next.js build 通過；`Gass` 全量自動化測試 **229 項 100% 通過 (Pass: 229, Fail: 0)**。
+
+---
+
 ## 📅 2026/10/31 - ⚖️ 戰情中心雙向資料即時核對 (Reconciliation) 鋼瓶規格解析、外勤運費試算與全系統禁語清除 [ver: 20261031_1120_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

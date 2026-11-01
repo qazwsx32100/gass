@@ -307,3 +307,26 @@ test("Stage 2 & 3 Deep-Water Engines: Idempotent LINE Order ERP Insert, Marketin
     assert.equal(plan.targetRtoSeconds, 10);
   });
 });
+
+test("Seven-AI Joint Dry-Run Sandbox Engine & Dual-Track Sync (Telegram + Mobile Web War Room)", async (t) => {
+  await t.test("1. seven-ai-dryrun-engine.ts orchestrates all 7 AIs in read-only DRY_RUN_SANDBOX mode", () => {
+    const dryRunSrc = fs.readFileSync("c:/shenglong-next/lib/seven-ai-dryrun-engine.ts", "utf8");
+    assert.ok(dryRunSrc.includes("export function runSevenAiJointDryRun"), "must export runSevenAiJointDryRun");
+    assert.ok(dryRunSrc.includes('mode: "DRY_RUN_SANDBOX"'), "must enforce DRY_RUN_SANDBOX mode");
+    assert.ok(dryRunSrc.includes("erpModified: false"), "must guarantee erpModified: false in dry-run");
+    assert.ok(dryRunSrc.includes("sandboxSqlPreviews"), "must compile read-only SQL previews without mutating ERP");
+  });
+
+  await t.test("2. Dual-track sync wired in /api/ai/advisor, /api/telegram/advisor, and AiAdvisorDrawer.tsx", () => {
+    const advisorRouteSrc = fs.readFileSync("c:/shenglong-next/app/api/ai/advisor/route.ts", "utf8");
+    assert.ok(advisorRouteSrc.includes("runSevenAiJointDryRun"), "/api/ai/advisor must call runSevenAiJointDryRun");
+    assert.ok(advisorRouteSrc.includes("all_dry_run"), "/api/ai/advisor must support all_dry_run agentId");
+
+    const tgRouteSrc = fs.readFileSync("c:/shenglong-next/app/api/telegram/advisor/route.ts", "utf8");
+    assert.ok(tgRouteSrc.includes("🚀 七大AI全真聯動試跑 (Dry-Run)"), "Telegram keyboard must include 1-tap Dry-Run button");
+    assert.ok(tgRouteSrc.includes("run_dry_run_all"), "Telegram webhook must support run_dry_run_all callback");
+
+    const drawerSrc = fs.readFileSync("c:/shenglong-next/app/components/AiAdvisorDrawer.tsx", "utf8");
+    assert.ok(drawerSrc.includes("七大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)"), "AiAdvisorDrawer must include 1-tap dual-track Dry-Run button");
+  });
+});

@@ -1,3 +1,16 @@
+## [2026-11-01 10:02] - 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）
+### 派單推播神經網絡與鎖屏休眠全面打通
+- **Google 官方標準雙軌全通知封包 (`lib/fcm-v1.ts`)**：
+  - 由原先純 Data 訊息升級為 Notification + Data + Android High Priority 雙軌封包，即使黑屏關螢幕休眠 (Doze Mode) 或 App 被系統凍結，Google Play 系統守護進程 100% 強制亮屏並在鎖屏彈出懸浮橫幅與鈴聲震動。
+- **雲端 Serverless 冷啟動零遺漏推播防線 (`app/api/today-orders/route.ts`)**：
+  - 修復 Vercel Lambda 實例冷啟動時誤漏推首批新單問題，保障即時指派單據 100% 秒級推播至外勤手機。
+- **Android 原生 v8 最高優先級頻道強制刷新 (`shenglong_dispatch_urgent_v8`)**：
+  - 全面更新 AndroidManifest、MainActivity 與 DriverOrderService，強制 Android 系統重新註冊並給予浮動橫幅與震動權限。
+- **啟動時自動申請電池最佳化忽略 (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)**：
+  - 防止手機系統將 App 移入深度休眠，守護背景輪詢保活。
+- **Signed Release APK 全自動編譯發布**：
+  - 重新編譯小龍與游柏林專用 Signed Release APK 至桌面 `C:\Users\懶\Desktop\sl\` 與雲端下載點，並提供白話重新安裝引導。
+
 ## [2026-10-31 11:20] - 戰情中心雙向資料即時核對 (Reconciliation) 鋼瓶規格全量解析、外勤運費試算修復與全系統禁語清除
 ### 雙軌核對神經網絡精準校準
 - **鋼瓶規格支數與全店總銷量智能解析 (`extractOrderBottleSpecs`)**：

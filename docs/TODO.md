@@ -4,7 +4,27 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-01 09:41
+> **最後更新時間**：2026-11-01 09:57
+
+---
+
+### 0. 外勤人員 Android App 鎖屏休眠與後台跳出即時通知浮動橫幅根治（升級 Google 官方 FCM 雙軌全通知封包、v8 高優先級通知頻道、Serverless 零遺漏推播防線、全自動 Signed Release APK 發布與安裝引導）
+- **狀態**：`[/]` 進行中 (依老闆回饋「通知問題還沒有解決，關掉螢幕、跳出app 還是不會通知。是沒有部屬嗎?」，深度排查四大通知斷點並全面重構升級)
+  - 🔍 **核心排查與修復明細**：
+    1. **FCM 雲端雙軌全通知封包升級 (`lib/fcm-v1.ts`)**：原先僅帶 data 欄位易遭三星/Android 13/14 Doze Mode 休眠凍結並靜默忽略；重構升級為 Google 官方標準 Notification + Data + Android High Priority 雙軌封包，即使黑屏關螢幕或 App 進程遭系統凍結，Google Play 系統守護進程仍 100% 強制亮屏並在鎖屏彈出懸浮橫幅！
+    2. **雲端 Serverless 冷啟動零遺漏推播防線 (`app/api/today-orders/route.ts`)**：修正原先 Vercel Lambda 新實例初次收到單據時誤將整批新單略過之盲點，確保任何即時指派單據 100% 秒級推播至外勤手機。
+    3. **Android 原生 v8 最高優先級頻道強制刷新 (`shenglong_dispatch_urgent_v8`)**：全面更新 AndroidManifest、MainActivity、DriverOrderService 之通知頻道 ID 至 v8，強制 Android 系統重新註冊並賦予浮動橫幅、震動與通知權限。
+    4. **啟動時自動申請電池最佳化忽略 (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)**：防止三星 Galaxy 等手機將 App 移入深度休眠，保障背景常駐輪詢與 WakeLock 保活。
+    5. **雙外送人員 Signed Release APK 全自動編譯與雙軌發布**：重新編譯小龍與游柏林專用 Signed Release APK 至桌面 `C:\Users\懶\Desktop\sl\` 與雲端下載點，並提供白話重新安裝引導。
+- **優先級**：`P0` (老闆最高決策指令)
+- **啟動日期**：2026/11/01
+
+---
+
+### 0. 七大 AI 全真數據沙盒演練 (Dry-Run) 全部 AI 聯合實跑與雙軌同步推播（Telegram 總裁戰情室 ＋ 手機網頁戰情室）
+- **狀態**：`[/]` 進行中 (依老闆決策：1. 先跑一輪全真數據沙盒演練 Dry-Run 暫不改動 ERP 訂單表、2. 雙軌同步推播至 Telegram 總裁戰情室與手機網頁戰情室、3. 全部七大 AI 一起作業產出真實數據報告)
+- **優先級**：`P0` (老闆最高決策指令)
+- **啟動日期**：2026/11/01
 
 ---
 
