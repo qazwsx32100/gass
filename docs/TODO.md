@@ -4,7 +4,26 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-01 17:35
+> **最後更新時間**：2026-11-01 19:15
+
+---
+
+### 0. 盛隆瓦斯 雙向閉環外勤結單收款空瓶回收 (SharedDeliveryCollectionModal) 與客戶歷程速查 (SharedCustomerHistoryModal) 全面實裝
+- **狀態**：`[x]` 已完成 (依老闆指示「一步一步 來做，那我們繼續處理」，將第三階段共用元件完整實裝：外勤 App 結單收款空瓶防呆面板 `<SharedDeliveryCollectionModal>`、客戶叫貨歷程速查彈窗 `<SharedCustomerHistoryModal>`、雙桶戶專屬標籤 `[🏡 雙桶戶 (壓瓶2支)]` 與 90 天呆瓶召回警示模型；全端 TypeScript 零報錯，290 項自動化回歸測試 100% 全數綠燈通過)
+  - 🔍 **核心成果明細**：
+    1. **外勤 App 結單收款與空瓶回收面板無縫貫通 (`<SharedDeliveryCollectionModal>`)**：
+       - 外勤同仁點擊「已送達 / 已收現完成」，直覺喚起專用防呆彈窗，可核對並調整「實收金額 (0~20萬鉗制)」、「付款方式 (現金/月結/賒欠)」與「回收空瓶數 (0~50支大按鈕)」，徹底杜絕口袋誤觸 (Ghost dispatch)。
+       - 傳遞 `collectionData` 進入 `handleFinishOrder`，直連 `/api/driver/orders/status`，並同步持久化至離線寄件匣 `OutboxAction.payload`，地下室無訊號重播不掉單。
+    2. **外勤端客戶叫貨歷史速查彈窗全面掛載 (`<SharedCustomerHistoryModal>`)**：
+       - 外勤 App 訂單卡片客戶姓名旁新增 `[📜 叫貨歷史]` 快捷按鈕，點擊立即開啟獨立共用之 `<SharedCustomerHistoryModal>`，免打電話即可掌握客戶過往規格、叫貨頻率與特殊備註。
+    3. **雙桶戶數位標籤與 90 天呆瓶壓桶預警模型全面就緒**：
+       - `<SharedGasSpecBadges>` 自動辨識一次叫 2 支之雙桶戶，展示琥珀金色 `[🏡 雙桶戶 (壓瓶2支)]` 專屬膠囊。
+       - `gas-cycle-estimator.ts` 擴充 `isDormantRecall` 與 `dormantWarning`，當客戶超過 90 天未叫瓦斯時自動觸發呆瓶召回警示，指導門市與外勤落實鋼瓶持有成本控制。
+    4. **全端 TypeScript 與 290 項單元與整合測試 100% 全數通過**：
+       - 修復 `OperationsOrderHistoryView.tsx` 與 `operations/page.tsx` 類型定義，實現全端零 TypeScript 報錯。
+       - 擴充 `tests/gas-cycle-estimator.test.mjs` (5 項) 與 `tests/shared-components.test.mjs` (11 項)，全站自動化測試達到 290 項，零回歸、零失敗。
+- **優先級**：`P1` (全端共用元件與外勤閉環核心)
+- **完成日期**：2026/11/01
 
 ---
 

@@ -119,3 +119,58 @@ test("🧩 Shared Components (P1): 外送員派工選擇切換器 (SharedDispatc
   assert.ok(cardContent.includes("SharedDispatcherSelector"), "SharedOrderCard 必須整合引用 SharedDispatcherSelector");
   assert.ok(cardContent.includes("<SharedDispatcherSelector"), "SharedOrderCard 必須實裝掛載 <SharedDispatcherSelector");
 });
+
+test("🧩 Shared Components (P1): 現場收款與空瓶回收面板 (SharedDeliveryCollectionModal)", () => {
+  const modalPath = path.join(process.cwd(), "../shenglong-next/app/components/SharedDeliveryCollectionModal.tsx");
+  assert.ok(fs.existsSync(modalPath), "SharedDeliveryCollectionModal.tsx 檔案必須存在");
+
+  const modalContent = fs.readFileSync(modalPath, "utf8");
+  assert.ok(modalContent.includes("SharedDeliveryCollectionModalProps"), "必須定義組件屬性介面");
+  assert.ok(modalContent.includes("isDoubleBottle"), "必須支援單雙桶客戶辨識");
+  assert.ok(modalContent.includes("collectedAmount"), "必須支援實收金額輸入");
+  assert.ok(modalContent.includes("emptyReturned"), "必須支援空瓶回收計數");
+  assert.ok(modalContent.includes("200000"), "必須遵守 20 萬元防爆鉗制");
+  assert.ok(modalContent.includes("50"), "必須遵守 50 支空瓶防爆鉗制");
+
+  // 驗證 SharedOrderCard 已整合 SharedDeliveryCollectionModal
+  const cardPath = path.join(process.cwd(), "../shenglong-next/app/components/SharedOrderCard.tsx");
+  const cardContent = fs.readFileSync(cardPath, "utf8");
+  assert.ok(cardContent.includes("SharedDeliveryCollectionModal"), "SharedOrderCard 必須整合引用 SharedDeliveryCollectionModal");
+  assert.ok(cardContent.includes("<SharedDeliveryCollectionModal"), "SharedOrderCard 必須實裝掛載 <SharedDeliveryCollectionModal");
+});
+
+test("🧩 Shared Components (P1): 外勤司機 App 結單收款與空瓶回收無縫整合 (Driver App Collection Modal)", () => {
+  const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
+  assert.ok(fs.existsSync(driverPagePath), "app/driver/page.tsx 檔案必須存在");
+
+  const driverContent = fs.readFileSync(driverPagePath, "utf8");
+  assert.ok(driverContent.includes("SharedDeliveryCollectionModal"), "外勤端必須導入 SharedDeliveryCollectionModal");
+  assert.ok(driverContent.includes("collectionTargetOrder"), "外勤端必須維護結單彈窗目標訂單狀態");
+  assert.ok(driverContent.includes("<SharedDeliveryCollectionModal"), "外勤端必須實裝掛載 <SharedDeliveryCollectionModal");
+  assert.ok(driverContent.includes("handleFinishOrder(targetId, {"), "外勤端確認送達必須傳遞收款與空瓶明細至 handleFinishOrder");
+  assert.ok(driverContent.includes("payload?:"), "離線寄件匣 OutboxAction 必須支援 payload 持久化暫存");
+  assert.ok(driverContent.includes("isOfflineReplay"), "離線補傳邏輯必須帶上 emptyReturned 與 collectedAmount");
+});
+
+test("🧩 Shared Components (P2): 雙桶戶壓瓶標籤與外勤歷史速查 (Double Bottle Badge & Driver History Modal)", () => {
+  // 1. 驗證 SharedGasSpecBadges 雙桶戶標籤支援
+  const badgesPath = path.join(process.cwd(), "../shenglong-next/app/components/SharedGasSpecBadges.tsx");
+  const badgesContent = fs.readFileSync(badgesPath, "utf8");
+  assert.ok(badgesContent.includes("isDoubleBottle"), "規格膠囊必須支援雙桶戶辨識");
+  assert.ok(badgesContent.includes("雙桶戶 (壓瓶2支)"), "規格膠囊必須呈現「雙桶戶 (壓瓶2支)」膠囊");
+
+  // 2. 驗證 SharedCustomerHistoryModal 獨立共用元件
+  const historyModalPath = path.join(process.cwd(), "../shenglong-next/app/components/SharedCustomerHistoryModal.tsx");
+  assert.ok(fs.existsSync(historyModalPath), "SharedCustomerHistoryModal.tsx 必須存在");
+  const historyContent = fs.readFileSync(historyModalPath, "utf8");
+  assert.ok(historyContent.includes("/api/customer-history"), "歷史彈窗必須介接 customer-history API");
+
+  // 3. 驗證 Driver App 已整合 SharedCustomerHistoryModal
+  const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
+  const driverContent = fs.readFileSync(driverPagePath, "utf8");
+  assert.ok(driverContent.includes("SharedCustomerHistoryModal"), "Driver App 必須導入 SharedCustomerHistoryModal");
+  assert.ok(driverContent.includes("historyModalOpen"), "Driver App 必須維護歷史彈窗開關狀態");
+  assert.ok(driverContent.includes("叫貨歷史"), "客戶姓名旁必須包含「叫貨歷史」速查按鈕");
+  assert.ok(driverContent.includes("<SharedCustomerHistoryModal"), "Driver App 必須實裝掛載 <SharedCustomerHistoryModal");
+});
+

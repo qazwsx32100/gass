@@ -1,3 +1,24 @@
+## 📅 2026/11/01 - 📦 盛隆瓦斯 雙向閉環外勤結單收款空瓶回收 (SharedDeliveryCollectionModal) 與客戶歷程速查 (SharedCustomerHistoryModal) 全面實裝 [ver: 20261101_1915_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆最高指示**：
+   - 「一步一步 來做」
+   - 「那我們繼續處理」
+2. **具體落地與工程成果**：
+   - **外勤 App 結單收款與空瓶回收面板無縫貫通 (`<SharedDeliveryCollectionModal>`)**：
+     - 外勤同仁點擊「已送達 / 已收現完成」，直覺喚起專用防呆彈窗，可核對並調整「實收金額 (0~20萬鉗制)」、「付款方式 (現金/月結/賒欠)」與「回收空瓶數 (0~50支大按鈕)」，徹底杜絕口袋誤觸 (Ghost dispatch)。
+     - 傳遞 `collectionData` 進入 `handleFinishOrder`，直連 `/api/driver/orders/status`，並同步持久化至離線寄件匣 `OutboxAction.payload`，地下室無訊號重播不掉單。
+   - **外勤端客戶叫貨歷史速查彈窗全面掛載 (`<SharedCustomerHistoryModal>`)**：
+     - 外勤 App 訂單卡片客戶姓名旁新增 `[📜 叫貨歷史]` 快捷按鈕，點擊立即開啟獨立共用之 `<SharedCustomerHistoryModal>`，免打電話即可掌握客戶過往規格、叫貨頻率與特殊備註。
+   - **雙桶戶數位標籤與 90 天呆瓶壓桶預警模型全面就緒**：
+     - `<SharedGasSpecBadges>` 自動辨識一次叫 2 支之雙桶戶，展示琥珀金色 `[🏡 雙桶戶 (壓瓶2支)]` 專屬膠囊。
+     - `gas-cycle-estimator.ts` 擴充 `isDormantRecall` 與 `dormantWarning`，當客戶超過 90 天未叫瓦斯時自動觸發呆瓶召回警示，指導門市與外勤落實鋼瓶持有成本控制。
+   - **全端 TypeScript 與 290 項單元與整合測試 100% 全數通過**：
+     - 修復 `OperationsOrderHistoryView.tsx` 與 `operations/page.tsx` 類型定義，實現全端零 TypeScript 報錯。
+     - 擴充 `tests/gas-cycle-estimator.test.mjs` (5 項) 與 `tests/shared-components.test.mjs` (11 項)，全站自動化測試達到 290 項，零回歸、零失敗。
+
+---
+
 ## 📅 2026/11/01 - 🧩 盛隆瓦斯 第二階段 (P1) 共用元件實裝（SharedOrderStatusBadge、SharedDispatcherSelector）與真實 52 天動態季節耗氣週期雷達全面升級 [ver: 20261101_1750_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

@@ -82,3 +82,26 @@ test("Gas Cycle Estimator 4: 狀態層級 (overdue / warning / normal) 與急迫
   assert.ok(normal);
   assert.equal(normal.urgencyLevel, "normal");
 });
+
+test("Gas Cycle Estimator 5: 呆瓶召回預警 (> 90 天未叫瓦斯壓桶防禦)", (t) => {
+  // 超過 90 天未叫 (例如 104 天)
+  const dormant = estimateGasCycle(
+    "20kg",
+    "2026/01/01",
+    undefined,
+    new Date("2026-04-15T00:00:00+08:00")
+  );
+  assert.ok(dormant);
+  assert.equal(dormant.isDormantRecall, true, "超過90天必須觸發呆瓶召回警戒");
+  assert.ok(dormant.dormantWarning?.includes("呆瓶壓桶警戒"), "必須包含呆瓶壓桶警戒提示");
+
+  // 未達 90 天 (例如 45 天)
+  const active = estimateGasCycle(
+    "20kg",
+    "2026/03/01",
+    undefined,
+    new Date("2026-04-15T00:00:00+08:00")
+  );
+  assert.ok(active);
+  assert.equal(active.isDormantRecall, false, "未達90天不應觸發呆瓶召回");
+});
