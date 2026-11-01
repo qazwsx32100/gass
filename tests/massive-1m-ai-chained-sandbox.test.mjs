@@ -42,7 +42,7 @@ test("1M AI-Chained Sandbox: 1,000,000 筆全系統 ↔ 7-AI 智慧中樞全鏈�
   assert.equal(aiTelemetry.aiDecisions.service.orderEntitiesExtracted, 250000, "叫氣實體解析率應為 100%");
 
   // 業務 AI
-  assert.equal(aiTelemetry.aiDecisions.sales.breakEvenViolations, 0, "破底低於 $568 保本價違規數應為 0");
+  assert.equal(aiTelemetry.aiDecisions.sales.breakEvenViolations, 0, "破底低於 $542 保本價違規數應為 0");
 
   // 行銷 AI
   assert.ok(aiTelemetry.aiDecisions.marketing.yellowAlertsTracked > 0, "應追蹤黃燈關注戶");

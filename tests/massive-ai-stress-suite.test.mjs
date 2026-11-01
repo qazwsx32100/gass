@@ -130,21 +130,21 @@ test("AI Massive Test Suite 2: Marketing & Sales Engine Multi-Scenario Stress & 
     // 正常進氣價 $22.63/kg
     const normal = runSalesAiEngine({ gasCostPerKg: 22.63 });
     assert.equal(normal.rawGasCost20kg, 453);
-    assert.equal(normal.deliveryAndDepreciation20kg, 115);
-    assert.equal(normal.breakEvenFloor20kg, 568);
-    assert.equal(normal.recommendedVipFloor20kg, 660);
+    assert.equal(normal.deliveryAndDepreciation20kg, 89);
+    assert.equal(normal.breakEvenFloor20kg, 542);
+    assert.equal(normal.recommendedVipFloor20kg, 634);
 
     // 高氣價波段 $28.00/kg (冬季上漲)
     const high = runSalesAiEngine({ gasCostPerKg: 28.0 });
     assert.equal(high.rawGasCost20kg, 560);
-    assert.equal(high.breakEvenFloor20kg, 675);
-    assert.equal(high.recommendedVipFloor20kg, 767);
+    assert.equal(high.breakEvenFloor20kg, 649);
+    assert.equal(high.recommendedVipFloor20kg, 741);
 
     // 低氣價波段 $18.50/kg (夏季低檔)
     const low = runSalesAiEngine({ gasCostPerKg: 18.5 });
     assert.equal(low.rawGasCost20kg, 370);
-    assert.equal(low.breakEvenFloor20kg, 485);
-    assert.equal(low.recommendedVipFloor20kg, 577);
+    assert.equal(low.breakEvenFloor20kg, 459);
+    assert.equal(low.recommendedVipFloor20kg, 551);
   });
 });
 

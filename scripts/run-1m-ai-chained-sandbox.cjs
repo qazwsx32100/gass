@@ -14,7 +14,7 @@
  *
  * 串聯七大 AI 智慧中樞 (7-AI Matrix):
  * - 客服 AI: 300 題問答、漏氣緊急處置 (100% 觸發安全SOP)、實體辨識 (叫氣規格/樓層/地址)
- * - 業務 AI: 3,934 戶客戶畫像、B2B批發定價、動態毛利試算 ($568 保本底線 / $660 VIP底線)
+ * - 業務 AI: 3,934 戶客戶畫像、B2B批發定價、動態毛利試算 ($542 保本底線 / $660 VIP底線)
  * - 行銷 AI: 黃橘紅三級耗氣雷達 (31-60d / 61-90d / >90d)、流浪鋼瓶獵金召回、喚醒券發送
  * - 營運 AI: 鋼瓶庫存即時水位警戒、車載平衡與司機派工 (小龍 vs 游柏林、車趟運費計算)
  * - 財務 AI: 現場收款 (現金/轉帳) 核銷、司機現金交帳對帳、大戶賒銷欠款稽核
@@ -70,7 +70,7 @@ async function runOneMillionAiChainedSandbox() {
       },
       sales: {
         b2bPriceEvaluated: 0,       // 營業大戶定價計算
-        breakEvenViolations: 0,     // 破底低於 $568 警告攔截 (應為 0)
+        breakEvenViolations: 0,     // 破底低於 $542 警告攔截 (應為 0)
         vipFloorsApplied: 0,        // VIP 最低價 $660 適用
       },
       marketing: {
@@ -153,7 +153,7 @@ async function runOneMillionAiChainedSandbox() {
         const basePrice = (spec === '50kg') ? 2200 : (spec === '16kg') ? 750 : 800;
         const stairSurcharge = floor > 3 ? (floor - 3) * 20 : 0;
         const finalPrice = (basePrice + stairSurcharge) * qty;
-        if ((finalPrice / qty) < 568) {
+        if ((finalPrice / qty) < 542) {
           aiTelemetry.aiDecisions.sales.breakEvenViolations++;
         }
 
@@ -261,7 +261,7 @@ async function runOneMillionAiChainedSandbox() {
               quantity20: 1,
             },
           };
-          if (newPrice < 568) aiTelemetry.aiDecisions.sales.breakEvenViolations++;
+          if (newPrice < 542) aiTelemetry.aiDecisions.sales.breakEvenViolations++;
         }
 
         const res = buildDispatchWritebackSql(writeJob);
@@ -415,7 +415,7 @@ async function runOneMillionAiChainedSandbox() {
 
   console.log('\n--- 🧠 七大 AI 智慧中樞決策統計 ---');
   console.log(`  💬 客服 AI: 處理 ${aiTelemetry.aiDecisions.service.totalHandled.toLocaleString()} 單 ｜ 漏氣安全 100% 觸發 ${aiTelemetry.aiDecisions.service.leakEmergenciesDetected.toLocaleString()} 次 ｜ 叫氣實體提取 ${aiTelemetry.aiDecisions.service.orderEntitiesExtracted.toLocaleString()} 次`);
-  console.log(`  🎯 業務 AI: 定價審查 250,000 次 ｜ 低於保本價 $568 違規數: ${aiTelemetry.aiDecisions.sales.breakEvenViolations} 次 (100% 保本)`);
+  console.log(`  🎯 業務 AI: 定價審查 250,000 次 ｜ 低於保本價 $542 違規數: ${aiTelemetry.aiDecisions.sales.breakEvenViolations} 次 (100% 保本)`);
   console.log(`  📣 行銷 AI: 黃燈關注 ${aiTelemetry.aiDecisions.marketing.yellowAlertsTracked.toLocaleString()} 戶 ｜ 橘燈喚醒 ${aiTelemetry.aiDecisions.marketing.orangeAlertsWoken.toLocaleString()} 戶 ｜ 紅燈待收 ${aiTelemetry.aiDecisions.marketing.redBottlesReclaimed.toLocaleString()} 戶 ｜ 累計回收空瓶: ${aiTelemetry.aiDecisions.marketing.totalBottlesReclaimed.toLocaleString()} 支`);
   console.log(`  🛵 營運 AI: 小龍派工 ${aiTelemetry.aiDecisions.operations.driverLongDispatched.toLocaleString()} 單 ｜ 游柏林派工 ${aiTelemetry.aiDecisions.operations.driverYouDispatched.toLocaleString()} 單 ｜ 司機運費累計: $${aiTelemetry.aiDecisions.operations.totalFreightCalculated.toLocaleString()} 元 ｜ 20kg庫存原子扣減: ${aiTelemetry.aiDecisions.operations.stockReserved20kg.toLocaleString()} 支`);
   console.log(`  💰 財務 AI: 現場現金實收 $${aiTelemetry.aiDecisions.finance.cashCollectedTotal.toLocaleString()} 元 ｜ 銀行轉帳 $${aiTelemetry.aiDecisions.finance.transferCollectedTotal.toLocaleString()} 元 ｜ 月結大戶欠款審查 ${aiTelemetry.aiDecisions.finance.debtsAuditedCount.toLocaleString()} 次 ｜ 司機交帳對帳 ${aiTelemetry.aiDecisions.finance.driverHandoversAudited.toLocaleString()} 次`);

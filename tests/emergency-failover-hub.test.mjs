@@ -85,7 +85,7 @@ test("Failover Hub 2: 死亡信件待查區 (DLQ) 單筆故障隔離與排除", 
   assert.equal(manualRes.job.status, "RESOLVED_MANUAL");
 });
 
-test("Failover Hub 3: 硬性保本底線 ($568) 與數值越界安全防禦", (t) => {
+test("Failover Hub 3: 硬性保本底線 ($542) 與數值越界安全防禦", (t) => {
   // 1. 惡意低價誘騙 (例如 $200 叫 20kg 瓦斯)
   const badPriceRes = validateOrderConstraints({
     price: 200,
@@ -94,7 +94,7 @@ test("Failover Hub 3: 硬性保本底線 ($568) 與數值越界安全防禦", (t
     address: "三重區中正路10號",
   });
   assert.equal(badPriceRes.isValid, false, "破底價格必須判定無效並產生警告");
-  assert.equal(badPriceRes.sanitized.price, 568, "破底價格必須強制修正為保本價 $568");
+  assert.equal(badPriceRes.sanitized.price, 542, "破底價格必須強制修正為保本價 $542");
 
   // 2. 正常價格通過 ($800)
   const okPriceRes = validateOrderConstraints({
@@ -111,7 +111,7 @@ test("Failover Hub 3: 硬性保本底線 ($568) 與數值越界安全防禦", (t
     collectedAmount: -100,
     emptyReturned: -5,
   });
-  assert.ok(negativeRes.sanitized.price >= 568, "負數價格必須修正為保本價");
+  assert.ok(negativeRes.sanitized.price >= 542, "負數價格必須修正為保本價");
   assert.equal(negativeRes.sanitized.quantity, 1, "負數數量必須修正為至少 1 桶");
   assert.equal(negativeRes.sanitized.collectedAmount, 0, "負數實收金額必須歸零");
   assert.equal(negativeRes.sanitized.emptyReturned, 0, "負數空瓶必須歸零");
@@ -191,7 +191,7 @@ test("Failover Hub 6: Telegram 錯誤告警與三大多功能排錯按鈕生成"
   // 3. 破底價格異常警報按鈕
   const priceAlert = await sendErrorAlert({
     title: "業務風控警報：單價低於保本線",
-    error: "訂單 #361599 填寫價格 $450 < $568",
+    error: "訂單 #361599 填寫價格 $450 < $542",
     source: "operations-pricing",
     errorType: "price_anomaly",
     actionId: "price_check_01",

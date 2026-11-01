@@ -215,7 +215,7 @@ export const sendErrorAlert = async ({
     ]);
   } else if (errorType === 'price_anomaly') {
     keyboard.push([
-      { text: '🛡️ 強制恢復保本價 $568', callback_data: `act:force_price_floor:${actionId}` },
+      { text: '🛡️ 強制恢復保本價 $542', callback_data: `act:force_price_floor:${actionId}` },
       { text: '👑 老闆特准過關', callback_data: `act:boss_override_price:${actionId}` }
     ]);
   } else {
