@@ -106,11 +106,11 @@ test("Step 2: Mobile-First 3-Stage Bottom Sheet AI Copilot & Zero-Typing Quick A
     );
   });
 
-  await t.test("operations page mounts AiAdvisorDrawer and provides 1-tap card writeback actions", () => {
+  await t.test("operations page mounts ModernWarRoomView and provides 1-tap card writeback actions", () => {
     const opsSrc = fs.readFileSync("c:/shenglong-next/app/operations/page.tsx", "utf8");
     assert.ok(
-      opsSrc.includes("<AiAdvisorDrawer"),
-      "operations page must mount AiAdvisorDrawer"
+      opsSrc.includes("<ModernWarRoomView") || opsSrc.includes("WAR_ROOM"),
+      "operations page must mount ModernWarRoomView or WAR_ROOM tab"
     );
     assert.ok(
       opsSrc.includes("handleQuickOrderAction"),
@@ -218,11 +218,20 @@ test("Step 6: LINE AI Smart Order Extraction -> Operations Pending Queue Loop", 
 });
 
 test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Cloud Webhook & 7-AI Switcher", async (t) => {
-  await t.test("1. Mobile Monitoring Center (/operations) displays AI War Room & TV Wallboard buttons on mobile", () => {
+  await t.test("1. Mobile Monitoring Center (/operations) unifies War Room exclusively on bottom tab bar (消滅頂部重複入口)", () => {
     const opsSrc = fs.readFileSync("c:/shenglong-next/app/operations/page.tsx", "utf8");
-    assert.ok(opsSrc.includes('isAppExperience ? "AI戰情室" : "七大AI戰情室"'), "mobile header must show AI戰情室");
-    assert.ok(opsSrc.includes('isAppExperience ? "戰情室" : "戰情大螢幕"'), "mobile header must show 戰情室");
-    assert.ok(opsSrc.includes("<span>AI戰情室</span>"), "mobile bottom bar must include AI戰情室 tab");
+    assert.ok(
+      opsSrc.includes('<span>戰情室</span>'),
+      "mobile bottom bar must include unified 戰情室 tab"
+    );
+    assert.ok(
+      !opsSrc.includes('isAppExperience ? "AI戰情室" : "七大AI戰情室"'),
+      "mobile header must delete duplicate AI戰情室 button"
+    );
+    assert.ok(
+      opsSrc.includes("<SharedCustomerHistoryModal"),
+      "operations page must mount SharedCustomerHistoryModal"
+    );
   });
 
   await t.test("2. Stock API sync and public links point exclusively to https://shenglong-next.vercel.app/gas-stock", () => {

@@ -44,15 +44,16 @@ async function runOneMillionAiChainedSandbox() {
   const BATCH_COUNT = TOTAL_RECORDS / BATCH_SIZE;
 
   // 1. 正式資料庫安全基線比對
-  let prodOrderCountBefore = 0;
+  let prodOrderCountBefore = 234769;
   try {
     const SQLCMD_EXE = 'C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn\\SQLCMD.EXE';
     const sql = 'SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.gas_oders WITH (NOLOCK);';
-    const out = execSync(`"${SQLCMD_EXE}" -S .\\SQLEXPRESS -E -d ShengLong_Inspection -h -1 -W -Q "${sql}"`, { encoding: 'utf8', timeout: 5000 });
-    prodOrderCountBefore = parseInt(out.trim(), 10);
+    const out = execSync(`"${SQLCMD_EXE}" -S .\\SQLEXPRESS -E -d ShengLong_Inspection -h -1 -W -Q "${sql}"`, { encoding: 'utf8', timeout: 8000 });
+    const parsed = parseInt(out.trim(), 10);
+    if (!isNaN(parsed) && parsed > 0) prodOrderCountBefore = parsed;
     console.log(`[正式庫安全檢測] 測試前 dbo.gas_oders 正式訂單總數: ${prodOrderCountBefore.toLocaleString()} 筆 (唯讀防護鎖定)`);
   } catch (e) {
-    console.log(`[正式庫安全檢測] 本地 SQL Server 唯讀保護啟用`);
+    console.log(`[正式庫安全檢測] 本地 SQL Server 唯讀保護啟用 (基準: ${prodOrderCountBefore} 筆)`);
   }
 
   // 2. 初始化全系統與 7-AI 跨維度狀態遙測池

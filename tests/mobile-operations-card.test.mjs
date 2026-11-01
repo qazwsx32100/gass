@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   extractOrderSpecs,
@@ -68,4 +69,27 @@ test("📱 Mobile Card: parseAddressForMobile 門牌與樓層高對比分離", (
   assert.equal(res3.isSanchong, false, "應識別為非三重區（蘆洲）");
   assert.equal(res3.district, "蘆洲區");
   assert.equal(res3.floor, "3樓之2");
+});
+
+test("📱 7大精煉優化項目: 稍後輸入、消滅重複導航、戰情室Tab與共用客戶歷史驗證", () => {
+  const pageContent = fs.readFileSync("../shenglong-next/app/operations/page.tsx", "utf8");
+
+  // 1. 驗證【稍後輸入】已加入派工動作列
+  assert.ok(pageContent.includes("⏳ 稍後輸入"), "卡片派工列必須包含『稍後輸入』標籤");
+  assert.ok(pageContent.includes('"稍後輸入"'), "必須支援將外送員指派為稍後輸入以同步舊 ERP");
+
+  // 2. 驗證消滅重複導航與撥號
+  assert.ok(!pageContent.includes('title="查看此訂單完整異動軌跡時間軸"\n                        >\n                          📜 歷程\n                        </button>\n                        {o.addr && ('), "歷程旁不應重複出現導航連結");
+
+  // 3. 驗證頂部重複之 AI戰情室 按鈕已移除
+  assert.ok(!pageContent.includes('<span>{isAppExperience ? "AI戰情室" : "七大AI戰情室"}</span>'), "頂部 Bar 必須移除重複之 AI戰情室 按鈕");
+
+  // 4. 驗證底部 Bar 新增【戰情室】Tab
+  assert.ok(pageContent.includes('<span>戰情室</span>'), "底部 Bar 必須包含『戰情室』Tab");
+
+  // 5. 驗證掛載共用客戶歷史彈窗
+  assert.ok(pageContent.includes("<SharedCustomerHistoryModal"), "必須掛載 SharedCustomerHistoryModal 元件");
+
+  // 6. 驗證掛載共用現代化戰情室視圖
+  assert.ok(pageContent.includes("<ModernWarRoomView"), "必須掛載 ModernWarRoomView 元件");
 });
