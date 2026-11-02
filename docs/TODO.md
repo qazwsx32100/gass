@@ -4,7 +4,19 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-02 15:10
+> **最後更新時間**：2026-11-02 15:15
+
+---
+
+### 0. 盛隆瓦斯 官方標準成本、運費與利潤核算權威數據主檔 (Master Financial & Costing Truth) 全系統 AI 助理讀取管線實裝
+- **狀態**：`[x]` 已完成 (依老闆指示「幫我記錄起來，讓需要這筆資料的ai助理 讀取」，將全規格每公斤成本模型、鋼瓶持有折舊模型、50kg 運費 $140、4kg/10kg 定價凍結與住家/生意攤真實基準全面固化為全系統權威真理：1. 寫入最高執行準則 `GEMINI.md` 第 3 條；2. 發布專屬規範主檔 `docs/SHENGLONG_GAS_CYLINDER_AND_COST_MASTER_DATA.md` 與桌面鏡像；3. 實裝 `c:\shenglong-next\lib\gas-cost-master-data.ts` 程式模組；4. 在 AI 戰情室 `app/api/ai/advisor/route.ts` 即時上下文注入完整成本表，全系統 AI 助理皆可毫秒精準讀取與引用)
+  - 🔍 **核心成果明細**：
+    1. **最高執行準則 GEMINI.md 權威注入**：在 `c:\Gass\GEMINI.md` 第 3 條確立「盛隆官方標準成本、運費與利潤核算基準 (Master Costing & Financial Truth)」，所有 AI 啟動對話時即刻強制載入，嚴禁虛構。
+    2. **雙倉庫代碼模組落地 (`lib/gas-cost-master-data.ts`)**：提供強型別常數 `GAS_PURCHASE_PRICE_PER_KG` ($22.63)、`DRIVER_DELIVERY_FEES` (一般$70/50kg$140)、`CYLINDER_PURCHASE_COSTS` (4kg$1080/10kg$1480/16kg$1480/20kg$1550)、`STORE_PRICING_POLICY` (4kg與10kg凍結不更動)、`SPEC_ECONOMICS_MATRIX` 與 `getSpecEconomics()` 查詢工具。
+    3. **AI 軍師戰情室實時注入 (`app/api/ai/advisor/route.ts`)**：在 AI 提問上下文 `liveContext` 中全面追加老闆親授之成本基準，確保網頁調度戰情室與 Telegram 特助在回答成本、定價、利潤時 100% 輸出最新標準。
+    4. **專屬權威主檔與桌面鏡像雙向發布**：發布 `docs/SHENGLONG_GAS_CYLINDER_AND_COST_MASTER_DATA.md` 與桌面鏡像 `C:\Users\懶\Desktop\盛隆瓦斯_官方標準成本與利潤核算主檔.md`。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/02
 
 ---
 

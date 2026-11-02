@@ -1,3 +1,10 @@
+## [2026-11-02 15:25] - 盛隆瓦斯 官方標準成本、運費與利潤核算權威數據主檔 (Master Financial & Costing Truth) 全系統 AI 助理讀取管線實裝
+### 寫入最高執行準則 GEMINI.md、發布標準成本主檔、實裝 TypeScript 模組、戰情室即時上下文全面注入
+- **最高執行準則 GEMINI.md 權威注入**：在 `c:\Gass\GEMINI.md` 第 3 條確立「盛隆官方標準成本、運費與利潤核算基準 (Master Costing & Financial Truth)」，所有 AI 啟動對話時即刻強制載入，嚴禁虛構。
+- **雙倉庫代碼模組落地 (`lib/gas-cost-master-data.ts`)**：提供強型別常數 `GAS_PURCHASE_PRICE_PER_KG` ($22.63)、`DRIVER_DELIVERY_FEES` (一般$70/50kg$140)、`CYLINDER_PURCHASE_COSTS` (4kg$1080/10kg$1480/16kg$1480/20kg$1550)、`STORE_PRICING_POLICY` (4kg與10kg凍結不更動)、`SPEC_ECONOMICS_MATRIX` 與 `getSpecEconomics()` 查詢工具。
+- **AI 軍師戰情室實時注入 (`app/api/ai/advisor/route.ts`)**：在 AI 提問上下文 `liveContext` 中全面追加老闆親授之成本基準，確保網頁調度戰情室與 Telegram 特助在回答成本、定價、利潤時 100% 輸出最新標準。
+- **專屬權威主檔與桌面鏡像雙向發布**：發布 `docs/SHENGLONG_GAS_CYLINDER_AND_COST_MASTER_DATA.md` 與桌面鏡像 `C:\Users\懶\Desktop\盛隆瓦斯_官方標準成本與利潤核算主檔.md`。
+
 ## [2026-11-02 15:20] - 盛隆瓦斯 八大 AI 矩陣升級：【8 號 軟體工程 AI】全鏈路實裝與人員離職 APK 停權自毀防線
 ### 8號軟體工程 AI 正式上崗、Telegram 專屬指令與診斷按鈕、監控戰情室健康卡片、324 項測試全數綠燈
 - **八大 AI 矩陣核心代碼擴編 (`lib/seven-ai-matrix.ts`)**：
