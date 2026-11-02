@@ -1,3 +1,33 @@
+## 📅 2026/11/02 - 💻 盛隆瓦斯 八大 AI 矩陣升級：【8 號 軟體工程 AI】全鏈路實裝與人員離職 APK 停權自毀防線 (324 測試 100% 全綠) [ver: 20261102_1520_auto_release]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆最高指示**：
+   - 「新增一位 工程師ai 幫我處理所有盛隆 的軟體部分」
+   - 「人員離職 apk」
+2. **具體落地與工程成果**：
+   - **八大 AI 矩陣核心代碼擴編 (`lib/seven-ai-matrix.ts`)**：
+     - 正式擴編為 `EightAiAgentId` 與 `EIGHT_AI_PROFILES.engineer`（【💻 8 號 軟體工程 AI】），定義為「系統技術長兼架構師」，涵蓋軟體代碼維護、外勤/ERP 原生 APK 自動化編譯打包、SQL 防死鎖與行級鎖優化、308+ 全回歸測試、離職人員 APK 即時鎖定自毀、Vercel 雲端部署與連動影響預判。
+     - 升級意圖分類器 `classifyEightAiIntent`（別名 `classifySevenAiIntent` 100% 向後相容），精準將「工程、軟體、程式、代碼、apk、編譯、打包、測試、308、離職、自毀、停權、鎖定、死鎖、rowlock、技術長、bug」秒級路由至工程師 AI。
+   - **人員離職 APK 四道停權與本機自毀安全防線確實驗收**：
+     - 第 1 道（管理後台）：`/api/driver/manage-status` 執行 `suspend`，Token 立即換為 `revoked_...`，解除 FCM 手機推播。
+     - 第 2 道（手機本機）：APK 收到 403 立即執行 `localStorage.clear()` + `sessionStorage.clear()`，全數清空所有客戶電話、姓名、地址與歷史備註。
+     - 第 3 道（畫面鎖死）：切換為深黑底紅字「🛑 此帳號授權已終止」全螢幕，無登入輸入框且不可返回。
+     - 第 4 道（背景啞火）：長輪詢停擺，黑屏不亮、鈴聲不響、TTS 全斷。
+     - 第 5 道（帳目保全）：舊 ERP 歷史單據與運費 100% 完整保留，新單不再指派。
+   - **Telegram 商業軍師機器人全線對齊 (`advisor-bot.cjs` & `app/api/telegram/advisor`)**：
+     - 常駐鍵盤新增 `[ 💻 工程師AI ]` 與 `[ 📱 離職人員APK ]` 直達大按鈕。
+     - 新增 4 大專屬 Inline 操作回呼：`cmd_eng_resignation_apk`（離職自毀檢驗）、`cmd_eng_check_apk`（APK 發布檢驗）、`cmd_eng_test_report`（全系統測試戰報）、`cmd_eng_check_sql`（SQL 探測與守護進程狀態）。
+   - **監控中心戰情室與 AI 抽屜無縫對齊 (`ModernWarRoomView.tsx` & `AiAdvisorDrawer.tsx`)**：
+     - 現代戰情室新增「【8號 軟體工程 AI】系統架構與 APK 發布狀態」卡片，高亮標註「308 全綠」與極速探測。
+     - AI 抽屜新增「8.工程師 AI」專屬膠囊與 4 顆免打字快捷晶片（架構與308測試、離職人員APK自毀、外勤APK發布狀態、門市SQL探測自癒）。
+   - **全系統自動化回歸測試達到 324 項全綠 (324 Pass / 0 Fail)**：
+     - 新增 `tests/eight-ai-matrix.test.mjs` (16 項完整合約測試)。
+     - 執行 `npm test`，全系統 324 項單元與整合測試 100% 通過，零副作用、零回歸。
+   - **正式生產資料庫零污染 (Zero Production DB Pollution)**：
+     - 嚴格守護最高執行指令，正式環境 `dbo.gas_oders` 基準值精確維持 **234,769 筆** 完全無受污染。
+
+---
+
 ## 📅 2026/11/02 - 📊 盛隆瓦斯 鋼瓶每公斤 (kg) 精算模型校準：50kg 師傅運費 $140 元、4kg/10kg 定價凍結 [ver: 20261102_1510_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
