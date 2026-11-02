@@ -336,7 +336,11 @@ test("Seven-AI Joint Dry-Run Sandbox Engine & Dual-Track Sync (Telegram + Mobile
     assert.ok(tgRouteSrc.includes("run_dry_run_all"), "Telegram webhook must support run_dry_run_all callback");
 
     const drawerSrc = fs.readFileSync("c:/shenglong-next/app/components/AiAdvisorDrawer.tsx", "utf8");
-    assert.ok(drawerSrc.includes("七大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)"), "AiAdvisorDrawer must include 1-tap dual-track Dry-Run button");
+    assert.ok(
+      drawerSrc.includes("八大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)") ||
+      drawerSrc.includes("七大 AI 全真數據沙盒試跑 (Dry-Run 雙軌推播)"),
+      "AiAdvisorDrawer must include 1-tap dual-track Dry-Run button"
+    );
   });
 });
 
