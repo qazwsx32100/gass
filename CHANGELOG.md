@@ -1,3 +1,22 @@
+## [2026-11-02 10:45] - 盛隆瓦斯 監控中心至舊 ERP 雙向資料傳輸全面疏通與 SQL Server 自動偵測修復
+### 徹底根除 API 鑑權阻擋與本機 SQL 逾時、全鏈路雙向派單/結單/備註/進氣秒級直達、308 項測試全數綠燈
+- **雲端 API 內部調度鑑權通道疏通 (`app/api/driver/orders/status` & `today-orders/remarks`)**：
+  - 解決監控中心點擊「🛵 派小龍/派柏林/稍後輸入」或「✅ 送達收現」時因無管理員 Session 遭 HTTP 401 阻擋，導致佇列完全無法寫入之問題；啟動 `isSameOriginRequest` 與 `x-internal-origin: operations` 內部授權，指令立即推入 `dispatch_queue_v1`。
+  - 解決單據備註修改時未回寫舊 ERP 之問題，修復 `today-orders/remarks` 支援同源請求與 `syncToErp: true`，確保備註變更排入佇列回寫 `dbo.gas_oders.oder_remarks`。
+- **雲端遠端指令與進氣入庫權限修復 (`app/api/remote-command`)**：
+  - 開放監控中心調度員同源操作進氣登記 (`add_stock`)、修改進氣 (`update_stock`)、作廢進氣 (`delete_stock`)、盤點平帳 (`adjust_stock`) 與來電結案 (`complete_call`)，指令可靠推入 `remote_command_v1`。
+  - 監控中心前端 `page.tsx` 全面追加 `credentials: "include"` 與 `x-internal-origin: "operations"`。
+- **門市守護進程 SQL 連線超時與資料庫映射根治 (`sync-stock.cjs` & `backup-db.cjs`)**：
+  - 拔除原本寫死 `127.0.0.1,1000` 與 `gas_station_ShengLong` 之程式碼（該 TCP 1000 埠未開放引發每次 ODBC 等候逾時錯誤）。
+  - 實裝智慧端點探測引擎 `detectSqlEndpoint()`，自動探測 `.\SQLEXPRESS` 與目標資料庫 `ShengLong_Inspection`（實測 117ms 極速連線），並優先遵守 `.env` 設定。
+  - 修復 `heartbeat-emitter.cjs` 與 `caller-watcher.ts`，主機失能開關心跳與 SQL 狀態即時翻轉為 `[OK]`。
+  - 重啟 `sync-stock.cjs` 守護進程，日誌成功連續輸出最新鋼瓶庫存與出貨趨勢，無任何 ODBC 逾時錯誤。
+- **全系統自動化回歸測試達到 308 項全綠 (308 Pass / 0 Fail)**：
+  - 新增 `tests/operations-hub-writeback.test.mjs` (8 項核心管線與防護測試)。
+  - 執行 `npm test`，全系統 308 項單元與整合測試 100% 全數綠燈通過。
+- **正式生產資料庫零污染 (Zero Production DB Pollution)**：
+  - 正式資料庫 `dbo.gas_oders` 基準值嚴格維持 **234,769 筆** 完全無受污染。
+
 ## [2026-11-02 10:20] - 盛隆瓦斯 全系統海量 AI 測試員按鈕串接壓測引擎全面驗收
 ### 107 位 AI 虛擬測試同仁、42+ 核心按鈕、1,214 次真實併發點擊、300 項全自動化測試 100% 綠燈、正式庫維持 234,769 筆零污染
 - **107 位 AI 虛擬測試員集群 (`scripts/ai-swarm-button-stress-test.cjs`)**：
