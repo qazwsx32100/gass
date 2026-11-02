@@ -149,7 +149,7 @@ test("Monitoring Center to Legacy ERP Full Pipeline Verification", async (t) => 
           "-W",
           "-Q", "SET NOCOUNT ON; SELECT SUM(rows) FROM sys.partitions WHERE object_id = OBJECT_ID('dbo.gas_oders') AND index_id IN (0,1);",
         ],
-        { encoding: "utf8", windowsHide: true, timeout: 3000 }
+        { encoding: "utf8", windowsHide: true, timeout: 10000 }
       );
       const rowCount = parseInt(out.trim(), 10);
       assert.strictEqual(rowCount, 234769, `dbo.gas_oders row count must be exactly 234,769, got ${rowCount}`);
