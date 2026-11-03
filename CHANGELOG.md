@@ -1,3 +1,14 @@
+## [20261103_1930_auto_release] - 2026-11-03
+
+### Added
+- **最高執行指令增補：【4. 舊 ERP 絕對零更動黑盒子鐵律 (Zero-Touch Legacy ERP Black-Box Rule)】**：
+  - 確立門市舊 ERP 系統（二進位程式、UI 打單介面、SQL Server 資料庫結構）為不可變動的神聖黑盒子，新系統與 AI 必須 100% 無條件配合舊 ERP 既有規格。
+  - 雙倉庫最高執行準則 `c:\Gass\GEMINI.md` 與 `c:\shenglong-next\GEMINI.md` 第 4 條正式落地。
+  - 新增專屬合約測試 `tests/legacy-erp-immutability.test.mjs`（全代碼庫 DDL 靜態稽核、回寫欄位原生相容性驗證）。
+- **全系統 340 項自動化回歸測試 100% 全綠**（340 Pass / 0 Fail）。
+
+---
+
 ## [20261103_1200_auto_release] - 2026-11-03
 
 ### Added

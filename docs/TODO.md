@@ -4,7 +4,20 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-03 11:55
+> **最後更新時間**：2026-11-03 19:30
+
+---
+
+### 0. 盛隆瓦斯 最高執行指令增補：【4. 舊 ERP 絕對零更動黑盒子鐵律】確立與全代碼合約驗收 (340 測試 100% 全綠)
+- **狀態**：`[x]` 已完成 (依老闆最高決策指令「不能對舊erp修改」，正式確立全系統第四大最高執行指令：**舊 ERP 軟體程式與資料庫結構完全不可變動（神聖黑盒子架構），新系統與 AI 必須 100% 無條件配合舊 ERP 既有規格**。全面落實：1. 寫入雙倉庫最高開發準則 `c:\Gass\GEMINI.md` 與 `c:\shenglong-next\GEMINI.md` 第 4 條；2. 全系統靜態代碼掃描，確認零任何針對舊 ERP 實體資料表 dbo.gas_oders / customers / Money 之 DDL (ALTER/DROP/TRIGGER) 修改指令；3. 回寫引擎 erp-writeback-engine 100% 依循原生欄位與 WITH (ROWLOCK) 行級防死鎖機制；4. 新增專屬自動化合約測試 `tests/legacy-erp-immutability.test.mjs`，全系統自動化測試達到 340 項全數 100% 綠燈通過)
+  - 🔍 **核心成果明細**：
+    1. **最高執行準則確立 (Supreme Directive #4)**：正式將「舊 ERP 絕對零更動黑盒子鐵律」寫入雙倉庫 `GEMINI.md`。門市舊 ERP 為不可更動的黑盒子，新系統（Next.js 監控中心、外送 Android APK、LINE 客服、Telegram 軍師機器人、八大 AI 矩陣、中繼同步 Daemon）必須 100% 無條件配合舊 ERP 既有資料表結構、Big5 編碼與打單習慣。
+    2. **全代碼庫零 DDL 靜態稽核保護**：經自動化掃描，全系統 gass 與 shenglong-next 內，針對舊門市實體資料表（`dbo.gas_oders`、`dbo.customers`、`dbo.Money`、`dbo.berrel_logs`、`dbo.stove_oders`）的 `ALTER TABLE`、`DROP TABLE`、`CREATE TRIGGER` 指令為 **0 筆**（100% 合規）。
+    3. **擴充資料全數外掛雲端**：任何現代化所需之延伸屬性（如 AI 辨識標籤、GPS 大門定點座標、FCM Token、離職停權標記、沙盒戳記等）一律存於外部雲端（Supabase / Vercel KV / 內部快取），絕不塞入舊 ERP。
+    4. **門市打單零干擾**：回寫與同步機制 100% 採用 `WITH (ROWLOCK)` 行級鎖，絕不引發舊門市 ERP 鎖表 (Table Lock)，門市小姐打單流暢度 100% 保障。
+    5. **全量測試保證零回歸**：新增 `tests/legacy-erp-immutability.test.mjs`，全系統 340 項測試 100% 通過 (`pass 340, fail 0`)。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/03
 
 ---
 

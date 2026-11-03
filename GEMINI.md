@@ -64,7 +64,15 @@
      - 鋼瓶年均分攤：$2.0 \times \$147.67 \div 50 = \mathbf{\$6\text{ 元 / 桶}}$。
      - 生意攤實質保本底線：進氣 $453 + 運費 $70 + 鋼瓶 $6 = \mathbf{\$529\text{ 元 / 桶}}$。
 
-### 4. 📝 待增加 (Dynamic Expansion Reserved)
+### 4. 🏛️ 舊 ERP 絕對零更動黑盒子鐵律 (Zero-Touch Legacy ERP Black-Box Rule)
+* **核心鐵律**：門市運行 20 年之舊 ERP 系統（二進位執行檔、打單介面 UI、Microsoft SQL Server 資料庫結構 Schema、現有欄位定義、預存程序、Triggers 與索引）**絕對嚴禁進行任何修改、變更、增刪欄位或重新編譯**。
+* **執行標準**：
+  1. **黑盒子架構 (Immutable Black-Box)**：舊 ERP 為神聖不可變更的既有系統，新系統（Next.js 監控中心、外送 Android APK、LINE 客服、Telegram 軍師機器人、八大 AI 矩陣、中繼同步 Daemon）必須 100% 無條件配合舊 ERP 的現有欄位（`dbo.gas_oders`, `dbo.customers`, `dbo.Money` 等）、資料型別與既有業務邏輯。
+  2. **嚴禁 Schema 結構性更動**：全系統任何腳本、API、遷移程式，嚴禁對舊門市 SQL Server 執行 `ALTER TABLE`、`CREATE TRIGGER`、`ALTER PROCEDURE` 或任何 DDL 結構修改指令。
+  3. **擴充資料外掛雲端**：任何現代化所需之擴充屬性（如 AI 辨識標籤、GPS 座標、FCM Token、離職停權標記、沙盒隔離戳記等），一律存於外部雲端（Supabase / Vercel KV / 內部快取），絕不強行塞入或修改舊 ERP 既有資料表。
+  4. **嚴格保護門市打單**：所有向舊門市資料庫執行的查詢或狀態同步，必須使用 `WITH (ROWLOCK)` 或 `WITH (NOLOCK)`，絕不佔用表級鎖，確保門市小姐 20 年鍵盤極速打單完全不受干擾。
+
+### 5. 📝 待增加 (Dynamic Expansion Reserved)
 * 預留擴充槽位，後續若老闆下達新最高執行指令，隨時依序增補並嚴格落實。
 
 ---
