@@ -147,7 +147,7 @@ test("Step 4: Production Database Zero Pollution Audit (dbo.gas_oders = 234,769)
       const out = execFileSync(
         "sqlcmd.exe",
         [
-          "-S", ".\\SQLEXPRESS",
+          "-S", process.env.SQL_SERVER || "lpc:.\\SQLEXPRESS",
           "-E",
           "-d", "ShengLong_Inspection",
           "-h", "-1",

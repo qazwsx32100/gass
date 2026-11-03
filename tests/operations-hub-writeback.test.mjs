@@ -142,7 +142,7 @@ test("Monitoring Center to Legacy ERP Full Pipeline Verification", async (t) => 
       const out = execFileSync(
         "sqlcmd.exe",
         [
-          "-S", ".\\SQLEXPRESS",
+          "-S", process.env.SQL_SERVER || "lpc:.\\SQLEXPRESS",
           "-E",
           "-d", "ShengLong_Inspection",
           "-h", "-1",

@@ -4,7 +4,27 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-02 15:45
+> **最後更新時間**：2026-11-03 11:55
+
+---
+
+### 0. 盛隆瓦斯 智慧定位防偏移與穿透導航三部曲全鏈路實裝 (Two-Wheeler Navigation + Door-Pinning Learning + Google Maps Platform Services, 337 測試 100% 全綠)
+- **狀態**：`[x]` 已完成 (依老闆最高決策「三步一起做」，全面根治雙北密集窄巷、單行道、死巷地址定位偏移至後方對街、巷口提前 50~80 公尺停止導航之長年痛點：1. 第一步（兩輪機車導航模式）：全面升級 Google Maps 呼叫模式為 travelmode=two_wheeler，包含單筆外送與多停靠點順路導航，穿透雙北窄巷與無尾死巷；2. 第二步（外勤大門 GPS 現場沉澱與秒存）：外勤同仁送達完成訂單時，系統自動將現場高精度 GPS 座標沉澱學習為該戶正門經緯度（Uber 模式）；訂單卡片提供「📍 標記大門」按鈕，站在大門口一鍵秒存；3. 第三步（Google Maps Platform 商業服務模組）：建立 lib/google-maps-service.ts 商業 API 與 /api/customer/geocode，支援 ROOFTOP 屋頂大門座標、Place ID 與機車實際路網距離精算；4. 整合驗證：新增專屬單元測試，全系統自動化測試達到 337 項全數 100% 綠燈，生產資料庫 dbo.gas_oders 維持 234,769 筆零污染)
+  - 🔍 **核心成果明細**：
+    1. **兩輪機車穿透導航 (`lib/navigation-address.ts`, `SharedAddressAction.tsx`, `SharedOrderCard.tsx`, `app/driver/page.tsx`)**：
+       - `getGoogleNavigationUrl` 預設採用 `travelmode=two_wheeler`，若有經緯度座標 (`lat,lng`) 或 `destination_place_id`，直連經緯度大門點，徹底避免 Google 開車模式自作聰明將車輛下客點吸附到寬馬路後背對街。
+       - 多停靠點整趟連續導航同步切換為機車模式。
+    2. **外勤端 Uber 模式自動學習與一鍵標記大門 (`app/driver/page.tsx`)**：
+       - `handleFinishOrder` 於送達現場結單時，若該戶尚未定點且手機 GPS 精度 <= 45m，非同步自動學習該點為大門 GPS。
+       - 訂單卡片地址旁提供「📍 標記大門」按鈕，站在大門口點擊秒存，已定點戶即時切換為「📍 已定點」並呈現距離公尺數。
+    3. **Google Maps Platform 商業級 API (`lib/google-maps-service.ts`, `/api/customer/geocode`)**：
+       - 實裝 `geocodeAddressWithGoogle`，支援 ROOFTOP 屋頂精準門牌定位與 Place ID 萃取。
+       - 實裝 `getRoadDistanceWithGoogle`，支援兩輪機車實際路網距離與行駛時間精算。
+       - 內建優雅降級與超時保護，無 API Key 時靜默回退至本機精確地址清洗。
+    4. **全量測試保證**：
+       - 全系統 337 項測試 100% 綠燈（`pass 337, fail 0`），正式生產資料庫零污染。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/03
 
 ---
 

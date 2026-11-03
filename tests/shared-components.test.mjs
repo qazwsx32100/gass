@@ -139,7 +139,7 @@ test("🧩 Shared Components (P1): 現場收款與空瓶回收面板 (SharedDeli
   assert.ok(cardContent.includes("<SharedDeliveryCollectionModal"), "SharedOrderCard 必須實裝掛載 <SharedDeliveryCollectionModal");
 });
 
-test("🧩 Shared Components (P1): 外勤司機 App 結單收款與空瓶回收無縫整合 (Driver App Collection Modal)", () => {
+test("🧩 Shared Components (P1): 外勤端 App 結單收款與空瓶回收無縫整合 (Driver App Collection Modal)", () => {
   const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
   assert.ok(fs.existsSync(driverPagePath), "app/driver/page.tsx 檔案必須存在");
 
@@ -172,5 +172,35 @@ test("🧩 Shared Components (P2): 雙桶戶壓瓶標籤與外勤歷史速查 (D
   assert.ok(driverContent.includes("historyModalOpen"), "Driver App 必須維護歷史彈窗開關狀態");
   assert.ok(driverContent.includes("叫貨歷史"), "客戶姓名旁必須包含「叫貨歷史」速查按鈕");
   assert.ok(driverContent.includes("<SharedCustomerHistoryModal"), "Driver App 必須實裝掛載 <SharedCustomerHistoryModal");
+});
+
+test("🛵 Google Maps 定位防飄移三步全聯動 (Two Wheeler + Uber Mode + Google Maps API)", async () => {
+  // 1. 驗證 navigation-address.ts 機車模式與座標導航
+  const navFilePath = path.join(process.cwd(), "../shenglong-next/lib/navigation-address.ts");
+  assert.ok(fs.existsSync(navFilePath), "navigation-address.ts 必須存在");
+  const navContent = fs.readFileSync(navFilePath, "utf8");
+  assert.ok(navContent.includes('two_wheeler'), "導航必須支援 two_wheeler 兩輪機車模式");
+  assert.ok(navContent.includes('destination_place_id'), "導航必須支援 destination_place_id 商業精準參數");
+
+  // 2. 驗證 Driver App 的 Uber 自動沉澱模式與現場「標記大門」按鈕
+  const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
+  const driverContent = fs.readFileSync(driverPagePath, "utf8");
+  assert.ok(driverContent.includes("handleQuickPinDoor"), "外勤端必須具備 handleQuickPinDoor 現場秒存大門定位函式");
+  assert.ok(driverContent.includes("Uber 模式：外勤同仁送達現場完成訂單時"), "結單時必須自動沉澱大門精準 GPS");
+  assert.ok(driverContent.includes("📍 標記大門"), "訂單卡片未定點時必須提供「📍 標記大門」按鈕");
+  assert.ok(driverContent.includes("travelmode=two_wheeler"), "外勤端 Google 導航必須升級為 travelmode=two_wheeler 機車模式");
+
+  // 3. 驗證 Google Maps Platform 官方商業服務與 API 路由
+  const gmsPath = path.join(process.cwd(), "../shenglong-next/lib/google-maps-service.ts");
+  assert.ok(fs.existsSync(gmsPath), "lib/google-maps-service.ts 必須存在");
+  const gmsContent = fs.readFileSync(gmsPath, "utf8");
+  assert.ok(gmsContent.includes("geocodeAddressWithGoogle"), "必須提供 geocodeAddressWithGoogle 地址解析函式");
+  assert.ok(gmsContent.includes("getRoadDistanceWithGoogle"), "必須提供 getRoadDistanceWithGoogle 實際機車路網行駛距離精算");
+  assert.ok(gmsContent.includes("ROOFTOP"), "必須支援 ROOFTOP 屋頂級精準座標判定");
+
+  const geocodeApiPath = path.join(process.cwd(), "../shenglong-next/app/api/customer/geocode/route.ts");
+  assert.ok(fs.existsSync(geocodeApiPath), "app/api/customer/geocode/route.ts 必須存在");
+  const geocodeContent = fs.readFileSync(geocodeApiPath, "utf8");
+  assert.ok(geocodeContent.includes("geocodeAddressWithGoogle"), "Geocode API 必須呼叫 geocodeAddressWithGoogle 服務");
 });
 

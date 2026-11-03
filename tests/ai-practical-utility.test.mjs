@@ -198,7 +198,7 @@ test("盛隆八大 AI 助理實際業務功用全面驗證 (Practical Utility Ve
       const out = execFileSync(
         "sqlcmd.exe",
         [
-          "-S", ".\\SQLEXPRESS",
+          "-S", process.env.SQL_SERVER || "lpc:.\\SQLEXPRESS",
           "-E",
           "-d", "ShengLong_Inspection",
           "-h", "-1",

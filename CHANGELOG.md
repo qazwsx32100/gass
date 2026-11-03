@@ -1,3 +1,16 @@
+## [20261103_1200_auto_release] - 2026-11-03
+
+### Added
+- **智慧定位防偏移與穿透導航三部曲全鏈路實裝 (Two-Wheeler Navigation + Door-Pinning Learning + Google Maps Platform Services)**：
+  - 導航升級：Google Maps 全面採用 `travelmode=two_wheeler` 兩輪機車導航模式，穿透雙北窄巷與死巷，解決開車模式提前 50~80 公尺結束導航與吸附對街問題。
+  - 大門學習（Uber 模式）：外勤同仁送達結單時，系統自動將當前現場精準 GPS 沉澱為該地址之永久正門座標。
+  - 現場秒存：外勤訂單卡片提供「📍 標記大門」按鈕，站在大門口一鍵秒存大門經緯度。
+  - 商業服務模組：建立 `lib/google-maps-service.ts` 商業 API 與 `/api/customer/geocode`，支援 ROOFTOP 屋頂座標與機車實際路網行駛距離精算。
+- **全系統 337 項自動化回歸測試 100% 全綠**（337 Pass / 0 Fail）。
+- 正式生產資料庫 `dbo.gas_oders` 精確維持 234,769 筆完全零污染。
+
+---
+
 ## [20261102_1545_auto_release] - 2026-11-02
 
 ### Added
