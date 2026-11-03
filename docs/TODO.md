@@ -4,7 +4,29 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **桌面即時鏡像**：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`  
-> **最後更新時間**：2026-11-03 19:30
+> **最後更新時間**：2026-11-03 19:55
+
+---
+
+### 0. 盛隆瓦斯 雲端資料即時同步斷鏈根治與進程防護熔斷器實裝 (Cloud Sync Restoration + Process Circuit Breaker + 1-Click Desktop Self-Healing, 346 測試 100% 全綠)
+- **狀態**：[x] 已完成 (依老闆反映「目前的系統 雲端資料 一直沒有同步更新 到 監控中心 和 司機app」，深入穿透全系統雲端鏈路排查根因並徹底根治：
+  1. **排查停止同步真兇**：主機因記憶體耗盡 (剩餘僅 114MB) 導致 Windows 服務 MSSQL 發生 OOM 崩潰退出 (Error 17058/19032)；而 sync-stock.cjs 在 SQL 斷線下高頻輪詢持續衍生掛起之 sqlcmd.exe 進程形成惡性循環；且雲端 Vercel /api/today-orders 寫入 KV 缺少 wait 導致 Serverless 提前凍結中斷 KV 更新。
+  2. **Vercel 雲端 API 寫入等待修復**：在 pp/api/today-orders/route.ts 補齊 wait fetch(PRIMARY_KV_URL, ...)，保證 Serverless 容器回應前 100% 完成 Private KV 加密持久化。
+  3. **中繼 Daemon 雙軌直連與智能熔斷器 (sync-stock.cjs)**：
+     - **雙軌直連**：訂單推送新增直連 PRIMARY_KV_ORDERS_URL (AES-256-GCM 雙向加密)，不再單純依賴 Vercel 轉發，實現店面與 KV 直通。
+     - **智能熔斷保護**：當偵測到 SQL Server 連線異常時，自動進入熔斷保護狀態，停用秒級高頻輪詢，降頻至每 10 秒單次探測自癒，徹底杜絕子進程累積與記憶體暴衝。
+     - **進程超時硬殺守護**：
+unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放機制，超時 4~8 秒瞬間清除孤兒進程。
+  4. **桌面一鍵修復與自癒策略配置**：
+     - 於老闆桌面產出 C:\Users\懶\Desktop\一鍵啟動門市SQL資料庫與同步.bat（具備 UAC 自動提權、釋放記憶體、啟動 SQLEXPRESS 與 SQLBrowser、自動配置 Windows 崩潰自癒重啟策略 sc failure reset= 86400 actions= restart/5000）。
+     - 同步整合至 C:\Users\懶\Desktop\盛隆瓦斯_訂單自動入單系統控制台.bat 選項 [6]。
+  5. **全系統 346 項測試 100% 綠燈**：新增 	ests/cloud-data-sync-pipeline.test.mjs，正式庫 dbo.gas_oders 筆數維持 234,769 筆完全零污染，雙向通訊鏈路 100% 暢通)
+  - 🔍 **核心成果明細**：
+    1. **雙向加解密驗證**：已驗證 	oday_orders 雲端 KV 儲存採用 AES-256-GCM 加密，即時推送與還原完全一致。
+    2. **雲端伺服器保全**：Vercel Node.js Serverless 容器內徹底避免非同步寫入遺失問題。
+    3. **自癒能力**：SQL 服務崩潰時 Windows 自動 5 秒內重啟，守護進程自動探測重新連線。
+- **優先級**：P0 (老闆最高決策指令)
+- **完成日期**：2026/11/03
 
 ---
 

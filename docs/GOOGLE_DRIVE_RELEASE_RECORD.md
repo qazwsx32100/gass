@@ -1,3 +1,29 @@
+## 📅 2026/11/03 - ⚡ 盛隆瓦斯 雲端資料即時同步斷鏈根治與進程防護熔斷器實裝 (346 測試 100% 全綠) [ver: 20261103_2000_auto_release]
+
+### 一、 需求背景與決策 (老闆反映「雲端資料一直沒有同步更新到監控中心和司機app」)
+1. **排查停止同步真兇**：
+   - 店面主機因記憶體耗盡 (剩餘僅 114MB) 導致 Windows 服務 MSSQL 發生 OOM 崩潰退出 (Error 17058/19032: 資源集區 internal 中的系統記憶體不足)。
+   - sync-stock.cjs 在 SQL 斷線下每秒高頻輪詢持續衍生掛起之 sqlcmd.exe 進程形成惡性循環，累積數十個進程加速記憶體枯竭。
+   - 雲端 Vercel /api/today-orders 寫入 KV 缺少 wait，導致 Serverless 容器回應後提前凍結，中斷了 KV 更新。
+2. **五重根治工程全鏈路落地**：
+   - **第一重：Vercel Serverless 非同步保全**
+     - 在 pp/api/today-orders/route.ts 補齊 wait fetch(PRIMARY_KV_URL, ...)，確保每一次訂單寫入 100% 持久化至 KV 後才返還回應，杜絕背景非同步中斷。
+   - **第二重：雙軌直連 PRIMARY_KV_ORDERS_URL**
+     - 在 sync-stock.cjs 中加入訂單端點雙軌直連，店面守護進程自動以 AES-256-GCM 加密直推 https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/today_orders，不再單一依賴 Vercel。
+   - **第三重：智慧連線熔斷保護器 (Circuit Breaker)**
+     - 實裝 markSqlDisconnected 與 markSqlConnected 熔斷機制。當偵測到 SQL Server 連線異常時，自動阻斷秒級高頻輪詢，自動切換為每 10 秒單次探測自癒，杜絕子進程累積與記憶體暴衝。
+   - **第四重：子進程超時硬殺樹狀守護 (Anti-Zombie Taskkill)**
+     - 
+unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放機制，超時 4~8 秒瞬間清除孤兒進程。
+   - **第五重：桌面一鍵啟動與 Windows 崩潰自癒重啟策略**
+     - 產出 C:\Users\懶\Desktop\一鍵啟動門市SQL資料庫與同步.bat（UAC 自動提權、釋放記憶體、啟動 SQLEXPRESS 與 SQLBrowser、自動配置 Windows 崩潰自癒重啟策略 sc failure reset= 86400 actions= restart/5000）。
+     - 同步整合至 C:\Users\懶\Desktop\盛隆瓦斯_訂單自動入單系統控制台.bat 選項 [6]。
+3. **最高執行指令審計 (Zero Regressions & Zero DB Pollution)**：
+   - 測試前後正式生產資料庫 dbo.gas_oders 筆數完全維持 **234,769 筆**（100% 唯讀防護與沙盒隔離，零污染）。
+   - 新增 	ests/cloud-data-sync-pipeline.test.mjs，全系統自動化測試達到 **346 項全數 100% 綠燈通過**（346 Pass / 0 Fail）。
+
+---
+
 ## 📅 2026/11/03 - 🏛️ 盛隆瓦斯 最高執行指令增補：【4. 舊 ERP 絕對零更動黑盒子鐵律】確立與全代碼合約驗收 (340 測試 100% 全綠) [ver: 20261103_1930_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

@@ -1,3 +1,13 @@
+## [2026-11-03 20:00] - ⚡ 盛隆瓦斯 雲端資料即時同步斷鏈根治與進程防護熔斷器實裝 (346 測試 100% 全綠)
+### 新增與修復 (Added & Fixed)
+- **Vercel Serverless 非同步保全**：在 pp/api/today-orders/route.ts 補齊 wait fetch(PRIMARY_KV_URL, ...)，解決雲端容器回應後提前凍結導致 KV 未更新之根本缺陷。
+- **雙軌直連 PRIMARY_KV_ORDERS_URL**：在 sync-stock.cjs 實裝訂單 AES-256-GCM 直推 KVDB.io 端點，建立雙重傳輸保障。
+- **智慧連線熔斷保護器**：實裝 markSqlDisconnected / markSqlConnected 熔斷機制，SQL 斷線時自動切換至 10 秒低頻探測，徹底杜絕 process storm 與 OOM 記憶體枯竭。
+- **子進程超時硬殺守護**：
+unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放機制。
+- **桌面一鍵啟動與 Windows 崩潰自癒重啟策略**：產出 C:\Users\懶\Desktop\一鍵啟動門市SQL資料庫與同步.bat 並整合至控制台選單 [6]，配置 sc failure 崩潰 5 秒自動重啟。
+- **全量測試保證**：新增 	ests/cloud-data-sync-pipeline.test.mjs，346 項測試 100% 綠燈通過。
+
 ## [20261103_1930_auto_release] - 2026-11-03
 
 ### Added
