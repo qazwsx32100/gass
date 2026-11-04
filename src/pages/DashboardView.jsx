@@ -1047,9 +1047,10 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         const customer = customerDetails.get(item.customerId);
                         const customerName = item.customerName || customer?.name || customer?.shortName || '未標示客戶';
                         const typeLabel = item.receivableType === 'monthly' ? '月結應收' : item.receivableType === 'current_debt' ? '現結欠款' : '其他應收';
+                        const detailRows = Array.isArray(item.debtDetails) ? item.debtDetails : [];
                         return (
+                        <React.Fragment key={item.id}>
                         <tr
-                          key={item.id}
                           data-detail-title={`${customerName}｜${typeLabel}`}
                           data-detail-json={JSON.stringify({
                             '客戶編號': item.customerId || '—',
@@ -1072,6 +1073,30 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                             <span className="badge void">{item.settledAmount > 0 ? '部分收款' : '尚未收款'}</span>
                           </td>
                         </tr>
+                        <tr>
+                          <td colSpan="7" style={{ padding: '8px 14px 14px', background: 'var(--bg-tertiary)' }}>
+                            <div style={{ fontWeight: 700, marginBottom: 6 }}>欠款逐筆明細</div>
+                            {detailRows.length > 0 ? (
+                              <div className="table-responsive">
+                                <table className="data-table" style={{ margin: 0 }}>
+                                  <thead><tr><th>實際發生日期</th><th>舊 ERP 單號</th><th>原始金額</th><th>已收</th><th>未收</th></tr></thead>
+                                  <tbody>{detailRows.map((detail, index) => (
+                                    <tr key={`${item.id}-detail-${index}`}>
+                                      <td>{detail.occurrenceDate || detail.date || '—'}</td>
+                                      <td>{detail.sourceRecordId || detail.orderId || '—'}</td>
+                                      <td>${Number(detail.originalAmount ?? detail.amount ?? 0).toLocaleString()}</td>
+                                      <td>${Number(detail.settledAmount || 0).toLocaleString()}</td>
+                                      <td style={{ color: 'var(--accent-red)', fontWeight: 700 }}>${Number(detail.outstandingAmount ?? detail.amount ?? 0).toLocaleString()}</td>
+                                    </tr>
+                                  ))}</tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div style={{ color: 'var(--text-secondary)' }}>目前只有彙總餘額，尚待舊 ERP 逐筆明細同步；不以每月 1 日推定發生日期。</div>
+                            )}
+                          </td>
+                        </tr>
+                        </React.Fragment>
                         );
                       })}
                       {activeReceivableRows.length === 0 && (
