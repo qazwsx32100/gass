@@ -16,6 +16,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
   const showCapitalDiff = canViewCapitalDifference(userRole, currentUser);
   const [activeDetailModal, setActiveDetailModal] = useState(null);
   const [selectedDetailCategory, setSelectedDetailCategory] = useState('');
+  const [selectedReceivableDetail, setSelectedReceivableDetail] = useState(null);
 
   const openDetailModal = (modalName) => {
     setSelectedDetailCategory('');
@@ -1033,7 +1034,7 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>發生日期</th>
+                        <th>詳細</th>
                         <th>客戶</th>
                         <th>欠款類型</th>
                         <th>原始金額</th>
@@ -1047,10 +1048,12 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                         const customer = customerDetails.get(item.customerId);
                         const customerName = item.customerName || customer?.name || customer?.shortName || '未標示客戶';
                         const typeLabel = item.receivableType === 'monthly' ? '月結應收' : item.receivableType === 'current_debt' ? '現結欠款' : '其他應收';
-                        const detailRows = Array.isArray(item.debtDetails) ? item.debtDetails : [];
                         return (
-                        <React.Fragment key={item.id}>
                         <tr
+                          key={item.id}
+                          onClick={() => setSelectedReceivableDetail(item)}
+                          style={{ cursor: 'pointer' }}
+                          title="點擊查看詳細欠款資料"
                           data-detail-title={`${customerName}｜${typeLabel}`}
                           data-detail-json={JSON.stringify({
                             '客戶編號': item.customerId || '—',
@@ -1063,7 +1066,11 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                             '資料來源': item.syncSource === 'shenglong' ? '舊系統同步' : '新系統建立'
                           })}
                         >
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{item.date || '-'}</td>
+                          <td>
+                            <button className="btn btn-secondary btn-sm" onClick={(event) => { event.stopPropagation(); setSelectedReceivableDetail(item); }}>
+                              查看詳細
+                            </button>
+                          </td>
                           <td style={{ fontWeight: '600' }}>{customerName}</td>
                           <td style={{ fontWeight: '600' }}>{typeLabel}</td>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>${Number(item.originalAmount || 0).toLocaleString()}</td>
@@ -1073,30 +1080,6 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
                             <span className="badge void">{item.settledAmount > 0 ? '部分收款' : '尚未收款'}</span>
                           </td>
                         </tr>
-                        <tr>
-                          <td colSpan="7" style={{ padding: '8px 14px 14px', background: 'var(--bg-tertiary)' }}>
-                            <div style={{ fontWeight: 700, marginBottom: 6 }}>欠款逐筆明細</div>
-                            {detailRows.length > 0 ? (
-                              <div className="table-responsive">
-                                <table className="data-table" style={{ margin: 0 }}>
-                                  <thead><tr><th>實際發生日期</th><th>舊 ERP 單號</th><th>原始金額</th><th>已收</th><th>未收</th></tr></thead>
-                                  <tbody>{detailRows.map((detail, index) => (
-                                    <tr key={`${item.id}-detail-${index}`}>
-                                      <td>{detail.occurrenceDate || detail.date || '—'}</td>
-                                      <td>{detail.sourceRecordId || detail.orderId || '—'}</td>
-                                      <td>${Number(detail.originalAmount ?? detail.amount ?? 0).toLocaleString()}</td>
-                                      <td>${Number(detail.settledAmount || 0).toLocaleString()}</td>
-                                      <td style={{ color: 'var(--accent-red)', fontWeight: 700 }}>${Number(detail.outstandingAmount ?? detail.amount ?? 0).toLocaleString()}</td>
-                                    </tr>
-                                  ))}</tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <div style={{ color: 'var(--text-secondary)' }}>目前只有彙總餘額，尚待舊 ERP 逐筆明細同步；不以每月 1 日推定發生日期。</div>
-                            )}
-                          </td>
-                        </tr>
-                        </React.Fragment>
                         );
                       })}
                       {activeReceivableRows.length === 0 && (
@@ -1576,6 +1559,59 @@ export default function DashboardView({ companyId, year, month, triggerRefresh, 
           </div>
         </div>
       )}
+      {selectedReceivableDetail && (() => {
+        const item = selectedReceivableDetail;
+        const customer = customerDetails.get(item.customerId);
+        const customerName = item.customerName || customer?.name || customer?.shortName || '未標示客戶';
+        const typeLabel = item.receivableType === 'monthly' ? '月結應收' : item.receivableType === 'current_debt' ? '現結欠款' : '其他應收';
+        const detailRows = Array.isArray(item.debtDetails) ? item.debtDetails : [];
+        const sourceLabel = item.syncSource === 'shenglong' ? '舊 ERP 同步' : item.syncSource || '新系統資料';
+        return (
+          <div className="dashboard-modal-overlay" onClick={() => setSelectedReceivableDetail(null)}>
+            <div className="dashboard-modal-container" onClick={(event) => event.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid rgba(5, 178, 165, 0.15)', paddingBottom: '16px' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>欠款詳細資料</div>
+                <button onClick={() => setSelectedReceivableDetail(null)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-tertiary)', padding: '4px' }}>✕</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '18px' }}>
+                {[
+                  ['客戶名稱', customerName], ['客戶編號', item.customerId || '—'], ['欠款類型', typeLabel],
+                  ['原始金額', `$${Number(item.originalAmount || 0).toLocaleString()}`], ['已收金額', `$${Number(item.settledAmount || 0).toLocaleString()}`], ['尚未收款', `$${Number(item.outstandingAmount || 0).toLocaleString()}`],
+                  ['收款日期', item.settlementDate || item.paymentDate || '—'], ['備註', item.remarks || '—'], ['資料來源', sourceLabel]
+                ].map(([label, value]) => (
+                  <div key={label} style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{label}</div>
+                    <div style={{ fontWeight: '700', wordBreak: 'break-word' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontWeight: '800', marginBottom: '8px' }}>逐筆欠款明細</div>
+              {detailRows.length > 0 ? (
+                <div className="table-responsive" style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                  <table className="data-table">
+                    <thead><tr><th>實際發生日期</th><th>舊 ERP 單號</th><th>原始金額</th><th>已收金額</th><th>尚未收款</th><th>收款日期</th><th>備註</th></tr></thead>
+                    <tbody>{detailRows.map((detail, index) => (
+                      <tr key={`${item.id}-detail-${index}`}>
+                        <td>{detail.occurrenceDate || detail.date || '—'}</td><td>{detail.sourceRecordId || detail.orderId || '—'}</td>
+                        <td>${Number(detail.originalAmount ?? detail.amount ?? 0).toLocaleString()}</td><td>${Number(detail.settledAmount || 0).toLocaleString()}</td>
+                        <td style={{ color: 'var(--accent-red)', fontWeight: 700 }}>${Number(detail.outstandingAmount ?? detail.amount ?? 0).toLocaleString()}</td>
+                        <td>{detail.settlementDate || detail.paymentDate || '—'}</td><td>{detail.remarks || '—'}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px', color: 'var(--text-secondary)' }}>
+                  尚待舊 ERP 明細同步；目前不以 10/1、11/1 等彙總日期推定實際發生日期。
+                </div>
+              )}
+              <div style={{ marginTop: '24px', textAlign: 'right', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+                <button className="btn btn-secondary" onClick={() => setSelectedReceivableDetail(null)}>關閉視窗</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
