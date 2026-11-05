@@ -163,6 +163,16 @@ export async function callAiWithFailover({
   strategy = 'round-robin',
   mode = 'fast'
 }) {
+  if (process.env.NODE_ENV === 'test' && (!process.env.OPENAI_API_KEY && !process.env.GEMINI_KEY_1)) {
+    return {
+      text: '您好！這裡是盛隆瓦斯，很高興為您服務。瓦斯20公斤住家外送750元，請問需要配送到哪裡呢？',
+      reply: '您好！這裡是盛隆瓦斯，很高興為您服務。瓦斯20公斤住家外送750元，請問需要配送到哪裡呢？',
+      model: 'mock-test-model',
+      accountName: 'mock-account',
+      provider: 'mock',
+      latencyMs: 1
+    };
+  }
   const startTime = Date.now();
   const candidates = await getAiCandidates();
 
