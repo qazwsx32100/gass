@@ -5,6 +5,15 @@ import { fetchWithTimeout } from './_fetch.js';
 import { getOptimizedSystemPrompt, classifyQueryComplexity } from './_knowledge-base.js';
 import { recordLineAiChat, fetchLineAiLogs } from './_line-ai-logger.js';
 import { sendTelegramMessage, getTelegramConfig } from './_telegram.js';
+import {
+  SUPPORTED_VOICE_LANGUAGES,
+  detectLanguage,
+  extractMultilingualOrderEntities,
+  transcribeAudio,
+  synthesizeSpeech,
+  downloadLineAudio,
+  buildMultilingualConfirmationText
+} from './_voice-service.js';
 
 /**
  * 驗證 LINE 數位簽章 (Timing-Safe Equal 防時序攻擊)
@@ -219,12 +228,33 @@ export default async function handler(req, res) {
 
   for (const event of events) {
     // 僅處理文字訊息事件
-    if (event.type === 'message' && event.message?.type === 'text') {
-      const userText = String(event.message.text || '').trim();
+    if (event.type === 'message' && (event.message?.type === 'text' || event.message?.type === 'audio')) {
+      const isVoice = event.message.type === 'audio';
       const replyToken = event.replyToken;
       const userId = event.source?.userId;
+      if (!replyToken) continue;
 
-      if (!userText || !replyToken) continue;
+      let userText = '';
+      let detectedLang = 'zh-TW';
+
+      if (isVoice) {
+        try {
+          console.log(`[LINE Webhook] 收到語音訊息 (ID: ${event.message.id})，正在下載並辨識...`);
+          const audioBuffer = await downloadLineAudio(event.message.id, channelAccessToken);
+          const sttResult = await transcribeAudio({ audioBuffer, mimeType: 'audio/m4a' });
+          userText = String(sttResult.transcript || '').trim();
+          detectedLang = sttResult.language || detectLanguage(userText);
+          console.log(`[LINE Webhook] 語音轉文字完成 [${detectedLang}]: "${userText}"`);
+        } catch (audioErr) {
+          console.error('[LINE Webhook] 語音辨識失敗:', audioErr.message);
+          userText = '（客戶傳送了一段語音訊息，但語音辨識服務暫時無法解析）';
+        }
+      } else {
+        userText = String(event.message.text || '').trim();
+        detectedLang = detectLanguage(userText);
+      }
+
+      if (!userText) continue;
 
       try {
         console.log(`[LINE Webhook] 收到來自使用者 [${userId || '未知'}] 的訊息: "${userText}"`);
@@ -267,11 +297,21 @@ export default async function handler(req, res) {
         const complexityMode = classifyQueryComplexity(userText);
         const isExpert = complexityMode === 'expert';
 
+        // 多語系指令注入 (中/英/台/越)
+        let multiLangDirective = '';
+        if (detectedLang === 'vi') {
+          multiLangDirective = '\n\n【🌐 語言指令】：客戶使用越南文 (Tiếng Việt)，請務必使用親切自然的越南文回答，金額與規格請嚴格遵守官方標準！';
+        } else if (detectedLang === 'nan') {
+          multiLangDirective = '\n\n【🌐 語言指令】：客戶使用台語 (臺灣閩南語)，請用親切在地台語口吻（台語漢字）回答，金額與規格請嚴格遵守官方標準！';
+        } else if (detectedLang === 'en') {
+          multiLangDirective = '\n\n【🌐 語言指令】：Customer speaks English. Please respond strictly in polite and clear English conforming to official pricing!';
+        }
+
         // 呼叫雲端 AI 輪調中心 (方案 B 智慧雙模分流 + 真・循環輪調 Round-Robin)
         const aiResult = await callAiWithFailover({
           prompt: userText,
           messages,
-          systemInstruction: getOptimizedSystemPrompt(userText, complexityMode, orderStateContext),
+          systemInstruction: getOptimizedSystemPrompt(userText, complexityMode, orderStateContext) + multiLangDirective,
           temperature: isExpert ? 0.3 : 0.6,
           preferredModel: 'gemini-3.8-flash',
           strategy: 'round-robin',
@@ -282,7 +322,7 @@ export default async function handler(req, res) {
         if (channelAccessToken) {
           await replyLineMessage(replyToken, [{
             type: 'text',
-            text: aiResult.text
+            text: (typeof isVoice !== 'undefined' && isVoice) ? `🎙️ 【盛隆 AI 語音辨識 (${detectedLang})】\n「${userText}」\n\n${aiResult.text}` : aiResult.text
           }], channelAccessToken);
         } else {
           console.log('[LINE Webhook (Dry Run)]: LINE_CHANNEL_ACCESS_TOKEN 未設定，AI 回覆文字為:\n', aiResult.text);

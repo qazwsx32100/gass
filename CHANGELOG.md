@@ -1,3 +1,13 @@
+## [2026-11-05 10:50] - 🛑 外勤人員 游柏林 離職停權與四道自毀防線全鏈路封鎖落地 (359 測試 100% 全綠)
+### 安全與停權 (Security & Resignation)
+- **外勤主檔停權**：游柏林加入 suspendedDrivers 停權名單，現役名單排除，密碼抹除銷毀，Token 置換為 revoked_resigned。
+- **手機本機個資自毀**：外勤 App 偵測到游柏林即刻 clear 本機儲存，離線模式亦不可進入，全螢幕深黑底紅字「此帳號授權已終止」鎖死。
+- **門市調度防誤派**：SharedDispatcherSelector 派柏林按鈕 disabled={true}，標註「⛔ 柏林(已離職)」，點擊跳警示阻斷。
+- **Telegram 特助對齊**：晨夕戰報與派單推薦固定為小龍，阻斷 cmd_assign_all_游柏林 指令。
+- **APK 下架**：/download-driver 與 /downloads 全面移除游柏林專屬版 APK。
+- **全量測試保證**：新增 tests/driver-resignation-suspension.test.mjs，全系統 359 項測試全數 100% 綠燈通過。
+- **正式庫零污染**：dbo.gas_oders 234,769 筆完全零變更。
+
 ## [2026-11-03 20:15] - 👑 盛隆瓦斯 全系統十萬位 AI 智能代理全鏈路極限驗收與八大 AI 矩陣總體驗收 (351 測試 100% 全綠)
 ### 新增與驗收 (Added & Accepted)
 - **十萬位 AI 全系統極限驗收引擎**：建立 scripts/run-100k-ai-full-system-acceptance.cjs，動員 100,000 位 AI 代理覆蓋住家、生意攤、餐廳、外勤、門市、八大 AI、雲端同步等全業務子系統。
