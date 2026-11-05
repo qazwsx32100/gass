@@ -412,6 +412,22 @@ export default async function handler(req, res) {
     await captureServerException(error, {
       tags: { endpoint: '/api/auth-login', method: req.method, status: 500 }
     });
-    return sendJson(res, 500, { success: false, error: '登入服務暫時無法使用，請稍後再試。' });
+    try {
+      if (typeof email === 'string' && email) {
+        clearLoginRateLimit(req, email);
+      }
+    } catch {}
+    const errStr = String(error?.message || error || '');
+    const isDbUnavailable = errStr.includes('unreachable') ||
+      errStr.includes('402') ||
+      errStr.includes('Payment Required') ||
+      errStr.includes('quota') ||
+      errStr.includes('fetch') ||
+      errStr.includes('timeout') ||
+      errStr.includes('Database');
+    const userMsg = isDbUnavailable
+      ? '雲端資料庫連線中斷（Supabase 服務受限或維護中），請確認後台狀態。'
+      : '登入服務暫時無法使用，請稍後再試。';
+    return sendJson(res, 500, { success: false, error: userMsg });
   }
 }

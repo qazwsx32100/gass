@@ -276,14 +276,27 @@ function App() {
       if (cancelled) return;
 
       if (!validatedSession) {
-        localStorage.removeItem('bp_login_session');
-        clearCloudSessionToken();
-        setIsLoggedIn(false);
-        setUserRole('');
-        setCurrentUser(null);
-        setIsDataReady(true);
         const error = getLastCloudSyncError();
-        showToast(error?.error || '雲端登入已失效，請重新登入。', 'error');
+        const isUnauthorized = error?.status === 401;
+        if (isUnauthorized) {
+          localStorage.removeItem('bp_login_session');
+          clearCloudSessionToken();
+          setIsLoggedIn(false);
+          setUserRole('');
+          setCurrentUser(null);
+          setIsDataReady(true);
+          showToast(error?.error || '雲端登入憑證已失效，請重新登入。', 'error');
+          setDbVersion(prev => prev + 1);
+          return;
+        }
+
+        // 雲端資料庫受限或中斷（非 401 憑證過期）：啟用離線韌性，保留既有 session
+        console.warn('Supabase sync unreachable, keeping local session in offline mode', error);
+        setIsLoggedIn(true);
+        setUserRole(restoredSession.role);
+        setCurrentUser(restoredSession.user);
+        setIsDataReady(true);
+        showToast('⚠️ 雲端資料庫連線受限，系統已自動啟用離線快照模式。', 'info');
         setDbVersion(prev => prev + 1);
         return;
       }
@@ -502,7 +515,8 @@ function App() {
     } else {
       const errorMsg = result?.error || '帳號或密碼錯誤，請重新輸入。';
       setLoginError(errorMsg);
-      showToast('❌ 登入失敗！請確認帳號密碼。', 'error');
+      const isAuthError = !result?.error || result.error.includes('帳號或密碼') || result.error.includes('密碼錯誤');
+      showToast(isAuthError ? '❌ 登入失敗！請確認帳號密碼。' : `❌ ${errorMsg}`, 'error');
     }
   };
 
