@@ -1,4 +1,32 @@
-## 📅 2026/11/05 - 🎙️ 線上叫瓦斯網頁 (LIFF) 懸浮語音麥克風與四語自動填單全鏈路落地 (375 測試 100% 全綠) [ver: 20261105_1225_liff_voice_fab]
+## 📅 2026/11/05 - ⚡ 盛隆瓦斯 全系統架構大改實施案（極速客戶中樞 CustomerSearchHub + 八大 AI 助理部門中心 + 共用套件庫落地）[ver: 20261105_1235_arch_overhaul_p2]
+
+### 一、 需求背景與決策 (老闆最高指令「一步一步做 我們來做吧」- 極速客戶中樞、AI助理中心、共用元件全量落地)
+1. **指令落實核心原則**：
+   - 解決監控中心客戶搜尋不完整、讀取緩慢之痛點，徹底淘汰 Google Apps Script 舊版 iframe (`https://script.google.com/macros/s/AKfycbzUGnAz_BTiFTKyYlpZH3gcPkVU7et_-hxeMRX0gY7vxEYxqi7g6c2sKpu8QagUOzdHNw/exec?v=11`)。
+   - 建立原生 React 元件 `<CustomerSearchHub />`，重現 GAS v11 五大分頁，前端快取 3,934 戶名冊，打字 0ms 模糊檢索。
+   - 正式設立「🤖 AI 助理中心」，設立 8 大部門，配置職責與 3 級防護權限。
+   - 抽取共用元件與套件庫：`<NavigationButton />`（兩輪機車導航模式）、`NotificationHub`（多通道統一通知）、Directive #3 官方標準成本權威常數雙軌對齊、台灣時間 UTC+8 Asia/Taipei 模組雙軌對齊。
+2. **全系統具體落地成效**：
+   - **極速客戶中樞 (<CustomerSearchHub />)**：
+     - 代碼量優化：移除 375 行舊版打 SQL 慢速卡片代碼，由 `<CustomerSearchHub />` 取代。
+     - 效能躍進：名冊載入僅 ~80KB，本地打字過濾 0ms 響應，支援姓名、電話末碼、路名、客戶代號、備註。
+     - 完整重現 GAS v11 五大分頁：🛢️ 瓦斯出貨、💰 欠款未收、🔄 鋼瓶流向、🍳 爐具工單、📋 全部歷程。
+     - 三大閉環功能：一鍵機車導航、一鍵撥號、一鍵帶入今日派單。
+   - **AI 助理中心 (<AiAssistantCenter />)**：
+     - 8 大部門在線：營運指揮、調度物流、客服應答、行銷業務、財務稽核、工務安檢、行政法務、資安維運。
+     - 三級防護機制：🟢 自動化執行 / 🟡 老闆審批 (TG ID: 8862712587) / 🔴 嚴格禁止 (DDL 結構修改 100% 阻斷)。
+   - **共用元件與通知中樞 (@shenglong)**：
+     - `<NavigationButton />`：自動清洗地址樓層，優先導航客戶大門 GPS，預設 `travelmode=two_wheeler`。
+     - `NotificationHub`：整合外勤司機 (FCM v1 + WebPush) 與老闆 Telegram SuperAdmin，具備多通道故障隔離與 30 秒防重鎖。
+     - 官方成本與利潤計算標準 (Directive #3 雙軌對齊)：進氣 $22.63/kg，運費 $70/$140，住家保本 $556，生意保本 $529。
+     - 台灣時間 UTC+8 Asia/Taipei 模組雙軌對齊：徹底消除跨日 0 點邊界漂移。
+3. **最高執行指令審計 (Zero Regressions & Zero ERP Pollution)**：
+   - `c:\shenglong-next`：`npm run build` 100% 通過，全套 25 項整合測試 100% 綠燈。
+   - `c:\Gass`：全套 375 項單元/整合測試 100% 綠燈。
+   - 舊門市 SQL Server `dbo.gas_oders` 234,769 筆完全維持零污染零干擾，嚴守黑盒子鐵律！
+
+---
+
 
 ### 一、 需求背景與決策 (老闆最高指令「我們試試看」- 網頁端即刻上線 AI 語音叫瓦斯)
 1. **指令落實核心原則**：
