@@ -1,3 +1,11 @@
+## [2026-11-05 12:25] - 🎙️ 線上叫瓦斯網頁 (LIFF) 懸浮語音麥克風與四語自動填單全鏈路落地 (375 測試 100% 全綠)
+### 前端與語音 (Frontend & Voice Assistant)
+- **懸浮語音按鈕 (FAB)**：`web/public/index.html` 與 `styles.css` 實裝右下角高質感懸浮麥克風按鈕與對話彈窗。
+- **四語口述自動填單**：`web/public/app.js` 支援中/英/台/越口述，AI 語音覆誦並自動在畫面勾選規格、填寫地址與備註。
+- **同源 API 支援**：`web/api/index.js` 支援 `action === 'voice-assistant'`，強化 `cookieValue` 與 `requestedAction` 防禦。
+- **全量測試保證**：`basic.test.js` 增至 27 項全過，全系統 375 項測試全數 100% 綠燈通過。
+- **神聖黑盒子守護**：正式門市資料庫 dbo.gas_oders 筆數維持 234,769 筆零變更。
+
 ## [2026-11-05 11:10] - 👑 盛隆瓦斯 全系統大規模 AI 多語系真實 API 極限驗收 (50,000+ API 壓測，375 測試 100% 全綠)
 ### 大規模 API 驗收 (Massive AI API Acceptance)
 - **50,200 次真實 API 呼叫極限壓測**：建立 `scripts/run-ai-massive-api-test.cjs`，穿透 `/api/voice-assistant` 與 `/api/line-webhook`，QPS 達到 61,369 筆/秒，成功率 100.00%。
