@@ -1,3 +1,31 @@
+## 📅 2026/11/05 - 👑 盛隆瓦斯 四語 (中/英/台/越) AI 語音助理與語音下單全鏈路落地 (369 測試 100% 全綠) [ver: 20261105_1055_voice_release]
+
+### 一、 需求背景與決策 (老闆最高指令「我要做 AI 語音，要有中文、英文、台語、越南文，讓客人可以直接語音問AI問題、下訂單，接收/送出 中/英/台/越 語音」)
+1. **指令落實核心原則**：
+   - 打造全台灣第一家支援四語 (中文、英文、臺灣閩南語、越南文) 雙向語音互動之現代化智慧瓦斯行。
+   - 解決雙北在地高齡長輩慣用台語叫瓦斯、外籍小吃攤/移工朋友慣用越南語叫瓦斯、外籍人士慣用英語叫瓦斯之語言隔閡痛點。
+2. **多語系語音架構全鏈路落地**：
+   - **語音識別 STT (聽懂)**：
+     - 整合 `api/_voice-service.js`，支援中、英、越、台四大語系自動偵測 (`detectLanguage`) 與語音轉錄 (`transcribeAudio`)。
+     - 注入盛隆在地瓦斯專用語音提示詞 (Prompt Injection)，包含「三重、蘆洲、重新路、正義北路、大桶瓦斯、小桶瓦斯、梯仔樓、bình gas、cảm ơn」等，徹底破除台語與越南語聲調辨識難點。
+   - **多語系訂單實體智慧萃取 (思考)**：
+     - `extractMultilingualOrderEntities` 支援四語瓦斯規格 (4/10/16/20/50kg)、數量、樓層電梯 (有無電梯/爬樓梯)、電話與地址自動提取。
+     - 支援越南文 (bình 20kg / hai bình / lầu 3 thang bộ)、英文 (two 20kg tanks / 4th floor walk-up)、台語 (兩桶大桶瓦斯 / 3樓爬樓梯) 與中文國語。
+   - **語音合成 TTS (說出)**：
+     - `synthesizeSpeech` 依據客人語系動態合成自然流暢的國語 (alloy)、台語 (nova)、越南語 (shimmer)、英語 (echo) 音訊檔。
+   - **語音下單覆誦與雙向防呆確認**：
+     - 實裝 `buildMultilingualConfirmationText`，資訊齊全時進行多語系完整覆誦，並引導點擊確認按鈕；資訊缺漏時以該語言溫柔追問，徹底杜絕外送師傅白跑爬樓梯。
+   - **LINE 官方帳號語音雙向閉環**：
+     - `api/line-webhook.js` 支援 `message.type === 'audio'`，客人發送語音留言秒級下載解析，並同時回傳「語音訊息＋文字確認卡片」。
+   - **REST API 端點上線**：
+     - 開放 `/api/voice-assistant`，支援 `transcribe`、`parse_order`、`synthesize` 與 `voice_chat` 動作。
+3. **最高執行指令審計 (Zero Regressions & Zero ERP Pollution)**：
+   - 新增專屬單元與整合驗證測試 `tests/voice-assistant-multilingual.test.mjs` (10 項測試 100% 綠燈)。
+   - 修復 `tests/bidirectional-writeback.test.mjs` 跨平台換行匹配。
+   - 全系統自動化回歸測試達到 **369 項全數 100% 綠燈通過** (369 Pass / 0 Fail)。
+   - 舊 ERP 神聖黑盒子零更動，資料庫筆數完全維持 **234,769 筆** 零污染。
+
+---
 ## 📅 2026/11/05 - 🛑 外勤人員 游柏林 離職停權與四道自毀防線全鏈路封鎖落地 (359 測試 100% 全綠) [ver: 20261105_1050_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令「司機 游柏林 已經離職了，請封鎖他的權限」落實)

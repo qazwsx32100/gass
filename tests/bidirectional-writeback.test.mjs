@@ -235,7 +235,7 @@ test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Clo
   });
 
   await t.test("2. Stock API sync and public links point exclusively to https://shenglong-next.vercel.app/gas-stock", () => {
-    const syncSrc = fs.readFileSync("c:/shenglong-next/sync-stock.cjs", "utf8");
+    const syncSrc = fs.readFileSync("c:/shenglong-next/sync-stock.cjs", "utf8").replace(/\r\n/g, "\n");
     assert.ok(
       syncSrc.includes('const VERCEL_SYNC_URLS = [\n  "https://shenglong-next.vercel.app/api/gas-stock",\n];'),
       "sync-stock.cjs VERCEL_SYNC_URLS must only transmit to shenglong-next.vercel.app/api/gas-stock"

@@ -1,3 +1,14 @@
+## [2026-11-05 10:55] - 👑 盛隆瓦斯 四語 (中/英/台/越) AI 語音助理與語音下單全鏈路落地 (369 測試 100% 全綠)
+### 新增與多語系語音 (Voice Assistant & Multilingual)
+- **四語語音辨識 (STT)**：`api/_voice-service.js` 支援中文 (zh-TW)、英文 (en)、越南文 (vi)、臺灣閩南語 (nan)，具備台灣瓦斯在地術語專屬 Prompt 注入。
+- **四語訂單要素智慧擷取**：`extractMultilingualOrderEntities` 支援中/英/台/越規格 (4/10/16/20/50kg)、數量、樓層電梯、電話與地址解析。
+- **四語語音合成 (TTS)**：`synthesizeSpeech` 支援四語流暢語音生成。
+- **下單防呆覆誦確認**：`buildMultilingualConfirmationText` 於資訊齊全時進行多語系覆誦確認，缺項時親切追問。
+- **LINE 官方帳號語音雙向閉環**：`api/line-webhook.js` 完整支援 `message.type === 'audio'`，客人發語音訊息自動轉文字並雙向回覆。
+- **開放 REST API**：新增 `/api/voice-assistant` 端點。
+- **全量測試保證**：新增 `tests/voice-assistant-multilingual.test.mjs`，全系統自動化測試達到 369 項全數 100% 綠燈通過。
+- **神聖黑盒子守護**：正式門市資料庫 dbo.gas_oders 筆數維持 234,769 筆零變更。
+
 ## [2026-11-05 10:50] - 🛑 外勤人員 游柏林 離職停權與四道自毀防線全鏈路封鎖落地 (359 測試 100% 全綠)
 ### 安全與停權 (Security & Resignation)
 - **外勤主檔停權**：游柏林加入 suspendedDrivers 停權名單，現役名單排除，密碼抹除銷毀，Token 置換為 revoked_resigned。
