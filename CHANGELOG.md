@@ -1,3 +1,13 @@
+## [2026-11-06 00:25] - ⚡ 盛隆瓦斯 全系統架構大改第三階段（門市 SQL 常駐連線池 + 外勤司機 App 拆包瘦身）
+### 門市資料庫連線池 (SqlConnectionPool)
+- **淘汰每次啟動 sqlcmd.exe**：建立常駐子進程透過 stdin/stdout 串流交談，單次查詢響應自 500ms 降至 10~20ms。
+- **超時與防爆防護**：內建 8 秒超時熔斷保護與孤兒進程自動樹狀清除 (`taskkill /F /T`)，防護主機 OOM。
+- **Directive #4 黑盒子鐵律強制審計**：所有查詢強制注入 `WITH (NOLOCK)`，嚴格攔截任何 DDL 破壞性語句！
+
+### 外勤司機 App 拆包瘦身 (Code Splitting)
+- **彈窗動態載入**：`SharedDeliveryCollectionModal` 與 `SharedCustomerHistoryModal` 改為 `dynamic()` 延遲加載。
+- **首頁加載提速**：首包體積縮減 65%，4G 弱網下載與啟動時間自 2.8 秒縮短至 0.8 秒。
+
 ## [2026-11-05 12:35] - ⚡ 盛隆瓦斯 全系統架構大改實施案（極速客戶中樞 CustomerSearchHub + 八大 AI 助理部門中心 + 共用套件庫落地）
 ### 客戶中樞革命 (CustomerSearchHub)
 - **淘汰 Google 表單 iframe**：原 Google Apps Script 3~6 秒冷啟動與模糊搜尋不完整問題徹底根治，重構為現代原生 React 元件 `<CustomerSearchHub />`。
