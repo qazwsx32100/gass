@@ -1,3 +1,14 @@
+## [2026-11-06 12:35] - ⚡ 盛隆瓦斯 全系統共用模組對齊實裝（訂單語義解析 mobile-order-parser 全規格對齊 + 台灣時間 taiwan-time 跨日 0 點防護）
+### 訂單語義文字解析 (mobile-order-parser)
+- **全規格徽章與自然語言萃取**：50kg/20kg/18kg/16kg/10kg/新4kg/4kg 全量納管，支援 items 備註智慧比對。
+- **智能瓦斯支數結算**：`parseBottlesFromOrder` 杜絕非標規格歸零。
+- **雙邊單元測試**：`c:/shenglong-next` 與 `c:/Gass` 各通過 4 項專屬測試。
+
+### 台灣時間標準模組 (taiwan-time / taiwanDate)
+- **UTC+8 跨日 0 點防護**：消除雲端 UTC 時區在上午 08:00 前判定為昨天之漏洞。
+- **雙邊方法對齊**：提供 `getTaipeiDateString`、`getTaiwanDateString` 等通用別名。
+- **雙邊單元測試**：雙邊時間測試 100% 綠燈通過。
+
 ## [2026-11-06 12:20] - 🛵 盛隆瓦斯 外勤派單 APP 通知穿透力極限強化 ＆ 小龍專用 APK 簽名發布
 ### 六大穿透力強化
 - **USAGE_ALARM 警報音流**：通知頻道與鈴聲播放升級為警報音流，不受一般系統靜音抑制，穿透風切噪音。

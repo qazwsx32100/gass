@@ -37,6 +37,27 @@
 
 ---
 
+### 0. 盛隆瓦斯 全系統共用模組對齊實裝 (訂單語義解析 mobile-order-parser 全規格對齊 + 台灣時間 taiwan-time 跨日 0 點防護，雙邊 415+ 測試 100% 全綠)
+- **狀態**：`[x]` 已完成 (依老闆指示「我們繼續處理 接下來的項目」，落實共用模組深度對齊與版本漂移根治：
+  1. **訂單語義文字解析 (mobile-order-parser 雙邊 100% 對齊)**：
+     - 同時支援 50kg、20kg、18kg（店面特規）、16kg、10kg、新4kg（`raw_new_4` / `new_4kg` / `bNew4`）、4kg 全規格精準萃取。
+     - 整合 items 自然語言手寫單、LINE 備註與口述要素辨識。
+     - 整合智能瓦斯支數結算 (`parseBottlesFromOrder`)，徹底解決非標規格造成外送支數被歸零問題。
+     - 雙邊測試覆蓋：`c:/shenglong-next/tests/mobile-order-parser.test.mjs` 與 `c:/Gass/tests/mobile-order-parser.test.mjs` 雙邊 100% 綠燈。
+  2. **台灣時間標準模組 (taiwan-time / taiwanDate 雙邊對齊)**：
+     - 統一 UTC+8 Asia/Taipei 營業日判讀標準，徹底根絕雲端伺服器在每日 08:00 前（UTC 跨日 0 點）判定為「昨天」之時間漂移漏洞。
+     - 支援 `getTaipeiDateString`、`getTaiwanDateString`、`getTaipeiMonthRange`（精準推算閏年/平年末日）。
+     - 雙邊測試覆蓋：`tests/taiwan-time.test.mjs` 與 `tests/taiwanDate.test.mjs` 100% 通過。
+  3. **監控中心客戶搜尋頁面原生態化落地**：
+     - 徹底以原生 React `<CustomerSearchHub />` 作為首選模式，消除舊版 Google Apps Script iframe 卡慢延遲，快取 3,934 戶名冊 0ms 模糊檢索。
+  4. **全量構建與測試驗證**：
+     - `c:/shenglong-next`：`next build` Turbopack 編譯 100% 成功。
+     - `c:/Gass`：Vite `npm run build` 成功，單元測試達到 388 項 100% 綠燈。
+- **優先級**：`P0` (架構重構核心共用庫行動)
+- **完成日期**：2026/11/06
+
+---
+
 ### 0. 盛隆瓦斯 八大 AI 部門定案規格 V1.0 正式套用至系統 (老闆親授官方架構審批，AI 秘書單一指令分派 + 任務導航中樞 + 三項整合功能落地)
 - **狀態**：`[x]` 已完成 (依老闆最高指示「AI部門 我已經在GITHUB上更新了 幫我讀取AI部門架構 / 把這架構 套用到系統裡」，全面將《盛隆瓦斯八大 AI 部門定案規格 V1.0》落地於全系統代碼與架構中：
   1. **八大 AI 部門權限與邊界完全落地**：

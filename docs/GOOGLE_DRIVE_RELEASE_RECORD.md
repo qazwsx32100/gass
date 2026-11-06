@@ -1,3 +1,16 @@
+## 📅 2026/11/06 - ⚡ 盛隆瓦斯 全系統共用模組對齊實裝 [ver: 20261106_1235_shared_modules_sync]
+
+### 一、 需求背景與決策 (老闆最高指令「我們繼續處理 接下來的項目」- 根除共用模組版本漂移)
+1. **指令落實核心原則**：
+   - 解決 `mobile-order-parser` 兩套版本漂移問題，統一納入 18kg、新4kg、自然語言 items 解析與 `parseBottlesFromOrder` 支數計算。
+   - 解決 `taiwan-time.ts` 與 `taiwanDate.js` 跨日 0 點邊界差異，雙邊通用別名完全對齊。
+2. **最高執行指令審計 (Zero Regressions & Zero ERP Pollution)**：
+   - `c:shenglong-next`：`next build` 通過，`tests/mobile-order-parser.test.mjs` 與 `tests/taiwan-time.test.mjs` 100% 綠燈。
+   - `c:Gass`：Vite `npm run build` 通過，測試達到 388 項 100% 綠燈。
+   - 舊門市 SQL Server 234,769 筆維持零污染零干擾，嚴守黑盒子鐵律！
+
+---
+
 ## 📅 2026/11/06 - 🛵 外勤派單 APP 通知穿透力極限強化：黑屏點亮15秒 + USAGE_ALARM穿透 + 免打擾穿透 + 雙快捷動作按鈕(導航/電話) + 語音動態自適應 [ver: 20261106_1220_notif_boost_actions]
 
 ### 一、 需求背景與決策 (老闆指示「APP通知 幫我強化」全面落地)
