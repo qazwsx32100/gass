@@ -4,7 +4,26 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 20:10
+> **最後更新時間**：2026-11-06 20:45
+
+---
+
+### 0. 盛隆瓦斯 戰情室單一聚合快照 API【效能優化】（`/api/ops/snapshot` 5端點並發輪詢請求驟降80% + 2.5秒高速微快取 + 容錯降級保底）
+- **狀態**：`[x]` 已完成 (依老闆最高指示「方案 1：戰情室單一聚合快照 API (`/api/ops/snapshot`)【效能優化】」全面落成)：
+  1. **單一聚合快照 API (`app/api/ops/snapshot/route.ts` & `app/api/operations/snapshot/route.ts`)**：
+     - 整合戰情室 5 大高頻輪詢端點：`/api/gas-stock` (庫存與門檻)、`/api/today-orders` (今日訂單)、`/api/system-status` (系統監控)、`/api/weather-analysis` (每小時氣象出貨關聯)、`/api/call-monitor` (進線電話浮動窗)。
+     - 採用 `Promise.allSettled` 並行提取，單一子模組若因權限或 SQL 異常不影響其他模組正常回傳。
+     - 內建 `turboCache` 2.5 秒記憶體微快取（以 session/user 隔離），大幅減輕雲端運算與 KV/DB 連線負荷。
+  2. **戰情室前端整合 (`app/operations/page.tsx`)**：
+     - `fetchAllData` 全面改為單一請求呼叫 `/api/ops/snapshot`，戰情室 HTTP 輪詢請求量驟降 80%。
+     - 模組化分派回調（`applyStockPayload`, `applyOrdersPayload`, `applySystemPayload`, `applyWeatherPayload`, `applyCallsPayload`）。
+     - 容錯降級保底：若 `/api/ops/snapshot` 遭遇網路中斷或非 200 回應，自動切換至 `fetchIndividualData` 獨立提取，戰情看板不中斷。
+  3. **自動化測試與零回歸驗證**：
+     - 新增單元測試 `tests/ops-snapshot.test.mjs` (3/3 測試通過)。
+     - Next.js Turbopack 生產構建 (`npx next build`) 0 錯誤通過。
+     - `c:/Gass` 全量測試 406 項 100% 綠燈通過 (`tests 406, pass 406, fail 0`)。
+- **優先級**：`P0` (戰情中心高頻效能優化核心)
+- **完成日期**：2026/11/06 20:45
 
 ---
 

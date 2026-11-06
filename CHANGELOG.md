@@ -1,3 +1,18 @@
+## [2026-11-06 20:45] - 🚀 盛隆瓦斯 戰情室單一聚合快照 API【效能優化】
+### 戰情室單一聚合快照 API (ops/snapshot) 與前端優化
+- **單一聚合快照 API (`app/api/ops/snapshot/route.ts` & `app/api/operations/snapshot/route.ts`)**：
+  - 整合戰情室 5 大高頻輪詢端點：`/api/gas-stock` (庫存與門檻)、`/api/today-orders` (今日訂單)、`/api/system-status` (系統監控)、`/api/weather-analysis` (每小時氣象關聯)、`/api/call-monitor` (進線電話浮動窗)。
+  - 採用 `Promise.allSettled` 並行提取，單一子模組若因權限或 SQL 異常不影響其他模組正常回傳。
+  - 內建 `turboCache` 2.5 秒記憶體微快取（以 session/user 隔離），大幅減輕雲端運算與 KV/DB 連線負荷。
+- **戰情室前端整合 (`app/operations/page.tsx`)**：
+  - `fetchAllData` 全面改為單一請求呼叫 `/api/ops/snapshot`，戰情室 HTTP 輪詢請求量驟降 80%。
+  - 模組化分派回調（`applyStockPayload`, `applyOrdersPayload`, `applySystemPayload`, `applyWeatherPayload`, `applyCallsPayload`）。
+  - 容錯降級保底：若 `/api/ops/snapshot` 遭遇網路中斷或非 200 回應，自動切換至 `fetchIndividualData` 獨立提取，戰情看板不中斷。
+- **全系統嚴格驗收**：
+  - 新增單元測試 `tests/ops-snapshot.test.mjs` 3 項測試 100% 通過。
+  - Next.js Turbopack 生產構建 0 錯誤。
+  - `c:/Gass` 全量測試 406 項 100% 綠燈通過 (`tests 406, pass 406, fail 0`)。
+
 ## [2026-11-06 20:10] - 🤖 盛隆瓦斯 LINE AI 客服直連 Supabase 雲端唯一窗口【智慧客服】
 ### LINE AI 客服直連 Supabase 雲端唯一窗口
 - **雲端中樞客戶秒級辨識引擎 (`api/_line-customer-matcher.js`)**：

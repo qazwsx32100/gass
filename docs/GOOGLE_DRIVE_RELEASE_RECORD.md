@@ -1,3 +1,22 @@
+## 📅 2026/11/06 - 🚀 盛隆瓦斯 戰情室單一聚合快照 API【效能優化】 [ver: 20261106_2045_ops_snapshot_aggregation]
+
+### 一、 需求背景與決策 (老闆最高指令「方案 1：戰情室單一聚合快照 API (/api/ops/snapshot)【效能優化】」)
+1. **戰情室高頻請求痛點徹底根除**：
+   - 戰情監控中心前端過往每 15 秒（SSE 在線時 60 秒）同時並發發送 5 次獨立 HTTP 請求（庫存、今日訂單、系統狀態、氣象分析、電話監控），造成瀏覽器連線數佔用與雲端無效頻寬消耗。
+2. **核心架構落地**：
+   - **單一聚合快照 API (`app/api/ops/snapshot/route.ts` & `app/api/operations/snapshot/route.ts`)**：
+     - 單一端點透過 `Promise.allSettled` 並行調度 5 大後端處理器，並內建 2.5 秒 `turboCache` 記憶體微快取（隔離 session 使用者）。
+     - 具備別名支援，相容 `/api/ops/snapshot` 與 `/api/operations/snapshot`。
+   - **戰情室前端整編 (`app/operations/page.tsx`)**：
+     - `fetchAllData` 整合為單一 fetch，HTTP 請求總量降低 80%。
+     - 具備完整 `fetchIndividualData` 自動降級保底容錯機制，聚合異常時立即自動切換為個別拉取，看板永不中斷。
+3. **全系統嚴格驗收**：
+   - 新增單元測試 `tests/ops-snapshot.test.mjs` 3 項測試 100% 通過。
+   - Next.js Turbopack 生產構建 0 錯誤。
+   - `c:/Gass` 全量測試 406 項 100% 綠燈通過 (`tests 406, pass 406, fail 0`)。
+
+---
+
 ## 📅 2026/11/06 - 🤖 盛隆瓦斯 LINE AI 客服直連 Supabase 雲端唯一窗口【智慧客服】 [ver: 20261106_2010_line_ai_cloud_customer]
 
 ### 一、 需求背景與決策 (老闆最高指令「先做方案 2：LINE AI 客服直連 Supabase 唯一窗口，實現老客戶秒級辨識」)
