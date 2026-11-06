@@ -4,7 +4,36 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-03 20:05
+> **最後更新時間**：2026-11-06 12:15
+
+---
+
+### 0. 盛隆瓦斯 外勤派單 APP 通知穿透力極限強化 ＆ 離職人員全域停權除名（黑屏點亮15秒 + USAGE_ALARM警報 + 免打擾穿透 + 雙快捷動作 + 語音動態自適應，雙邊測試 381+ 全綠）
+- **狀態**：`[x]` 已完成 (依老闆最高指示「司機 游柏林 已經離職了，請封鎖他的權限」、「1.幫我把監控中心的游柏林 按鈕移除 2.司機前端APP 目前指定司機時不會跳出訊息，只有在開啟APP時才會跳出，離開APP 和 關閉螢幕時不會跳出」、「APP通知 幫我強化」全面落地)：
+  1. **游柏林離職停權與全域除名**：
+     - `app/operations/page.tsx`、`AiAdvisorDrawer.tsx`、`SharedDispatcherSelector.tsx`、`SmartDriverDispatchModal.tsx` 中游柏林專用按鈕、下拉選單、AI 順路派單推薦徹底拔除。
+     - 派單選擇器全面重構為標準雙態佈局：`🛵 派小龍` 與 `⏳ 稍後輸入`。
+     - 離職人員 Token 請求全面由中繼同步與 API 端點嚴格阻絕，保護系統權限。
+  2. **通知橫幅快捷動作 (Notification Action Buttons)**：
+     - 🔘 **【🗺️ 立即導航】**：通知橫幅直接呼叫 Google Maps 啟動機車導航模式（`google.navigation:q=...&mode=b`），外勤人員於黑屏鎖屏或騎車時免解鎖手機、一鍵進入導航。
+     - 🔘 **【📞 撥打電話】**：通知橫幅直接帶出客戶聯絡電話撥號 Intent（`tel:...`），緊急聯絡一觸即發。
+  3. **音訊穿透力拉滿 (USAGE_ALARM 警報音流)**：
+     - 通知頻道音訊屬性由普通通知 `USAGE_NOTIFICATION` 升級為警報音流 `AudioAttributes.USAGE_ALARM`，音訊穿透力拉滿，杜絕一般系統靜音鍵抑制與馬路騎車風切噪音。
+  4. **黑屏鎖屏點亮時間拉長 (WakeLock 15 秒)**：
+     - 原生黑屏喚醒鎖時間由原 8 秒/10 秒大幅拉長至 15 秒（`wakeLock.acquire(15000)`），確保外勤放口袋或機車支架上有充分時間辨識訂單。
+  5. **語音播報連鎖無縫自適應修復 (Speech Delay Dynamic Fix)**：
+     - 徹底修正 `MyFirebaseMessagingService.java` 中 `speechDelay` 原本硬編碼寫死 1800ms 之 bug，改為依據選擇之鈴聲類型（核子警報 15.2s / 磅礡號角 10.2s / 加長 4.2s）動態自適應延遲，前奏超響鈴聲與真人繁中語音朗讀完美銜接、絕不重疊打架。
+  6. **免打擾穿透與全螢幕彈出 (Bypass DND & FullScreen Intent)**：
+     - 原生通知頻道全面啟用 `channel.setBypassDnd(true)` 穿透手機免打擾模式，並設置 `setFullScreenIntent(pendingIntent, true)` 與 `VISIBILITY_PUBLIC`，黑屏時頂部浮動橫幅強制彈出。
+  7. **外勤端預設值優化**：
+     - `app/driver/page.tsx` 與原生層 `SoundPolicy.java` 將 `alertExtended`（加長循環）與 `autoBoostVolume`（騎車戶外自動最大音量）預設直接開啟為 `true`，開箱即具備最高規格外送提醒。
+  8. **Android Signed Release APK 自動封裝發布**：
+     - 重新編譯封裝小龍專用 APK，V1+V2+V3 完整簽署，自動部署至桌面 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk`。
+  9. **全系統回歸驗證**：
+     - TypeScript 全模組型別驗證 0 錯誤通過 (`npx tsc --noEmit`)。
+     - `c:/Gass` 381 項單元與整合測試 100% 綠燈通過 (`tests 381, pass 381, fail 0`)。
+- **優先級**：`P0` (外勤騎車配送核心生命線)
+- **完成日期**：2026/11/06
 
 ---
 
