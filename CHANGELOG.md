@@ -1,3 +1,21 @@
+## [2026-11-06 10:30] - ⚡ 盛隆瓦斯 全系統架構大改第四階段（巨型地圖瘦身拆包 + 52天用氣週期行銷召回 + 官方成本財務稽核 + 30年鋼瓶安檢 + AI助理中心實體控制台）
+### 巨型地圖拆包瘦身 (GasCustomerMapPanel)
+- **非同步資料抽離**：將 500KB (3,934 戶) 內嵌 JSON 陣列抽離為獨立 Chunk (`src/data/customerMapData.json`)，元件主檔代碼從 528KB 驟降至 27KB。
+- **報表視窗延遲加載**：`ReportsView.jsx` 採用 `React.lazy` 與 `<Suspense>`，首屏載入極速提升。
+- **Leaflet 資安與導航防護**：彈窗全面套用 `escapeHtml` 杜絕 XSS，導航對齊機車導航模式 (`travelmode=two_wheeler`)。
+
+### 行銷與業務 AI (Marketing AI)
+- **52天用氣週期與沉睡客召回**：建立 `lib/ai-marketing-service.ts` 與 `/api/ai/marketing/recall`，精準區分 45~52天臨期、超期斷氣預警、60天沉睡回訪、90天呆瓶壓桶。
+- **個人化文案生成**：自動產生尊榮召回 LINE/簡訊文案，支援一鍵複製與推播。
+
+### 財務與稽核 AI (Finance AI)
+- **Directive #3 成本審計**：建立 `lib/ai-finance-audit-service.ts` 與 `/api/ai/finance/audit`，進氣 $22.63/kg、運費 $70/$140、鋼瓶分攤 $33/$6、住家保本 $556、生意保本 $529。
+- **現金對帳與破盤告警**：售價跌破保本底線即時紅燈告警，外勤 COD 現金自動對帳沖帳與差額追蹤。
+
+### 工務與安檢 AI (Engineering AI)
+- **30年法定壽命與8次定期檢驗模型**：建立 `lib/ai-engineering-service.ts` 與 `/api/ai/engineering/inspections`，前20年每5年1次、後10年每2年1次，30天臨期告警與逾期禁止出貨安全防護。
+- **AI 助理中心實體操作台**：`AiAssistantCenter.tsx` 內嵌行銷召回、財務審計、工務安檢即時控制台。
+
 ## [2026-11-06 00:25] - ⚡ 盛隆瓦斯 全系統架構大改第三階段（門市 SQL 常駐連線池 + 外勤司機 App 拆包瘦身）
 ### 門市資料庫連線池 (SqlConnectionPool)
 - **淘汰每次啟動 sqlcmd.exe**：建立常駐子進程透過 stdin/stdout 串流交談，單次查詢響應自 500ms 降至 10~20ms。

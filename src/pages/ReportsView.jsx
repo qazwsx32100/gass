@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { getIncomeStatement, getBalanceSheet, getDividendsForPeriod, getPeriodEndDate, getPeriodLabel, generateLineShareText, getGasGrossProfitForPeriod, getCompanyProfitReport, getGasInventoryForMonth, getGasInventoryValuationAtDate, getJournalEntries, getTrialBalance, getGeneralLedger, getCashFlowStatement, getVatReport, getPayrollReport, getAuditReadinessReport, getAgingReport, getSupplierPayableSummary, getAggregateReceivableSummary, getMonthlyOperatingSummary, isDateInPeriod, getPartsGrossProfitReport } from '../utils/financials';
 import { USER_ROLES, getCompanies, getShareholders, getShareholderLedger, getIncomes, getExpenses, getSuppliers, getCustomers, getBankTransactions, getChartOfAccounts, saveIncomes, saveExpenses, getPeriodLocks, savePeriodLocks } from '../db/storage';
 import { canExportReports, canViewShareholderReports } from '../utils/permissions';
@@ -9,7 +9,7 @@ import { expandSettlementAttributions, isActiveSettlementReceipt, resolveSettlem
 import { calculateOperatingProfit } from '../utils/operatingProfit';
 import { isEffectiveForReport } from '../utils/reportEligibility';
 import GasMonthlyDeliveryReportPanel from '../components/GasMonthlyDeliveryReportPanel';
-import GasCustomerMapPanel from '../components/GasCustomerMapPanel';
+const GasCustomerMapPanel = lazy(() => import('../components/GasCustomerMapPanel'));
 import { getTaiwanDateString } from '../utils/taiwanDate';
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
@@ -1373,7 +1373,9 @@ export default function ReportsView({ companyId, year, month, triggerRefresh, sh
         )}
 
         {reportType === 'customerMap' && (
-          <GasCustomerMapPanel />
+          <Suspense fallback={<div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>客戶分佈地圖載入中...</div>}>
+            <GasCustomerMapPanel />
+          </Suspense>
         )}
 
         {reportType === 'dailySales' && (

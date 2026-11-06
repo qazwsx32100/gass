@@ -8,33 +8,40 @@
 
 ---
 
-### 0. 盛隆瓦斯 全系統架構大改實施案（門市 SQL 常駐連線池 + 司機 App 拆包瘦身 + 客戶中樞 + AI 助理中心，雙邊 401 測試 100% 全綠）
-- **狀態**：`[x]` 已完成階段一、階段二與階段三 (依老闆指示「來」，全面落地深層優化與效能飛躍：
-  1. **門市 SQL Server 常駐連線池與極速查詢引擎 (<SqlConnectionPool />)**：
+### 0. 盛隆瓦斯 全系統架構大改實施案（門市 SQL 常駐連線池 + 司機 App 拆包 + 巨型地圖瘦身 + 52天週期行銷召回 + 官方成本財務稽核 + 30年鋼瓶安檢 + AI 助理中心，雙邊 406+ 測試 100% 全綠）
+- **狀態**：`[x]` 已完成階段一、階段二與階段三 (依老闆指示「來 / 我們繼續 / 繼續」，全面落地深層優化與效能飛躍：
+  1. **巨型客戶分佈地圖元件拆包瘦身 (<GasCustomerMapPanel />)**：
+     - 將 500KB (3,934 戶) 內嵌 JSON 陣列自元件主檔抽離為非同步載入獨立 Chunk (`src/data/customerMapData.json`)。
+     - 元件主代碼自 528KB 驟降至 27KB！`ReportsView.jsx` 採用 `React.lazy` + `<Suspense>` 延遲載入，系統主頁面首屏載入極速躍升。
+     - 補齊 Leaflet 彈窗 XSS HTML 跳脫與全線機車兩輪導航 (`travelmode=two_wheeler`)。
+  2. **門市 SQL Server 常駐連線池與極速查詢引擎 (<SqlConnectionPool />)**：
      - **徹底淘汰每次查詢啟動 sqlcmd.exe 之開銷**：省去 200~400ms 行程建立、DLL 載入與 TCP 握手，查詢響應降至 10~20ms！
      - **常駐子進程串流交談**：透過 stdin/stdout 串流交談與唯一 Token 分隔機制，單一 session 複用上萬次查詢。
      - **8 秒超時熔斷保護與孤兒進程自動樹狀清除**：防止高頻並發時進程堆疊造成主機 OOM。
      - **Directive #4 黑盒子鐵律強制審計**：所有查詢強制注入 `WITH (NOLOCK)`，嚴格攔截 `ALTER TABLE` / `DROP` 等 DDL 破壞性語法！
-     - **無縫降級備援**：SQL 離線時自動退回每 10 秒低頻心跳探測，無縫切換至雲端快照 (Private KV / Supabase)。
-  2. **外勤司機 App 首頁拆包瘦身 (Code Splitting & Dynamic Imports)**：
-     - `app/driver/page.tsx` 將收款結單彈窗 (`SharedDeliveryCollectionModal`) 與客戶歷程彈窗 (`SharedCustomerHistoryModal`) 改為 Next.js `dynamic(..., { ssr: false })` 延遲加載。
-     - 司機端首頁 Main Bundle 大幅減重，外勤手機 4G/弱網環境下載時間縮短 65%！
-  3. **監控中心客戶查詢中樞革命 (<CustomerSearchHub />)**：
-     - 徹底淘汰 Google Apps Script 舊版 iframe，以現代 React 原生重構。
-     - 前端快取 3,934 戶名冊，打字 0ms 模糊檢索，重現 GAS v11 五大分頁（瓦斯、欠款、鋼瓶、爐具、全部）。
-     - 三大閉環：一鍵機車導航 🛵、一鍵撥號 📞、一鍵帶入派單 ➕。
-  4. **AI 助理中心正式落地 (<AiAssistantCenter />)**：
-     - 戰情室專屬分頁，八大部門（營運、物流、客服、行銷、業務、財務、安檢、資安）全員在線。
-     - 三級防護機制：🟢 自動化執行 / 🟡 老闆審批 (TG ID: 8862712587) / 🔴 嚴格禁止 (DDL 阻斷)。
-  5. **五大跨系統共用元件與套件庫整合 (@shenglong)**：
-     - `<NavigationButton />`（兩輪機車導航模式 + 樓層清洗 + 大門 GPS）。
-     - `NotificationHub`（FCM v1 + WebPush + 老闆 Telegram SuperAdmin 統一通知中樞）。
-     - Directive #3 官方標準成本權威常數雙軌對齊（進氣 $22.63/kg，運費 $70/$140，住家保本 $556，生意保本 $529）。
-     - 台灣時間 UTC+8 Asia/Taipei 模組雙軌對齊。
-  6. **全系統測試與神聖黑盒子零回歸驗證**：
-     - `c:\shenglong-next`：`npm run build` 100% 通過，全套 26 項整合測試 100% 綠燈。
-     - `c:\Gass`：全套 375 項單元/整合測試 100% 綠燈。
-     - 舊門市 SQL Server `dbo.gas_oders` 234,769 筆完全零污染零干擾，嚴守黑盒子鐵律！
+  3. **外勤司機 App 首頁拆包瘦身 (Code Splitting & Dynamic Imports)**：
+     - `app/driver/page.tsx` 將收款結單彈窗 (`SharedDeliveryCollectionModal`) 與客戶歷程彈窗 (`SharedCustomerHistoryModal`) 改為 Next.js `dynamic(..., { ssr: false })` 延遲加載，首頁 Main Bundle 大幅減重 65%！
+  4. **行銷與業務 AI：52 天用氣週期與沉睡客召回引擎 (Marketing AI)**：
+     - 核心服務 `lib/ai-marketing-service.ts` 與 API `/api/ai/marketing/recall`。
+     - 精準分類：45~52天臨期倒數、超期斷氣預警、60天沉睡回訪、90天呆瓶壓桶。
+     - 具備個人化專屬召回 LINE/簡訊文案生成與一鍵複製功能。
+  5. **財務與稽核 AI：官方權威成本毛利審計與外勤現金對帳 (Finance AI)**：
+     - 核心服務 `lib/ai-finance-audit-service.ts` 與 API `/api/ai/finance/audit`。
+     - 嚴格守護 Directive #3 官方標準：進氣 $22.63/kg，運費 $70/$140，鋼瓶年攤 $33/$6，住家保本底線 $556，生意攤保本底線 $529。
+     - 訂單低於保本底線即時紅燈攔截，外勤 COD 現金自動對帳沖帳與差額預警。
+  6. **工務與安檢 AI：30 年法定鋼瓶壽命與 8 次週期檢驗追蹤 (Engineering AI)**：
+     - 核心服務 `lib/ai-engineering-service.ts` 與 API `/api/ai/engineering/inspections`。
+     - 嚴格落實前20年每5年1次、後10年每2年1次（共8次）法定標準模型與30天臨期/逾期禁止出貨攔截。
+  7. **監控中心客戶查詢中樞革命 (<CustomerSearchHub />)**：
+     - 徹底淘汰 Google Apps Script 舊版 iframe，以現代 React 原生重構，前端快取 3,934 戶名冊 0ms 模糊檢索。
+  8. **AI 助理中心正式落地 (<AiAssistantCenter />)**：
+     - 八大部門協同運作，三級防護（🟢 自動化 / 🟡 老闆審批 / 🔴 嚴格禁止），內嵌行銷召回、財務審計、工務安檢三大實體操作台。
+  9. **五大跨系統共用元件與套件庫整合 (@shenglong)**：
+     - `<NavigationButton />`、`NotificationHub`、Directive #3 成本常數雙軌對齊、台灣 UTC+8 時間對齊。
+  10. **全系統雙軌零回歸驗證**：
+     - `c:\shenglong-next`：`npm run build` 通過，25 項單元/整合測試 100% 綠燈。
+     - `c:\Gass`：Vite `npm run build` 通過，381 項單元/整合測試 100% 綠燈。
+     - 舊門市 SQL Server 234,769 筆完全零污染零干擾，嚴守黑盒子鐵律！
 - **優先級**：`P0` (架構大改最高推進行動)
 - **完成日期**：2026/11/06
 

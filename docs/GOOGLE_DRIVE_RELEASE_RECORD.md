@@ -1,3 +1,32 @@
+## 📅 2026/11/06 - ⚡ 盛隆瓦斯 全系統架構大改第四階段（巨型地圖瘦身拆包 + 52天用氣週期行銷召回 + 官方成本財務稽核 + 30年鋼瓶安檢 + AI助理中心實體控制台）[ver: 20261106_1030_arch_overhaul_p4]
+
+### 一、 需求背景與決策 (老闆最高指令「繼續」- 巨型地圖拆包、行銷召回、財務審計、工務安檢全量落地)
+1. **指令落實核心原則**：
+   - 解決 Gass 系統內 [`src/components/GasCustomerMapPanel.jsx`](file:///c:/Gass/src/components/GasCustomerMapPanel.jsx) 528KB 巨型內嵌 JSON 造成首屏打包膨脹問題。
+   - 將 500KB 地圖資料提取為非同步獨立 Chunk，配合 `ReportsView.jsx` `React.lazy` 與 `<Suspense>` 延遲載入，首屏體積減重超過 500KB。
+   - 實裝行銷與業務 AI：52 天用氣週期監控與 >60 天沉睡客召回引擎 (`lib/ai-marketing-service.ts`、`/api/ai/marketing/recall`)。
+   - 實裝財務與稽核 AI：Directive #3 官方標準成本權威審計與外勤 COD 現金自動對帳 (`lib/ai-finance-audit-service.ts`、`/api/ai/finance/audit`)。
+   - 實裝工務與安檢 AI：30 年法定鋼瓶壽命與 8 次週期定期檢驗追蹤 (`lib/ai-engineering-service.ts`、`/api/ai/engineering/inspections`)。
+   - AI 助理中心 [`app/components/AiAssistantCenter.tsx`](file:///c:/shenglong-next/app/components/AiAssistantCenter.tsx) 內嵌實體操作面板與一鍵 LINE 文案複製。
+2. **全系統具體落地成效**：
+   - **巨型地圖拆包瘦身 (<GasCustomerMapPanel />)**：
+     - 元件主代碼從 528KB 縮減至 27KB，3,934 戶地圖坐標抽離至 `src/data/customerMapData.json`。
+     - Leaflet 彈窗全面加入 `escapeHtml` 杜絕 XSS，導航一律對齊機車導航模式 (`travelmode=two_wheeler`)。
+   - **行銷業務 AI (52天用氣週期 & 沉睡客召回)**：
+     - 動態分級：45~52天臨期倒數、超期斷氣預警、60天沉睡回訪、90天呆瓶壓桶。
+     - 自動生成尊榮個人化召回文案，支援一鍵複製推播。
+   - **財務稽核 AI (官方成本審計 & 現金對帳)**：
+     - 進氣 $22.63/kg、運費 $70/$140、鋼瓶分攤 $33/$6、住家保本底線 $556、生意攤底線 $529。
+     - 售價低於保本底線即時紅燈告警，外勤現金短少/溢收自動對帳。
+   - **工務安檢 AI (30年鋼瓶壽命 & 8次檢驗模型)**：
+     - 前20年每5年1次，後10年每2年1次，法定8次送驗，30天臨期告警與逾期禁止出貨安全防護。
+3. **最高執行指令審計 (Zero Regressions & Zero ERP Pollution)**：
+   - `c:\shenglong-next`：`npm run build` 通過，25 項測試 100% 綠燈。
+   - `c:\Gass`：Vite `npm run build` 通過，381 項測試 100% 綠燈。
+   - 舊門市 SQL Server 234,769 筆維持零污染零干擾，嚴守黑盒子鐵律！
+
+---
+
 ## 📅 2026/11/06 - ⚡ 盛隆瓦斯 全系統架構大改第三階段（門市 SQL 常駐連線池 + 外勤司機 App 拆包瘦身）[ver: 20261106_0025_arch_overhaul_p3]
 
 ### 一、 需求背景與決策 (老闆最高指令「來」- 門市 SQL Server 常駐連線池與司機 App 拆包瘦身落地)
