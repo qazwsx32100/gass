@@ -1,3 +1,18 @@
+## 📅 2026/11/06 - 👑 盛隆瓦斯 八大 AI 部門定案規格 V1.0 正式套用至系統 [ver: 20261106_1215_eight_ai_v1]
+
+### 一、 需求背景與決策 (老闆最高指令「AI部門 我已經在GITHUB上更新了 / 把這架構 套用到系統裡」)
+1. **指令落實核心原則**：
+   - 全面套用《盛隆瓦斯八大 AI 部門定案規格 V1.0》（docs/ai-eight-departments-v1-approved.md）。
+   - 建立權威模型模組 `lib/ai-eight-departments.ts`、單一指令分派端點 `/api/ai/secretary/command` 與部門配置端點 `/api/ai/eight-departments`。
+   - 升級監控中心 `AiAssistantCenter.tsx`，新增 AI 秘書單一指令入口與任務導航卡片。
+2. **三項跨部門整合功能落實**：
+   - 客戶資料管理（行政 AI 主責）、跨部門數據分析（AI 秘書統籌）、系統監控（系統工程師主責）。
+3. **最高執行指令審計 (Zero Regressions & Zero ERP Pollution)**：
+   - `c:shenglong-next`：`next build` 通過，`tests/ai-eight-departments.test.mjs` 3/3 全通。
+   - 舊門市 SQL Server 234,769 筆維持零污染零干擾，嚴守黑盒子鐵律！
+
+---
+
 ## 📅 2026/11/06 - 🛵 監控中心游柏林按鈕全域除名 ＆ 外勤端 APP 背景/黑屏鎖屏推播喚醒機制全鏈路修復 [ver: 20261106_1100_auto_release]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
