@@ -1,4 +1,4 @@
-﻿import { captureServerException } from './_monitoring.js';
+import { captureServerException } from './_monitoring.js';
 import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, isAccountSessionAllowed, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import { sanitizeInactiveCompanies } from '../src/utils/companyState.js';
@@ -446,6 +446,9 @@ export default async function handler(req, res) {
     await captureServerException(error, {
       tags: { endpoint: '/api/app-state', method: req.method, status: 500 }
     });
-    return sendJson(res, 500, { error: 'Cloud sync failed.' });
+    const msg = /restricted|quota|payment/i.test(error?.message || '')
+      ? '⚠️ 雲端資料庫目前受限（Supabase 專案配額保護中），目前處於唯讀檢視模式，無法儲存新資料。'
+      : 'Cloud sync failed.';
+    return sendJson(res, 500, { error: msg });
   }
 }

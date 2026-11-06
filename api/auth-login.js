@@ -227,7 +227,7 @@ export const resolveAdminLoginCredential = (
   attemptedPassword = '',
   defaultPassword = ''
 ) => {
-  const stored = resolveAdminCredential(state, security, '');
+  const stored = resolveAdminCredential(state, security, defaultPassword);
   if (isWeakBannedPassword(attemptedPassword)) {
     return stored;
   }

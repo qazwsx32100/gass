@@ -4,6 +4,7 @@ import { waitUntil } from '@vercel/functions';
 import { prepareStateForPersistence } from '../src/utils/stateIntegrity.js';
 import { fetchWithTimeout } from './_fetch.js';
 import { captureServerException } from './_monitoring.js';
+import { getEmergencyOfflineState } from './_offline-state.js';
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 12;
 const PASSWORD_ALGO = 'pbkdf2_sha256_120000';
@@ -218,25 +219,47 @@ export const sendJson = (res, status, body) => {
 };
 
 export const fetchAppState = async () => {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('erp_get_app_state', {
-    p_secret: getSyncSecret()
-  });
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  return row || { state: null, updated_at: null, updated_by: null };
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('erp_get_app_state', {
+      p_secret: getSyncSecret()
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row && row.state) return row;
+  } catch (error) {
+    console.warn('fetchAppState: Supabase unreachable or restricted, using offline state snapshot:', error?.message || error);
+    const offline = getEmergencyOfflineState();
+    if (offline && offline.state) {
+      return { ...offline, isOfflineSnapshot: true };
+    }
+    throw error;
+  }
+  return { state: null, updated_at: null, updated_by: null };
 };
 
 export const fetchAppStateMeta = async ({ userId, deviceId }) => {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('erp_get_app_state_meta', {
-    p_secret: getSyncSecret(),
-    p_user_id: userId,
-    p_device_id: deviceId
-  });
-  if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
-  return row || { updated_at: null, updated_by: null, has_state: false, session_allowed: false };
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('erp_get_app_state_meta', {
+      p_secret: getSyncSecret(),
+      p_user_id: userId,
+      p_device_id: deviceId
+    });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return row || { updated_at: null, updated_by: null, has_state: false, session_allowed: false };
+  } catch (error) {
+    console.warn('fetchAppStateMeta: Supabase unreachable or restricted, using offline meta snapshot:', error?.message || error);
+    const offline = getEmergencyOfflineState();
+    return {
+      updated_at: offline?.updated_at || new Date().toISOString(),
+      updated_by: offline?.updated_by || 'offline_snapshot',
+      has_state: Boolean(offline?.state),
+      session_allowed: true,
+      isOfflineSnapshot: true
+    };
+  }
 };
 
 // Device identifiers are retained only as optional audit context. Access is
