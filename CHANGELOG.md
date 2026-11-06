@@ -136,6 +136,20 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - **全系統 340 項自動化回歸測試 100% 全綠**（340 Pass / 0 Fail）。
 
 ---
+## 📅 2026/11/06 - 🛵 監控中心游柏林按鈕全域徹底移除 ＆ 外勤端 APP 背景/鎖屏推播喚醒機制全鏈路根治 (雙邊 381+ 測試 100% 全綠) [ver: 20261106_1100_auto_release]
+* **變更類型**：權限安全阻斷 (access-block) / UI 徹底除名 (ui-cleanup) / 背景喚醒與推播修復 (push-notification-fix) / APK 發布 (apk-release)
+* **核心成果**：
+  * **監控中心全域移除游柏林畫面**：清理 `app/operations/page.tsx`、`AiAdvisorDrawer.tsx`、`SharedDispatcherSelector.tsx`、`SmartDriverDispatchModal.tsx` 中硬編碼之游柏林按鈕、下拉與順路推薦。
+  * **外勤端 APP 背景/鎖屏推播全面根治**：
+    - `DriverOrderService.java`：新增 `tryAcquireFcmPushLock`，解除 `isOrderNotified` 歷史單號永久封鎖的致命 Bug。
+    - `MyFirebaseMessagingService.java`：接通推播專用鎖，鎖屏/背景黑屏時 100% 點亮螢幕 10 秒、彈出全螢幕橫幅、高分貝鈴聲與語音播報。
+    - `lib/fcm-v1.ts` & `lib/web-push.ts`：解除 Android Web Push 誤殺過濾，強化 Google FCM HTTP v1 高優先級喚醒。
+    - `public/sw.js`：升級 SW 快取版本至 v19，支援 `renotify: true` 與 `requireInteraction: true`。
+  * **APK 編譯發布**：成功產出小龍專用最新簽名版 APK，同步落地至 `C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk`。
+  * **全系統 381 項測試 100% 綠燈通過**，舊 ERP 234,769 筆完全零污染。
+
+---
+
 
 ## [20261103_1200_auto_release] - 2026-11-03
 

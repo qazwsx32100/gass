@@ -108,7 +108,7 @@ test("🧩 Shared Components (P1): 外送員派工選擇切換器 (SharedDispatc
   const selectorContent = fs.readFileSync(selectorPath, "utf8");
   assert.ok(selectorContent.includes("SharedDispatcherSelectorProps"), "必須定義組件屬性介面");
   assert.ok(selectorContent.includes("🛵 派小龍"), "必須包含派小龍按鈕");
-  assert.ok(selectorContent.includes("🛵 派柏林"), "必須包含派柏林按鈕");
+  assert.ok(!selectorContent.includes("🛵 派柏林"), "已徹底除名移除派柏林按鈕");
   assert.ok(selectorContent.includes("⏳ 稍後輸入"), "必須包含稍後輸入按鈕");
   assert.ok(selectorContent.includes("minHeight: \"40px\""), "按鈕必須符合 40px+ 拇指熱區規範");
   assert.ok(selectorContent.includes("triggerHaptic"), "必須支援觸覺震動回饋");

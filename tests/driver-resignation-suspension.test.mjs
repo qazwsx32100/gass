@@ -38,11 +38,12 @@ test("🛑 外勤人員 游柏林 離職停權與四道自毀防線全鏈路檢�
     assert.ok(!driverPage.includes('{ name: "游柏林", icon: "🚚"'), "登入彈窗不可提供游柏林選擇");
   });
 
-  await t.test("5. 門市調度選擇器：派柏林按鈕已鎖死停權，禁止派發新單", () => {
+  await t.test("5. 門市調度選擇器：游柏林按鈕已全面除名移除，僅保留小龍與稍後輸入", () => {
     const selectorPath = path.join(process.cwd(), "../shenglong-next/app/components/SharedDispatcherSelector.tsx");
     const selector = fs.readFileSync(selectorPath, "utf8");
-    assert.ok(selector.includes("外勤人員 游柏林 已離職，帳號已停權禁止派單"), "選擇器必須提示游柏林已離職停權");
-    assert.ok(selector.includes("disabled={true}"), "派柏林按鈕必須處於 disabled={true} 鎖死狀態");
+    assert.ok(!selector.includes("🛵 派柏林"), "選擇器不可再有派柏林按鈕");
+    assert.ok(selector.includes("🛵 派小龍"), "選擇器保留派小龍按鈕");
+    assert.ok(selector.includes("⏳ 稍後輸入"), "選擇器保留稍後輸入按鈕");
   });
 
   await t.test("6. Telegram 軍師機器人：阻斷派單給游柏林指令，僅建議在職員工小龍", () => {

@@ -99,7 +99,7 @@ test("🤖 AI Swarm Test 3: 👩‍💼 Dispatcher-ShuFen-AI 門市調度 8 大�
   const selectorContent = fs.readFileSync(selectorPath, "utf8");
 
   assert.ok(selectorContent.includes("🛵 派小龍"), "派工選擇器必須包含 派小龍 按鈕");
-  assert.ok(selectorContent.includes("🛵 派柏林"), "派工選擇器必須包含 派柏林 按鈕");
+  assert.ok(!selectorContent.includes("🛵 派柏林"), "派工選擇器已徹底移除離職游柏林按鈕");
   assert.ok(selectorContent.includes("⏳ 稍後輸入"), "派工選擇器必須包含 稍後輸入 按鈕");
   assert.ok(selectorContent.includes("minHeight: \"40px\""), "按鈕必須符合 40px+ 觸控熱區");
   assert.ok(selectorContent.includes("triggerHaptic(15)"), "點擊派工必須觸發觸覺震動");
