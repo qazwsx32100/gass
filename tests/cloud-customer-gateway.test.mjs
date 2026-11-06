@@ -58,3 +58,10 @@ test("【雲端客戶中樞】4. 杜絕本地過期死檔 (orders_2026_full.json
   assert.ok(typeof cust.name === "string");
   assert.ok(typeof cust.addr === "string");
 });
+
+test("【門市ERP鏡像腳本】5. 鏡像引擎函式與設定模組完整性驗證", async () => {
+  const { runCloudMirror, extractCustomerCode: extractMirrorCode } = await import("../scripts/sync-cloud-mirror.cjs");
+  assert.equal(typeof runCloudMirror, "function");
+  assert.equal(extractMirrorCode("26.21.1(羊肉爐)"), "26.21.1");
+  assert.equal(extractMirrorCode("102.15.3"), "102.15.3");
+});

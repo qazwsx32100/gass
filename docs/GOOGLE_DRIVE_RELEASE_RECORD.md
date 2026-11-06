@@ -1,3 +1,18 @@
+## 📅 2026/11/06 - 🚀 盛隆瓦斯 門市 ERP 主機專用雲端鏡像自動寫入工具包發布至 GitHub [ver: 20261106_1615_erp_cloud_sync_pkg]
+
+### 一、 需求背景與決策 (老闆最高指令「完成後 幫我寫一個自動寫入的腳本放在GUTHUB上 我要把這腳本帶到 ERP主機」)
+1. **實裝項目**：
+   - 在專案目錄建立專屬獨立工具包 `tools/erp-cloud-sync`，專為店面門市舊 ERP 主機環境量身打造。
+   - 核心腳本 `sync-cloud-mirror.cjs` 同步支援客戶主檔（`cloud_customers`，包含 `26.21.1` 等經典代號萃取）與當日/近期訂單（`cloud_orders`）。
+   - 支援雙擊執行 `一鍵同步門市資料至雲端.bat`，以及一鍵安裝 Windows 每晚 21:05 背景靜默鏡像排程 `安裝每晚21點自動同步排程.bat`。
+   - 附帶連線配置 `sync-config.env` 與詳細繁中指南 `README_ERP主機使用說明.md`。
+2. **最高執行指令審計 (Directive #4 黑盒子鐵律)**：
+   - 提取資料全數採用 `SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;` 與 `WITH (NOLOCK)`，零表級鎖，門市打單 0 干擾。
+   - 直連 Supabase DB REST API，不消耗 Edge Function 額度，終生杜絕 402/429 限流。
+   - 雙邊測試 `tests/cloud-customer-gateway.test.mjs` 5 項測試 100% 綠燈通過。
+
+---
+
 ## 📅 2026/11/06 - 👑 盛隆瓦斯 雲端唯一真理架構方案五部曲落地：Supabase 客戶主檔與歷史訂單唯一窗口、夜間 21:00 鏡像腳本、Next.js 單一資料中樞閘道、全端點切換、高頻心跳節流脫困 [ver: 20261106_1545_cloud_master_truth]
 
 ### 一、 需求背景與決策 (老闆最高指令「把 SUPABASE 當作客戶資料 唯一 窗口 任何要查詢都要從這裡查詢」「改善每三秒打入的狀態 給我方向」「照這五步驟處理」)

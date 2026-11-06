@@ -1,3 +1,16 @@
+## [2026-11-06 16:15] - 🚀 盛隆瓦斯 門市 ERP 主機專用雲端鏡像自動寫入工具包 (tools/erp-cloud-sync) 正式發布至 GitHub
+### 門市 ERP 主機獨立工具包 (tools/erp-cloud-sync)
+- **核心寫入引擎 (`sync-cloud-mirror.cjs`)**：
+  - 嚴格遵守 Directive #4 黑盒子鐵律，採用 `WITH (NOLOCK)` 從門市 SQL Server 唯讀提取全量客戶主檔 (含 `26.21.1` 代號、電話、地址、餘額、規格) 與當日/近期訂單。
+  - 採用 Supabase PostgreSQL REST API 批次直寫 (`cloud_customers` & `cloud_orders`)，零 Edge Function 呼叫消耗，終生杜絕 402/429 限流。
+- **一鍵手動同步批次檔 (`一鍵同步門市資料至雲端.bat`)**：
+  - 專為門市人員與老闆設計，雙擊即可極速手動鏡像，自動探測 Node.js 與 SQL Server 端點，彩色終端機進度顯示。
+- **自動排程安裝檔 (`安裝每晚21點自動同步排程.bat`)**：
+  - 一鍵將夜間同步任務註冊至 Windows 工作排程器 (Task Scheduler)，每晚打烊 21:05 自動於背景靜默執行鏡像，不彈窗不干擾店面打單。
+- **配置與指引**：
+  - 內附 `sync-config.env` 設定範本與 `README_ERP主機使用說明.md` 完整繁體中文使用指南。
+  - 同步發布至 GitHub 兩大官方倉庫 (`gass` 與 `shenglong-next`)，並於老闆桌面建立捷徑 `一鍵同步門市資料至雲端.bat`。
+
 ## [2026-11-06 15:45] - 👑 盛隆瓦斯 雲端唯一真理架構落地（Supabase 客戶主檔與歷史訂單唯一窗口、夜間 21:00 鏡像腳本、Next.js 單一資料中樞閘道、全端點切換、高頻心跳節流脫困）
 ### 第一步：建立 Supabase 客戶與訂單正規資料表結構
 - **表結構定義**：`cloud_customers`（包含 `id`、`code` 如 `26.21.1`、`name`、`tel`、`phone_clean`、`addr`、`balance`、`p50`~`p4` 等）與 `cloud_orders`（歷史明細），支援外鍵關聯與級聯刪除。
