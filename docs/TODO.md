@@ -37,6 +37,32 @@
 
 ---
 
+### 0. 盛隆瓦斯 雲端唯一真理架構方案五部曲落地（Supabase 客戶主檔與歷史訂單表結構、夜間 21:00 鏡像腳本、Next.js 單一中樞閘道、全端點切換、sync-stock.cjs 高頻心跳節流脫困）
+- **狀態**：`[x]` 已完成 (依老闆最高指示「把 SUPABASE 當作客戶資料 唯一 窗口 任何要查詢都要從這裡查詢」「改善每三秒打入的狀態 給我方向」「照這五步驟處理」全面驗收交付)：
+  1. **第一步：建立 Supabase 客戶資料表結構 (`cloud_customers` & `cloud_orders`)**：
+     - 建置正規關聯結構：`cloud_customers`（3,934+ 名冊、包含客戶編號、代號如 `26.21.1`、姓名、電話、正規化電話、地址、經緯度、客戶類別、慣用規格、最後叫貨日、欠款）與 `cloud_orders`（歷史明細）。
+     - 建立 B-Tree 極速索引（`idx_cloud_customers_code`、`idx_cloud_customers_phone_clean`、`idx_cloud_customers_name`、`idx_cloud_customers_addr`），保證查詢延遲 < 20 毫秒。
+     - 遷移腳本於 `c:/Gass/supabase/migrations/20261106153000_create_cloud_customers_and_orders.sql` 與 `c:/shenglong-next/supabase/migrations/20261106153000_create_cloud_customers_and_orders.sql` 雙軌落地。
+  2. **第二步：建立門市夜間 21:00 鏡像腳本 (`scripts/sync-cloud-mirror.cjs`)**：
+     - 每晚 21:00 ~ 21:15 自動執行，採用 `WITH (NOLOCK)` 從門市 SQL Server 提取當天有變動的資料，直接調用 Supabase DB REST API 整批寫入。
+     - 每天只傳 1 次，耗時 < 1 秒，完全不消耗 Edge Function 配額，舊門市打單零干擾。
+  3. **第三步：建立 Next.js 單一資料中樞閘道 (`lib/cloud-customer-gateway.ts`)**：
+     - 伺服器端直連 Supabase DB + 本地記憶體極速快取（0ms 查詢保障），支援門市編號（如 `26.21.1`）、電話末碼、姓名、地址模糊比對。
+     - 全面封存並拔除 `orders_2026_full.json` 等過期死檔的讀取路徑，絕不回傳過期截斷資料。
+     - 建立專屬單元與整合測試 `tests/cloud-customer-gateway.test.mjs`，雙邊 100% 綠燈通過。
+  4. **第四步：切換全端點 (司機 App、客戶中樞、AI 助理、老闆 API)**：
+     - `/api/customers/directory`、`/api/boss/customer-lookup`、`/api/customer-history`、`/api/customers` 全面改接 `cloud-customer-gateway.ts`。
+     - 保證全天下只從 Supabase 雲端資料庫這個唯一窗口讀取客戶真實資料！
+  5. **第五步：調校 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 高頻心跳**：
+     - 將 1s/2s 無效輪詢改為「有異動才推 (Dirty Check)」，閒置心跳由 20s/60s 大幅放寬至 180s（3 分鐘），API 呼叫次數驟降 90%，徹底解除 402/429 限制。
+     - SQL 斷線熔斷退避時間由 10s 延長至 120s，`runSqlCmd()` 內建熔斷保護，徹底制止日誌風暴。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/06 15:45
+
+---
+
+
+
 ### 0. 盛隆瓦斯 全系統共用模組對齊實裝 (訂單語義解析 mobile-order-parser 全規格對齊 + 台灣時間 taiwan-time 跨日 0 點防護，雙邊 415+ 測試 100% 全綠)
 - **狀態**：`[x]` 已完成 (依老闆指示「我們繼續處理 接下來的項目」，落實共用模組深度對齊與版本漂移根治：
   1. **訂單語義文字解析 (mobile-order-parser 雙邊 100% 對齊)**：

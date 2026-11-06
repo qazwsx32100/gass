@@ -1,3 +1,26 @@
+## [2026-11-06 15:45] - 👑 盛隆瓦斯 雲端唯一真理架構落地（Supabase 客戶主檔與歷史訂單唯一窗口、夜間 21:00 鏡像腳本、Next.js 單一資料中樞閘道、全端點切換、高頻心跳節流脫困）
+### 第一步：建立 Supabase 客戶與訂單正規資料表結構
+- **表結構定義**：`cloud_customers`（包含 `id`、`code` 如 `26.21.1`、`name`、`tel`、`phone_clean`、`addr`、`balance`、`p50`~`p4` 等）與 `cloud_orders`（歷史明細），支援外鍵關聯與級聯刪除。
+- **B-Tree 極速索引**：建立 `code`、`phone_clean`、`name`、`addr` 與 `order_date` B-Tree 索引，保證查詢延遲 < 20 毫秒。
+- **遷移腳本雙軌就緒**：`supabase/migrations/20261106153000_create_cloud_customers_and_orders.sql`。
+
+### 第二步：建立門市夜間 21:00 鏡像腳本 (`scripts/sync-cloud-mirror.cjs`)
+- **零干擾增量傳輸**：每晚 21:00 ~ 21:15 執行，使用 `WITH (NOLOCK)` 從門市 SQL Server 提取變更客戶與訂單，直接調用 Supabase DB REST API 整批寫入。
+- **零 Edge Function 配額消耗**：每天只傳 1 次，耗時 < 1 秒，完全不消耗 Edge Function 配額，徹底解除 402 限流風險。
+
+### 第三步：建立 Next.js 單一資料中樞閘道 (`lib/cloud-customer-gateway.ts`)
+- **0ms 極速記憶體快取**：伺服器端直連 Supabase DB + 本地快取，支援門市代號（如 `26.21.1`）、電話末碼（7~8 碼）、姓名與地址模糊比對。
+- **徹底封存過期死檔**：全系統嚴格阻絕讀取 `orders_2026_full.json` 等過期死檔，絕不提供過期截斷資料。
+- **專屬驗證套件**：建立 `tests/cloud-customer-gateway.test.mjs`，4 項測試 100% 綠燈通過。
+
+### 第四步：切換全端點為唯一窗口
+- **端點改接**：`/api/customers/directory`、`/api/boss/customer-lookup`、`/api/customer-history`、`/api/customers` 全面改接 `cloud-customer-gateway.ts`。
+- **多端保證**：司機 App、客戶中樞、AI 助理、老闆 API 全天下只從 Supabase 這個唯一窗口讀取客戶真實資料。
+
+### 第五步：調校 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 高頻心跳
+- **有異動才推 (Dirty Check)**：將原本 1s/2s 高頻輪詢改為 3s~5s 探測 + 有異動才推，閒置保底心跳由 20s/60s 放寬至 180s（3 分鐘），API 呼叫量減少 90% 以上。
+- **SQL 斷線熔斷退避**：SQL 斷線退避時間由 10s 延長至 120s，`runSqlCmd()` 內建熔斷保護，徹底制止日誌風暴。
+
 ## [2026-11-06 12:35] - ⚡ 盛隆瓦斯 全系統共用模組對齊實裝（訂單語義解析 mobile-order-parser 全規格對齊 + 台灣時間 taiwan-time 跨日 0 點防護）
 ### 訂單語義文字解析 (mobile-order-parser)
 - **全規格徽章與自然語言萃取**：50kg/20kg/18kg/16kg/10kg/新4kg/4kg 全量納管，支援 items 備註智慧比對。

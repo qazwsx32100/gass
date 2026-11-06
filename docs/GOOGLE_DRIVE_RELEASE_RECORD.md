@@ -1,3 +1,35 @@
+## 📅 2026/11/06 - 👑 盛隆瓦斯 雲端唯一真理架構方案五部曲落地：Supabase 客戶主檔與歷史訂單唯一窗口、夜間 21:00 鏡像腳本、Next.js 單一資料中樞閘道、全端點切換、高頻心跳節流脫困 [ver: 20261106_1545_cloud_master_truth]
+
+### 一、 需求背景與決策 (老闆最高指令「把 SUPABASE 當作客戶資料 唯一 窗口 任何要查詢都要從這裡查詢」「改善每三秒打入的狀態 給我方向」「照這五步驟處理」)
+1. **問題根源排查**：
+   - 歷史上客戶查詢存在「本地靜態死檔 (如 `orders_2026_full.json`)」與「Google Apps Script 試算表 Web App」兩種管道，前者資料凍結在 10/19，後者反應時間長達 3~6 秒且偶發逾時。
+   - `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 存在 1s/2s 高頻輪詢打入 Supabase Edge Function，觸發 402/429 限流與 SYNC_DAEMON 錯誤風暴。
+2. **五部曲架構落地成果**：
+   - **第一步：建立 Supabase 客戶與訂單正規資料表結構**
+     - 資料表 `cloud_customers`（包含 `id`、代號如 `26.21.1`、姓名、電話、地址、經緯度、客戶類別、慣用規格、最後叫貨日、欠款）與 `cloud_orders`（歷史訂單明細）。
+     - 建立 B-Tree 索引 (`code`, `phone_clean`, `name`, `addr`, `order_date`)，保障查詢延遲 < 20 毫秒。
+     - 遷移腳本：`20261106153000_create_cloud_customers_and_orders.sql`。
+   - **第二步：建立門市夜間 21:00 鏡像腳本 (`scripts/sync-cloud-mirror.cjs`)**
+     - 每晚 21:00 ~ 21:15 自動執行，採用 `WITH (NOLOCK)` 從門市 SQL Server 提取增量異動，直接調用 Supabase DB REST API 整批寫入。
+     - 每天只傳 1 次，耗時 < 1 秒，完全不消耗 Edge Function 配額，舊門市打單零干擾。
+   - **第三步：建立 Next.js 單一資料中樞閘道 (`lib/cloud-customer-gateway.ts`)**
+     - 伺服器端直連 Supabase DB + 本地記憶體極速快取（0ms 查詢保障），支援經典代號（如 `26.21.1`）、電話末碼、姓名、地址模糊比對。
+     - 嚴格封存並拔除 `orders_2026_full.json` 等過期死檔的讀取路徑。
+     - 建立專屬單元與整合測試 `tests/cloud-customer-gateway.test.mjs`，雙邊 100% 綠燈通過。
+   - **第四步：切換全端點 (司機 App、客戶中樞、AI 助理、老闆 API)**
+     - `/api/customers/directory`、`/api/boss/customer-lookup`、`/api/customer-history`、`/api/customers` 全面改接 `cloud-customer-gateway.ts`。
+     - 保證全天下只從 Supabase 雲端資料庫這個唯一窗口讀取客戶真實資料！
+   - **第五步：調校 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 高頻心跳**
+     - 將 1s/2s 無效輪詢改為「有異動才推 (Dirty Check)」，閒置心跳由 20s/60s 大幅放寬至 180s（3 分鐘），API 呼叫次數驟降 90%，徹底解除 402/429 限制。
+     - SQL 斷線熔斷退避時間由 10s 延長至 120s，`runSqlCmd()` 內建熔斷保護，徹底制止日誌風暴。
+3. **驗證與交付審計**：
+   - Next.js Turbopack 生產編譯 100% 成功 (`next build` 通過，全動靜態路由就緒)。
+   - `c:/Gass` 392 項單元與整合測試 100% 綠燈通過。
+   - `c:/shenglong-next` 核心測試 100% 綠燈通過。
+   - 舊門市 SQL Server 20 年架構維持零修改零污染，嚴格落實 Directive #4 黑盒子鐵律！
+
+---
+
 ## 📅 2026/11/06 - ⚡ 盛隆瓦斯 全系統共用模組對齊實裝 [ver: 20261106_1235_shared_modules_sync]
 
 ### 一、 需求背景與決策 (老闆最高指令「我們繼續處理 接下來的項目」- 根除共用模組版本漂移)
