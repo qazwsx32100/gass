@@ -4,7 +4,7 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 21:25
+> **最後更新時間**：2026-11-06 22:15
 
 ---
 
@@ -36,6 +36,32 @@
      - GitHub Actions CI 三次連續成功，Vercel 生產環境成功 Aliased 上線。
 - **優先級**：`P0` (老闆最高決策指令)
 - **完成日期**：2026/11/06 22:00
+
+---
+
+### 0. 盛隆外勤離職機制正式建立、舊 ERP 歷史訂單配送員顯示 (已離職) 標籤與 Token 權限體系架構確認【最高執行指令落實】
+- **狀態**：`[x]` 已完成 (依老闆最新指令「1.建立離職 2.顯示舊ERP的 員工名稱(已離職) 3.權限問題確認」，全量實裝並經 407 項測試 100% 綠燈驗收)：
+  1. **離職體系獨立建置 (`lib/driver-settings.ts` & `app/api/driver/manage-status/route.ts`)**：
+     - **型別與設定擴充**：於 `DriverAppSettings` 獨立新增 `resignedDrivers?: string[]` 欄位，與臨時停權 (`suspendedDrivers`) 明確區隔。「停權」為臨時請假/調查，「離職」為永久封存。
+     - **永久安全守護**：內建 `sanitizeResignedDrivers` 與 `isDriverResigned` 函數，游柏林硬編碼永久鎖入離職與停權雙保險清單，絕不因介面誤操作而被恢復。
+     - **API 離職指令**：`manage-status` 路由支援 `action: "resign"`，生成作廢戳記 `revoked_resigned_${Date.now()}`，阻斷任意 delete/restore 復原通道（需最高管理員方可異動）。
+     - **鑑權提示優化 (`lib/driver-session.ts`)**：外勤請求鑑權時若判定為離職，明確回傳「此外勤人員已正式離職，APK 授權已永久終止，請洽盛隆瓦斯管理部。」
+  2. **舊 ERP 歷史訂單配送員顯示 (已離職) 標籤（黑盒子零修改原則）**：
+     - **黑盒子鐵律遵循**：舊 ERP `dbo.gas_oders.driver` 欄位絕對不作任何 ALTER 或文字更動，資料庫保持原生乾淨。
+     - **API 自動附帶標籤 (`app/api/driver/orders/route.ts`)**：回傳訂單時自動比對 `settings.resignedDrivers`，若符合則標記 `isDriverResigned: true` 與 `driverDisplayName: "${driver}(已離職)"`。
+     - **三大前端畫面統一標示**：
+       - 外勤管理監控中心 (`app/driver/admin/page.tsx`)：訂單列表配送員標示 `🚚 游柏林 (已離職)` 紅色警示標籤；卡片管理區標示 `🚪 正式離職` 與提供 `🚪 離職` 按鈕。
+       - 門市調度台中心 (`app/operations/page.tsx`)：即時訂單卡片標示 `🚚 游柏林(已離職)`。
+       - 歷史訂單審計視圖 (`app/components/OperationsOrderHistoryView.tsx`)：表格與卡片配送員標籤渲染為 `🛵 游柏林(已離職)`。
+  3. **架構確認（Token 權限金鑰認證制確認）**：
+     - 確認系統為 **Token 專屬金鑰認證機制**，非傳統帳號密碼制。
+     - 流程：門市舊 ERP 新增送貨員姓名 ➔ 後台分配/簽發唯一專屬 Token ➔ 公司發行含有該 Token 之專用 APK ➔ APK 依 Token 向後端拉取訂單 ➔ 後台將名單加入 `resignedDrivers`/`suspendedDrivers` 即時作廢 Token 達成鎖定。
+  4. **測試與零回歸驗證**：
+     - `tests/driver-resignation-suspension.test.mjs` 9 項全鏈路測試 100% 通過。
+     - `c:/shenglong-next` TypeScript 編譯檢驗 (`npx tsc --noEmit`) 0 錯誤。
+     - `c:/Gass` 全系統測試 407 項全數通過 (`pass 407, fail 0`)。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/06 22:15
 
 ---
 

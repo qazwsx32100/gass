@@ -1,3 +1,25 @@
+## 📅 2026/11/06 - 🚪 盛隆外勤離職機制正式建立、舊 ERP 歷史訂單配送員顯示 (已離職) 標籤與 Token 權限體系架構確認 [ver: 20261106_2215_driver_resignation_system]
+
+### 一、 需求背景與決策 (老闆最高指令「1.建立離職 2.顯示舊ERP的 員工名稱(已離職) 3.權限問題確認」)
+1. **建立獨立離職狀態體系**：
+   - 解決現有「停權」與「離職」概念混雜問題：停權為臨時請假、調查或換裝備之暫時凍結，未來可復權；離職為人事永久結束，Token 與資格永久封存，不可隨意恢復。
+   - 於 `DriverAppSettings` 獨立新增 `resignedDrivers?: string[]` 欄位，游柏林硬編碼永久鎖入離職防護清單。
+   - `manage-status` 後端支援 `action: "resign"`，生成永久作廢戳記 `revoked_resigned_${Date.now()}`，並阻斷透過刪除或恢復通道復原。
+   - `driver-session.ts` 鑑權時若判定為離職，明確回傳離職終止專用訊息。
+2. **舊 ERP 歷史訂單配送員顯示 (已離職) 標籤（黑盒子零更動原則）**：
+   - 門市運行 20 年之舊 ERP `dbo.gas_oders` 絕對零更動、零修改、不執行任何 DDL 或字串覆蓋。
+   - API 回傳訂單時，透過 `settings.resignedDrivers` 自動附加 `isDriverResigned: true` 與 `driverDisplayName: "${driver}(已離職)"`。
+   - 外勤管理中心 (`app/driver/admin/page.tsx`)、調度台看板 (`app/operations/page.tsx`) 與歷史訂單審計視圖 (`OperationsOrderHistoryView.tsx`)，配送員欄位全面視覺化標示 `🚚 游柏林 (已離職)`。
+3. **架構確認（Token 權限認證制確認）**：
+   - 確認全系統為 **「Token 權限/專屬金鑰認證制」**，非傳統註冊帳號密碼體系。
+   - 舊 ERP 建立送貨員 ➔ 管理後台發行專屬 Token ➔ 公司發行綁定 Token 之專用 APK ➔ APK 依 Token 拉取派單 ➔ 停權/離職由後台作廢 Token 達成鎖定。
+4. **驗證與測試**：
+   - 單元測試：`tests/driver-resignation-suspension.test.mjs` 9 項全數通過。
+   - TypeScript：`c:/shenglong-next` 執行 `npx tsc --noEmit` 0 錯誤。
+   - 整合測試：`c:/Gass` 執行 `npm test` 407 項測試 100% 全數通過 (0 失敗)。
+
+---
+
 ## 📅 2026/11/06 - 👑 盛隆瓦斯 LINE 系統全面復活、四語語音助理實裝、高併發微批次打包與公網實彈驗收 [ver: 20261106_2200_line_voice_batching_live]
 
 ### 一、 需求背景與決策 (老闆最高指令「真實跑為最高權限、高併發防護、修復語音已讀不回、資安四重防護、我們來做」)

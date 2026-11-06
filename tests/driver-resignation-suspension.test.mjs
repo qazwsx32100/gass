@@ -59,4 +59,24 @@ test("🛑 外勤人員 游柏林 離職停權與四道自毀防線全鏈路檢�
     assert.ok(sync.includes('for (const drv of ["小龍"])'), "sync-stock 必須僅向在職外勤小龍執行雙向同步");
     assert.ok(sync.includes('"游柏林": "revoked_resigned"'), "sync-stock 內游柏林 Token 必須已作廢");
   });
+
+  await t.test("8. 正式離職名單 (resignedDrivers) 獨立性、API 支援與標籤防護", () => {
+    assert.ok(settingsTs.includes("resignedDrivers?: string[]"), "DriverAppSettings 必須包含 resignedDrivers 欄位");
+    assert.ok(settingsTs.includes('resignedDrivers: ["游柏林"]'), "預設離職名單必須包含游柏林");
+    assert.ok(settingsTs.includes("export function isDriverResigned"), "必須提供 isDriverResigned 判斷函數");
+
+    const jsonPath = path.join(process.cwd(), "../shenglong-next/driver-settings.json");
+    const jsonContent = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+    assert.ok(Array.isArray(jsonContent.resignedDrivers), "driver-settings.json 必須包含 resignedDrivers 陣列");
+    assert.ok(jsonContent.resignedDrivers.includes("游柏林"), "driver-settings.json resignedDrivers 必須包含游柏林");
+
+    const manageStatusPath = path.join(process.cwd(), "../shenglong-next/app/api/driver/manage-status/route.ts");
+    const manageStatusTs = fs.readFileSync(manageStatusPath, "utf8");
+    assert.ok(manageStatusTs.includes('action === "resign"'), "manage-status 路由必須支援 resign 離職指令");
+
+    const adminPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/admin/page.tsx");
+    const adminPage = fs.readFileSync(adminPagePath, "utf8");
+    assert.ok(adminPage.includes("(已離職)"), "外勤管理頁面訂單列表必須包含 (已離職) 標籤");
+    assert.ok(adminPage.includes("🚪 正式離職"), "外勤管理頁面卡片必須包含 🚪 正式離職 標記");
+  });
 });
