@@ -53,6 +53,25 @@ export const STORE_PRICING_POLICY = {
   b50_retail: 1600,
 };
 
+/**
+ * 👑 老闆親授官方全規格最低售價底線表 (含合理利潤，全系統報價與財務嚴格守護)
+ */
+export const OFFICIAL_MINIMUM_PRICE_FLOORS = {
+  residential: {
+    b4: 350,   // 4kg 住家最低售價 $350
+    b10: 500,  // 10kg 住家最低售價 $500
+    b16: 700,  // 16kg 住家最低售價 $700
+    b20: 800,  // 20kg 住家最低售價 $800
+  },
+  commercial: {
+    b4: 300,   // 4kg 商家最低售價 $300
+    b10: 420,  // 10kg 商家最低售價 $420
+    b16: 540,  // 16kg 商家最低售價 $540
+    b20: 590,  // 20kg 商家最低售價 $590
+    b50: 1625, // 50kg 商家最低售價 $1,625
+  },
+};
+
 export const getWeightedGasPurchaseCost = (purchases = []) => (
   purchases.reduce((sum, purchase) => {
     const kg = Number(purchase?.totalKg || 0);
