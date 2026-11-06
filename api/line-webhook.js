@@ -14,6 +14,7 @@ import {
   downloadLineAudio,
   buildMultilingualConfirmationText
 } from './_voice-service.js';
+import { matchLineCustomer, formatCustomerContextPrompt } from './_line-customer-matcher.js';
 
 /**
  * 驗證 LINE 數位簽章 (Timing-Safe Equal 防時序攻擊)
@@ -126,6 +127,29 @@ export function extractOrderEntities(messages = [], currentText = '') {
     }
   }
 
+  // 👑 5. 雲端 Supabase 客戶唯一窗口直連匹配 (依代號 26.21.1、電話或地址秒級識別)
+  let customer = null;
+  try {
+    const matched = matchLineCustomer(currentText, messages);
+    if (matched && matched.customer) {
+      customer = matched.customer;
+      // 熟客若對話中未提電話，以雲端主檔電話補全
+      if (!phone && customer.tel) {
+        phone = customer.tel;
+      }
+      // 熟客若對話中未提完整地址，以雲端登記地址補全
+      if (!address && (customer.cleanAddress || customer.addr)) {
+        address = customer.cleanAddress || customer.addr;
+      }
+      // 熟客若只說叫一桶/送瓦斯，以熟客慣用規格補全
+      if (!spec && /送|叫|要|來|換|沒瓦斯|一桶|兩桶/.test(combined)) {
+        spec = matched.inferredSpec || '20kg';
+      }
+    }
+  } catch (err) {
+    console.warn('[LINE Customer Matcher Error]:', err.message);
+  }
+
   const missing = [];
   if (!address) missing.push('配送地址');
   if (!floor) missing.push('樓層');
@@ -138,7 +162,15 @@ export function extractOrderEntities(messages = [], currentText = '') {
     floor: floor ? (elevatorInfo ? `${floor} (${elevatorInfo})` : floor) : (elevatorInfo || null),
     address,
     missing,
-    isComplete: Boolean(phone && spec && (address || floor))
+    isComplete: Boolean(phone && spec && (address || floor)),
+    customer: customer ? {
+      id: customer.id,
+      code: customer.code,
+      name: customer.name,
+      tel: customer.tel,
+      addr: customer.cleanAddress || customer.addr,
+      type: customer.type
+    } : null
   };
 }
 
@@ -162,12 +194,14 @@ export function buildLinePendingOrderPayload(extracted, userText = '', lineUserI
     quantity,
     rawText: String(userText || '').trim(),
     lineUserId: String(lineUserId || '').trim(),
-    customerName: 'LINE 智慧擷取客戶',
+    customerName: extracted.customer?.name || 'LINE 智慧擷取客戶',
+    customerCode: extracted.customer?.code || '',
+    customerId: extracted.customer?.id || null,
   };
 }
 
 export function formatOrderStateContext(extracted) {
-  if (!extracted || (!extracted.address && !extracted.floor && !extracted.spec && !extracted.phone)) {
+  if (!extracted || (!extracted.address && !extracted.floor && !extracted.spec && !extracted.phone && !extracted.customer)) {
     return '';
   }
   const missingPrompts = [];
@@ -176,7 +210,18 @@ export function formatOrderStateContext(extracted) {
   if (!extracted.spec) missingPrompts.push('瓦斯規格（20kg/16kg/10kg/4kg）與桶數');
   if (!extracted.phone) missingPrompts.push('聯絡電話');
 
-  return `【📦 目前系統從對話中自動掌握之訂單要素】
+  let customerHeader = '';
+  if (extracted.customer) {
+    const c = extracted.customer;
+    customerHeader = `【👑 盛隆雲端中樞客戶識別成功 (熟客 100% 命中)】
+- 客戶代號：${c.code || '門市客戶'}
+- 客戶名稱：${c.name}
+- 登記地址：${c.addr}
+- 登記電話：${c.tel}
+【🤖 熟客應對引導】：此客戶已由盛隆雲端中樞精準識別！請親切尊稱客戶，並主動確認是否送至「${c.addr}」，切勿重複要求客戶提供已登記資料！\n\n`;
+  }
+
+  return `${customerHeader}【📦 目前系統從對話中自動掌握之訂單要素】
 - 配送地址：${extracted.address || '（尚未提供）'}
 - 樓層狀況：${extracted.floor || '（尚未提供）'}
 - 瓦斯規格：${extracted.spec || '（尚未提供）'}
@@ -357,7 +402,8 @@ export default async function handler(req, res) {
                   }, 3000).catch(() => {});
                 }
               }
-              tgMsg = `🎉 *【LINE 客服 - 完整訂單要素已齊全派工】*\n────────────────────────\n👤 *客戶電話*：\`${extracted.phone}\`\n📍 *配送地址*：${extracted.address || '未提供'} ${extracted.floor ? `(${extracted.floor})` : ''}\n⛽ *預訂規格*：${extracted.spec}\n💵 *收款方式*：現場現金\n\n💬 *客戶最新訊息*：\n「${userText}」\n\n🤖 *AI 已確認回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁立即確認並備妥車趟！_`;
+              const custTitle = extracted.customer ? `${extracted.customer.name} (代號: \`${extracted.customer.code}\`)` : `\`${extracted.phone}\``;
+              tgMsg = `🎉 *【LINE 客服 - 熟客秒辨識訂單齊全派工】*\n────────────────────────\n👤 *客戶*：${custTitle}\n📞 *電話*：\`${extracted.phone}\`\n📍 *配送地址*：${extracted.address || '未提供'} ${extracted.floor ? `(${extracted.floor})` : ''}\n⛽ *預訂規格*：${extracted.spec}\n💵 *收款方式*：現場現金\n\n💬 *客戶最新訊息*：\n「${userText}」\n\n🤖 *AI 已確認回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁立即確認並備妥車趟！_`;
             } else {
               tgMsg = `🔔 *【LINE 客服 - 叫瓦斯訊息提示】*\n────────────────────────\n👤 *客戶內容*：\n${userText}\n\n🤖 *AI 已自動回覆*：\n${aiResult.text.slice(0, 150)}...\n────────────────────────\n_請值班同仁注意是否有地址與訂購需求！_`;
             }
