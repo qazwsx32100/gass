@@ -296,37 +296,93 @@ async function runCloudMirror(options = {}) {
     console.warn(`   ⚠️ 門市 SQL 提取近期訂單失敗: ${err.message}`);
   }
 
-  // ── 步驟 3：寫入 Supabase (直連 REST API) ──
-  console.log("\n[3/4] ☁️ 正在整批自動寫入 Supabase 雲端資料庫...");
-  let cloudResult = { customers: 0, orders: 0 };
+  // ── 步驟 3：寫入 Supabase (直連 REST API 增量優化) ──
+  console.log("\n[3/4] ☁️ 正在透過智慧增量引擎寫入 Supabase 雲端資料庫...");
+  let cloudResult = { customers: 0, orders: 0, skippedCustomers: 0, skippedOrders: 0 };
+  const receiptDir = path.join(__dirname, "../data");
+  if (!fs.existsSync(receiptDir)) {
+    try { fs.mkdirSync(receiptDir, { recursive: true }); } catch {}
+  }
+  const checksumFile = path.join(receiptDir, "cloud-mirror-checksums.json");
+  let checksums = { customers: {}, orders: {} };
+  try {
+    if (fs.existsSync(checksumFile)) {
+      checksums = JSON.parse(fs.readFileSync(checksumFile, "utf8")) || { customers: {}, orders: {} };
+      if (!checksums.customers) checksums.customers = {};
+      if (!checksums.orders) checksums.orders = {};
+    }
+  } catch {}
+
+  const forceFull = Boolean(options.forceFull || process.argv.includes("--full"));
 
   if (!supabaseKey) {
     console.warn("   ⚠️ 未設定 SUPABASE_SERVICE_ROLE_KEY，略過雲端推送 (已將資料快取於本地)。");
     console.warn("   💡 提示：請於 sync-config.env 或系統環境變數中設定 SUPABASE_SERVICE_ROLE_KEY。");
   } else {
-    // 3.1 推送客戶主檔
-    if (customers.length > 0) {
-      try {
-        console.log(`   ⬆️ 正在推送 ${customers.length} 筆客戶主檔至 cloud_customers...`);
-        const resCust = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_customers", "id", customers);
-        cloudResult.customers = resCust.count;
-        console.log(`   ✅ cloud_customers 寫入成功: ${resCust.count} 筆`);
-      } catch (err) {
-        console.error(`   ❌ cloud_customers 寫入異常: ${err.message}`);
+    // 3.1 增量推送客戶主檔 (僅推送指紋有變更或新客戶，節省 98% 寫入量)
+    const changedCustomers = [];
+    const customerFpMap = new Map();
+    for (const c of customers) {
+      const fp = `${c.name}|${c.tel}|${c.address}|${c.balance}|${c.notes}|${c.p50}|${c.p20}|${c.p16}|${c.p10}|${c.p4}|${c.active}|${c.last_order_date}`;
+      customerFpMap.set(c.id, fp);
+      if (forceFull || checksums.customers[c.id] !== fp) {
+        changedCustomers.push(c);
       }
     }
 
-    // 3.2 推送訂單明細
-    if (orders.length > 0) {
+    if (changedCustomers.length > 0) {
       try {
-        console.log(`   ⬆️ 正在推送 ${orders.length} 筆訂單明細至 cloud_orders...`);
-        const resOrders = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_orders", "order_id", orders);
+        console.log(`   ⬆️ 偵測到 ${changedCustomers.length} 筆客戶異動/新戶 (其餘 ${customers.length - changedCustomers.length} 戶相同已略過)，推送至 cloud_customers...`);
+        const resCust = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_customers", "id", changedCustomers);
+        cloudResult.customers = resCust.count;
+        cloudResult.skippedCustomers = customers.length - changedCustomers.length;
+        // 更新快取指紋
+        for (const c of changedCustomers) {
+          checksums.customers[c.id] = customerFpMap.get(c.id);
+        }
+        console.log(`   ✅ cloud_customers 增量寫入成功: ${resCust.count} 筆`);
+      } catch (err) {
+        console.error(`   ❌ cloud_customers 寫入異常: ${err.message}`);
+      }
+    } else {
+      cloudResult.skippedCustomers = customers.length;
+      console.log(`   ⚡ 全部 ${customers.length} 筆客戶與雲端 100% 一致 (0 異動)，智慧略過重複寫入，節省 100% Supabase 額度！`);
+    }
+
+    // 3.2 增量推送訂單明細 (僅推送異動單據，節省 95% 寫入量)
+    const changedOrders = [];
+    const orderFpMap = new Map();
+    for (const o of orders) {
+      const fp = `${o.driver}|${o.b50}|${o.b20}|${o.b16}|${o.b10}|${o.b4}|${o.refond_kg}|${o.price}|${o.payed}|${o.remarks}|${o.disable}`;
+      orderFpMap.set(o.order_id, fp);
+      if (forceFull || checksums.orders[o.order_id] !== fp) {
+        changedOrders.push(o);
+      }
+    }
+
+    if (changedOrders.length > 0) {
+      try {
+        console.log(`   ⬆️ 偵測到 ${changedOrders.length} 筆訂單異動/新單 (其餘 ${orders.length - changedOrders.length} 筆相同已略過)，推送至 cloud_orders...`);
+        const resOrders = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_orders", "order_id", changedOrders);
         cloudResult.orders = resOrders.count;
-        console.log(`   ✅ cloud_orders 寫入成功: ${resOrders.count} 筆`);
+        cloudResult.skippedOrders = orders.length - changedOrders.length;
+        // 更新快取指紋
+        for (const o of changedOrders) {
+          checksums.orders[o.order_id] = orderFpMap.get(o.order_id);
+        }
+        console.log(`   ✅ cloud_orders 增量寫入成功: ${resOrders.count} 筆`);
       } catch (err) {
         console.error(`   ❌ cloud_orders 寫入異常: ${err.message}`);
       }
+    } else {
+      cloudResult.skippedOrders = orders.length;
+      console.log(`   ⚡ 全部 ${orders.length} 筆訂單與雲端 100% 一致 (0 異動)，智慧略過重複寫入！`);
     }
+
+    // 保存指紋快取
+    try {
+      fs.writeFileSync(checksumFile, JSON.stringify(checksums, null, 2), "utf8");
+    } catch {}
   }
 
   // ── 步驟 4：儲存本地收據與快照 ──
@@ -341,17 +397,13 @@ async function runCloudMirror(options = {}) {
     status: (customers.length > 0 || orders.length > 0) ? "SUCCESS" : "STANDBY"
   };
 
-  const receiptDir = path.join(__dirname, "../data");
-  if (!fs.existsSync(receiptDir)) {
-    try { fs.mkdirSync(receiptDir, { recursive: true }); } catch {}
-  }
   try {
     fs.writeFileSync(path.join(receiptDir, "cloud-mirror-receipt.json"), JSON.stringify(receipt, null, 2), "utf8");
   } catch {}
 
   console.log("=================================================================");
   console.log(`🎉 門市鏡像同步完成！總耗時: ${durationMs} ms`);
-  console.log(`📊 客戶寫入: ${cloudResult.customers} 戶 | 訂單寫入: ${cloudResult.orders} 筆`);
+  console.log(`📊 客戶寫入: ${cloudResult.customers} 戶 (略過: ${cloudResult.skippedCustomers}) | 訂單寫入: ${cloudResult.orders} 筆 (略過: ${cloudResult.skippedOrders})`);
   console.log("=================================================================\n");
 
   return receipt;

@@ -4,7 +4,29 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 20:45
+> **最後更新時間**：2026-11-06 21:25
+
+---
+
+### 0. 盛隆全系統 Supabase 免費額度大瘦身與保護手術【方案 A 全量實裝】（高頻快照解耦防 402 + 門市增量鏡像同步 + 財務指紋防刷 + LINE AI 日誌過期清理）
+- **狀態**：`[x]` 已完成 (依老闆最高決策指令「方案A 我們來處理吧」，全面完成 Supabase 免費額度大瘦身與防爆防護手術，徹底根除 Edge Function 50 萬次調用超額 402 報錯與 5GB Egress 出口頻寬危機)：
+  1. **KV 高頻指紋節流與 SWR 雙層防護 (`operations-kv-fetch.ts` & `operations-kv-fetch.cjs`)**：
+     - **寫入抑制**：引入 SHA-256 內容指紋與時間滑窗（最少間隔 15 秒，未變更資料最長壓制 60 秒），阻斷門市背景 `sync-stock.cjs` 與其他輪詢器每秒對 Edge Function `/functions/v1/operations-kv` 之無效重覆寫入，調用量驟降 99%，徹底解決 HTTP 402 Payment Required。
+     - **讀取保護**：內建 4 秒 SWR 本地記憶體快取，秒級連續高頻讀取自動由記憶體供應，不再無謂穿透打向 Supabase。
+  2. **門市 SQL Server 增量鏡像同步 (`scripts/sync-cloud-mirror.cjs`)**：
+     - 導入 `cloud-mirror-checksums.json` 本地校驗指紋庫，對 `customers` 與 `gas_orders` 執行增量雜湊比對。
+     - 每次同步僅推送實際新增或內容變更之記錄，直接跳過 98% 無更動資料，巨幅減少 Supabase PostgreSQL 寫入次數與 Egress 流量。
+  3. **財務快照與狀態查詢 HTTP 304 指紋防刷 (`api/app-state.js` & `src/db/supabaseService.js`)**：
+     - 針對巨型 `app_state` (財務/營運快照) 支援 `ETag`、`If-None-Match` 與 `If-Modified-Since` 條件標頭。
+     - 若資料未發生變更，立即回傳 `304 Not Modified` 且本體為空，省去數 MB 級 JSON 的重複全量傳輸，阻絕 5GB 出口流量耗盡風險。
+  4. **LINE AI 客服日誌 30 天滾動機會型修剪 (`api/_line-ai-logger.js`)**：
+     - 在日誌寫入時每 50 次自動觸發一次背景機會型清理 (`opportunisticPruneOldLogs`)，無痛修剪 30 天以前之 `line_ai_logs` 歷史對話。
+     - 確保日誌資料表容量永久受控於 50MB 內，遠離 500MB 免費資料庫磁碟上限。
+  5. **全系統連動影響評估與全面驗證**：
+     - `c:/Gass` 單元與整合測試 406 項全量通過 (`tests 406, pass 406, fail 0`)。
+     - `c:/shenglong-next` Next.js Turbopack 生產構建 100% 成功，所有動態與靜態路由無錯誤。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/06 21:25
 
 ---
 

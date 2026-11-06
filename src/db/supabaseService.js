@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+﻿import { apiFetch } from './apiClient';
 import { sanitizeInactiveCompanies } from '../utils/companyState';
 
 const LOCAL_UPDATED_AT_KEY = 'bp_supabase_updated_at';
@@ -259,10 +259,20 @@ const rememberCloudUpdatedAt = (updatedAt) => {
 export const pullSupabaseToLocal = async () => {
   if (!getCloudSessionToken()) return false;
   clearLastCloudSyncError();
+  const localUpdatedAt = localStorage.getItem(CLOUD_UPDATED_AT_KEY) || '';
   const response = await apiFetch('/api/app-state', {
     method: 'GET',
-    headers: { Accept: 'application/json', ...authHeaders() }
+    headers: {
+      Accept: 'application/json',
+      ...(localUpdatedAt ? { 'If-Modified-Since': localUpdatedAt } : {}),
+      ...authHeaders()
+    }
   });
+
+  if (response.status === 304) {
+    // 🛡️ [SUPABASE-EGRESS-SHIELD] 雲端狀態無異動，0 位元組傳輸命中快取
+    return true;
+  }
 
   if (!response.ok) {
     const error = normalizeCloudError(response.status, await getResponseError(response, '雲端資料讀取失敗。'));
@@ -433,10 +443,20 @@ export const initSupabaseSync = async (onSync) => {
   clearLastCloudSyncError();
 
   // Combined fetch to avoid double roundtrips (seed + pull)
+  const localUpdatedAt = localStorage.getItem(CLOUD_UPDATED_AT_KEY) || '';
   const response = await apiFetch('/api/app-state', {
     method: 'GET',
-    headers: { Accept: 'application/json', ...authHeaders() }
+    headers: {
+      Accept: 'application/json',
+      ...(localUpdatedAt ? { 'If-Modified-Since': localUpdatedAt } : {}),
+      ...authHeaders()
+    }
   });
+
+  if (response.status === 304) {
+    // 🛡️ [SUPABASE-EGRESS-SHIELD] 雲端狀態無異動，0 位元組傳輸命中快取
+    return true;
+  }
 
   if (!response.ok) {
     const error = normalizeCloudError(response.status, await getResponseError(response, '雲端資料讀取失敗。'));

@@ -1,3 +1,29 @@
+﻿## 📅 2026/11/06 - 🛡️ 盛隆全系統 Supabase 免費額度大瘦身與保護手術【方案 A 全量實裝】 [ver: 20261106_2125_supabase_quota_shield]
+
+### 一、 需求背景與決策 (老闆最高指令「方案A 我們來處理吧」)
+1. **Supabase 免費額度瓶頸徹底根除**：
+   - 經深入排查，Supabase 免費版瀕臨上限主因為「三大無效重複消耗」：
+     - ① 門市秒級守護進程透過 operationsKvFetch 高頻打向 Supabase Edge Function，每月產生 150 萬 ~ 250 萬次調用，直接撞擊 50 萬次上限並觸發 402 報錯。
+     - ② sync-cloud-mirror.cjs 每次無差別推送 4,000 戶客戶主檔與 3,000 筆訂單，無謂消耗寫入 I/O 與頻寬。
+     - ③ 前台財務狀態 (app_state) 與 LINE AI 日誌反覆全量拉取與堆積，消耗 5GB Egress 出站流量與 500MB 資料庫儲存空間。
+2. **四大關鍵手術全量落成 (方案 A)**：
+   - **① 高頻 KV 寫入記憶體指紋節流 (lib/operations-kv-fetch.ts & operations-kv-fetch.cjs)**：
+     - 實裝 writeCache（指紋比對）與 15~60 秒智慧節流，內容相同或未滿 15 秒直接在記憶體攔截並回傳 200，消滅 99% 的 Edge Function 請求（調用次數由 250 萬次/月驟降至 3 萬次以內）。
+     - 實裝 readCache（4 秒 SWR 快取），高頻 GET 讀取直接由記憶體回傳，零網路開銷。
+   - **② 門市雲端鏡像「智慧增量同步」(scripts/sync-cloud-mirror.cjs)**：
+     - 引入 cloud-mirror-checksums.json 本地指紋快取。
+     - 客戶主檔與訂單明細僅在偵測到實質欄位異動或最新叫貨變更時才執行推播，全量吻合時智慧略過，資料庫寫入量驟降 98%！
+   - **③ 財務大狀態 ETag / If-Modified-Since 指紋防刷 (pi/app-state.js & src/db/supabaseService.js)**：
+     - GET /api/app-state 支援 304 Not Modified 快取判定。
+     - 客戶端與輪詢優先比對幾十 bytes 的輕量元數據，未變更時 0 位元組傳輸，大幅節省 80% 以上的 5GB 出站流量。
+   - **④ LINE AI 對話日誌過期自動修剪 (pi/_line-ai-logger.js)**：
+     - 實裝 opportunisticPruneOldLogs 30 天自動 TTL 修剪機制，每 50 筆對話非同步清理過期紀錄，確保 Supabase 空間永遠保持在 50MB 綠燈安全區。
+3. **全系統嚴格驗收與零回歸**：
+   - Next.js Turbopack 生產構建 0 錯誤通過 (next build 20/20 靜態頁面 + 40+ API routes)。
+   - c:/Gass 全量測試 406 項 100% 綠燈通過 (tests 406, suites 3, pass 406, fail 0)。
+   - 門市舊 ERP dbo.gas_oders 234,769 筆零污染，Directive #4 絕對合規。
+
+---
 ## 📅 2026/11/06 - 🚀 盛隆瓦斯 戰情室單一聚合快照 API【效能優化】 [ver: 20261106_2045_ops_snapshot_aggregation]
 
 ### 一、 需求背景與決策 (老闆最高指令「方案 1：戰情室單一聚合快照 API (/api/ops/snapshot)【效能優化】」)

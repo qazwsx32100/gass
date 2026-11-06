@@ -1,4 +1,4 @@
-import { captureServerException } from './_monitoring.js';
+﻿import { captureServerException } from './_monitoring.js';
 import { fetchAppState, fetchAppStateMeta, getBearerToken, getClientIp, isAccountSessionAllowed, sanitizeStateForClient, saveAppState, sendJson, verifyToken } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 import { sanitizeInactiveCompanies } from '../src/utils/companyState.js';
@@ -365,12 +365,34 @@ export default async function handler(req, res) {
         return sendJson(res, 200, meta);
       }
 
+      // 🛡️ [SUPABASE-EGRESS-SHIELD-20261106]
+      // 支援 If-Modified-Since / If-None-Match 指紋防護：
+      // 先以輕量的 fetchAppStateMeta 檢查更新時間，若客戶端快取已是最新，回傳 304 Not Modified
+      // 杜絕反覆整包拉取數十 MB 大 JSON，保護 Supabase 5GB Egress 出站流量！
+      const clientSince = req.headers['if-modified-since'] || req.headers['if-none-match'];
+      if (clientSince) {
+        try {
+          const meta = await fetchAppStateMeta({ userId: session.id, deviceId: session.deviceId });
+          if (meta.session_allowed && meta.updated_at && String(clientSince).trim() === String(meta.updated_at).trim()) {
+            res.statusCode = 304;
+            res.setHeader('ETag', meta.updated_at);
+            res.setHeader('Last-Modified', meta.updated_at);
+            res.end();
+            return;
+          }
+        } catch {}
+      }
+
       const row = await fetchAppState();
       const activeState = sanitizeInactiveCompanies(row.state || {});
       if (!isAccountSessionAllowed(activeState, session)) {
         return sendJson(res, 401, { error: 'Session is no longer allowed.' });
       }
       const publicSession = getPublicSessionForClient(activeState, session);
+      if (row?.updated_at) {
+        res.setHeader('ETag', row.updated_at);
+        res.setHeader('Last-Modified', row.updated_at);
+      }
       return sendJson(res, 200, {
         ...(row || { state: null, updated_at: null, updated_by: null }),
         state: sanitizeStateForClient(activeState, publicSession),

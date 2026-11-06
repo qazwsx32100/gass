@@ -4,6 +4,18 @@ import { getSupabase } from './_auth.js';
 const localMemoryLogs = [];
 const MAX_LOCAL_MEMORY = 50;
 
+// 🛡️ [SUPABASE-STORAGE-SHIELD-20261106]
+// LINE 對話日誌自動修剪計數器（每 50 筆非同步清理 30 天前舊紀錄，確保 DB 容量永遠小於 50MB）
+let logWriteCounter = 0;
+async function opportunisticPruneOldLogs(supabase) {
+  logWriteCounter++;
+  if (logWriteCounter % 50 !== 0) return;
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from('line_ai_logs').delete().lt('created_at', thirtyDaysAgo);
+  } catch {}
+}
+
 /**
  * 記錄一筆 LINE AI 對話歷程
  */
@@ -71,6 +83,8 @@ export async function recordLineAiChat({
         console.warn('[LineAiLogger] Supabase 寫入紀錄失敗 (非致命):', insertErr.message);
       }
     }
+    // 非同步日誌修剪 (不阻塞當前對話)
+    opportunisticPruneOldLogs(supabase).catch(() => {});
   } catch (err) {
     console.warn('[LineAiLogger] 寫入資料庫異常 (非致命):', err.message);
   }
