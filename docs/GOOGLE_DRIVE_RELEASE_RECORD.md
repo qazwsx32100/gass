@@ -1,3 +1,27 @@
+## 📅 2026/11/06 - 📴 盛隆瓦斯 外勤司機端 APP 離線抗斷網與地下室防掉單【外勤體驗】 [ver: 20261106_1640_driver_offline_resilience]
+
+### 一、 需求背景與決策 (老闆最高指令「方案 3：外勤司機端 APP 離線抗斷網與地下室防掉單【外勤體驗】 幫我處理」)
+1. **外勤現場痛點徹底根除**：
+   - 司機進入公寓地下室、電梯大樓深處或訊號死角時網路斷訊，可能造成送達、接單或收現介面卡頓、操作回滾或重啟後資料遺失。
+2. **核心架構落地**：
+   - **本機單據快照立即持久化落盤 (`lib/driver-offline-storage.ts`)**：
+     - 開發模組化離線引擎 `lib/driver-offline-storage.ts`。
+     - 司機點擊接單或送達收現時，`updateAndPersistCachedOrders` 立即樂觀更新派單狀態並落盤至 `localStorage` 與 Android WebView 原生快取 (`AndroidBridge.saveOfflineOrders`)，即便作業系統砍進程或無訊號重開 APP，單據狀態、實收金額與回收空瓶 100% 留存。
+   - **寄件匣去重、狀態升級與 FIFO 自動回放 (Outbox Queue)**：
+     - 實現 `enqueueOutboxAction` 與 `dequeueOutboxAction`，支援動作去重與狀態升級（若同單已在寄件匣中從 accept 變為 finish，自動合併升級為 finish 並攜帶最新收款金額與空瓶數）。
+     - 恢復連線時透過 `replayOutboxQueue` 自動依序回傳中樞，回傳成功自動從寄件匣安全出隊並觸發震動提示。
+   - **真實連通性主動探測 (Active Ping)**：
+     - 實現 `checkRealConnectivity`，杜絕 Android 假在線 (Fake Online) 訊號干擾，在發起狀態回寫前進行主動輕量級探測，避免無效例外拋出。
+   - **外勤端 UI 全視角回饋 (Visual Feedback & Manual Retry)**：
+     - 於每筆訂單卡片頂部加入顯眼橘色標籤 `📴【地下室暫存】送達已本機落盤，待恢復訊號自動回傳中樞`，讓司機 100% 安心確認已操作。
+     - 頂部離線狀態列增加「點此補傳」點擊主動觸發功能，司機一出地下室隨手一點即可立即補傳。
+3. **全系統嚴格驗收**：
+   - 單元測試 `tests/driver-offline-queue.test.mjs` 4 項測試 100% 通過。
+   - Next.js Turbopack 生產構建 (`npx next build`) 0 錯誤通過。
+   - `c:/Gass` 全量測試 397 項 100% 綠燈通過 (`tests 397, pass 397, fail 0`)。
+
+---
+
 ## 📅 2026/11/06 - 🚀 盛隆瓦斯 門市 ERP 主機專用雲端鏡像自動寫入工具包發布至 GitHub [ver: 20261106_1615_erp_cloud_sync_pkg]
 
 ### 一、 需求背景與決策 (老闆最高指令「完成後 幫我寫一個自動寫入的腳本放在GUTHUB上 我要把這腳本帶到 ERP主機」)

@@ -4,7 +4,29 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 12:15
+> **最後更新時間**：2026-11-06 16:40
+
+---
+
+### 0. 盛隆瓦斯 外勤司機端 APP 離線抗斷網與地下室防掉單【外勤體驗】
+- **狀態**：`[x]` 已完成 (依老闆最高指示「方案 3：外勤司機端 APP 離線抗斷網與地下室防掉單【外勤體驗】」全面落成)：
+  1. **本地快取持久化與立即落盤 (`lib/driver-offline-storage.ts`)**：
+     - 開發獨立離線儲存引擎模組 `lib/driver-offline-storage.ts`。
+     - 司機於地下室、電梯、公寓深處離線點擊「接單」或「送達/收款」時，`updateAndPersistCachedOrders` 立即樂觀更新記憶體並同步落盤至 `localStorage` 與 Android 原生 WebView 快取（`AndroidBridge.saveOfflineOrders`），即便 APP 重啟或作業系統殺後台進程，已送達狀態、實收金額與空瓶回收數 100% 留存絕不回滾。
+  2. **寄件匣去重、狀態升級與 FIFO 自動回放 (Outbox Queue)**：
+     - 實現 `enqueueOutboxAction` 與 `dequeueOutboxAction`，支援動作去重與狀態升級（若同單已在寄件匣中從 accept 變為 finish，自動合併升級為 finish 並攜帶最新收款金額與空瓶數）。
+     - 恢復連線時透過 `replayOutboxQueue` 自動依序回傳中樞，回傳成功自動從寄件匣安全出隊並觸發震動提示。
+  3. **真實連通性主動探測 (Active Ping)**：
+     - 實現 `checkRealConnectivity`，杜絕 Android 假在線 (Fake Online) 訊號干擾，在發起狀態回寫前進行主動輕量級探測，避免無效例外拋出。
+  4. **外勤端 UI 全視角回饋 (Visual Feedback & Manual Retry)**：
+     - 於每筆訂單卡片頂部加入顯眼橘色標籤 `📴【地下室暫存】送達已本機落盤，待恢復訊號自動回傳中樞`，讓司機 100% 安心確認已操作。
+     - 頂部離線狀態列增加「點此補傳」點擊主動觸發功能，司機一出地下室隨手一點即可立即補傳。
+  5. **全系統回歸驗證**：
+     - 單元測試 `tests/driver-offline-queue.test.mjs` 4 項測試 100% 通過。
+     - Next.js Turbopack 生產構建 (`npx next build`) 0 錯誤通過。
+     - `c:/Gass` 全量測試 397 項 100% 綠燈通過 (`tests 397, pass 397, fail 0`)。
+- **優先級**：`P0` (外勤體驗核心防掉單防線)
+- **完成日期**：2026/11/06 16:40
 
 ---
 
