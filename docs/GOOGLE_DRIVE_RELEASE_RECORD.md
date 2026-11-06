@@ -1,3 +1,22 @@
+## 📅 2026/11/06 - ☁️ LINE AI 客服對話歷史自動封存至 Google Drive 官方資料夾 (方案 1 先封存再修剪，零資料遺失保證) [ver: 20261106_2220_line_ai_logs_gdrive_archive]
+
+### 一、 需求背景與決策 (老闆最高指令「方案1」：封存至 Google Drive 官方資料夾 1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)
+1. **冷熱資料分離與零遺失保證 (Archive-then-Prune)**：
+   - 原先 30 天滾動修剪為直接抹除；依老闆決策升級為「先封存至 Google Drive 官方資料夾，確認備份成功後才從 Supabase 釋放空間」。
+   - 若 Google Drive 未設定或上傳發生異常，自動終止修剪（Zero Data Loss 原則），絕不遺失任何對話。
+2. **多維度自動封存引擎 (api/_line-ai-logger.js)**：
+   - 實作 `archiveAndPruneOldLogs(supabase, options)`：自動批次打包 30 天前歷史對話，結構化產出包含日期區間、總筆數與元數據之 JSON 封存檔。
+   - 串接 `uploadPrivateFileToGoogleDrive` 自動上傳至指定資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)。
+   - 整合至 `opportunisticPruneOldLogs`，每寫入 50 筆對話時非同步背景觸發，不阻礙客戶即時交談體驗。
+3. **管理員一鍵即時封存 (api/line-ai-logs.js)**：
+   - 支援 API `?action=archive-to-drive`，授權管理員隨時手動觸發歷史封存。
+   - 視覺化對話看板新增「☁️ 封存至 Google Drive」快捷操作按鈕，點擊彈出進度確認並回報封存筆數與檔案 ID。
+4. **驗證與測試**：
+   - 單元測試：`tests/line-ai-logs.test.mjs` 新增 4 項嚴格測試（無舊單判定、封存並修剪成功、上傳失敗即時中斷保護、未設定安全略過），7/7 測試全數綠燈通過。
+   - 全系統回歸：411 項全量測試 100% 通過。
+
+---
+
 ## 📅 2026/11/06 - 🚪 盛隆外勤離職機制正式建立、舊 ERP 歷史訂單配送員顯示 (已離職) 標籤與 Token 權限體系架構確認 [ver: 20261106_2215_driver_resignation_system]
 
 ### 一、 需求背景與決策 (老闆最高指令「1.建立離職 2.顯示舊ERP的 員工名稱(已離職) 3.權限問題確認」)

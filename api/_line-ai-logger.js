@@ -1,8 +1,132 @@
 import { getSupabase } from './_auth.js';
+import { isGoogleDriveBackupConfigured, uploadPrivateFileToGoogleDrive } from './_google-drive.js';
 
 // 本地內存快取（供無 DB 或本地開發時應急查詢最近 50 筆）
 const localMemoryLogs = [];
 const MAX_LOCAL_MEMORY = 50;
+
+/**
+ * 🛡️ [ARCHIVE-THEN-PRUNE-20261106]
+ * 方案 1：封存 30 天前對話至 Google Drive 官方資料夾 (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)，
+ * 確保先備份成功後才從 Supabase 刪除，達成「零資料遺失」與「DB 容量大瘦身」。
+ */
+export async function archiveAndPruneOldLogs(supabaseClient = null, options = {}) {
+  const {
+    retentionDays = 30,
+    batchSize = 500,
+    allowUnbackedPrune = false,
+    uploader = uploadPrivateFileToGoogleDrive,
+    isConfiguredChecker = isGoogleDriveBackupConfigured
+  } = options;
+
+  let supabase = supabaseClient;
+  if (!supabase) {
+    try {
+      supabase = getSupabase(10000);
+    } catch (err) {
+      return { ok: false, error: `Supabase 初始化失敗: ${err.message}`, archivedCount: 0, prunedCount: 0 };
+    }
+  }
+
+  const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+
+  // 1. 抓取過期對話紀錄 (批次提取，防止大物件 OOM)
+  const { data: oldLogs, error: fetchErr } = await supabase
+    .from('line_ai_logs')
+    .select('*')
+    .lt('created_at', cutoffDate)
+    .order('created_at', { ascending: true })
+    .limit(batchSize);
+
+  if (fetchErr) {
+    console.warn('[LineAiLogger] 查詢待封存舊紀錄失敗:', fetchErr.message);
+    return { ok: false, error: fetchErr.message, archivedCount: 0, prunedCount: 0 };
+  }
+
+  if (!oldLogs || oldLogs.length === 0) {
+    return { ok: true, archivedCount: 0, prunedCount: 0, status: 'no_old_logs' };
+  }
+
+  const isConfigured = isConfiguredChecker();
+  let driveResult = null;
+
+  // 2. 若 Google Drive 已配置，執行上傳封存
+  if (isConfigured) {
+    try {
+      const firstDate = oldLogs[0].created_at ? String(oldLogs[0].created_at).slice(0, 10) : 'start';
+      const lastDate = oldLogs[oldLogs.length - 1].created_at ? String(oldLogs[oldLogs.length - 1].created_at).slice(0, 10) : 'end';
+      const filename = `line_ai_logs_archive_${firstDate}_to_${lastDate}_${Date.now()}.json`;
+      const payload = {
+        archiveMetadata: {
+          exportedAt: new Date().toISOString(),
+          recordCount: oldLogs.length,
+          retentionCutoff: cutoffDate,
+          firstRecordAt: oldLogs[0].created_at,
+          lastRecordAt: oldLogs[oldLogs.length - 1].created_at,
+          googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || '1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM'
+        },
+        logs: oldLogs
+      };
+
+      const buffer = Buffer.from(JSON.stringify(payload, null, 2), 'utf8');
+      driveResult = await uploader({
+        filename,
+        mimeType: 'application/json',
+        buffer,
+        description: `盛隆瓦斯 LINE AI 客服對話歷史自動封存 (${oldLogs.length} 筆，區間: ${firstDate} ~ ${lastDate})`
+      });
+    } catch (uploadErr) {
+      console.error('[LineAiLogger] 上傳 Google Drive 封存失敗，中止修剪以保護資料安全:', uploadErr.message);
+      return {
+        ok: false,
+        error: `Google Drive 封存失敗: ${uploadErr.message}`,
+        archivedCount: 0,
+        prunedCount: 0,
+        status: 'upload_failed_abort_prune'
+      };
+    }
+  } else if (!allowUnbackedPrune) {
+    console.warn('[LineAiLogger] Google Drive 尚未配置且未開啟強制無備份修剪，跳過刪除以防資料遺失。');
+    return {
+      ok: true,
+      archivedCount: 0,
+      prunedCount: 0,
+      status: 'drive_not_configured_skip_prune'
+    };
+  }
+
+  // 3. 封存成功（或允許無備份修剪）後，刪除對應 ID 之舊資料
+  const idsToDelete = oldLogs.map(l => l.id).filter(Boolean);
+  let deleteQuery;
+  if (idsToDelete.length > 0) {
+    deleteQuery = supabase.from('line_ai_logs').delete().in('id', idsToDelete);
+  } else {
+    deleteQuery = supabase.from('line_ai_logs').delete().lt('created_at', cutoffDate);
+  }
+
+  const { error: deleteErr } = await deleteQuery;
+  if (deleteErr) {
+    console.error('[LineAiLogger] 刪除已封存之 Supabase 舊日誌失敗:', deleteErr.message);
+    return {
+      ok: true,
+      archivedCount: oldLogs.length,
+      prunedCount: 0,
+      googleDriveFileId: driveResult?.id || null,
+      error: `封存成功但修剪失敗: ${deleteErr.message}`,
+      status: 'archived_but_prune_failed'
+    };
+  }
+
+  return {
+    ok: true,
+    archivedCount: oldLogs.length,
+    prunedCount: oldLogs.length,
+    googleDriveFileId: driveResult?.id || null,
+    filename: driveResult?.name || null,
+    webViewLink: driveResult?.webViewLink || null,
+    status: 'archived_and_pruned'
+  };
+}
 
 // 🛡️ [SUPABASE-STORAGE-SHIELD-20261106]
 // LINE 對話日誌自動修剪計數器（每 50 筆非同步清理 30 天前舊紀錄，確保 DB 容量永遠小於 50MB）
@@ -11,9 +135,10 @@ async function opportunisticPruneOldLogs(supabase) {
   logWriteCounter++;
   if (logWriteCounter % 50 !== 0) return;
   try {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('line_ai_logs').delete().lt('created_at', thirtyDaysAgo);
-  } catch {}
+    await archiveAndPruneOldLogs(supabase);
+  } catch (err) {
+    console.warn('[LineAiLogger] 機會型封存修剪背景執行異常 (非致命):', err.message);
+  }
 }
 
 /**

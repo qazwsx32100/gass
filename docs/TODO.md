@@ -4,8 +4,7 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 22:15
-
+> **最後更新時間**：2026-11-06 22:20\n
 ---
 
 ### 0. 盛隆瓦斯 LINE 系統全面復活、四語語音助理實裝、高併發微批次打包與公網實彈驗收【最高權限真機實測】
@@ -62,6 +61,26 @@
      - `c:/Gass` 全系統測試 407 項全數通過 (`pass 407, fail 0`)。
 - **優先級**：`P0` (老闆最高決策指令)
 - **完成日期**：2026/11/06 22:15
+
+---
+
+### 0. LINE AI 客服對話歷史自動封存至 Google Drive 官方資料夾【方案 1 全量實裝】（先封存再修剪 Archive-then-Prune + 零資料遺失防護 + 官方雲端 1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM 連動）
+- **狀態**：`[x]` 已完成 (依老闆最高決策指令「方案1」，落實冷熱資料分離與永久雲端歸檔，歷史對話封存至指定 Google Drive 官方資料夾，Supabase 資料庫空間永久保持在 50MB 內)：
+  1. **冷熱資料分離架構 (Archive-then-Prune)**：
+     - 近 30 天對話保留於 Supabase `line_ai_logs` 提供戰情室與 LINE 智慧客服即時查詢。
+     - 超過 30 天之舊對話在修剪前，自動批次結構化打包為 JSON 封存檔上傳至盛隆指定 Google 雲端資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)。
+  2. **核心封存引擎實作 (`api/_line-ai-logger.js`)**：
+     - 開發 `archiveAndPruneOldLogs(supabase, options)`，自帶批次提取、區間檔名命名與詳細元數據 (`exportedAt`, `recordCount`, `retentionCutoff`)。
+     - 具備**零資料遺失防護 (Zero Data Loss)**：若 Google Drive 尚未配置或遭遇網路/配額錯誤，立即中斷刪除程序，舊對話完整留存 Supabase，確保資料安全。
+     - 整合每 50 筆對話之非同步機會型觸發 (`opportunisticPruneOldLogs`)，完全不阻塞客戶交談與伺服器響應。
+  3. **管理員專屬即時封存 API 與面板按鈕 (`api/line-ai-logs.js`)**：
+     - API 支援 `?action=archive-to-drive`，提供管理員手動即時封存。
+     - 對話歷程視覺化看板標題右側實裝「☁️ 封存至 Google Drive」操作按鈕，點擊自動發送請求並彈窗回報封存筆數與 Google Drive 檔案 ID。
+  4. **嚴密單元測試與零回歸驗證**：
+     - `tests/line-ai-logs.test.mjs` 新增 4 項專屬測試，7/7 項測試 100% 綠燈通過。
+     - 全系統 411 項單元與整合測試全數通過 (`tests 411, pass 411, fail 0`)。
+- **優先級**：`P0` (老闆指定方案1)
+- **完成日期**：2026/11/06 22:20
 
 ---
 

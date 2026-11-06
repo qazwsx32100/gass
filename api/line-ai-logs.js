@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { fetchLineAiLogs } from './_line-ai-logger.js';
+import { fetchLineAiLogs, archiveAndPruneOldLogs } from './_line-ai-logger.js';
 import { sendJson, verifyToken, getBearerToken, getClientIp } from './_auth.js';
 import { createBoundedRateLimiter } from './_rateLimit.js';
 
@@ -254,7 +254,10 @@ function renderHtmlDashboard(result, queryParams) {
     <header>
       <div class="title-row">
         <h1>🔥 盛隆瓦斯 ｜ LINE AI 客服對話歷史紀錄 <span class="badge-src">${escapeHtml(source)}</span></h1>
-        <a href="?format=json" target="_blank" class="filter-btn">📥 匯出 JSON 資料</a>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" onclick="triggerDriveArchive()" class="filter-btn" style="background: #0284c7; color: #fff; border-color: #0284c7; font-weight: bold; cursor: pointer;">☁️ 封存至 Google Drive</button>
+          <a href="?format=json" target="_blank" class="filter-btn">📥 匯出 JSON 資料</a>
+        </div>
       </div>
       
       <div class="stats-grid">
@@ -306,6 +309,36 @@ function renderHtmlDashboard(result, queryParams) {
       盛隆瓦斯 24H 智慧營運中心 · 雙向容災自動輪調系統 · <a href="/">回 ERP 首頁</a>
     </div>
   </div>
+  <script>
+  async function triggerDriveArchive() {
+    if (!confirm('確定要執行「LINE AI 對話封存至 Google Drive」嗎？\\n系統將抓取 30 天前之歷史對話，上傳備份至盛隆指定 Google 雲端資料夾 (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)，並安全釋放 Supabase 資料庫空間。')) return;
+    const btn = event.target;
+    const origText = btn.innerText;
+    btn.innerText = '⏳ 封存中...';
+    btn.disabled = true;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('action', 'archive-to-drive');
+      const res = await fetch(url.toString());
+      const data = await res.json();
+      if (data.ok) {
+        if (data.archivedCount > 0) {
+          alert('✅ 封存成功！\\n共封存 ' + data.archivedCount + ' 筆對話至 Google Drive\\n檔名：' + (data.filename || '已產出') + (data.googleDriveFileId ? '\\n檔案ID: ' + data.googleDriveFileId : ''));
+          window.location.reload();
+        } else {
+          alert('ℹ️ 目前沒有超過 30 天的對話紀錄需要封存 (' + (data.status || '無舊紀錄') + ')');
+        }
+      } else {
+        alert('⚠️ 封存失敗：' + (data.error || '未預期錯誤'));
+      }
+    } catch (e) {
+      alert('❌ 請求異常：' + e.message);
+    } finally {
+      btn.innerText = origText;
+      btn.disabled = false;
+    }
+  }
+  </script>
 </body>
 </html>`;
 }
@@ -361,6 +394,20 @@ export default async function handler(req, res) {
       ok: false,
       error: '未授權存取：此端點包含客戶即時對話與個資，需提供有效的管理員金鑰或登入憑證。'
     });
+  }
+
+  // 檢查是否為封存至 Google Drive 動作
+  const action = String(req.query?.action || '').trim().toLowerCase();
+  if (action === 'archive-to-drive' || action === 'archive-prune') {
+    try {
+      const result = await archiveAndPruneOldLogs(null, {
+        retentionDays: Math.max(1, Number(req.query?.days) || 30),
+        batchSize: Math.min(1000, Math.max(10, Number(req.query?.batch) || 500))
+      });
+      return sendJson(res, result.ok ? 200 : 500, result);
+    } catch (archiveErr) {
+      return sendJson(res, 500, { ok: false, error: archiveErr.message });
+    }
   }
 
   try {

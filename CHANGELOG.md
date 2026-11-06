@@ -1,3 +1,11 @@
+## [2026-11-06 22:20] - ☁️ LINE AI 客服對話歷史自動封存至 Google Drive 官方資料夾 (方案 1 先封存再修剪，零資料遺失保證)
+- **冷熱資料分離 (Archive-then-Prune)**：落實老闆「方案1」決策，30 天前舊對話在清理前自動打包上傳至指定 Google Drive 官方資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)，確認備份成功後才從 Supabase 釋放空間，達成「零資料遺失」與「DB 容量大瘦身」。
+- **核心封存引擎 (api/_line-ai-logger.js)**：實作 `archiveAndPruneOldLogs`，支援批次封存、元數據簽章與 Google Drive 整合，掛載於每 50 筆機會型背景輪詢。
+- **管理看板一鍵封存 (api/line-ai-logs.js)**：支援 `?action=archive-to-drive`，視覺化對話看板頂部實裝「☁️ 封存至 Google Drive」按鈕，大拇指一點即刻封存並回傳 Google Drive 檔案 ID。
+- **測試通過**：`tests/line-ai-logs.test.mjs` 7 項測試 100% 通過，全系統 411 項測試 100% 全綠。
+
+---
+
 ## [2026-11-06 22:15] - 🚪 盛隆外勤離職機制正式建立、舊 ERP 歷史訂單配送員顯示 (已離職) 標籤與 Token 權限體系架構確認
 - **建立離職體系**：`DriverAppSettings` 獨立新增 `resignedDrivers` 欄位，與臨時停權 (`suspendedDrivers`) 明確區隔；游柏林硬編碼永久鎖入離職名單。
 - **後台操作擴充**：外勤管理中心實裝「🚪 離職」按鈕與「🚪 正式離職」標籤；離職人員禁止任意透過恢復/刪除通道復原。

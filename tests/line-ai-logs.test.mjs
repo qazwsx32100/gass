@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { recordLineAiChat, fetchLineAiLogs } from '../api/_line-ai-logger.js';
+import { recordLineAiChat, fetchLineAiLogs, archiveAndPruneOldLogs } from '../api/_line-ai-logger.js';
 
 test('LineAiLogger: recordLineAiChat records and retrieves chat from fallback cache', async () => {
   const testUserId = `test-user-${Date.now()}`;
@@ -105,4 +105,148 @@ test('LineAiLogger: multi-turn context reconstruction preserves chronological me
   assert.equal(messages[2].content, '3樓沒有電梯');
   assert.equal(messages[3].content, '好的，3樓爬樓梯會為您試算樓層費，請問需要哪種規格的瓦斯？');
   assert.equal(messages[4].content, '送一桶20公斤');
+});
+
+test('LineAiLogger: archiveAndPruneOldLogs returns no_old_logs when no expired logs exist', async () => {
+  const mockSupabase = {
+    from: () => ({
+      select: () => ({
+        lt: () => ({
+          order: () => ({
+            limit: async () => ({ data: [], error: null })
+          })
+        })
+      })
+    })
+  };
+
+  const res = await archiveAndPruneOldLogs(mockSupabase, { retentionDays: 30 });
+  assert.equal(res.ok, true);
+  assert.equal(res.archivedCount, 0);
+  assert.equal(res.prunedCount, 0);
+  assert.equal(res.status, 'no_old_logs');
+});
+
+test('LineAiLogger: archiveAndPruneOldLogs uploads to Google Drive and prunes on success', async () => {
+  const fakeOldLogs = [
+    { id: 'log-1', user_message: '送瓦斯', created_at: '2026-09-01T08:00:00.000Z' },
+    { id: 'log-2', user_message: '多少錢', created_at: '2026-09-02T09:00:00.000Z' }
+  ];
+  const deletedIds = [];
+  let uploadCalledWith = null;
+
+  const mockSupabase = {
+    from: () => ({
+      select: () => ({
+        lt: () => ({
+          order: () => ({
+            limit: async () => ({ data: fakeOldLogs, error: null })
+          })
+        })
+      }),
+      delete: () => ({
+        in: async (field, ids) => {
+          deletedIds.push(...ids);
+          return { error: null };
+        }
+      })
+    })
+  };
+
+  const mockUploader = async (payload) => {
+    uploadCalledWith = payload;
+    return {
+      id: 'gdrive-file-12345',
+      name: payload.filename,
+      webViewLink: 'https://drive.google.com/file/d/gdrive-file-12345/view'
+    };
+  };
+
+  const res = await archiveAndPruneOldLogs(mockSupabase, {
+    retentionDays: 30,
+    uploader: mockUploader,
+    isConfiguredChecker: () => true
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.archivedCount, 2);
+  assert.equal(res.prunedCount, 2);
+  assert.equal(res.googleDriveFileId, 'gdrive-file-12345');
+  assert.deepEqual(deletedIds, ['log-1', 'log-2']);
+  assert.ok(uploadCalledWith.filename.startsWith('line_ai_logs_archive_2026-09-01_to_2026-09-02'));
+  assert.ok(uploadCalledWith.description.includes('2 筆'));
+});
+
+test('LineAiLogger: archiveAndPruneOldLogs aborts prune on Google Drive upload failure (Zero Data Loss)', async () => {
+  const fakeOldLogs = [
+    { id: 'log-3', user_message: '緊急漏氣', created_at: '2026-09-01T08:00:00.000Z' }
+  ];
+  let deleteWasCalled = false;
+
+  const mockSupabase = {
+    from: () => ({
+      select: () => ({
+        lt: () => ({
+          order: () => ({
+            limit: async () => ({ data: fakeOldLogs, error: null })
+          })
+        })
+      }),
+      delete: () => {
+        deleteWasCalled = true;
+        return { in: async () => ({ error: null }) };
+      }
+    })
+  };
+
+  const mockFailingUploader = async () => {
+    throw new Error('Google Drive quota exceeded / network error');
+  };
+
+  const res = await archiveAndPruneOldLogs(mockSupabase, {
+    retentionDays: 30,
+    uploader: mockFailingUploader,
+    isConfiguredChecker: () => true
+  });
+
+  assert.equal(res.ok, false);
+  assert.equal(res.archivedCount, 0);
+  assert.equal(res.prunedCount, 0);
+  assert.equal(res.status, 'upload_failed_abort_prune');
+  assert.equal(deleteWasCalled, false, 'Pruning MUST be aborted when upload fails');
+});
+
+test('LineAiLogger: archiveAndPruneOldLogs skips pruning safely when Drive is unconfigured', async () => {
+  const fakeOldLogs = [
+    { id: 'log-4', user_message: '改派', created_at: '2026-09-01T08:00:00.000Z' }
+  ];
+  let deleteWasCalled = false;
+
+  const mockSupabase = {
+    from: () => ({
+      select: () => ({
+        lt: () => ({
+          order: () => ({
+            limit: async () => ({ data: fakeOldLogs, error: null })
+          })
+        })
+      }),
+      delete: () => {
+        deleteWasCalled = true;
+        return { in: async () => ({ error: null }) };
+      }
+    })
+  };
+
+  const res = await archiveAndPruneOldLogs(mockSupabase, {
+    retentionDays: 30,
+    isConfiguredChecker: () => false,
+    allowUnbackedPrune: false
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.archivedCount, 0);
+  assert.equal(res.prunedCount, 0);
+  assert.equal(res.status, 'drive_not_configured_skip_prune');
+  assert.equal(deleteWasCalled, false);
 });
