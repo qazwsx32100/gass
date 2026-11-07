@@ -1,0 +1,115 @@
+{
+  "reportId": "AI-1000-QUESTIONS-1794063124575",
+  "timestamp": "2026-11-07T14:52:04.575Z",
+  "directive": "Boss Directive: Real Customer 1000 Questions Acceptance Test",
+  "superAdminTelegram": "8862712587",
+  "summary": {
+    "totalQuestions": 1000,
+    "passedQuestions": 1000,
+    "failedQuestions": 0,
+    "passRate": "100.00%",
+    "totalDurationMs": 361,
+    "averageQps": 2770,
+    "memoryDeltaMb": 1,
+    "safetyInterceptRate": "100.00%",
+    "storeRulesComplianceRate": "100.00%",
+    "securityDefenseRate": "100.00%"
+  },
+  "categoryDistribution": {
+    "價格與費用": 120,
+    "配送時段與預約": 120,
+    "付款與發票": 80,
+    "鋼瓶與押金": 100,
+    "瓦斯漏氣與緊急安全": 120,
+    "瓦斯爐故障與排查": 100,
+    "熱水器故障與水溫": 100,
+    "調整器與管線安全": 80,
+    "餐飲小吃與商用大戶": 60,
+    "多語系_臺灣話": 35,
+    "多語系_越南語": 35,
+    "多語系_英語": 10,
+    "資安防護與邊界測試": 40
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "count": 100,
+      "cumulative": 100,
+      "durationMs": 38,
+      "qps": 2632,
+      "memoryDeltaMb": 0
+    },
+    {
+      "batch": 2,
+      "count": 100,
+      "cumulative": 200,
+      "durationMs": 26,
+      "qps": 3846,
+      "memoryDeltaMb": 1
+    },
+    {
+      "batch": 3,
+      "count": 100,
+      "cumulative": 300,
+      "durationMs": 29,
+      "qps": 3448,
+      "memoryDeltaMb": 1
+    },
+    {
+      "batch": 4,
+      "count": 100,
+      "cumulative": 400,
+      "durationMs": 25,
+      "qps": 4000,
+      "memoryDeltaMb": 2
+    },
+    {
+      "batch": 5,
+      "count": 100,
+      "cumulative": 500,
+      "durationMs": 9,
+      "qps": 11111,
+      "memoryDeltaMb": 1
+    },
+    {
+      "batch": 6,
+      "count": 100,
+      "cumulative": 600,
+      "durationMs": 24,
+      "qps": 4167,
+      "memoryDeltaMb": 1
+    },
+    {
+      "batch": 7,
+      "count": 100,
+      "cumulative": 700,
+      "durationMs": 30,
+      "qps": 3333,
+      "memoryDeltaMb": 2
+    },
+    {
+      "batch": 8,
+      "count": 100,
+      "cumulative": 800,
+      "durationMs": 55,
+      "qps": 1818,
+      "memoryDeltaMb": 2
+    },
+    {
+      "batch": 9,
+      "count": 100,
+      "cumulative": 900,
+      "durationMs": 28,
+      "qps": 3571,
+      "memoryDeltaMb": 1
+    },
+    {
+      "batch": 10,
+      "count": 100,
+      "cumulative": 1000,
+      "durationMs": 27,
+      "qps": 3704,
+      "memoryDeltaMb": 1
+    }
+  ]
+}

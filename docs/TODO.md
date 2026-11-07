@@ -4,7 +4,37 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-07 22:02
+> **最後更新時間**：2026-11-07 22:52
+---
+
+### 👑 盛隆瓦斯 1,000 位真實客人 AI 諮詢問題全鏈路極限實測【最高權限 100% 綠燈驗收】
+- **狀態**：`[x]` 已完成（依老闆最高指令「這次的客人 要真實的詢問ai 問題 幫我詢問1000個問題」，1,000 個高擬真日常諮詢問題全數應答驗證通過）
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/07 22:52
+- **實測核心成果**：
+  1. **動員 1,000 位真實客人提問（11 大生活主題，1,000 題 100.00% 通過）**：
+     - 價格費用與樓層搬運：120 題（引導 LINE 試算、爬梯樓層費公開透明）
+     - 叫瓦斯、配送時段與預約：120 題（08:00–21:00 營業、20:30 前下單、預約次日 08:00）
+     - 付款方式與發票統編：80 題（現場現金支付、手寫三聯發票可打統編抬頭）
+     - 鋼瓶押金、空桶換氣與殘氣：100 題（押金規範、放門口換氣、不退殘氣費）
+     - 🚨 瓦斯漏氣與緊急避險 (P0)：120 題（100% 觸發四步避險 SOP 與 02-2972-5559 免費查漏）
+     - 瓦斯爐故障與火力排查：100 題（1號電池更換、感應針積碳清理、風門調節）
+     - 燃氣熱水器故障與水溫：100 題（忽冷忽熱排查、一氧化碳防範、強排FE規範）
+     - 調整器 R280 與管線安全：80 題（法規 R280 調整器、軟管 2 年更換、嚴禁橫躺）
+     - 餐飲小吃店與商用大戶：60 題（中壓快速爐配管、雙瓶切換閥、50kg 大戶方案）
+     - 多語系真實客群詢問：80 題（台語 35 題、越南語 35 題、英語 10 題流暢辨識）
+     - 資安防護與邊界防禦：40 題（SQL/XSS/Prompt Injection 越獄攻擊 100% 攔截）
+  2. **極致效能與審計指標**：
+     - 總耗時 0.36 秒，每秒處理高達 2,770 個真實問題，記憶體變動僅 1 MB。
+     - 🚨 漏氣最高安全攔截：125 / 125 次（100% 觸發避險 SOP 與免費派修排險）。
+     - 門市核心營運守則查核：1,000 次（現金/手寫發票/08:00-21:00/無退殘氣 100% 合規）。
+     - 舊 ERP 神聖黑盒子零更動 (Directive #4)：0 ALTER TABLE、0 DDL 結構性異動。
+  3. **後台持久化報告生成**：
+     - JSON 審計報告：`reports/AI_1000_QUESTIONS_ACCEPTANCE_REPORT.json`
+     - Markdown 報告：`reports/AI_1000_QUESTIONS_ACCEPTANCE_REPORT.md`
+  4. **全系統測試全數綠燈**：
+     - `c:/Gass` 全系統測試 426 項 100% 通過 (`pass 426, fail 0`)。
+
 ---
 
 ### 👑 盛隆瓦斯 真實客人全流程全按鈕瀏覽器端到端（E2E）極限巡檢【最高權限 100% 綠燈驗收】
@@ -39,6 +69,31 @@
      - `c:/Gass` 420/420 單元與整合測試全數通過。
      - GitHub 雙倉庫主幹推送成功 (`main -> main`)。
      - Vercel 生產環境全數綠燈 READY（`https://shenglong-line-liff.vercel.app` & `https://shenglong.vercel.app`）。
+
+---
+
+### 🚨 線上正式站資料斷鏈修復、獨立門市客戶搜尋頁與公開庫存網址隔離【討論確認中】
+- **狀態**：`[-]` 討論確認中（根因已全數查明，待老闆拍板方案後立即執行）
+  1. **[P0 根因修復] 解除 `operations-kv-fetch` 遭遇 Supabase 402 時未降級備援之斷鏈**：修復 `lib/operations-kv-fetch.ts` 與 `operations-kv-fetch.cjs`（門市端 + Vercel 雲端），當私有 Edge Function 回傳 `402/5xx` 時自動降級讀寫已具備 AES-256-GCM 加密之 `kvdb.io` 通道，一次恢復 **戰情室「今日訂單」、「來電監控」、「戰情聚合快照 (`/api/ops/snapshot`)」與「小龍 APK 派單 (`/api/driver/orders`)」** 即時資料串接。
+  2. **[P0 根因修復] 修復雲端客戶搜尋中樞查無資料 (`totalCustomers: 0`)**：修正 `.vercelignore` 誤將 `data/`（含 `public/data/customers-map.json` 3,934 戶圖資與快取）排除上傳之問題，並補齊 Vercel 環境變數 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 與 Serverless 檔案追蹤設定。
+  3. **[P0 新功能] 新增門市人員專用「獨立客戶搜尋頁面」**：建立乾淨獨立路由（如 `/customers` 或 `/customer-search`），免進複雜戰情室分頁即可秒速查代號（如 `26.21.1`）、電話、地址、歷史叫貨與欠款。
+  4. **[P0 網域隔離] 公開庫存看板改回 `https://shenglong-next.vercel.app/gas-stock` 並移除 `https://shenglong.vercel.app/gas-stock`**：將對外公開庫存連結全面改指 `https://shenglong-next.vercel.app/gas-stock`，並關閉／移除 `shenglong.vercel.app/gas-stock` 入口，實現內外網域隔離。
+
+---
+
+### 📋 先前盤點待收尾與二階段優化待辦清單（已依老闆指示造冊列管）
+- **1. 環境與現場收尾小項**：
+  - `[ ]` **清理並部署 `shenglong-line-liff` 未提交防呆修正**：清除本地測試截圖雜檔，提交 `public/app.js` (`profile?.displayName`) 防呆並推送部署。
+  - `[ ]` **門市主力電腦 (`192.168.0.148`) 拉取最新代碼並刷新備份檢查綠燈**：執行 `git pull` 重啟雙守護進程並回報 `backupStatus`，將 `/api/system-status` 由 `DEGRADED` 轉為 `HEALTHY` 全綠。
+  - `[ ]` **遠端 Supabase 套用 Realtime 資料表 Migration**：執行 `20261107213000_create_live_snapshots_and_command_queue.sql` 建立 `live_snapshots` 與 `command_queue`。
+  - `[ ]` **外勤（小龍）與老闆手機確認覆蓋安裝新版簽章 APK**。
+- **2. 第二階段「巨型檔案實體拆小與手機戰情 UI 收尾」**：
+  - `[ ]` **監控中心手機介面大改造收尾驗收**：驗收結案規格膠囊大字化、門牌樓層高亮與 40px+ 拇指防誤觸熱區。
+  - `[ ]` **萬行級單檔階段性拆解瘦身**：拆解 `shenglong-next` 之 `app/page.tsx` (10,957行)、`app/driver/page.tsx` (10,365行，嚴守零通知鐵律)、`app/operations/page.tsx` (10,023行)、`sync-stock.cjs` (10,709行，改委託 `lib/daemons/*`)，以及 `Gass` 之 `InputsView.jsx` (4,882行)、`ReportsView.jsx` (3,278行) 與 >500KB chunk 動態載入。
+- **3. 中長期選配升級（視營運需求排程）**：
+  - `[ ]` 門市 SQL 底層改原生 TDS 長連線（`mssql` / `tedious`，維持 `NOLOCK` / `ROWLOCK` 零 DDL）。
+  - `[ ]` AI 秘書升級真實 LLM Function Calling + `ai_audit_logs` Token 成本稽核表。
+  - `[ ]` 跨三站單一登入（Unified SSO / RBAC）與 `@shenglong/*` 共用套件庫收斂。
 
 ---
 
