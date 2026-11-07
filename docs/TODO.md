@@ -10,9 +10,9 @@
 ### 0. 全系統網址淨化與單一權威主網域統一【方案 A 全量完成】（永久刪除 -phi、清除舊幽靈網域污染、全面切換至 https://shenglong.vercel.app）
 - **狀態**：`[x]` 已完成 (依老闆最高決策指令「統一改用更乾淨的 shenglong.vercel.app，並清除所有舊污染連結」、「現在直接永久刪除 -phi」，全系統代碼、桌面捷徑、LINE/Telegram、7 大 Android APK 與 Vercel 雲端網域已 100% 淨化統一)：
   1. **Vercel 官方主網域鎖定與舊 `-phi` 永久刪除**：
-     - 查明舊 `shenglong-next.vercel.app` 卡在外部舊帳號且凍結於 21 天前（造成 `IconIndex=0` 桌面捷徑污染根源）。
+     - 查明舊 `shenglong.vercel.app` 卡在外部舊帳號且凍結於 21 天前（造成 `IconIndex=0` 桌面捷徑污染根源）。
      - 於現有 Pro 專案 (`prj_QQA36DhfsOAmmkpsGERVJX67aEBA`) 正式綁定最精簡無後綴之唯一主網域 **`https://shenglong.vercel.app`**（免 Vercel SSO 攔截，實測 `/operations`、`/gas-stock`、`/api/ops/snapshot` 全部 200 OK）。
-     - 透過 Vercel API 永久刪除 `shenglong-next-phi.vercel.app`，杜絕雙網域分流與歷史快取污染。
+     - 透過 Vercel API 永久刪除 `shenglong.vercel.app`，杜絕雙網域分流與歷史快取污染。
   2. **跨四端共 108 個檔案、340+ 處連結全量淨化遷移 (`tools/migrate-phi-to-clean.cjs`)**：
      - 涵蓋 `c:/Gass`、`c:/shenglong-next`、`c:/shenglong-line-liff` 與桌面捷徑 (`盛隆瓦斯_戰情客戶搜尋中樞.url`、`盛隆瓦斯_系統導航總入口.html`)。
      - 同步完成 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 推播陣列去重，消除雙倍重複請求；升級 `middleware.ts` 將殘留 `shenglong-next*` 預覽網址自動 308 導向 `https://shenglong.vercel.app`（防範無限迴圈）。
