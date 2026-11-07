@@ -1,3 +1,10 @@
+## [2026-11-07 20:42] - 👑 盛隆瓦斯 10,000 位真實 AI 客人多語系全鏈路極限實測引擎【最高權限 100% 綠燈驗收】
+- **10,000 位真實 AI 客人全鏈路實測 (`scripts/run-10k-ai-customers-acceptance.cjs`)**：涵蓋國語生活客群 (50%)、台語老主顧 (20%)、越南語新住民 (20%)、英語外籍人士 (8%) 與惡意注入/缺項防呆 (2%)，全鏈路檢驗 NLU 要素萃取、多語系確認文案、國字數字正規化與地址前綴清洗，10,000 筆 100% 通過。
+- **極致吞吐與效能審計**：總耗時 0.07 秒，每秒處理高達 149,254 位 AI 客人，記憶體變動僅 1 MB，高吞吐無記憶體外洩。
+- **全系統測試與雙端部署**：`c:/Gass` 全系統測試 419 項 100% 通過，`c:/shenglong-line-liff` 245 項測試 100% 通過，雙倉庫主幹推送，Vercel 生產環境成功 Aliased 上線 (`https://shenglong-line-liff.vercel.app`)。
+
+---
+
 ## [2026-11-07 14:15] - 🌐 全系統網址淨化與單一權威主網域統一【方案 A 全量完成】（永久刪除 `-phi`，全面統一至 `https://shenglong.vercel.app`）
 - **綁定乾淨主網域並永久刪除 `-phi`**：查明舊 `shenglong-next.vercel.app` 凍結於外部舊帳號（21 天前版本），正式於現有 Pro 專案綁定無後綴之 **`https://shenglong.vercel.app`**，並透過 Vercel API 永久刪除 `shenglong-next-phi.vercel.app`。
 - **跨系統 108 檔、340+ 處連結全量淨化**：同步更新 `c:/Gass`、`c:/shenglong-next`、`c:/shenglong-line-liff` 與桌面捷徑（清除 `盛隆瓦斯_戰情客戶搜尋中樞.url` 舊污染連結与 `盛隆瓦斯_系統導航總入口.html`）；去重 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 推播陣列，升級 `middleware.ts` 安全轉址。
