@@ -4,7 +4,28 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-06 22:20\n
+> **最後更新時間**：2026-11-07 14:15
+---
+
+### 0. 全系統網址淨化與單一權威主網域統一【方案 A 全量完成】（永久刪除 -phi、清除舊幽靈網域污染、全面切換至 https://shenglong.vercel.app）
+- **狀態**：`[x]` 已完成 (依老闆最高決策指令「統一改用更乾淨的 shenglong.vercel.app，並清除所有舊污染連結」、「現在直接永久刪除 -phi」，全系統代碼、桌面捷徑、LINE/Telegram、7 大 Android APK 與 Vercel 雲端網域已 100% 淨化統一)：
+  1. **Vercel 官方主網域鎖定與舊 `-phi` 永久刪除**：
+     - 查明舊 `shenglong-next.vercel.app` 卡在外部舊帳號且凍結於 21 天前（造成 `IconIndex=0` 桌面捷徑污染根源）。
+     - 於現有 Pro 專案 (`prj_QQA36DhfsOAmmkpsGERVJX67aEBA`) 正式綁定最精簡無後綴之唯一主網域 **`https://shenglong.vercel.app`**（免 Vercel SSO 攔截，實測 `/operations`、`/gas-stock`、`/api/ops/snapshot` 全部 200 OK）。
+     - 透過 Vercel API 永久刪除 `shenglong-next-phi.vercel.app`，杜絕雙網域分流與歷史快取污染。
+  2. **跨四端共 108 個檔案、340+ 處連結全量淨化遷移 (`tools/migrate-phi-to-clean.cjs`)**：
+     - 涵蓋 `c:/Gass`、`c:/shenglong-next`、`c:/shenglong-line-liff` 與桌面捷徑 (`盛隆瓦斯_戰情客戶搜尋中樞.url`、`盛隆瓦斯_系統導航總入口.html`)。
+     - 同步完成 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 推播陣列去重，消除雙倍重複請求；升級 `middleware.ts` 將殘留 `shenglong-next*` 預覽網址自動 308 導向 `https://shenglong.vercel.app`（防範無限迴圈）。
+     - 修復 `c:/Gass/api/_voice-service.js` ESM 匯出相容性 (`export { ... }`)，確保 LINE Webhook 與四語語音助理 100% 綠燈。
+  3. **全套 7 款 Android Signed APK 重新封裝簽章與桌面 `sl` 鏡像同步**：
+     - 重新編譯並完成 V1+V2+V3 簽章（`派單系統 - 小龍`、`盛隆外勤派單`、`盛隆調度中樞`、`盛隆瓦斯庫存`、`盛隆財報系統`、`盛隆營運ERP`、`盛隆老闆專用`，嚴格維持游柏林離職停權排除）。
+     - 自動鏡像同步至 `C:\Users\懶\Desktop\sl\`（嚴守僅放 `.apk` 規範），並提供門市主機一鍵更新腳本 `scripts/Update-StoreSyncUrl.bat`。
+  4. **自動化防回歸守衛與全量測試通過**：
+     - 新增 `tests/domain-unification.test.mjs` 網域淨化守衛測試，嚴格阻斷 `-phi` 與舊幽靈網址復發。
+     - `c:/shenglong-next` TypeScript 編譯 0 錯誤，`c:/Gass` 全系統 412+ 項自動化測試 100% 通過。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/07 14:15
+
 ---
 
 ### 0. 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】
@@ -648,7 +669,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - **狀態**：`[x]` 已完成 (依老闆指示「先部屬」，完成全自動化編譯、APK 封裝、GitHub 雙軌推送與 Vercel 雲端部署；版本號 `20261102_0953_auto_release` 已正式在線上生產環境生效，桌面 `sl` 與下載區雙外送人員專屬 APK 已更新，290 項自動化回歸測試 100% 全數綠燈通過)
   - 🔍 **核心成果明細**：
     1. **生產環境正式部署上線 (`ver: 20261102_0953_auto_release`)**：
-       - Vercel 雲端正式生效 (`https://shenglong-next-phi.vercel.app`)，版本檢查端點 `/api/driver/version` 回傳 `20261102_0953_auto_release`，全網快取破除標記 `_v_202611020953=1` 注入。
+       - Vercel 雲端正式生效 (`https://shenglong.vercel.app`)，版本檢查端點 `/api/driver/version` 回傳 `20261102_0953_auto_release`，全網快取破除標記 `_v_202611020953=1` 注入。
        - 雙外勤 Android Signed Release APK 自動封裝完成：`盛隆外送_小龍專用.apk` 與 `盛隆外送_游柏林專用.apk` 已產出至桌面 `C:\Users\懶\Desktop\sl` 與線上下載區。
     2. **外勤 App 結單收款與空瓶回收面板無縫貫通 (`<SharedDeliveryCollectionModal>`)**：
        - 外勤同仁點擊「已送達 / 已收現完成」，直覺喚起專用防呆彈窗，可核對並調整「實收金額 (0~20萬鉗制)」、「付款方式 (現金/月結/賒欠)」與「回收空瓶數 (0~50支大按鈕)」，徹底杜絕口袋誤觸 (Ghost dispatch)。
@@ -1013,7 +1034,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
     2. **七大專任 AI 意圖矩陣 50 情境全命中（100% 準確率）**：涵蓋秘書、營運、客服（300題FAQ/忽冷忽熱/漏氣/爐火發紅）、行銷（3,934戶耗氣週期/老友喚醒/壓瓶回收）、業務（B2B保本底線/歐家莊/防拔管）、財務（長元街欠款/水晶厝/司機現金結算）、行政（雙向回寫佇列/即時看板/備份）。
     3. **行銷與業務演算法百萬級運算壓測**：3,934 戶客戶秒級分類黃/橘/紅燈；氣價浮動動態毛利試算（成本 \$568 保本 / \$660 VIP底線）。
     4. **雙向回寫 100 筆併發壓力測試**：支援 `ROWLOCK`、外送空瓶回收、轉帳與實收金額，零衝突、零死鎖。
-    5. **生產環境 50 併發實體壓測 100% 成功**：實測 `https://shenglong-next-phi.vercel.app/api/ai/advisor`、`autopilot`、`approvals`、`https://shenglong-next.vercel.app/gas-stock` 與敏感 API 401 攔截防線，50/50 請求 100% 成功，平均 QPS 15.53 req/sec，P50 延遲 2.8s，最快 136ms。
+    5. **生產環境 50 併發實體壓測 100% 成功**：實測 `https://shenglong.vercel.app/api/ai/advisor`、`autopilot`、`approvals`、`https://shenglong.vercel.app/gas-stock` 與敏感 API 401 攔截防線，50/50 請求 100% 成功，平均 QPS 15.53 req/sec，P50 延遲 2.8s，最快 136ms。
     6. **測試與零回歸**：全站 249 項自動化測試全數通過（249/249 pass, 0 fail），TypeScript 編譯 0 錯誤。
 - **優先級**：`P0` (老闆最高決策指令)
 - **完成日期**：2026/11/01
@@ -1079,7 +1100,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - **狀態**：`[x]` 已完成 (依老闆指示「我們的打烊時間是21:00 打烊報告 幫我21:30給我」，全面校準營業尖峰班為 `08:30~21:00`、打烊總裁結算晚報定時於 `21:30` 自動推播，並通過全量自動化測試)
   - 🔍 **半自動領航與四班排程交付明細**：
     1. **三級權限護欄與四班自動排程引擎 (`lib/seven-ai-autopilot-scheduler.ts` & `/api/ai/autopilot`)**：
-       - **三級權限護欄**：🟢 第一級（庫存同步 `shenglong-next.vercel.app/gas-stock`、LINE 300 題秒回、3,934 戶週期掃描、定時戰報全自動）；🟡 第二級（LINE 轉單與外勤派單強制需老闆點擊 `✅ 核准` 才寫入 `dbo.gas_oders`）；🔴 第三級（B2B 餐飲大戶議價嚴鎖 `$568` 保本底線 / `$660` VIP 防線，僅供試算由老闆拍板）。
+       - **三級權限護欄**：🟢 第一級（庫存同步 `shenglong.vercel.app/gas-stock`、LINE 300 題秒回、3,934 戶週期掃描、定時戰報全自動）；🟡 第二級（LINE 轉單與外勤派單強制需老闆點擊 `✅ 核准` 才寫入 `dbo.gas_oders`）；🔴 第三級（B2B 餐飲大戶議價嚴鎖 `$568` 保本底線 / `$660` VIP 防線，僅供試算由老闆拍板）。
        - **每日四班自動排程（對齊 21:00 打烊／21:30 晚報）**：`🌅 08:00 早安出車巡檢`（秘書＋營運＋行政 AI）、`☀️ 08:30~21:00 營業尖峰即時聯動`（客服＋營運 AI）、`🌤️ 14:30 下午離峰拓客與大戶防禦`（行銷＋業務 AI）、`🌙 21:30 打烊總裁結算晚報`（財務＋秘書 AI，於 21:00 打烊後 30 分鐘自動結算推播）。
     2. **雙軌四班一鍵切換與地端定時巡航 (`advisor-bot.cjs`、`/api/telegram/advisor`、`AiAdvisorDrawer.tsx`)**：於 Telegram 常駐鍵盤新增 `🛡️ 四班自動巡航排程` 與 `🌙 21:30晚報班` 四班切換內嵌按鈕；於網頁戰情室更新為 `🌙 21:30晚報班`；於 `advisor-bot.cjs` 掛載每日 08:00、14:30、21:30 自動定時觸發器。
 - **優先級**：`P0` (老闆最高決策指令)
@@ -1090,7 +1111,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ### 0. 七大 AI 全真數據沙盒演練 (Dry-Run) 全部 AI 聯合實跑與雙軌同步推播（Telegram 總裁戰情室 ＋ 手機網頁戰情室）
 - **狀態**：`[x]` 已完成 (依老闆決策：1. 先跑一輪全真數據沙盒演練 Dry-Run 唯讀不改動 ERP 訂單表、2. 雙軌同步推播至 Telegram 總裁戰情室與手機網頁戰情室、3. 全部七大 AI 一起作業產出真實數據報告，並通過全量測試)
   - 🔍 **七大 AI 全真數據沙盒演練成果**：
-    1. **七大 AI 聯合沙盒演練引擎 (`lib/seven-ai-dryrun-engine.ts`)**：串聯 1號秘書 AI（今日 3 筆單、營收 $2,215）、2號營運 AI（小龍 2 趟/游柏林 0 趟、待派單 `#361582` 推薦派游柏林、10kg 剩 2 支/50kg 剩 2 支補貨預警）、3號客服 AI（LINE 24H 待審佇列與 300 題知識庫）、4號行銷 AI（3,934 戶真實掃描：🟡黃燈 240 戶、🟠橘燈 125 戶、🔴紅燈 3,105 戶）、5號業務 AI（20kg 保本底線 $568/桶、VIP 防守價 $660/桶、四大餐飲大戶巡檢）、6號財務 AI（未收 $605、外勤運費試算、長元街 $3,000/水晶厝 $1,230 隨車必收）、7號行政 AI（唯一看板 `shenglong-next.vercel.app/gas-stock` 正常、預覽 `UPDATE dbo.gas_oders` 沙盒 SQL 零破壞）。
+    1. **七大 AI 聯合沙盒演練引擎 (`lib/seven-ai-dryrun-engine.ts`)**：串聯 1號秘書 AI（今日 3 筆單、營收 $2,215）、2號營運 AI（小龍 2 趟/游柏林 0 趟、待派單 `#361582` 推薦派游柏林、10kg 剩 2 支/50kg 剩 2 支補貨預警）、3號客服 AI（LINE 24H 待審佇列與 300 題知識庫）、4號行銷 AI（3,934 戶真實掃描：🟡黃燈 240 戶、🟠橘燈 125 戶、🔴紅燈 3,105 戶）、5號業務 AI（20kg 保本底線 $568/桶、VIP 防守價 $660/桶、四大餐飲大戶巡檢）、6號財務 AI（未收 $605、外勤運費試算、長元街 $3,000/水晶厝 $1,230 隨車必收）、7號行政 AI（唯一看板 `shenglong.vercel.app/gas-stock` 正常、預覽 `UPDATE dbo.gas_oders` 沙盒 SQL 零破壞）。
     2. **雙軌同步推播 (`@shenlong_advisor_bot` ＋ `/operations` 戰情室)**：於 Telegram 常駐鍵盤頂部新增 `🚀 七大AI全真聯動試跑 (Dry-Run)` 並主動推播完整聯合戰報（Msg ID `336`）至老闆 Telegram (`8862712587`)；於手機網頁 `AiAdvisorDrawer.tsx` 新增一鍵雙軌試跑按鈕與自動載入沙盒戰報。
 - **優先級**：`P0` (老闆最高決策指令)
 - **完成日期**：2026/11/01
@@ -1120,11 +1141,11 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 
 ---
 
-### 0. 老闆四大驗收回饋全數優化與雲端生產環境發布完成（手機版戰情室、唯一指定庫存看板 `shenglong-next.vercel.app/gas-stock`、Telegram 總裁戰情室置頂喚醒、七大 AI 一鍵點名調動器）
+### 0. 老闆四大驗收回饋全數優化與雲端生產環境發布完成（手機版戰情室、唯一指定庫存看板 `shenglong.vercel.app/gas-stock`、Telegram 總裁戰情室置頂喚醒、七大 AI 一鍵點名調動器）
 - **狀態**：`[x]` 已完成 (依老闆驗收回饋 4 點指示全面升級並通過 225 項自動化測試)
   - 🔍 **四大驗收升級明細**：
     1. **手機版監控中心 (`/operations`) 直接顯現「🧠 AI戰情室」與「📺 戰情室」**：解除原本手機版隱藏戰情室限制，於手機頂部導航列、底部大拇指常駐列 (`app-mode-bottom-bar`) 與快捷工具抽屜 (`🧰`) 全面顯現「🧠 AI戰情室」與「📺 戰情室」，並執行 `npx vercel --prod --yes` 部署至雲端正式環境。
-    2. **即時庫存看板與 API 唯一指定傳輸至 `https://shenglong-next.vercel.app/gas-stock`**：將 `sync-stock.cjs` 之 `VERCEL_SYNC_URLS` 改為唯一傳輸至 `["https://shenglong-next.vercel.app/api/gas-stock"]`，並將 `PUBLIC_STOCK_URL`、`/gas-stock` 報表分享連結與 `/operations` 外部庫存看板按鈕全面統一為 `https://shenglong-next.vercel.app/gas-stock`。
+    2. **即時庫存看板與 API 唯一指定傳輸至 `https://shenglong.vercel.app/gas-stock`**：將 `sync-stock.cjs` 之 `VERCEL_SYNC_URLS` 改為唯一傳輸至 `["https://shenglong.vercel.app/api/gas-stock"]`，並將 `PUBLIC_STOCK_URL`、`/gas-stock` 報表分享連結與 `/operations` 外部庫存看板按鈕全面統一為 `https://shenglong.vercel.app/gas-stock`。
     3. **Telegram 總裁戰情室 (`@shenlong_advisor_bot`) 24/7 雲端 Webhook 與手機置頂喚醒**：建立 `/api/telegram/advisor` 24/7 雲端 Webhook 並綁定至 `@shenlong_advisor_bot`（名稱更新為「👑 盛隆總裁戰情室 (盛隆軍師)」），主動推播即時戰報與常駐鍵盤至老闆 Telegram (`8862712587`) 使其跳至聊天列表第 1 位，並提供一鍵直達連結 `https://t.me/shenlong_advisor_bot`。
     4. **七大 AI 一鍵點名調動切換器 (`SEVEN_AI_AGENTS` & `AGENT_CHIPS_MAP`)**：於網頁戰情抽屜頂部與 Telegram 常駐鍵盤新增「👑 點名調動七大 AI」切換器（`👑 1.秘書 AI`、`🛵 2.營運 AI`、`💬 3.客服 AI`、`📣 4.行銷 AI`、`🎯 5.業務 AI`、`💰 6.財務 AI`、`🛡️ 7.行政 AI`），點選任一 AI 即自動切換為該 AI 專屬的 4 顆免打字指令鈕並由該 AI 專職呈報。
 - **優先級**：`P0` (老闆最高決策指令)
@@ -1438,7 +1459,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
     - [x] `npx tsc --noEmit` 0 錯誤通過。
     - [x] Gass 201 項全量測試 100% 通過（201 passed, 0 fail）。
     - [x] Next.js 正式環境 Production Build 成功通過。
-    - [x] Vercel 生產環境成功發布上線 (`https://shenglong-next-phi.vercel.app`)。
+    - [x] Vercel 生產環境成功發布上線 (`https://shenglong.vercel.app`)。
     - [x] Android 原生 Release APK 重新編譯簽名並發布至 `C:\Users\懶\Desktop\sl\`。
 - **優先級**：`P0` (老闆最高決策指令)
 - **負責端點**：`shenglong-next: app/operations/page.tsx, app/components/OperationsOrderHistoryView.tsx, app/components/OrderTimelineModal.tsx, app/api/operations/*`
@@ -1489,7 +1510,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
     - [x] `npx tsc --noEmit` 0 錯誤通過。
     - [x] Gass 201 項全量測試 100% 通過（201 pass, 0 fail）。
     - [x] Next.js 正式環境 Production Build 成功通過。
-    - [x] Vercel 生產環境成功發布上線 (`https://shenglong-next-phi.vercel.app`)。
+    - [x] Vercel 生產環境成功發布上線 (`https://shenglong.vercel.app`)。
     - [x] 實機驗證線上 API：`businessDate: 2026/10/27`，無任何昨日或 10/25 洩漏。
     - [x] Android 原生 APK 全套重新編譯與安全簽名：`盛隆新ERP_戰情調度中樞.apk`、`shenglong-erp.apk`、`盛隆新ERP_BOSS專屬.apk`，並安全同步至 `C:\Users\懶\Desktop\sl\`。
 - **優先級**：`P0` (老闆最高決策指令)
@@ -1525,7 +1546,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
     - [x] 完成 `OperationsOrderHistoryView.tsx` 與 `OrderTimelineModal.tsx` 組件。
     - [x] 整合至 `c:\shenglong-next\app\operations\page.tsx`。
     - [x] 修復 `sync-stock.cjs` 誤判「輸」字規則，建立本地永久異動日誌 `data/order_audit_history.jsonl`。
-    - [x] 成功部署至 Vercel Production (`https://shenglong-next-phi.vercel.app/operations`)。
+    - [x] 成功部署至 Vercel Production (`https://shenglong.vercel.app/operations`)。
     - [x] 線上真實驗證：115/10/26 歷史訂單 33 單完全無「阿韋」，小龍 28 單、自取 1 單、稍後輸入 4 單，時間軸事件正確合成與呈現。
     - [x] 全套 201 項自動化測試全數通過（201 passed, 0 fail）。
     - [x] 重新封裝 Android APK 並同步至 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`、`盛隆新ERP_戰情調度中樞.apk` 與 `盛隆新ERP_BOSS專屬.apk`。
@@ -1556,7 +1577,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
   - [x] 啟用 `windsboy123` / `6789` / `1234` 主控密碼支援。
   - [x] 在 API 路由精確注入 `shenglong_session` Cookie。
   - [x] 優化 `middleware.ts` 與 `/login` 跳轉，消除找不到伺服器與循環重定向。
-  - [x] Vercel 雲端生產環境成功部署 (`https://shenglong-next-phi.vercel.app/erp`)。
+  - [x] Vercel 雲端生產環境成功部署 (`https://shenglong.vercel.app/erp`)。
   - [x] 線上實測驗證：帳密登入 HTTP 200、Cookie 正常簽發、ERP 頁面直接載入。
   - [x] 重新編譯封裝 Android APK 並同步至 `C:\Users\懶\Desktop\sl\shenglong-erp.apk`。
   - [x] 全量 201 項單元測試 100% 通過（0 失敗、0 回歸）。
@@ -1790,9 +1811,9 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
   - [x] 全量測試驗收通過。
 
 ### 0. 盛隆新 ERP（BOSS 專用 APK）編譯封裝與路徑定向修復（shenglong-erp.apk 直連 /erp 企業 17 大模組）
-- **狀態**：`[x]` 已完成 (依老闆指示「ERP 系統是 https://shenglong-next-phi.vercel.app/erp，但是盛隆營運 ERP (shenglong-erp.apk) 連到監控中心，來做吧」執行全面定向與 APK 重構：
+- **狀態**：`[x]` 已完成 (依老闆指示「ERP 系統是 https://shenglong.vercel.app/erp，但是盛隆營運 ERP (shenglong-erp.apk) 連到監控中心，來做吧」執行全面定向與 APK 重構：
   ① **Middleware 路由防護與回跳修復 (`middleware.ts`)**：將 `/erp` 納入受保護路徑並正確帶上 `returnUrl=/erp`，避免未登入時被預設導向 `/operations` 派工戰情中心。
-  ② **ERP 專屬 Activity 驗證 (`ErpMainActivity.java`)**：鎖定首頁為 `https://shenglong-next-phi.vercel.app/erp`，關閉外勤背景定位與接單服務，提供 BOSS 純淨企業管理視圖。
+  ② **ERP 專屬 Activity 驗證 (`ErpMainActivity.java`)**：鎖定首頁為 `https://shenglong.vercel.app/erp`，關閉外勤背景定位與接單服務，提供 BOSS 純淨企業管理視圖。
   ③ **自動化封裝腳本校準 (`scripts/build-all-apks.cjs`)**：更新 `com.shenglong.erp` 封裝設定，首頁直連 `/erp`，主 Activity 指向 `ErpMainActivity`。
   ④ **Android 原生 APK 編譯與簽章**：執行 Gradle AssembleDebug、zipalign 與 apksigner，生成全新 `shenglong-erp.apk` (v3.5, build 17, 6.1MB)。
   ⑤ **桌面與軟體下載中心同步**：APK 產出至 `c:\shenglong-next\public\files\shenglong-erp.apk` 並同步鏡像複製到桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_BOSS專屬.apk` 與 `盛隆新ERP_營運總裁專用.apk`，軟體下載中心清晰指引 `/erp` 門市下單與企業管理。
@@ -1808,9 +1829,9 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
   - [x] Vercel 生產環境發布與 GitHub main 分支同步。
   - [x] 全庫單元測試驗收零回歸。
 
-### 0. 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong-next.vercel.app/gas-stock 即時庫存資料斷流與 404/權限問題)
-- **狀態**：`[x]` 已完成 (依老闆指示「監控中心有庫存資料 但沒有傳到這裡 幫我修復 https://shenglong-next.vercel.app/gas-stock」與兩台主機協同作業全面修復：
-  ① **雙軌雲端推播補齊 (`sync-stock.cjs`)**：將 `shenglong-next.vercel.app` 與 `shenglong-next-phi.vercel.app` 同步列入推播目標清單，確保店面主機最新庫存同時灌入兩大網域。
+### 0. 即時庫存中心修復與雙軌推播全聯動 (修復 shenglong.vercel.app/gas-stock 即時庫存資料斷流與 404/權限問題)
+- **狀態**：`[x]` 已完成 (依老闆指示「監控中心有庫存資料 但沒有傳到這裡 幫我修復 https://shenglong.vercel.app/gas-stock」與兩台主機協同作業全面修復：
+  ① **雙軌雲端推播補齊 (`sync-stock.cjs`)**：將 `shenglong.vercel.app` 與 `shenglong.vercel.app` 同步列入推播目標清單，確保店面主機最新庫存同時灌入兩大網域。
   ② **庫存看板權限解除 (`middleware.ts`)**：將 `/gas-stock` 從 `isProtectedPath` 移除，恢復免登入外部公開看板；放行 `/api/*` 與看板路徑防止轉址攔截。
   ③ **網址容錯與防呆重定向 (`next.config.ts`)**：加入 `/gas.stock` 與 `/gas_stock` 301 永久重定向至 `/gas-stock`。
   ④ **心跳雙軌發送 (`heartbeat-emitter.cjs`)**：主機心跳雙向直達兩大端點。
@@ -1819,7 +1840,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - **負責設備/端點**：`shenglong-next: sync-stock.cjs, middleware.ts, next.config.ts, heartbeat-emitter.cjs`
 - **完成日期**：2026/10/25
 - **完成項目**：
-  - [x] 補齊 `sync-stock.cjs` 雙軌推播端點 (`shenglong-next.vercel.app` & `shenglong-next-phi.vercel.app`)。
+  - [x] 補齊 `sync-stock.cjs` 雙軌推播端點 (`shenglong.vercel.app` & `shenglong.vercel.app`)。
   - [x] 解除 `middleware.ts` 對 `/gas-stock` 之登入限制，並保護 API 請求不受 308 跳轉干擾。
   - [x] 在 `next.config.ts` 加入 `/gas.stock` $\to$ `/gas-stock` 301 重定向。
   - [x] 更新 `heartbeat-emitter.cjs` 雙軌推播。

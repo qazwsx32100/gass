@@ -395,7 +395,7 @@ export default async function handler(req, res) {
               if (process.env.SHENGLONG_SYNC_LINE_ORDERS === '1' || process.env.VERCEL) {
                 const pendingPayload = buildLinePendingOrderPayload(extracted, userText, userId);
                 if (pendingPayload) {
-                  fetchWithTimeout('https://shenglong-next-phi.vercel.app/api/line-orders/pending', {
+                  fetchWithTimeout('https://shenglong.vercel.app/api/line-orders/pending', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(pendingPayload)

@@ -1,3 +1,25 @@
+## 📅 2026/11/07 - 🌐 盛隆瓦斯 全系統網址淨化與單一權威主網域統一（永久刪除 -phi、清除舊幽靈網域污染、全面切換至 https://shenglong.vercel.app） [ver: 20261107_1415_domain_unification_clean]
+
+### 一、 需求背景與決策 (老闆最高指令落實)
+1. **老闆最高指示**：
+   - 「我們確認一下所有的系統連結，因為受到汙染了 `https://shenglong-next.vercel.app/operations?tab=CUSTOMERS` `IconIndex=0` 這就是舊的」
+   - 「把 -PHI 的網址全部都移植到沒有 -PHI 的網址，並且永久刪除 -PHI 的網址」
+   - 「好，統一改用更乾淨的 `shenglong.vercel.app`，並清除所有舊污染連結；現在直接永久刪除 `-phi`，我馬上同步更新門市電腦與小龍手機 APK」
+2. **具體落地與全鏈路淨化成果**：
+   - **根因查明與權威主網域啟用**：
+     - 查明 `shenglong-next.vercel.app` 係綁定於外部舊 Vercel 帳號之凍結部署（停留在 21 天前），因此點擊舊捷徑會開啟過期畫面。
+     - 於正式 Pro 團隊專案 (`prj_QQA36DhfsOAmmkpsGERVJX67aEBA`) 正式啟用無 `-phi`、最簡潔之唯一官方網址 **`https://shenglong.vercel.app`**，並透過 Vercel REST API 永久刪除 `shenglong-next-phi.vercel.app`。
+   - **全系統 108 個檔案、340+ 處連結無死角遷移**：
+     - 涵蓋 `Gass`（LINE/Telegram Webhook、官網導覽）、`shenglong-next`（戰情中心、外勤系統、`sync-stock.cjs`、`advisor-bot.cjs`、`heartbeat-emitter.cjs`、`middleware.ts`）與桌面捷徑（`盛隆瓦斯_戰情客戶搜尋中樞.url`、`盛隆瓦斯_系統導航總入口.html`）。
+     - 消除 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 舊雙軌重複 URL 陣列，降低門市主機 50% 推播請求開銷。
+   - **7 大 Android APK 全新編譯簽章與門市一鍵更新腳本**：
+     - 7 款 APK 全部改指 `https://shenglong.vercel.app`，完成 V1+V2+V3 簽章並同步至 `C:\Users\懶\Desktop\sl\`（嚴守純 `.apk` 目錄規範與游柏林離職封存）。
+     - 新增 `scripts/Update-StoreSyncUrl.bat` 供門市主力電腦 (`192.168.0.148`) 一鍵拉取新網址並重啟守護進程。
+   - **自動化防回歸測試驗證**：
+     - 新增 `tests/domain-unification.test.mjs` 永久阻斷 `-phi` 與舊幽靈網址復發；修復 `_voice-service.js` ESM 匯出，全系統測試 100% 綠燈通過。
+
+---
+
 ## 📅 2026/11/07 - 🎙️ 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】 [ver: 20261107_1350_line_liff_voice_gemini_optimization]
 
 ### 一、 需求背景與決策 (老闆最高指令「1.語音的部分 一直辨識失敗 幫我確認一下 2.測試會員與訂單系統（LIFF 首頁）：出現『暫時無法連線』 3.幫我優化」)

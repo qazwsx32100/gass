@@ -234,21 +234,21 @@ test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Clo
     );
   });
 
-  await t.test("2. Stock API sync and public links point exclusively to https://shenglong-next.vercel.app/gas-stock", () => {
+  await t.test("2. Stock API sync and public links point exclusively to https://shenglong.vercel.app/gas-stock", () => {
     const syncSrc = fs.readFileSync("c:/shenglong-next/sync-stock.cjs", "utf8").replace(/\r\n/g, "\n");
     assert.ok(
-      syncSrc.includes('const VERCEL_SYNC_URLS = [\n  "https://shenglong-next.vercel.app/api/gas-stock",\n];'),
-      "sync-stock.cjs VERCEL_SYNC_URLS must only transmit to shenglong-next.vercel.app/api/gas-stock"
+      syncSrc.includes('const VERCEL_SYNC_URLS = [\n  "https://shenglong.vercel.app/api/gas-stock",\n];'),
+      "sync-stock.cjs VERCEL_SYNC_URLS must only transmit to shenglong.vercel.app/api/gas-stock"
     );
     assert.ok(
-      syncSrc.includes('const PUBLIC_STOCK_URL = "https://shenglong-next.vercel.app/gas-stock";'),
-      "PUBLIC_STOCK_URL must be https://shenglong-next.vercel.app/gas-stock"
+      syncSrc.includes('const PUBLIC_STOCK_URL = "https://shenglong.vercel.app/gas-stock";'),
+      "PUBLIC_STOCK_URL must be https://shenglong.vercel.app/gas-stock"
     );
 
     const stockPageSrc = fs.readFileSync("c:/shenglong-next/app/gas-stock/page.tsx", "utf8");
     assert.ok(
-      stockPageSrc.includes("🔗 外部看板：https://shenglong-next.vercel.app/gas-stock"),
-      "gas-stock page report link must use https://shenglong-next.vercel.app/gas-stock"
+      stockPageSrc.includes("🔗 外部看板：https://shenglong.vercel.app/gas-stock"),
+      "gas-stock page report link must use https://shenglong.vercel.app/gas-stock"
     );
   });
 
@@ -311,7 +311,7 @@ test("Stage 2 & 3 Deep-Water Engines: Idempotent LINE Order ERP Insert, Marketin
     const topo = getMicroDaemonsTopology();
     assert.equal(topo.daemons.length, 3);
     assert.equal(topo.rollbackGuaranteeSeconds, 10);
-    assert.equal(topo.primaryStockApiTarget, "https://shenglong-next.vercel.app/api/gas-stock");
+    assert.equal(topo.primaryStockApiTarget, "https://shenglong.vercel.app/api/gas-stock");
     const plan = buildRollbackPlan("verification");
     assert.equal(plan.targetRtoSeconds, 10);
   });

@@ -1,3 +1,11 @@
+## [2026-11-07 14:15] - 🌐 全系統網址淨化與單一權威主網域統一【方案 A 全量完成】（永久刪除 `-phi`，全面統一至 `https://shenglong.vercel.app`）
+- **綁定乾淨主網域並永久刪除 `-phi`**：查明舊 `shenglong-next.vercel.app` 凍結於外部舊帳號（21 天前版本），正式於現有 Pro 專案綁定無後綴之 **`https://shenglong.vercel.app`**，並透過 Vercel API 永久刪除 `shenglong-next-phi.vercel.app`。
+- **跨系統 108 檔、340+ 處連結全量淨化**：同步更新 `c:/Gass`、`c:/shenglong-next`、`c:/shenglong-line-liff` 與桌面捷徑（清除 `盛隆瓦斯_戰情客戶搜尋中樞.url` 舊污染連結与 `盛隆瓦斯_系統導航總入口.html`）；去重 `sync-stock.cjs` 與 `heartbeat-emitter.cjs` 推播陣列，升級 `middleware.ts` 安全轉址。
+- **7 大 Android APK 全量重編簽章與桌面 `sl` 同步**：小龍外送專用、營運 ERP、BOSS 專用、戰情調度中樞等 APK 全面指向 `https://shenglong.vercel.app` 並完成 V1+V2+V3 簽章同步至 `Desktop\sl`（嚴格維持游柏林離職封存）；附門市電腦一鍵切換腳本 `scripts/Update-StoreSyncUrl.bat`。
+- **ESM 修復與防回歸測試全綠**：修復 `c:/Gass/api/_voice-service.js` ESM 匯出與測試守衛，新增 `tests/domain-unification.test.mjs`，全站測試 100% 通過、TypeScript 0 錯誤。
+
+---
+
 ## [2026-11-07 13:50] - 🎙️ 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】
 - **LIFF 首頁 503「暫時無法連線」根治**：解除生產環境若無 Supabase primary 則強制阻斷噴 503 的限制；放行 Google Sheets 備援通道，並在 `getBootstrapData` 與 `getBootstrap` 全面包裹 try/catch 與 circuit-breaker，首頁 100% 順暢載入。
 - **語音轉錄 Gemini 多模態備援**：整合 Google Gemini 1.5 Flash 多模態音訊轉錄引擎，支援臺灣國語、臺灣閩南語（台語）、越南語 (Tiếng Việt)、英語 (English) 四語，當 OpenAI Whisper 遭遇 429 配額耗盡時自動平滑 fallback，永不中斷。

@@ -4,7 +4,7 @@
 使用者於 2026-10-25 正式下達最高原則：「**最高原則 做的任何事情都要上傳github和雲端**」
 任何後續維護、優化、校準、改版或除錯工作，無論任何理由，**一律嚴格遵循以下三大全面上傳執行令**：
 1. **【GitHub 全面同步推送】**：任何程式碼、組態、測試或腳本修改完成並驗證通過後，必須於同次工作中執行 `git commit` 並 `git push` 推送至 GitHub 遠端儲存庫主幹（`origin/main`），嚴禁僅停留在本機工作區。
-2. **【雲端正式環境（Vercel）部署生效】**：凡涉及雲端站台與 API 異動，必須確保同步部署至 Vercel Production 正式環境（`vercel --prod`），確認線上正式網址（`https://shenglong-next.vercel.app`、`https://shenglong-next-phi.vercel.app` 等）全數綠燈 READY。
+2. **【雲端正式環境（Vercel）部署生效】**：凡涉及雲端站台與 API 異動，必須確保同步部署至 Vercel Production 正式環境（`vercel --prod`），確認線上正式網址（`https://shenglong.vercel.app`、`https://shenglong.vercel.app` 等）全數綠燈 READY。
 3. **【雲端維護紀錄（Google Drive）同調登記】**：每次更動完成後，依據維護規範將版本紀錄、SHA-256 指紋與檔案狀態更新登錄於 `雲端同步狀態.json` 與對應的 5 大專屬維護紀錄，並同步至 Google Drive 雲端資料夾。
 
 ## 🚨【最高權限鐵律】司機外勤端「100% 零通知、零彈窗、靜默直接定位」（最高不可逾越指令，嚴禁觸犯）

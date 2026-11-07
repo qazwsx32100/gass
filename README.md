@@ -20,7 +20,7 @@
 │   ├── 主 ERP Web App（Vite + React）
 │   │   └── https://erp-weld-three-96.vercel.app
 │   └── 即時看板與監控（Next.js SSR）
-│       └── https://shenglong-next-phi.vercel.app
+│       └── https://shenglong.vercel.app
 │
 ├── 📱 LINE 叫瓦斯系統（Vercel LIFF）
 │   └── LIFF ID：2011207944-VaQEXeyi
@@ -73,7 +73,7 @@
 
 ## 📊 子系統 2：即時看板（shenglong-next）
 
-**網址**：`https://shenglong-next-phi.vercel.app`  
+**網址**：`https://shenglong.vercel.app`  
 **GitHub 路徑**：（獨立 Next.js 專案，部署在另一 Vercel 專案）  
 **技術**：Next.js 14 (App Router) + SSR + Supabase Realtime
 
@@ -252,9 +252,9 @@ Python Daemon（inspect_backup.py）
 |------|------|------|
 | 🖥️ **新 ERP 系統** | http://127.0.0.1:3000 | 店面主機本地進銷存（含來電顯示、排程備份） |
 | 📊 **新財報系統** | https://erp-weld-three-96.vercel.app | 雲端財務與股東報表（損益表、現金流、毛利） |
-| 🚀 **營運中心** | **https://shenglong-next-phi.vercel.app/operations** | **外送派工・庫存監控・司機管理・挑桶設定** |
-| 🛢️ 即時庫存看板 | https://shenglong-next-phi.vercel.app/gas-stock | 即時庫存監控 |
-| 📋 今日叫貨看板 | https://shenglong-next-phi.vercel.app/operations | 今日叫貨調度 |
+| 🚀 **營運中心** | **https://shenglong.vercel.app/operations** | **外送派工・庫存監控・司機管理・挑桶設定** |
+| 🛢️ 即時庫存看板 | https://shenglong.vercel.app/gas-stock | 即時庫存監控 |
+| 📋 今日叫貨看板 | https://shenglong.vercel.app/operations | 今日叫貨調度 |
 | 🤖 Telegram 機器人 | https://t.me/shenlong_gas_bot | Telegram 9 大快捷指令（營運與告警） |
 | 👑 **商業軍師機器人** | **https://t.me/shenlong_advisor_bot** | **老闆專屬 24H 數位特助（產業情報、拓客行銷、進貨調價）** |
 | 📁 GitHub 營運中心 | https://github.com/qazwsx32100/shenglong-next | 營運中心原始碼 |

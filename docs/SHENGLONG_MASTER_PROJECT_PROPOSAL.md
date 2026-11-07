@@ -3,7 +3,7 @@
 > **專案名稱**：盛隆瓦斯系統現代化雙向閉環架構重構與七大專職 AI 智慧中樞總體工程企劃案  
 > **最高決策者**：老闆（Telegram ID: `8862712587`，唯一 SuperAdmin 最高指揮官）  
 > **涵蓋系統倉庫**：`shenglong-next`（網頁調度戰情中心 / 外勤專用 Android App）& `gass`（財務會計 ERP / LINE 官方客服 / 300 題知識庫 / 門市同步引擎）  
-> **正式線上環境**：[營運調度戰情中心](https://shenglong-next-phi.vercel.app) ｜ [財務與知識庫中樞](https://erp-weld-three-96.vercel.app)  
+> **正式線上環境**：[營運調度戰情中心](https://shenglong.vercel.app) ｜ [財務與知識庫中樞](https://erp-weld-three-96.vercel.app)  
 > **指定雲端紀錄**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)  
 > **企劃定案日期**：2026 年 10 月 31 日  
 > **核心指導方針**：**「不強迫門市更換 20 年操作習慣、將中繼轉運升級為高鐵規格達成 100% 雙向即時閉環、以七大專職 AI 矩陣各司其職、打造手機優先與免打字一鍵點選的極致操控體驗」**

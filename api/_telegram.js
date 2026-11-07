@@ -211,7 +211,7 @@ export const sendErrorAlert = async ({
   } else if (errorType === 'leak' || errorType === 'leak_emergency') {
     keyboard.push([
       { text: '🚨 啟動全面警報', callback_data: `act:broadcast_leak:${actionId}` },
-      { text: '📞 撥打門市緊急專線', url: 'https://shenglong-next.vercel.app/operations' }
+      { text: '📞 撥打門市緊急專線', url: 'https://shenglong.vercel.app/operations' }
     ]);
   } else if (errorType === 'price_anomaly') {
     keyboard.push([

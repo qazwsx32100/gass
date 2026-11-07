@@ -24,7 +24,7 @@
             <key>PayloadVersion</key>
             <integer>1</integer>
             <key>URL</key>
-            <string>https://shenglong-next-phi.vercel.app/gas-stock</string>
+            <string>https://shenglong.vercel.app/gas-stock</string>
             <key>IgnoreManifestScope</key>
             <true/>
         </dict>

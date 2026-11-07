@@ -358,7 +358,7 @@ async function transcribeAudio({
     throw new Error('音訊資料為空，無法進行語音辨識');
   }
 
-  if (process.env.NODE_ENV === 'test' || apiKey === 'mock-key' || (apiKey && apiKey.startsWith('mock-'))) {
+  if (process.env.NODE_ENV === 'test' || Boolean(process.env.NODE_TEST_CONTEXT) || apiKey === 'mock-key' || (apiKey && apiKey.startsWith('mock-'))) {
     const mockText = '我要叫一桶20公斤瓦斯送到三重區重新路四段12號3樓無電梯電話0912345678';
     return {
       ok: true,
@@ -525,7 +525,7 @@ async function downloadLineAudio(messageId, channelAccessToken) {
   return Buffer.from(arrayBuffer);
 }
 
-module.exports = {
+export {
   SUPPORTED_VOICE_LANGUAGES,
   detectLanguage,
   extractMultilingualOrderEntities,

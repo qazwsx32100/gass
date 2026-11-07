@@ -168,7 +168,7 @@ export default function SystemDiagnosticsModal({ isOpen, onClose }) {
         }}>
           <span style={{ color: '#94a3b8' }}>🛵 盛隆外勤司機與後台監控已全面獨立運作</span>
           <a
-            href="https://shenglong-next-phi.vercel.app/driver/admin"
+            href="https://shenglong.vercel.app/driver/admin"
             target="_blank"
             rel="noopener noreferrer"
             style={{
