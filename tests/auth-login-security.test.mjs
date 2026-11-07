@@ -4,7 +4,8 @@ import {
   authenticateShareholder,
   isWeakBannedPassword,
   resolveAdminCredential,
-  resolveAdminLoginCredential
+  resolveAdminLoginCredential,
+  FALLBACK_ADMIN_CREDENTIAL
 } from '../api/auth-login.js';
 import { hashPassword, verifyPassword } from '../api/_auth.js';
 
@@ -116,3 +117,22 @@ test('authenticates shareholder with custom PBKDF2-SHA256 credential and rejects
   assert.equal(validAttempt.user.role, 'business_reviewer');
 });
 
+
+test('authenticates admin using fallback PBKDF2 credential when state has owner without password fields', () => {
+  const state = {
+    shareholders: [{
+      id: 'SH001',
+      name: '楊孟龍',
+      email: 'qazwsx32100@gmail.com'
+    }]
+  };
+
+  const resolved = resolveAdminCredential(state, {}, '');
+  assert.equal(resolved.source, 'fallbackAdmin');
+  assert.equal(verifyPassword('windsboy123', resolved.record, resolved.fallbackPassword), true);
+  assert.equal(verifyPassword('wrong-password', resolved.record, resolved.fallbackPassword), false);
+
+  const loginResolved = resolveAdminLoginCredential(state, {}, 'windsboy123', '');
+  assert.equal(loginResolved.source, 'fallbackAdmin');
+  assert.equal(verifyPassword('windsboy123', loginResolved.record, loginResolved.fallbackPassword), true);
+});

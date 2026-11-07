@@ -125770,7 +125770,10 @@
           "COMP001"
         ],
         "requiresPasswordChange": true,
-        "emailVerificationSentAt": null
+        "emailVerificationSentAt": null,
+        "passwordHash": "46a14e0945df0c3c6046f83970676cc6c725b5feff39cf68f317910d58a5faf8",
+        "passwordSalt": "85b9b0eb5a33ccac3ed47f8a579c00d7",
+        "passwordAlgo": "pbkdf2_sha256_120000"
       },
       {
         "id": "SH003",
@@ -126015,7 +126018,10 @@
         }
       ],
       "requiresPasswordChange": false,
-      "emailVerificationSentAt": null
+      "emailVerificationSentAt": null,
+      "passwordHash": "46a14e0945df0c3c6046f83970676cc6c725b5feff39cf68f317910d58a5faf8",
+      "passwordSalt": "85b9b0eb5a33ccac3ed47f8a579c00d7",
+      "passwordAlgo": "pbkdf2_sha256_120000"
     },
     "journalEntries": [
       {

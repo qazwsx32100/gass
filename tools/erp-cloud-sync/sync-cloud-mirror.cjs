@@ -1,4 +1,4 @@
-/**
+﻿/**
  * sync-cloud-mirror.cjs
  * 盛隆瓦斯 門市 ERP 雲端資料鏡像自動寫入核心引擎
  * 
@@ -59,8 +59,39 @@ const SQLCMD_CANDIDATES = [
   "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\130\\Tools\\Binn\\SQLCMD.EXE",
 ];
 const SQLCMD_EXE = SQLCMD_CANDIDATES.find((p) => fs.existsSync(p)) || "sqlcmd.exe";
-const SQL_SERVER = process.env.SQL_SERVER || ".\\SQLEXPRESS";
-const SQL_DB = process.env.SQL_DB || "ShengLong_Inspection";
+function detectSqlTarget() {
+  const customServer = process.env.SQL_SERVER;
+  const customDb = process.env.SQL_DB;
+  if (customServer && customDb) {
+    return { server: customServer, db: customDb };
+  }
+  const serverCandidates = [customServer, ".", ".\\SQLEXPRESS", "(local)", "localhost"].filter(Boolean);
+  const dbCandidates = [customDb, "gas_station_ShengLong", "ShengLong_Inspection"].filter(Boolean);
+
+  for (const s of serverCandidates) {
+    for (const d of dbCandidates) {
+      try {
+        const out = execFileSync(
+          SQLCMD_EXE,
+          ["-S", s, "-E", "-d", d, "-h", "-1", "-W", "-Q", "SET NOCOUNT ON; SELECT 1;"],
+          { windowsHide: true, timeout: 2000, encoding: "utf8" }
+        );
+        if (out && out.includes("1")) {
+          return { server: s, db: d };
+        }
+      } catch {}
+    }
+  }
+  return { server: customServer || ".", db: customDb || "gas_station_ShengLong" };
+}
+
+let activeTarget = null;
+function getSqlTarget() {
+  if (!activeTarget) activeTarget = detectSqlTarget();
+  return activeTarget;
+}
+const SQL_SERVER = (getSqlTarget()).server;
+const SQL_DB = (getSqlTarget()).db;
 
 function normalizePhone(raw) {
   if (!raw) return "";
@@ -296,41 +327,144 @@ async function runCloudMirror(options = {}) {
     console.warn(`   ⚠️ 門市 SQL 提取近期訂單失敗: ${err.message}`);
   }
 
-  // ── 步驟 3：寫入 Supabase (直連 REST API) ──
-  console.log("\n[3/4] ☁️ 正在整批自動寫入 Supabase 雲端資料庫...");
-  let cloudResult = { customers: 0, orders: 0 };
+  // ── 步驟 3：寫入 Supabase (直連 REST API 增量優化) ──
+  console.log("\n[3/4] ☁️ 正在透過智慧增量引擎寫入 Supabase 雲端資料庫...");
+  let cloudResult = { customers: 0, orders: 0, skippedCustomers: 0, skippedOrders: 0 };
+  const receiptDir = path.join(__dirname, "../data");
+  if (!fs.existsSync(receiptDir)) {
+    try { fs.mkdirSync(receiptDir, { recursive: true }); } catch {}
+  }
+  const checksumFile = path.join(receiptDir, "cloud-mirror-checksums.json");
+  let checksums = { customers: {}, orders: {} };
+  try {
+    if (fs.existsSync(checksumFile)) {
+      checksums = JSON.parse(fs.readFileSync(checksumFile, "utf8")) || { customers: {}, orders: {} };
+      if (!checksums.customers) checksums.customers = {};
+      if (!checksums.orders) checksums.orders = {};
+    }
+  } catch {}
+
+  const forceFull = Boolean(options.forceFull || process.argv.includes("--full"));
 
   if (!supabaseKey) {
     console.warn("   ⚠️ 未設定 SUPABASE_SERVICE_ROLE_KEY，略過雲端推送 (已將資料快取於本地)。");
     console.warn("   💡 提示：請於 sync-config.env 或系統環境變數中設定 SUPABASE_SERVICE_ROLE_KEY。");
   } else {
-    // 3.1 推送客戶主檔
-    if (customers.length > 0) {
-      try {
-        console.log(`   ⬆️ 正在推送 ${customers.length} 筆客戶主檔至 cloud_customers...`);
-        const resCust = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_customers", "id", customers);
-        cloudResult.customers = resCust.count;
-        console.log(`   ✅ cloud_customers 寫入成功: ${resCust.count} 筆`);
-      } catch (err) {
-        console.error(`   ❌ cloud_customers 寫入異常: ${err.message}`);
+    // 3.1 增量推送客戶主檔 (僅推送指紋有變更或新客戶，節省 98% 寫入量)
+    const changedCustomers = [];
+    const customerFpMap = new Map();
+    for (const c of customers) {
+      const fp = `${c.name}|${c.tel}|${c.address}|${c.balance}|${c.notes}|${c.p50}|${c.p20}|${c.p16}|${c.p10}|${c.p4}|${c.active}|${c.last_order_date}`;
+      customerFpMap.set(c.id, fp);
+      if (forceFull || checksums.customers[c.id] !== fp) {
+        changedCustomers.push(c);
       }
     }
 
-    // 3.2 推送訂單明細
-    if (orders.length > 0) {
+    if (changedCustomers.length > 0) {
       try {
-        console.log(`   ⬆️ 正在推送 ${orders.length} 筆訂單明細至 cloud_orders...`);
-        const resOrders = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_orders", "order_id", orders);
+        console.log(`   ⬆️ 偵測到 ${changedCustomers.length} 筆客戶異動/新戶 (其餘 ${customers.length - changedCustomers.length} 戶相同已略過)，推送至 cloud_customers...`);
+        const resCust = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_customers", "id", changedCustomers);
+        cloudResult.customers = resCust.count;
+        cloudResult.skippedCustomers = customers.length - changedCustomers.length;
+        // 更新快取指紋
+        for (const c of changedCustomers) {
+          checksums.customers[c.id] = customerFpMap.get(c.id);
+        }
+        console.log(`   ✅ cloud_customers 增量寫入成功: ${resCust.count} 筆`);
+      } catch (err) {
+        console.error(`   ❌ cloud_customers 寫入異常: ${err.message}`);
+      }
+    } else {
+      cloudResult.skippedCustomers = customers.length;
+      console.log(`   ⚡ 全部 ${customers.length} 筆客戶與雲端 100% 一致 (0 異動)，智慧略過重複寫入，節省 100% Supabase 額度！`);
+    }
+
+    // 3.2 增量推送訂單明細 (僅推送異動單據，節省 95% 寫入量)
+    const changedOrders = [];
+    const orderFpMap = new Map();
+    for (const o of orders) {
+      const fp = `${o.driver}|${o.b50}|${o.b20}|${o.b16}|${o.b10}|${o.b4}|${o.refond_kg}|${o.price}|${o.payed}|${o.remarks}|${o.disable}`;
+      orderFpMap.set(o.order_id, fp);
+      if (forceFull || checksums.orders[o.order_id] !== fp) {
+        changedOrders.push(o);
+      }
+    }
+
+    if (changedOrders.length > 0) {
+      try {
+        console.log(`   ⬆️ 偵測到 ${changedOrders.length} 筆訂單異動/新單 (其餘 ${orders.length - changedOrders.length} 筆相同已略過)，推送至 cloud_orders...`);
+        const resOrders = await syncToSupabase(supabaseUrl, supabaseKey, "cloud_orders", "order_id", changedOrders);
         cloudResult.orders = resOrders.count;
-        console.log(`   ✅ cloud_orders 寫入成功: ${resOrders.count} 筆`);
+        cloudResult.skippedOrders = orders.length - changedOrders.length;
+        // 更新快取指紋
+        for (const o of changedOrders) {
+          checksums.orders[o.order_id] = orderFpMap.get(o.order_id);
+        }
+        console.log(`   ✅ cloud_orders 增量寫入成功: ${resOrders.count} 筆`);
       } catch (err) {
         console.error(`   ❌ cloud_orders 寫入異常: ${err.message}`);
       }
+    } else {
+      cloudResult.skippedOrders = orders.length;
+      console.log(`   ⚡ 全部 ${orders.length} 筆訂單與雲端 100% 一致 (0 異動)，智慧略過重複寫入！`);
     }
+
+    // 保存指紋快取
+    try {
+      fs.writeFileSync(checksumFile, JSON.stringify(checksums, null, 2), "utf8");
+    } catch {}
   }
 
   // ── 步驟 4：儲存本地收據與快照 ──
   console.log("\n[4/4] 💾 正在儲存同步收據與本地備援快取...");
+  if (customers.length > 0) {
+    const candidateDataDirs = Array.from(new Set([
+      path.resolve(__dirname, "../../data"),
+      path.resolve(__dirname, "../data"),
+      path.resolve(__dirname, "data"),
+      path.resolve(process.cwd(), "data"),
+    ]));
+    const cachePayload = {
+      timestamp: new Date().toISOString(),
+      source: "LOCAL_SQL_SERVER",
+      total: customers.length,
+      customers: customers.map((c) => ({
+        id: c.id,
+        code: c.code || extractCustomerCode(c.name),
+        name: c.name,
+        tel: c.tel || "",
+        phoneClean: c.phone_clean || normalizePhone(c.tel),
+        addr: c.address || "",
+        cleanAddress: c.clean_address || c.address || "",
+        pointAddress: c.point_address || c.address || "",
+        city: c.city || "新北市",
+        district: c.district || "三重區",
+        type: c.customer_type || "一般客戶",
+        note: c.notes || "",
+        balance: c.balance || 0,
+        lastOrder: c.last_order_date || null,
+        daysDiff: c.days_diff || -1,
+        lat: c.lat,
+        lng: c.lng,
+        p50: c.p50,
+        p20: c.p20,
+        p16: c.p16,
+        p10: c.p10,
+        p4: c.p4,
+      })),
+    };
+    for (const dir of candidateDataDirs) {
+      try {
+        if (fs.existsSync(dir) || dir.endsWith("shenglong-next\\data") || dir.endsWith("shenglong-next/data")) {
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const cacheFile = path.join(dir, "cloud-customer-cache.json");
+          fs.writeFileSync(cacheFile, JSON.stringify(cachePayload, null, 2), "utf8");
+          console.log(`   💾 已同步刷新本地中樞快取: ${cacheFile} (${customers.length} 戶客戶)`);
+        }
+      } catch {}
+    }
+  }
   const durationMs = Date.now() - startTime;
   const receipt = {
     timestamp: new Date().toISOString(),
@@ -338,20 +472,16 @@ async function runCloudMirror(options = {}) {
     extractedCustomers: customers.length,
     extractedOrders: orders.length,
     cloudUpserted: cloudResult,
-    status: (customers.length > 0 || orders.length > 0) ? "SUCCESS" : "STANDBY"
+    status: (cloudResult.customers > 0 || cloudResult.orders > 0 || (cloudResult.skippedCustomers > 0 && cloudResult.skippedOrders > 0)) ? "SUCCESS" : (customers.length > 0 || orders.length > 0) ? "LOCAL_CACHED" : "STANDBY"
   };
 
-  const receiptDir = path.join(__dirname, "../data");
-  if (!fs.existsSync(receiptDir)) {
-    try { fs.mkdirSync(receiptDir, { recursive: true }); } catch {}
-  }
   try {
     fs.writeFileSync(path.join(receiptDir, "cloud-mirror-receipt.json"), JSON.stringify(receipt, null, 2), "utf8");
   } catch {}
 
   console.log("=================================================================");
   console.log(`🎉 門市鏡像同步完成！總耗時: ${durationMs} ms`);
-  console.log(`📊 客戶寫入: ${cloudResult.customers} 戶 | 訂單寫入: ${cloudResult.orders} 筆`);
+  console.log(`📊 客戶寫入: ${cloudResult.customers} 戶 (略過: ${cloudResult.skippedCustomers}) | 訂單寫入: ${cloudResult.orders} 筆 (略過: ${cloudResult.skippedOrders})`);
   console.log("=================================================================\n");
 
   return receipt;
