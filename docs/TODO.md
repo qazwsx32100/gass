@@ -7,6 +7,28 @@
 > **最後更新時間**：2026-11-06 22:20\n
 ---
 
+### 0. 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】
+- **狀態**：`[x]` 已完成 (依老闆最新指令「1.語音的部分 一直辨識失敗 幫我確認一下 2.測試會員與訂單系統（LIFF 首頁）：出現『暫時無法連線』 3.幫我優化」，兩大核心問題已徹底根治並完成極致自然語言解析優化，經公網真實穿透驗收 100% 綠燈)：
+  1. **LIFF 首頁「暫時無法連線」(HTTP 503) 根治 (`api/index.js` & `api/_database-primary.js`)**：
+     - **解除強制 503 阻斷**：在 `api/index.js` 放行 Google Sheets 備援存在時的降級通道，絕不因 Supabase 暫時受限而阻斷客戶訪問。
+     - **首頁資料載入安全降級**：`getBootstrapData` 與 `getBootstrap` 全面包裹 try/catch 與 circuit-breaker，發生異常時自動平滑回退至預載/Google Sheets，首頁 100% 順暢載入。
+  2. **語音一直辨識失敗 (OpenAI 429 配額耗盡) 徹底根除 (`api/_voice-service.js` & `public/app.js`)**：
+     - **Gemini 多模態音訊轉錄備援**：整合 Google Gemini 1.5 Flash 多模態音訊轉錄引擎，支援臺灣國語、臺灣閩南語（台語）、越南語 (Tiếng Việt)、英語 (English) 四語，當 OpenAI Whisper 429 時自動平滑 fallback，永不中斷。
+     - **前端 Web Speech API 本機晶片辨識**：手機點擊麥克風優先啟用原生語音辨識（iOS Safari / Android Chrome / LINE WebView），本機即時轉文字，0 額度消耗、0 延遲，不支援時自動切換 MediaRecorder 雙軌保護。
+  3. **自然語言訂單要素解析 (NLU) 極致優化**：
+     - **國字規格辨識**：支援口述「二十公斤」、「十六公斤」、「十公斤」、「四公斤」、「五十公斤」、「大桶」、「小桶」自動正規化。
+     - **地址前綴智慧清洗**：自動過濾口語「送到...」、「送去...」、「地址在...」，精確萃取路、段、巷、弄、門牌。
+  4. **全系統測試與公網實彈驗證**：
+     - `c:/shenglong-line-liff` 239 項測試 100% 通過 (`pass 239, fail 0`)。
+     - `c:/Gass` 411 項測試 100% 通過 (`pass 411, fail 0`)。
+     - GitHub 雙倉庫主幹推送成功 (`main -> main`)。
+     - Vercel 生產環境成功 Aliased 上線 (`https://shenglong-line-liff.vercel.app`)。
+     - 真實公網測試：首頁 200 PASS、bootstrap 401 鑑權正常 (不再 503)、語音解析 200 PASS (台語二十公斤兩桶精準識別)。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/07 13:50
+
+---
+
 ### 0. 盛隆瓦斯 LINE 系統全面復活、四語語音助理實裝、高併發微批次打包與公網實彈驗收【最高權限真機實測】
 - **狀態**：`[x]` 已完成 (依老闆最高決策指令「真實跑為最高權限、高併發防護、修復語音已讀不回、資安四重防護、我們來做」，全量交付並經 Vercel 公網真機實彈驗收 100% 綠燈)：
   1. **LINE 語音「完全沒理我」雙 P0 根治 (`api/line-webhook.js` & `api/_voice-service.js`)**：

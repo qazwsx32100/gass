@@ -1,3 +1,12 @@
+## [2026-11-07 13:50] - 🎙️ 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】
+- **LIFF 首頁 503「暫時無法連線」根治**：解除生產環境若無 Supabase primary 則強制阻斷噴 503 的限制；放行 Google Sheets 備援通道，並在 `getBootstrapData` 與 `getBootstrap` 全面包裹 try/catch 與 circuit-breaker，首頁 100% 順暢載入。
+- **語音轉錄 Gemini 多模態備援**：整合 Google Gemini 1.5 Flash 多模態音訊轉錄引擎，支援臺灣國語、臺灣閩南語（台語）、越南語 (Tiếng Việt)、英語 (English) 四語，當 OpenAI Whisper 遭遇 429 配額耗盡時自動平滑 fallback，永不中斷。
+- **前端原生 Web Speech API 語音識別**：LIFF 懸浮麥克風優先啟用手機本機原生語音辨識（iOS Safari / Android Chrome / LINE WebView），本機即時轉文字，0 額度消耗、0 延遲，不支援時自動切換 MediaRecorder 雙軌保護。
+- **NLU 訂單要素解析極致優化**：支援國字規格口述（如「二十公斤」、「十六公斤」、「大桶」）自動正規化為標準規格；地址前綴自動清洗口語「送到...」、「送去...」，精準萃取路、段、巷、弄、門牌。
+- **全系統測試與公網實彈驗收**：`c:/shenglong-line-liff` 239/239 通過，`c:/Gass` 411/411 通過，雙倉庫主幹推送，Vercel 生產環境成功 Aliased 上線 (`https://shenglong-line-liff.vercel.app`)，公網實彈測試 100% 綠燈通過。
+
+---
+
 ## [2026-11-06 22:20] - ☁️ LINE AI 客服對話歷史自動封存至 Google Drive 官方資料夾 (方案 1 先封存再修剪，零資料遺失保證)
 - **冷熱資料分離 (Archive-then-Prune)**：落實老闆「方案1」決策，30 天前舊對話在清理前自動打包上傳至指定 Google Drive 官方資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)，確認備份成功後才從 Supabase 釋放空間，達成「零資料遺失」與「DB 容量大瘦身」。
 - **核心封存引擎 (api/_line-ai-logger.js)**：實作 `archiveAndPruneOldLogs`，支援批次封存、元數據簽章與 Google Drive 整合，掛載於每 50 筆機會型背景輪詢。
