@@ -126,8 +126,9 @@ test("🤖 AI Swarm Test 4: 👑 Boss-SuperAdmin-AI 老闆審批按鈕、403 權
   });
 
   assert.ok(approvalItems.length >= 4, "老闆審批清單應包含 4 大重點決策項目");
-  assert.ok(approvalItems[0].approveLabel.includes("核准派給 游柏林"), "第 1 項包含核准派工按鈕");
-  assert.ok(approvalItems[0].secondaryApproveLabel?.includes("改派給 小龍"), "第 1 項包含改派小龍備用按鈕");
+  assert.ok(approvalItems[0].approveLabel.includes("核准派給 小龍"), "第 1 項自動過濾離職人員並改派在職小龍");
+  assert.ok(!approvalItems[0].approveLabel.includes("游柏林"), "嚴格禁止指派離職人員游柏林");
+  assert.ok(approvalItems[0].secondaryApproveLabel?.includes("保留稍後輸入"), "第 1 項包含保留稍後輸入備用按鈕");
   assert.ok(approvalItems[1].approveLabel.includes("核准排入今日喚醒名單"), "第 2 項包含行銷喚醒核准按鈕");
   assert.ok(approvalItems[2].approveLabel.includes("核准派外勤順路收瓶"), "第 3 項包含空瓶回收核准按鈕");
 

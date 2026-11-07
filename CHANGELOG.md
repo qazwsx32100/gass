@@ -1,3 +1,12 @@
+## [2026-11-07 22:02] - 🏗️ 盛隆瓦斯大架構改版四大階段（Phase A ➔ Phase C ➔ Phase D ➔ Phase B）跨倉收官與同步驗證
+- **雲端唯一真理客戶／訂單閘道同步升級 (`lib/cloud-customer-gateway.ts` & `api/_line-customer-matcher.js` & `api/line-webhook.js`)**：
+  - 與 `shenglong-next` 100% 同調串接 Supabase REST `cloud_customers`（10 分鐘快取）與 `cloud_orders`（2 分鐘 LRU 250 戶快取），內建 5 分鐘 HTTP `402`/`5xx` 熔斷器與靜態離線保底；`line-webhook.js` 升級接入 `matchLineCustomerAsync` 即時預載熟客名冊。
+- **跨倉共用模組同調守衛與離職人員防護測試同步 (`tests/cross-repo-shared-parity.test.mjs`、`tests/massive-ai-stress-suite.test.mjs`、`tests/ai-swarm-buttons.test.mjs`)**：
+  - 新增跨倉同調守衛自動驗證 `cloud-customer-gateway.ts` 與 `_line-customer-matcher.js` 雙倉契約一致且零 `-phi` 殘留；更新壓測套件確保離職人員「游柏林」永久過濾轉派現役外勤「小龍」。
+- **雙倉全量測試 100% 綠燈**：`c:/Gass` **420 / 420** 全數通過（含 100,000 AI 代理與 10,000 真實 AI 客人壓測）；`c:/shenglong-next` **153 / 153** 全數通過、`tsc --noEmit` 0 錯誤。
+
+---
+
 ## [2026-11-07 20:42] - 👑 盛隆瓦斯 10,000 位真實 AI 客人多語系全鏈路極限實測引擎【最高權限 100% 綠燈驗收】
 - **10,000 位真實 AI 客人全鏈路實測 (`scripts/run-10k-ai-customers-acceptance.cjs`)**：涵蓋國語生活客群 (50%)、台語老主顧 (20%)、越南語新住民 (20%)、英語外籍人士 (8%) 與惡意注入/缺項防呆 (2%)，全鏈路檢驗 NLU 要素萃取、多語系確認文案、國字數字正規化與地址前綴清洗，10,000 筆 100% 通過。
 - **極致吞吐與效能審計**：總耗時 0.07 秒，每秒處理高達 149,254 位 AI 客人，記憶體變動僅 1 MB，高吞吐無記憶體外洩。

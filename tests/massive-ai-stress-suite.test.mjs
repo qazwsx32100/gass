@@ -274,7 +274,8 @@ test("AI Massive Test Suite 5: Boss Approvals Hub & UPS Power Guardian Full Cove
 
     const dispatchItem = items.find((i) => i.id === "apr_dispatch_today");
     assert.equal(dispatchItem.status, "pending");
-    assert.ok(dispatchItem.approveLabel.includes("游柏林"));
+    assert.ok(dispatchItem.approveLabel.includes("小龍"));
+    assert.ok(!dispatchItem.approveLabel.includes("游柏林"));
   });
 
   await t.test("ups-power-guardian evaluates AC, UPS discharge, and emergency checkpoints", () => {

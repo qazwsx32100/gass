@@ -15,6 +15,7 @@ import {
   buildMultilingualConfirmationText
 } from './_voice-service.js';
 import { matchLineCustomer, formatCustomerContextPrompt } from './_line-customer-matcher.js';
+import { ensureCloudCustomerDirectoryLoaded } from '../lib/cloud-customer-gateway.ts';
 
 /**
  * 驗證 LINE 數位簽章 (Timing-Safe Equal 防時序攻擊)
@@ -270,6 +271,10 @@ export default async function handler(req, res) {
 
   // 立刻回覆 200 給 LINE 平台避免超時，背景非同步處理訊息
   sendJson(res, 200, { ok: true, count: events.length });
+
+  if (events.length > 0) {
+    await ensureCloudCustomerDirectoryLoaded().catch(() => {});
+  }
 
   for (const event of events) {
     // 僅處理文字訊息事件

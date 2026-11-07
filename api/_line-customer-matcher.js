@@ -1,4 +1,5 @@
 import {
+  ensureCloudCustomerDirectoryLoaded,
   searchCloudCustomers,
   normalizePhone,
   extractCustomerCode,
@@ -31,6 +32,11 @@ export function extractCustomerCodeFromText(text) {
   }
 
   return null;
+}
+
+export async function matchLineCustomerAsync(currentText = '', historyMessages = []) {
+  await ensureCloudCustomerDirectoryLoaded();
+  return matchLineCustomer(currentText, historyMessages);
 }
 
 /**
@@ -74,6 +80,10 @@ export function extractAddressSnippet(text) {
  */
 export function inferCustomerSpec(customer) {
   if (!customer) return '20kg';
+  if (customer.preferredSpec && typeof customer.preferredSpec === 'string') {
+    const m = customer.preferredSpec.match(/(50|20|16|10|4)kg/i);
+    if (m) return m[1] + 'kg';
+  }
 
   // 1. 若有特定規格單價或歷史規格
   if (customer.p50 && customer.p50 > 0) return '50kg';

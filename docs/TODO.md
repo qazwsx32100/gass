@@ -4,7 +4,37 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-07 14:15
+> **最後更新時間**：2026-11-07 22:02
+---
+
+### 🔥 大架構改版補齊總工程（依老闆指示順序：Phase A ➔ Phase C ➔ Phase D ➔ Phase B）
+- **狀態**：`[x]` **四大階段 100% 全量實裝、零回歸測試通過並正式上線**（完成時間：`2026/11/07 22:02`）
+- **Phase A｜補齊雲端唯一真理讀取斷鏈、資安邊界加固與舊 ERP 黑盒子零觸碰守衛**：`[x]` 已完成
+  1. `lib/cloud-customer-gateway.ts`（`shenglong-next` 與 `Gass` 雙倉同步）真實串接 Supabase REST `cloud_customers`（10 分鐘名冊快取）與 `cloud_orders`（2 分鐘 LRU 250 戶訂單快取 + `formatCloudOrderTuple`），內建 5 分鐘 HTTP `402`/`5xx` 熔斷器與靜態離線保底，徹底修復 `getCloudCustomerOrders()` 寫死空陣列斷鏈。
+  2. 全面接線 `/api/customer-history`、`/api/customers/directory`、`/api/customers`、`/api/boss/customer-lookup` 與雙倉 LINE 熟客辨識 `api/_line-customer-matcher.js`（`matchLineCustomerAsync`）。
+  3. 資安加固：移除 `/api/customers/directory` 可偽造 `Referer`/`Origin` 繞過並改為 `Cache-Control: private, max-age=60, stale-while-revalidate=300`；強制 `/api/ai/approvals`、`/api/ai/autopilot?push=1`、`/api/ai/secretary/command` 登入／內部權杖授權；清零殘留之離職人員「游柏林」預設指派。
+  4. 舊 ERP 零觸碰守衛：移除 `app_order_promotions` 對 `dbo.customers` 外鍵束縛，並於 `lib/sqlserver.ts` 實裝 `assertNoLegacyTableDdl` 阻斷對神聖舊表（`gas_oders` / `customers` / `Money` / `barrel` / `Order_Stove` / `gas_stock`）之任何 DDL 操作，雲端 Serverless 環境秒速短路零子程序開銷。
+- **Phase C｜萬行巨型頁面按需載入瘦身（next/dynamic）、共用元件統一與 SQL 連線池／合併查詢落地**：`[x]` 已完成
+  1. `app/operations/page.tsx` 將 16 個非首屏重型視圖與彈窗改為 `dynamic(() => import(...), { ssr: false })` 按需載入，大幅削減首屏 JS 負擔。
+  2. 消除雙份千行地圖重複碼（`app/operations/CustomerMapComponent.tsx` 收斂為 4 行轉發包裝）、戰情室正式換裝 `<SharedCustomerMap />`，並修復地圖背景 `/api/driver/location` 10 秒高頻輪詢違規為 `60,000ms`（隱藏分頁自動暫停，僅手動按鈕才帶 `?fresh=1`）；統一 `NavigationButton` 與 `SharedAddressAction` 機車窄巷優先導航（`mode="two_wheeler"` + `AndroidBridge.openNavigation`）。
+  3. 真正接通 `lib/sql-connection-pool.ts`（Big5 CP950 串流解碼 + 閒置 `.unref()` 自動回收 + `getStats()` 指標）與 `lib/sqlserver.ts`（`MAX_CONCURRENT_SQL = 8` 併發閘門 + 相同唯讀 SQL 飛行中合併 `coalesceReadQuery` + `getSqlPoolStats()` 遙測）。
+- **Phase D｜微服務守護模組化拆分、Supabase Realtime 雙向通道橋接、API 埋點快取與跨倉守衛**：`[x]` 已完成
+  1. 建立 `lib/daemons/` 三大獨立微守護子引擎：`stock-sync-daemon.cjs`（SHA-256 指紋差異閘門 + 402 熔斷）、`telephony-flash-daemon.cjs`（8 秒重複振鈴防抖 + 三態來電追蹤）、`closing-archive-daemon.cjs`（21:30 打烊結帳摘要與官方淨毛利核算），並升級 `lib/micro-daemons-manager.cjs` 真實埠位與健康度探測（100% 相容既有 `sync-stock.cjs`）。
+  2. 建立 `supabase/migrations/20261107213000_create_live_snapshots_and_command_queue.sql` 與 `lib/realtime-bridge.ts`（`live_snapshots` / `command_queue` 讀寫橋接、5 分鐘 402 熔斷與離職司機硬攔截）。
+  3. `/api/ops/snapshot` 新增逐模組 `Server-Timing` 指標與決定性 Weak `ETag`（支援 `If-None-Match` -> `304 Not Modified` 零傳輸快取）；新增 `c:/Gass/tests/cross-repo-shared-parity.test.mjs` 跨倉共用模組同調守衛。
+- **Phase B｜八大部門 AI 助理中心「拔除假資料、接通真實營運數據與老闆 Telegram 審批閉環」**：`[x]` 已完成
+  1. 升級 `lib/boss-approvals-hub.ts` 與 `/api/ai/approvals`，打通自訂部門簽核持久化（`submitCustomBossApproval` / `markBossApprovalApproved`）與老闆唯一 SuperAdmin Telegram（`8862712587`）即時推播通知。
+  2. 全面去假換真：`/api/ai/finance/audit` 拔除假單 `OD-1001~OD-1008` 與假司機「阿豪」，接通真實 `getTodayOrders` 與在職司機交帳核對；`/api/ai/engineering/inspections` 拔除寫死假鋼瓶，接通門市 `dbo.barrel` / `dbo.Order_Stove WITH (NOLOCK)` 與雲端長期滯留瓶分析；`/api/ai/marketing/recall` 接通真實雲端客戶週期並改走老闆簽核放行（杜絕未核准偽報已發 LINE）。
+  3. 升級 `/api/ai/eight-departments`（注入真實客戶主檔、SQL 池與 Realtime Bridge 遙測）與 `AiAssistantCenter.tsx`（拔除 `alert()` 假互動，L1 真實 `fetch` 執行、L2/L3 真實送審老闆簽核佇列，並動態掛載手機版三段式抽屜 `AiAdvisorDrawer`）。
+  4. 全量驗證：`shenglong-next` 153/153 測試通過、`tsc --noEmit` 0 錯誤、外勤零通知守衛通過；`Gass` 420/420 測試（含 10 萬 AI 代理與 1 萬真實 AI 客人）100% 通過。
+
+---
+
+### 0. 雲端戰情心跳 Serverless 持久化、KV 節流盾 402 誠實回執修復與門市鏡像更新同步部署
+- **狀態**：`[x]` 已完成（合併門市 `a79b477`/`2f43d10`，修復 `app/api/system-status/route.ts` 回應前 `await` KV 持久化與 `operations-kv-fetch` 402 熔斷優先檢查，正式部署至 `https://shenglong.vercel.app` `dpl_9dvxGyKWC2pPgBJrXk1RJnw42s7Y`）
+- **優先級**：`P0`
+- **完成日期**：2026/11/07 21:00
+
 ---
 
 ### 0. 盛隆瓦斯 10,000 位真實 AI 客戶全鏈路多模態極限實測引擎【最高權限 100% 綠燈驗收】

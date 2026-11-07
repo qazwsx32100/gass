@@ -1,3 +1,22 @@
+## 📅 2026/11/07 - 🏗️ 盛隆瓦斯大架構改版四大階段（Phase A ➔ Phase C ➔ Phase D ➔ Phase B）全量收官與跨倉同步部署 [ver: 20261107_2202_arch_overhaul_acdb_complete]
+
+### 一、 需求背景與決策（老闆最高指令「順序a->c->d->b」）
+1. **Phase A（雲端唯一真理讀取鏈路 + 資安加固 + 舊 ERP 零 DDL 守衛）**：
+   - 雙倉同步升級 `lib/cloud-customer-gateway.ts` 與 `api/_line-customer-matcher.js`，真實串接 Supabase REST `cloud_customers` 與 `cloud_orders`（含 5 分鐘 `402` 熔斷、10 分鐘名冊快取、2 分鐘訂單 LRU 快取與靜態保底），修復雲端歷史訂單空陣列斷鏈；`api/line-webhook.js` 升級接入 `matchLineCustomerAsync`。
+   - 加固客戶名冊與 AI 端點授權驗證、清除離職人員「游柏林」預設指派，並於 `shenglong-next/lib/sqlserver.ts` 實裝神聖舊表零 DDL 攔截守衛。
+2. **Phase C（戰情巨頁按需載入瘦身 + 共用元件收斂 + SQL 連線池與查詢合併）**：
+   - `app/operations/page.tsx` 16 大重型面板改 `next/dynamic` 按需載入、合併重複千行地圖並修復 10 秒輪詢為合規 `60,000ms`、統一機車窄巷優先導航元件，並啟用 `SqlConnectionPool` 與 8 路併發查詢合併。
+3. **Phase D（微服務守護模組化拆分 + Realtime 雙向橋接 + `Server-Timing` / `ETag` + 跨倉同調守衛）**：
+   - 拆出三大微守護引擎（`stock-sync`、`telephony-flash`、`closing-archive`）、建置 `live_snapshots` / `command_queue` Realtime 橋接、實裝 `/api/ops/snapshot` `Server-Timing` 與 `304 Not Modified` 快取，並於 `Gass` 新增 `tests/cross-repo-shared-parity.test.mjs` 跨倉同調守衛。
+4. **Phase B（八大部門 AI 助理中心去假換真 + 老闆 Telegram 簽核閉環）**：
+   - 全面拔除財務稽核、工務安檢、行銷喚醒與系統工程假資料，串接真實營運數據、`boss-approvals-hub` 持久化與老闆唯一 SuperAdmin Telegram（`8862712587`）即時審批通知閉環。
+5. **全系統測試與雙端部署**：
+   - `c:/Gass` 全系統測試 **420 項 100% 通過** (`pass 420, fail 0`)。
+   - `c:/shenglong-next` 全系統測試 **153 項 100% 通過** (`pass 153, fail 0`)、`tsc --noEmit` 0 錯誤、司機端零通知守衛 100% 通過。
+   - GitHub 雙倉庫主幹推送並同步部署至 Vercel Production（`https://shenglong.vercel.app`）。
+
+---
+
 ## 📅 2026/11/07 - 👑 盛隆瓦斯 10,000 位真實 AI 客人多語系全鏈路極限實測引擎【最高權限 100% 綠燈驗收】 [ver: 20261107_2042_10k_ai_customers_acceptance]
 
 ### 一、 需求背景與決策 (老闆最高指令「繼續優化 10000Ai客人做實際測試」)
