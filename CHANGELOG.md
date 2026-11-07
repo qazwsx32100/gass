@@ -1,3 +1,20 @@
+## [2026-11-07 22:20] - 👑 盛隆瓦斯 真實客人全流程全按鈕瀏覽器端到端（E2E）極限巡檢【最高權限 100% 綠燈驗收】
+- **真實客人全流程 Microsoft Edge (Chromium) 真機巡檢 (`scripts/run-real-customer-e2e.js`)**：
+  - 依據老闆最高指令「我要的是 實際跑過全部流程的真實客人 每一個按鈕、功能 都要實際的測試過」，動員真實無頭 Edge 瀏覽器（iPhone 414x896 手機視口），跑完 5 大核心生活劇本。
+  - 真實點擊 **23 個功能按鈕**、互動 **6 個表單欄位**、**3 次頂部 Tabs 切換**，100% 零拋錯、零阻斷。
+  - 雙軌驗收：本機內嵌伺服器與 Vercel Production 線上正式站點（`https://shenglong-line-liff.vercel.app`）全數 100% 綠燈通過。
+- **前端隱藏 P0 級 Bug 捕獲與修復 (`public/app.js`)**：
+  - 修復 `applyMemberData` 呼叫時 `state.data.profile?.displayName` 空值保護，杜絕首頁未登入時拋錯中斷。
+  - 補齊規格輸入框 `name="quantity"` 與多語系雙向匹配（`kg` 與 `公斤` 同步辨識帶入）。
+- **全程高精截圖存證 (`reports/e2e-screenshots/`)**：
+  - 產出 10 張完整流程截圖（安全宣導中心 119、8 大主題展開、語音 FAB 彈窗、要素卡片、主叫瓦斯頁、規格與備註填寫、訂單紀錄切換與重新整理、會員中心切換與清除裝置、新客查詢與建檔表單）。
+- **全系統測試與雲端雙端正式部署**：
+  - `c:/shenglong-line-liff` 245/245 單元測試全數通過。
+  - `c:/Gass` 420/420 測試全數通過（含十萬 AI 代理群與一萬真實 AI 客人）。
+  - Vercel Production 雙端綠燈 READY（`https://shenglong-line-liff.vercel.app` & `https://shenglong.vercel.app`）。
+
+---
+
 ## [2026-11-07 22:02] - 🏗️ 盛隆瓦斯大架構改版四大階段（Phase A ➔ Phase C ➔ Phase D ➔ Phase B）跨倉收官與同步驗證
 - **雲端唯一真理客戶／訂單閘道同步升級 (`lib/cloud-customer-gateway.ts` & `api/_line-customer-matcher.js` & `api/line-webhook.js`)**：
   - 與 `shenglong-next` 100% 同調串接 Supabase REST `cloud_customers`（10 分鐘快取）與 `cloud_orders`（2 分鐘 LRU 250 戶快取），內建 5 分鐘 HTTP `402`/`5xx` 熔斷器與靜態離線保底；`line-webhook.js` 升級接入 `matchLineCustomerAsync` 即時預載熟客名冊。

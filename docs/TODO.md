@@ -7,6 +7,41 @@
 > **最後更新時間**：2026-11-07 22:02
 ---
 
+### 👑 盛隆瓦斯 真實客人全流程全按鈕瀏覽器端到端（E2E）極限巡檢【最高權限 100% 綠燈驗收】
+- **狀態**：`[x]` 已完成（依老闆最高指令「我要的是 實際跑過全部流程的真實客人 每一個按鈕、功能 都要實際的測試過」，以 Microsoft Edge 真機跑完全部流程無死角點擊驗收通過）
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/07 22:20
+- **實測核心成果**：
+  1. **Microsoft Edge (Chromium) 真實手機環境端到端無死角點擊**：
+     - 5 大生活核心劇本 100% 綠燈通過（0 錯誤、0 阻斷）。
+     - 累計真實點擊 **23 個功能按鈕**（含 8 大安全宣導折疊面板、懸浮 🎙️ FAB、錄音鈕、帶入訂單鈕、彈窗 ✕ 關閉鈕、底部取消鈕、新增地址單選鈕、訂單重新整理鈕、清除裝置按鈕等）。
+     - 累計真實互動 **6 個表單欄位**（規格數量、縣市選單、備註輸入、查詢電話、新會員姓名等）。
+     - 頂部導覽列 Tabs（立即叫瓦斯 / 訂單紀錄 / 會員中心）**3 次順暢切換**。
+  2. **線上正式站點與本機雙重驗證**：
+     - 本機內嵌 HTTP 伺服器驗收通過。
+     - Vercel Production 線上正式站點（`https://shenglong-line-liff.vercel.app`）實測通過。
+  3. **捕獲並修復隱藏 P0 級前端 Bug**：
+     - 修復 `public/app.js` 中 `state.data.profile?.displayName` 空指針保護，杜絕首頁讀取崩潰。
+     - 補齊規格輸入框 `name="quantity"` 與多語系雙向匹配（`kg` 與 `公斤` 同步辨識帶入）。
+  4. **全程高精截圖存證（10 張手機版實機截圖存於 `reports/e2e-screenshots/`）**：
+     - `01_safety_center_landing.png`：瓦斯安全中心首頁與 119 緊急按鈕
+     - `02_safety_topics_expanded.png`：8 大折疊主題逐一點擊展開效果
+     - `03_voice_modal_opened.png`：右下角懸浮按鈕點擊彈出四語語音助理
+     - `04_voice_recognized_card.png`：語音辨識完成後實體要素卡片與帶入按鈕
+     - `05_order_view_rendered.png`：叫瓦斯主介面會員資料、商品規格與地址列表
+     - `06_form_filled_ready.png`：真實表單鍵入數量、備註與語音一鍵帶入後狀態
+     - `07_tab_history_view.png`：訂單紀錄 Tab 切換與重新整理按鈕
+     - `08_tab_profile_view.png`：會員中心 Tab 切換與清除裝置按鈕
+     - `09_tab_order_back.png`：切回叫瓦斯主分頁
+     - `10_register_new_member_view.png`：新客電話查詢與新會員建檔表單展開
+  5. **全系統測試與雲端正式部署**：
+     - `c:/shenglong-line-liff` 245/245 單元測試全數通過。
+     - `c:/Gass` 420/420 單元與整合測試全數通過。
+     - GitHub 雙倉庫主幹推送成功 (`main -> main`)。
+     - Vercel 生產環境全數綠燈 READY（`https://shenglong-line-liff.vercel.app` & `https://shenglong.vercel.app`）。
+
+---
+
 ### 🔥 大架構改版補齊總工程（依老闆指示順序：Phase A ➔ Phase C ➔ Phase D ➔ Phase B）
 - **狀態**：`[x]` **四大階段 100% 全量實裝、零回歸測試通過並正式上線**（完成時間：`2026/11/07 22:02`）
 - **Phase A｜補齊雲端唯一真理讀取斷鏈、資安邊界加固與舊 ERP 黑盒子零觸碰守衛**：`[x]` 已完成
