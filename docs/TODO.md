@@ -4,7 +4,7 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-07 22:52
+> **最後更新時間**：2026-11-08 10:25
 ---
 
 ### 👑 盛隆瓦斯 1,000 位真實客人 AI 諮詢問題全鏈路極限實測【最高權限 100% 綠燈驗收】
@@ -72,12 +72,12 @@
 
 ---
 
-### 🚨 線上正式站資料斷鏈修復、獨立門市客戶搜尋頁與公開庫存網址隔離【討論確認中】
-- **狀態**：`[-]` 討論確認中（根因已全數查明，待老闆拍板方案後立即執行）
-  1. **[P0 根因修復] 解除 `operations-kv-fetch` 遭遇 Supabase 402 時未降級備援之斷鏈**：修復 `lib/operations-kv-fetch.ts` 與 `operations-kv-fetch.cjs`（門市端 + Vercel 雲端），當私有 Edge Function 回傳 `402/5xx` 時自動降級讀寫已具備 AES-256-GCM 加密之 `kvdb.io` 通道，一次恢復 **戰情室「今日訂單」、「來電監控」、「戰情聚合快照 (`/api/ops/snapshot`)」與「小龍 APK 派單 (`/api/driver/orders`)」** 即時資料串接。
-  2. **[P0 根因修復] 修復雲端客戶搜尋中樞查無資料 (`totalCustomers: 0`)**：修正 `.vercelignore` 誤將 `data/`（含 `public/data/customers-map.json` 3,934 戶圖資與快取）排除上傳之問題，並補齊 Vercel 環境變數 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 與 Serverless 檔案追蹤設定。
-  3. **[P0 新功能] 新增門市人員專用「獨立客戶搜尋頁面」**：建立乾淨獨立路由（如 `/customers` 或 `/customer-search`），免進複雜戰情室分頁即可秒速查代號（如 `26.21.1`）、電話、地址、歷史叫貨與欠款。
-  4. **[P0 網域隔離] 公開庫存看板改回 `https://shenglong-next.vercel.app/gas-stock` 並移除 `https://shenglong.vercel.app/gas-stock`**：將對外公開庫存連結全面改指 `https://shenglong-next.vercel.app/gas-stock`，並關閉／移除 `shenglong.vercel.app/gas-stock` 入口，實現內外網域隔離。
+### 🚨 線上正式站客戶搜尋修復、門市獨立免登入搜尋頁、公開庫存網域隔離與純 Supabase 直連升級
+- **狀態**：`[x]` 程式碼與雲端部署已完成（僅待老闆於 Supabase 後台解除 `ytwhfiudhhdkmzobqmqq` 402 限制或提供新免費專案金鑰，今日訂單／來電／小龍派單即刻自動恢復）
+  1. **[已完成] 客戶搜尋中樞修復 (`https://shenglong.vercel.app/operations?tab=CUSTOMERS`)**：修正 `.vercelignore` 誤寫 `data/` 排除 `public/data/customers-map.json`（3,934 戶圖資）之問題並改為 `/data/`，同時於 `next.config.ts` 加入 `outputFileTracingIncludes` 確保 Serverless 完整打包。
+  2. **[已完成] 新增門市人員專用「獨立免登入客戶搜尋頁」(`https://shenglong.vercel.app/customers`)**：依老闆決策「獨立、不用登入帳號、開放搜尋」，新建 `app/customers/page.tsx`（含 `/customer-search` 308 別名與桌面捷徑 `盛隆瓦斯_門市客戶搜尋系統.url`），支援 `26.21.1` 代號、電話末碼、地址、欠款與完整歷史叫貨秒查。
+  3. **[已完成] 公開庫存看板網域隔離**：依老闆決策永久刪除 `shenglong-next` 之 `app/gas-stock` 與 `app/public-stock` 頁面，並將 `https://shenglong.vercel.app/gas-stock` 自動 `308` 轉址至保留之 `https://shenglong-next.vercel.app/gas-stock`。
+  4. **[已完成代碼升級・待解鎖 Supabase 402] 純 Supabase 直連 PostgREST (`sl_operations_kv`)**：嚴守老闆「只用 Supabase、絕不降級加密備援通道」指令，升級 `operations-kv-fetch.ts` 與 `operations-kv-fetch.cjs` 支援直連 `/rest/v1/sl_operations_kv`（0 次 Edge Function 消耗）。目前因現有 Supabase 專案 (`ytwhfiudhhdkmzobqmqq`) 觸發官方月度 Egress + Edge 雙超額限制鎖定 `402`，待解鎖或換新免費 Supabase 專案金鑰後，「今日訂單」、「來電監控」、「戰情快照」與「小龍 APK 派單」將立即恢復串接。
 
 ---
 

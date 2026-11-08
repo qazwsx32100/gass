@@ -1,3 +1,8 @@
+## [2026-11-08 10:25] - 🔍 跨倉網域隔離守衛更新（保留 `shenglong-next.vercel.app/gas-stock` 公開庫存、驗證 `/customers` 獨立搜尋頁）與待辦看板造冊
+- **更新網域隔離守衛 (`tests/domain-unification.test.mjs`)**：驗證 `shenglong-next/app/gas-stock/page.tsx` 已刪除、`app/customers/page.tsx` 獨立搜尋頁就位，並僅允許公開庫存網址指向 `https://shenglong-next.vercel.app/gas-stock`（嚴禁 `-phi`）。
+- **全局看板同步 (`docs/TODO.md` & 桌面鏡像)**：依老闆指示完整造冊記錄剩餘二階段巨檔拆解與環境收尾項目。
+
+---
 ## [2026-11-07 22:52] - 👑 盛隆瓦斯 1,000 位真實客人 AI 諮詢問題全鏈路極限實測【最高權限 100% 綠燈驗收】
 - **1,000 個高擬真日常諮詢問題全鏈路實測 (`scripts/run-1000-ai-questions.cjs` & `tests/ai-1000-questions.test.mjs`)**：
   - 依據老闆最高指令「這次的客人 要真實的詢問ai 問題 幫我詢問1000個問題」，動員 1,000 位具備真實人設之客人，向盛隆 AI 提出 1,000 個高擬真日常諮詢問題。

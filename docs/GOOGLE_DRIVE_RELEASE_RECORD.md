@@ -1,3 +1,9 @@
+## 📅 2026/11/08 - 🔍 門市獨立客戶搜尋頁、公開庫存網域隔離守衛與待辦清單造冊同步 [ver: 20261108_1025_customers_portal_stock_isolation]
+
+### 一、 變更摘要
+* 依老闆決策同步更新 `tests/domain-unification.test.mjs` 跨倉網域隔離守衛、`docs/TODO.md` 與桌面看板鏡像，確保 `https://shenglong.vercel.app/customers` 免登入獨立搜尋頁與 `https://shenglong-next.vercel.app/gas-stock` 公開庫存隔離 100% 通過雙倉測試驗證。
+
+---
 ## 📅 2026/11/07 - 👑 盛隆瓦斯 1,000 位真實客人 AI 諮詢問題全鏈路極限實測【最高權限 100% 綠燈驗收】 [ver: 20261107_2252_ai_1000_questions_acceptance]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
