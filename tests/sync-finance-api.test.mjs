@@ -42,9 +42,9 @@ test('sync-finance API: rejects requests with invalid sync secret with 401', asy
   }
 });
 
-test('sync-finance API: accepts valid payload with correct secret and returns structured response', async () => {
-  const origSecret = process.env.ERP_SYNC_SECRET;
-  process.env.ERP_SYNC_SECRET = 'correct-test-secret-1234567890abcdef';
+test('sync-finance API: accepts valid payload with SYSTEM_STATUS_REPORT_TOKEN and returns structured response', async () => {
+  const origToken = process.env.SYSTEM_STATUS_REPORT_TOKEN;
+  process.env.SYSTEM_STATUS_REPORT_TOKEN = 'test-system-status-token-64bytes-long-secret-key-1234567890abcdef';
   try {
     const response = createResponse();
     const samplePayload = {
@@ -62,7 +62,10 @@ test('sync-finance API: accepts valid payload with correct secret and returns st
 
     await handler({
       method: 'POST',
-      headers: { 'x-erp-sync-secret': 'correct-test-secret-1234567890abcdef' },
+      headers: {
+        'x-status-token': 'test-system-status-token-64bytes-long-secret-key-1234567890abcdef',
+        'authorization': 'Bearer test-system-status-token-64bytes-long-secret-key-1234567890abcdef'
+      },
       body: { functionName: 'erp_sync_shenglong_finance', params: { p_payload: samplePayload } }
     }, response);
 
@@ -75,6 +78,6 @@ test('sync-finance API: accepts valid payload with correct secret and returns st
     assert.equal(result.incomeRows, 1);
     assert.ok(result.backupId);
   } finally {
-    process.env.ERP_SYNC_SECRET = origSecret;
+    process.env.SYSTEM_STATUS_REPORT_TOKEN = origToken;
   }
 });

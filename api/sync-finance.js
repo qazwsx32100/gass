@@ -19,16 +19,38 @@ const syncRateLimiter = createBoundedRateLimiter({
   maxEntries: 100
 });
 
-function verifySyncSecret(providedSecret = '') {
-  const secret = process.env.ERP_SYNC_SECRET?.trim();
-  if (!secret || !providedSecret) return false;
-  try {
-    const cand = crypto.createHash('sha256').update(String(providedSecret).trim()).digest();
-    const exp = crypto.createHash('sha256').update(String(secret).trim()).digest();
-    return cand.length === exp.length && crypto.timingSafeEqual(cand, exp);
-  } catch {
-    return false;
+function verifySyncAuth(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const candidates = [
+    req.headers['x-erp-sync-secret'],
+    req.headers['x-status-token'],
+    req.headers['x-system-status-token'],
+    bearerToken
+  ].map(s => String(s || '').trim()).filter(Boolean);
+
+  if (candidates.length === 0) return false;
+
+  const validTokens = [
+    process.env.SYSTEM_STATUS_REPORT_TOKEN?.trim(),
+    process.env.ERP_SYNC_SECRET?.trim(),
+    process.env.CRON_SECRET?.trim()
+  ].filter(Boolean);
+
+  if (validTokens.length === 0) return false;
+
+  for (const cand of candidates) {
+    for (const valid of validTokens) {
+      try {
+        const b1 = Buffer.from(cand);
+        const b2 = Buffer.from(valid);
+        if (b1.length === b2.length && crypto.timingSafeEqual(b1, b2)) {
+          return true;
+        }
+      } catch {}
+    }
   }
+  return false;
 }
 
 export default async function handler(req, res) {
@@ -37,13 +59,9 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
-  // 1. 驗證密鑰 (支援 X-ERP-Sync-Secret 或 Bearer Token)
-  const authHeader = req.headers['authorization'] || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  const syncSecret = (req.headers['x-erp-sync-secret'] || token || '').trim();
-
-  if (!verifySyncSecret(syncSecret)) {
-    return sendJson(res, 401, { error: 'Unauthorized: Invalid ERP sync secret' });
+  // 1. 驗證密鑰 (支援 X-Status-Token, X-ERP-Sync-Secret 或 Bearer Token)
+  if (!verifySyncAuth(req)) {
+    return sendJson(res, 401, { error: 'Unauthorized: Invalid ERP sync or status token' });
   }
 
   // 2. 限流防護
@@ -87,7 +105,7 @@ export default async function handler(req, res) {
   try {
     const supabase = getSupabase(25000);
     const { data, error } = await supabase.rpc('erp_sync_shenglong_finance', {
-      p_secret: syncSecret,
+      p_secret: req.headers['x-erp-sync-secret'] || process.env.ERP_SYNC_SECRET,
       p_payload: payload
     });
     if (!error && data) {
