@@ -1,4 +1,4 @@
-# 📌 盛隆瓦斯系統 - 全局任務看板與待完成項目清單 (TODO Board)
+﻿# 📌 盛隆瓦斯系統 - 全局任務看板與待完成項目清單 (TODO Board)
 
 > **最高決策者**：老闆 (Telegram ID: 8862712587，唯一 SuperAdmin)  
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
@@ -7,6 +7,30 @@
 > **最後更新時間**：2026-11-08 11:25
 ---
 
+### 👑 盛隆五大系統獨立網址與專屬網域徹底切分【100% 綠燈驗收】
+- **狀態**：[x] 已完成（依老闆決策將盛隆新 ERP、戰情調度中樞、門市客戶搜尋中樞、公開庫存看板徹底切分為獨立專屬網址並重簽對應 APK）
+- **優先級**：P0 (老闆最高決策指令)
+- **完成日期**：2026/11/08 14:10
+- **核心落地架構**：
+  1. **盛隆新 ERP（18 大模組營運下單／客戶／鋼瓶系統）**：
+     - 正式獨立網址：https://shenglong-erp.vercel.app
+     - 更新 Android 原生進入點 ErpMainActivity.java 指向獨立網域。
+     - 重新編譯封裝並完成 V1+V2+V3 安全簽名：public/files/shenglong-erp.apk，同步複製至桌面 sl（shenglong-erp.apk、盛隆新ERP_BOSS專屬.apk、盛隆新ERP_營運總裁專用.apk）。
+  2. **戰情調度中樞（老闆專用調度台）**：
+     - 正式網址：https://shenglong.vercel.app/operations
+     - 內部仍保留 CUSTOMERS 分頁供老闆本人快速查看。
+     - 訪客存取 https://shenglong.vercel.app/ 自動導向 /operations；存取 /erp 308 導向 https://shenglong-erp.vercel.app/；存取 /customers 308 導向 https://shenglong-customers.vercel.app/。
+  3. **門市客戶搜尋中樞（門市人員專用免登入）**：
+     - 正式獨立網址：https://shenglong-customers.vercel.app
+     - 免登入秒查 3,934 筆客戶代號（如 26.21.1）、電話、門牌地址、欠款與叫貨履歷。
+     - 嚴格網域隔離安全閘門：禁止存取任何後台操作 API，僅放行 /api/customers/directory 與 /api/customer-history 唯讀查詢；桌面快捷方式 盛隆瓦斯_門市客戶搜尋系統.url 已同步更新。
+  4. **公開瓦斯庫存看板**：
+     - 正式獨立網址：https://shenglong-next.vercel.app/gas-stock
+     - 重新編譯封裝並完成 V1+V2+V3 安全簽名：public/files/shenglong-stock.apk，同步複製至桌面 sl（盛隆瓦斯庫存.apk）。
+  5. **小龍外送派單**：
+     - 直載網址：https://shenglong.vercel.app/files/shenglong-driver-xl.apk（APK 檔案正常）。
+
+---
 ### 👑 盛隆瓦斯 1,000 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】
 - **狀態**：`[x]` 已完成（依老闆最高指令「改成10000000位客人」並決策以真實 Edge 瀏覽器跑動 1,000 位真實客人，100% 真機觸控點擊全部按鈕、填寫表單並存證）
 - **優先級**：`P0` (老闆最高決策指令)
@@ -2620,3 +2644,4 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - **負責設備/端點**：`Android Release APK` ＆ `Vercel (/download-driver)`
 - **老闆指示備註**：游柏林、小龍與通用版 APK 簽章完成並置於桌面與公開下載頁，冷啟動畫面純淨高質感。
 - **關聯詳細記錄**：[`docs/GOOGLE_DRIVE_RELEASE_RECORD.md#20261009-下午---外觀與-app-體驗全面升級`](file:///c:/Gass/docs/GOOGLE_DRIVE_RELEASE_RECORD.md)
+

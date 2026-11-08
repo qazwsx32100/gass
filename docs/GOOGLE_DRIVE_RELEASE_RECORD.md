@@ -1,3 +1,10 @@
+﻿## [2026-11-08 14:10] - 🌐 盛隆五大系統獨立網址與專屬網域徹底切分（新 ERP shenglong-erp ＋ 門市客戶搜尋 shenglong-customers ＋ 公開庫存 shenglong-next/gas-stock ＋ APK 全面重簽）
+- **盛隆新 ERP 專屬獨立網域 (https://shenglong-erp.vercel.app)**：將 18 大模組營運下單／客戶／鋼瓶系統切出獨立網域，根路徑不再自動跳轉 /operations；ErpMainActivity.java 與 build-all-apks.cjs 改綁獨立網域，重簽產出 shenglong-erp.apk 並同步鏡像至桌面 sl（shenglong-erp.apk、盛隆新ERP_BOSS專屬.apk、盛隆新ERP_營運總裁專用.apk）。
+- **門市客戶搜尋中樞專屬獨立網域 (https://shenglong-customers.vercel.app)**：為門市櫃檯配置免登入秒查 3,934 筆客戶之獨立網域，首頁直接改寫渲染客戶搜尋元件，並在 middleware.ts 實裝嚴格安全隔離閘門（禁止存取任何後台操作 API）；桌面捷徑 盛隆瓦斯_門市客戶搜尋系統.url 與 盛隆瓦斯_系統導航總入口.html 同步對齊。
+- **戰情調度中樞 (https://shenglong.vercel.app/operations)**：維持老闆調度台，內部完整保留 CUSTOMERS 客戶分頁供老闆自查；根路徑維持安全跳轉至戰情室，若請求 /erp 或 /customers 自動 308 導引至專屬獨立網域。
+- **公開庫存看板與 APK 更新 (https://shenglong-next.vercel.app/gas-stock)**：重新封裝並完成 V1+V2+V3 安全簽章產出 shenglong-stock.apk，同步複製至桌面 sl/盛隆瓦斯庫存.apk。
+
+---
 ## 📅 2026/11/08 - 👑 盛隆瓦斯 1,000 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】 [ver: 20261108_1121_real_1000_customers_full_flow_e2e]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)
@@ -3450,4 +3457,5 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - [x] **APK 安裝檔**：已生成於桌面與雲端目錄 (`ShengLong_Advisor_v1.0.apk`)
 - [x] **進程狀態**：`sync-stock.cjs` (PID 運行中) + `advisor-bot.cjs` (PID 運行中)
 - [x] **最高權限**：Telegram ID `8862712587` (SuperAdmin 永久鎖定)
+
 
