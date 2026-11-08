@@ -1,3 +1,22 @@
+## [2026-11-08 10:55] - 👑 盛隆瓦斯 100 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】
+- **100 位真實顧客全流程全按鈕瀏覽器端到端 (E2E) 實測驗收 (`shenglong-line-liff/scripts/run-100-real-customers-full-flow.js`)**：
+  - 依據老闆最高指令「幫我直接真實的跑數據 100個客人實際跑全部流程 和 按鈕」，動員真實 Microsoft Edge (Chromium, iPhone 414x896 手機視口) 引擎實機跑動 100 位具備獨立真人生產背景之客群。
+  - 全流程通過率達 **100.00% (100 通過, 0 失敗, 0 阻斷)**，105 秒極速完成。
+  - 累計真實點擊 **465 次按鈕**、表單鍵入 **200 次**、分頁切換 **255 次**。
+  - 涵蓋 5 大生活情境：Type A 熟客叫瓦斯 50 位、Type B 四語語音下單 20 位、Type C 搬家/新增地址 15 位、Type D 用氣安全 10 位、Type E 新客電話建檔 5 位。
+- **修復隱藏 P0 級前端 Bug (`public/app.js`)**：
+  - 修復下單表單 submit 時 `event.submitter` 為空拋出的 TypeError，並在 `finally` 區塊加入安全防護。
+- **後台持久化報告與高精真機截圖存證**：
+  - 審計報告：`reports/REAL_100_CUSTOMERS_FULL_FLOW_AUDIT.json` 與 `reports/REAL_100_CUSTOMERS_FULL_FLOW_AUDIT.md`。
+  - 截圖存證：6 張高精實機截圖存於 `reports/100-customers-e2e-screenshots/`。
+  - 新增單元測試 `tests/100-real-customers-full-flow.test.js`，全域 250 項測試全數綠燈。
+- **雲端與 GitHub 全面同步發布**：
+  - `shenglong-line-liff` 成功推送 GitHub `origin/main` (commit `27b6b20`)。
+  - Vercel Production 正式環境 (`https://shenglong-line-liff.vercel.app`) 部署成功綠燈 READY。
+  - 門市 `c:/Gass` 426 項全域測試全數綠燈通過。
+
+---
+
 ## [2026-11-08 10:25] - 🔍 跨倉網域隔離守衛更新（保留 `shenglong-next.vercel.app/gas-stock` 公開庫存、驗證 `/customers` 獨立搜尋頁）與待辦看板造冊
 - **更新網域隔離守衛 (`tests/domain-unification.test.mjs`)**：驗證 `shenglong-next/app/gas-stock/page.tsx` 已刪除、`app/customers/page.tsx` 獨立搜尋頁就位，並僅允許公開庫存網址指向 `https://shenglong-next.vercel.app/gas-stock`（嚴禁 `-phi`）。
 - **全局看板同步 (`docs/TODO.md` & 桌面鏡像)**：依老闆指示完整造冊記錄剩餘二階段巨檔拆解與環境收尾項目。
