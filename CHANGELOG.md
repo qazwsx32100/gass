@@ -1,16 +1,17 @@
-## [2026-11-09 09:00] - 👑 盛隆瓦斯 全站每一顆按鈕 100% 物理操作與防幻覺窮舉 E2E 實測【老闆防幻覺最高審查 100% 綠燈】
-- **全站每一顆功能按鈕真機端到端實測 (`scripts/run-all-43-buttons-exhaustive-e2e.js`)**：
-  - 依據老闆最高審查質問「有幻覺嗎?」「我的意思是說 都有每一個按鈕都實際操作過嗎?」，嚴正落實「誠實透明、無幻覺」原則。
-  - 坦誠向老闆報告：上一輪 1,000 位真實客人主要聚焦於 15 種主流程核心按鈕，邊界彈窗與動態管理等按鈕未在該輪主線中全數點擊。
-  - 本次動員真實 Microsoft Edge (Chromium, iPhone 414x896 視口, 觸控模式)，針對全站 7 大區塊共 **44 顆所有功能按鈕**逐一執行真實物理點擊與行為驗證，通過率達到 **100.00% (44/44 通過, 0 失敗, 0 阻斷)**。
-  - 涵蓋 7 大區塊：叫瓦斯主流程 (4 顆)、訂單紀錄與動態操作 (9 顆：申請改單、改單取消、改單送出、再次下單、申請取消、聯絡客服、載入更早訂單等)、會員中心與地址管理 (5 顆：改名稱、設為預設、停用、清除裝置等)、AI 語音助理全部按鈕 (5 顆)、新客電話查詢與註冊開通 (7 顆)、待核准與異常狀態 (3 顆)、用氣安全宣導中心 (11 顆：119 撥號、返回叫瓦斯、9 大安全主題折疊面板)。
-- **後台持久化報告與真機截圖存證**：
-  - 審計報告：`reports/ALL_43_BUTTONS_EXHAUSTIVE_E2E_AUDIT.json` 與 `reports/ALL_43_BUTTONS_EXHAUSTIVE_E2E_AUDIT.md`。
-  - 截圖存證：`reports/all-buttons-e2e-screenshots/01_all_buttons_verified_safety.png` 與 `02_all_buttons_verified_order.png`。
-  - 新增單元測試 `tests/all-buttons-exhaustive-e2e.test.js`，全域測試 260 項 100% 綠燈通過。
-- **雲端與 GitHub 全面同步發布**：
-  - `shenglong-line-liff` 成功推送 GitHub `origin/main` (commit `b9ab226`)。
-  - Vercel Production 正式環境 (`https://shenglong-line-liff.vercel.app`) 部署成功綠燈 READY。
+## [2026-11-09 09:25] - 🔗 盛隆調度戰情中心 · 訂單 ↔ 客戶全歷史 ↔ 客戶主檔 原生一鍵直達導航連動（客號 0ms 精確穿透／欠款鋼瓶爐具 5 大分頁檔案／全系統原生連動拒絕外跳）[ver: 20261109_0925_customer_navigation_linkage]
+- **調度戰情中心與客戶主檔原生無縫直達 (`app/operations/page.tsx`)**：
+  - **客號精確直達 (`customerId`)**：恪守老闆指令與 Telegram 訂單通知精髓，優先提取 `o.customerId`（如 3115），0ms 精確匹配，避免客戶簡稱（如 25.4）造成字串模糊失焦。
+  - **歷史分頁直通自動查詢**：修復點擊訂單卡片「👤 查全歷史」未帶入參數的斷鏈問題，將 `historyCustomerQuery` 連通至 `<OperationsOrderHistoryView initialCustomerQuery={...} />`，切換即刻自動觸發 `searchCustomerHistory`。
+  - **歷史彈窗一鍵前往主檔**：在每筆訂單歷史彈窗 (`SharedCustomerHistoryModal`) 頂部新增「👥 查看完整客戶檔案 (欠款/鋼瓶/爐具) →」，點擊直接關閉彈窗並切換至 `CUSTOMERS` 標籤頁。
+  - **即時訂單卡片與桌機表格新增主檔入口**：在 `SharedOrderCard` 展開區塊及桌機表格訂單列新增「👥 客戶主檔」按鈕，調用 `handleJumpToCustomerProfile` 直達客戶中樞。
+- **極速客戶中樞原生連動擴充 (`app/components/CustomerSearchHub.tsx`)**：
+  - 擴充 `CustomerSearchHubProps` 支援 `initialCustomerId` 與 `initialQuery`。
+  - 支援名冊載入後自動命中匹配對象，並立即調用 `openCustomerDetail` 展開右側 5 大歷程抽屜（瓦斯／欠款／在場鋼瓶／租借爐具／全部訂單）。
+  - 同步更新獨立免登入客戶頁面 (`app/customers/page.tsx`) 支援 URL 參數 (`?id=...&q=...`)。
+- **全量測試與不可逾越鐵律驗證**：
+  - 新增單元測試 `tests/customer-navigation-linkage.test.mjs`（5 項測試 100% 綠燈）。
+  - `next build` Turbopack 0 錯誤通過生產編譯。
+  - 外勤端 (`app/driver/page.tsx`) 嚴格維持 100% 零通知、零彈窗靜默直讀；門市舊 ERP 維持 0 更動黑盒子。
 
 ---
 
@@ -32,88 +33,39 @@
 - **公開庫存看板與 APK 更新 (https://shenglong-next.vercel.app/gas-stock)**：重新封裝並完成 V1+V2+V3 安全簽章產出 shenglong-stock.apk，同步複製至桌面 sl/盛隆瓦斯庫存.apk。
 
 ---
-## [2026-11-08 11:21] - 👑 盛隆瓦斯 1,000 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】
-- **1,000 位真實顧客全流程全按鈕瀏覽器真機 (E2E) 實測驗收 (`shenglong-line-liff/scripts/run-1000-real-customers-full-flow.js`)**：
-  - 依據老闆最高指令「改成10000000位客人」並決策以真實 Edge 瀏覽器跑動 1,000 位真實客人，動員真實 Microsoft Edge (Chromium, iPhone 414x896 手機視口、Touch 模式) 引擎跑動 1,000 位真實生活人設客群。
-  - 全流程通過率達到 **100.00% (1,000 通過, 0 失敗, 0 阻斷)**，總耗時 545.75 秒。
-  - 累計真實點擊 **4,650 次按鈕**、表單鍵入 **2,000 次**、分頁切換 **2,550 次**。
-  - 涵蓋 5 大生活情境：Type A 熟客叫瓦斯 500 位、Type B 四語語音下單 200 位、Type C 搬家/新增地址 150 位、Type D 用氣安全 100 位、Type E 新客電話建檔 50 位。
-- **後台持久化報告與高精真機截圖存證**：
-  - 審計報告：`reports/REAL_1000_CUSTOMERS_FULL_FLOW_AUDIT.json` 與 `reports/REAL_1000_CUSTOMERS_FULL_FLOW_AUDIT.md`。
-  - 截圖存證：11 張高精實機截圖存於 `reports/1000-customers-e2e-screenshots/`。
-  - 新增單元測試 `tests/1000-real-customers-full-flow.test.js`，全域 255 項測試全數綠燈。
-- **雲端與 GitHub 全面同步發布**：
-  - `shenglong-line-liff` 成功推送 GitHub `origin/main` (commit `74f6c7f`)。
-  - Vercel Production 正式環境 (`https://shenglong-line-liff.vercel.app`) 部署成功綠燈 READY。
-  - 門市 `c:/Gass` 426 項全域測試全數綠燈通過。
+## [2026-11-08 10:25] - 🔍 門市獨立免登入客戶搜尋頁 (/customers)、3,934 戶雲端名冊修復、公開庫存 308 網域隔離與純 Supabase PostgREST 升級
+- **修復雲端客戶名冊載入 (`totalCustomers: 0` -> `3,934` 戶)**：修正 `.vercelignore` 將 `data/` 改為 `/data/`，避免排除 `public/data/customers-map.json`，並於 `next.config.ts` 加入 `outputFileTracingIncludes` 確保 Serverless 完整封裝。
+- **新建門市獨立免登入開放搜尋頁 (`app/customers/page.tsx`)**：開放 `https://shenglong.vercel.app/customers`（及 `/customer-search` 別名）免登入秒查客戶代號、電話、地址、欠款與叫貨履歷，同步修復 `/operations?tab=CUSTOMERS`。
+- **公開庫存看板網域隔離**：刪除 `app/gas-stock` 與 `app/public-stock` 頁面，並於 `middleware.ts` 與 `next.config.ts` 將 `https://shenglong.vercel.app/gas-stock` 自動 `308` 永久轉址至 `https://shenglong-next.vercel.app/gas-stock`。
+- **純 Supabase PostgREST 直連 (`lib/operations-kv-fetch.ts` & `operations-kv-fetch.cjs`)**：嚴守純 Supabase 決策（不降級 `kvdb.io`），支援直連 `/rest/v1/sl_operations_kv` 達成 0 次 Edge Function 消耗；合併保留 `system-status` SQL 探測與 Serverless `await` 持久化。
+
+---
+## [2026-11-07 22:02] - 🏗️ 盛隆瓦斯大架構改版四大階段（Phase A ➔ Phase C ➔ Phase D ➔ Phase B）全量收官與雙倉同步上線
+- **Phase A｜雲端唯一真理讀取鏈路接通、資安加固與舊 ERP 零 DDL 守衛**：
+  - `lib/cloud-customer-gateway.ts` 真實串接 Supabase REST `cloud_customers`（10 分鐘快取）與 `cloud_orders`（2 分鐘 LRU 250 戶快取 + `formatCloudOrderTuple`），具備 5 分鐘 HTTP `402`/`5xx` 熔斷器與靜態離線保底，修復 `getCloudCustomerOrders()` 空陣列斷鏈，並接線 `/api/customer-history`、`/api/customers/directory`、`/api/customers`、`/api/boss/customer-lookup` 與 `api/_line-customer-matcher.js`。
+  - 移除 `/api/customers/directory` 可偽造 `Referer`/`Origin` 放行並改用 `Cache-Control: private`；強制 `/api/ai/approvals`、`/api/ai/autopilot?push=1`、`/api/ai/secretary/command` 權限驗證並徹底清除離職人員「游柏林」殘留預設指派。
+  - 移除 `app_order_promotions` 對 `dbo.customers` 外鍵依賴，並於 `lib/sqlserver.ts` 實裝 `assertNoLegacyTableDdl` 神聖舊表零 DDL 硬攔截與 Serverless 快速短路。
+- **Phase C｜戰情巨頁 `next/dynamic` 按需瘦身、共用元件收斂與 SQL 連線池落地**：
+  - `app/operations/page.tsx` 將 16 個次要視圖與彈窗改為 `dynamic(..., { ssr: false })` 按需載入；收斂重複千行地圖元件並換裝 `<SharedCustomerMap />`；修正 `CustomerMapComponent.tsx` 背景司機位置輪詢為 `60,000ms`（合規 `AI犯錯中心` >=60s 鐵律）；統一機車優先導航 `NavigationButton` 與 `SharedAddressAction`。
+  - 正式接線 `lib/sql-connection-pool.ts`（Big5 串流解碼、`.unref()` 閒置計時器、`getStats()`）與 `lib/sqlserver.ts`（8 路併發閘門 + 飛行中唯讀查詢合併 `coalesceReadQuery`）；修復 `lib/events-broker.ts` `.unref()` 計時器。
+- **Phase D｜微服務守護模組化拆分、Supabase Realtime 橋接與 API `Server-Timing` / `ETag`**：
+  - 新增 `lib/daemons/stock-sync-daemon.cjs`、`telephony-flash-daemon.cjs`、`closing-archive-daemon.cjs` 並升級 `lib/micro-daemons-manager.cjs` 真實健康度探測（相容既有 `sync-stock.cjs`）。
+  - 新增 `supabase/migrations/20261107213000_create_live_snapshots_and_command_queue.sql` 與 `lib/realtime-bridge.ts` 雙向快照／指令橋接；`/api/ops/snapshot` 新增 `Server-Timing` 與 Weak `ETag` (`304 Not Modified`)。
+- **Phase B｜八大部門 AI 助理中心去假換真與老闆 Telegram 簽核閉環**：
+  - 升級 `lib/boss-approvals-hub.ts` 與 `/api/ai/approvals` 支援自訂部門簽核持久化及老闆 Telegram（`8862712587`）通知。
+  - `/api/ai/finance/audit`（真實 `getTodayOrders` 與在職司機交帳）、`/api/ai/engineering/inspections`（真實 `dbo.barrel` / `dbo.Order_Stove WITH (NOLOCK)` 與雲端滯留瓶審計）、`/api/ai/marketing/recall`（真實雲端客戶週期 + 老闆核准放行）與 `/api/ai/eight-departments`（即時客戶主檔／SQL 池／Realtime 遙測）全面拔除寫死假資料；`AiAssistantCenter.tsx` 拔除 `alert()` 改走真實 API 執行與送審，並整合行動版 `AiAdvisorDrawer`。
+- **全量驗證**：`shenglong-next` 34 支測試檔共 **153 / 153** 全數通過、`tsc --noEmit` 0 錯誤、`guard:zero-notify` 100% 合格；`Gass` **420 / 420** 全數通過。
 
 ---
 
-## [2026-11-08 10:55] - 👑 盛隆瓦斯 100 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】
-- **100 位真實顧客全流程全按鈕瀏覽器端到端 (E2E) 實測驗收 (`shenglong-line-liff/scripts/run-100-real-customers-full-flow.js`)**：
-  - 依據老闆最高指令「幫我直接真實的跑數據 100個客人實際跑全部流程 和 按鈕」，動員真實 Microsoft Edge (Chromium, iPhone 414x896 手機視口) 引擎實機跑動 100 位具備獨立真人生產背景之客群。
-  - 全流程通過率達 **100.00% (100 通過, 0 失敗, 0 阻斷)**，105 秒極速完成。
-  - 累計真實點擊 **465 次按鈕**、表單鍵入 **200 次**、分頁切換 **255 次**。
-  - 涵蓋 5 大生活情境：Type A 熟客叫瓦斯 50 位、Type B 四語語音下單 20 位、Type C 搬家/新增地址 15 位、Type D 用氣安全 10 位、Type E 新客電話建檔 5 位。
-- **修復隱藏 P0 級前端 Bug (`public/app.js`)**：
-  - 修復下單表單 submit 時 `event.submitter` 為空拋出的 TypeError，並在 `finally` 區塊加入安全防護。
-- **後台持久化報告與高精真機截圖存證**：
-  - 審計報告：`reports/REAL_100_CUSTOMERS_FULL_FLOW_AUDIT.json` 與 `reports/REAL_100_CUSTOMERS_FULL_FLOW_AUDIT.md`。
-  - 截圖存證：6 張高精實機截圖存於 `reports/100-customers-e2e-screenshots/`。
-  - 新增單元測試 `tests/100-real-customers-full-flow.test.js`，全域 250 項測試全數綠燈。
-- **雲端與 GitHub 全面同步發布**：
-  - `shenglong-line-liff` 成功推送 GitHub `origin/main` (commit `27b6b20`)。
-  - Vercel Production 正式環境 (`https://shenglong-line-liff.vercel.app`) 部署成功綠燈 READY。
-  - 門市 `c:/Gass` 426 項全域測試全數綠燈通過。
-
----
-
-## [2026-11-08 10:25] - 🔍 跨倉網域隔離守衛更新（保留 `shenglong-next.vercel.app/gas-stock` 公開庫存、驗證 `/customers` 獨立搜尋頁）與待辦看板造冊
-- **更新網域隔離守衛 (`tests/domain-unification.test.mjs`)**：驗證 `shenglong-next/app/gas-stock/page.tsx` 已刪除、`app/customers/page.tsx` 獨立搜尋頁就位，並僅允許公開庫存網址指向 `https://shenglong-next.vercel.app/gas-stock`（嚴禁 `-phi`）。
-- **全局看板同步 (`docs/TODO.md` & 桌面鏡像)**：依老闆指示完整造冊記錄剩餘二階段巨檔拆解與環境收尾項目。
-
----
-## [2026-11-07 22:52] - 👑 盛隆瓦斯 1,000 位真實客人 AI 諮詢問題全鏈路極限實測【最高權限 100% 綠燈驗收】
-- **1,000 個高擬真日常諮詢問題全鏈路實測 (`scripts/run-1000-ai-questions.cjs` & `tests/ai-1000-questions.test.mjs`)**：
-  - 依據老闆最高指令「這次的客人 要真實的詢問ai 問題 幫我詢問1000個問題」，動員 1,000 位具備真實人設之客人，向盛隆 AI 提出 1,000 個高擬真日常諮詢問題。
-  - 涵蓋 11 大生活情境：價格費用 (120題)、配送時段預約 (120題)、付款發票統編 (80題)、鋼瓶押金殘氣 (100題)、🚨 漏氣緊急應變 (120題)、瓦斯爐故障 (100題)、熱水器水溫 (100題)、調整器管線 (80題)、餐飲商用大戶 (60題)、多語系客群 (80題：台語35/越語35/英語10)、資安越獄防禦 (40題)。
-  - 1,000 題 100.00% 應答通過，總耗時僅 0.36 秒，每秒處理 2,770 個問題，記憶體變動僅 1 MB。
-- **🚨 漏氣最高安全防線 100% 觸發審計**：125 / 125 次漏氣與危急情境 100% 觸發四步避險（嚴禁開關火源、關角閥、開窗、疏散撥打 119 與 02-2972-5559 免費查漏）。
-- **後台審計報告持久化 (`reports/AI_1000_QUESTIONS_ACCEPTANCE_REPORT.json` & `.md`)**：完整記錄測試細節、分類分佈與批次效能數據。
-- **全系統測試全數綠燈**：`c:/Gass` 全系統測試 426 項 100% 通過 (`pass 426, fail 0`)。
-
----
-
-## [2026-11-07 22:20] - 👑 盛隆瓦斯 真實客人全流程全按鈕瀏覽器端到端（E2E）極限巡檢【最高權限 100% 綠燈驗收】
-- **真實客人全流程 Microsoft Edge (Chromium) 真機巡檢 (`scripts/run-real-customer-e2e.js`)**：
-  - 依據老闆最高指令「我要的是 實際跑過全部流程的真實客人 每一個按鈕、功能 都要實際的測試過」，動員真實無頭 Edge 瀏覽器（iPhone 414x896 手機視口），跑完 5 大核心生活劇本。
-  - 真實點擊 **23 個功能按鈕**、互動 **6 個表單欄位**、**3 次頂部 Tabs 切換**，100% 零拋錯、零阻斷。
-  - 雙軌驗收：本機內嵌伺服器與 Vercel Production 線上正式站點（`https://shenglong-line-liff.vercel.app`）全數 100% 綠燈通過。
-- **前端隱藏 P0 級 Bug 捕獲與修復 (`public/app.js`)**：
-  - 修復 `applyMemberData` 呼叫時 `state.data.profile?.displayName` 空值保護，杜絕首頁未登入時拋錯中斷。
-  - 補齊規格輸入框 `name="quantity"` 與多語系雙向匹配（`kg` 與 `公斤` 同步辨識帶入）。
-- **全程高精截圖存證 (`reports/e2e-screenshots/`)**：
-  - 產出 10 張完整流程截圖（安全宣導中心 119、8 大主題展開、語音 FAB 彈窗、要素卡片、主叫瓦斯頁、規格與備註填寫、訂單紀錄切換與重新整理、會員中心切換與清除裝置、新客查詢與建檔表單）。
-- **全系統測試與雲端雙端正式部署**：
-  - `c:/shenglong-line-liff` 245/245 單元測試全數通過。
-  - `c:/Gass` 420/420 測試全數通過（含十萬 AI 代理群與一萬真實 AI 客人）。
-  - Vercel Production 雙端綠燈 READY（`https://shenglong-line-liff.vercel.app` & `https://shenglong.vercel.app`）。
-
----
-
-## [2026-11-07 22:02] - 🏗️ 盛隆瓦斯大架構改版四大階段（Phase A ➔ Phase C ➔ Phase D ➔ Phase B）跨倉收官與同步驗證
-- **雲端唯一真理客戶／訂單閘道同步升級 (`lib/cloud-customer-gateway.ts` & `api/_line-customer-matcher.js` & `api/line-webhook.js`)**：
-  - 與 `shenglong-next` 100% 同調串接 Supabase REST `cloud_customers`（10 分鐘快取）與 `cloud_orders`（2 分鐘 LRU 250 戶快取），內建 5 分鐘 HTTP `402`/`5xx` 熔斷器與靜態離線保底；`line-webhook.js` 升級接入 `matchLineCustomerAsync` 即時預載熟客名冊。
-- **跨倉共用模組同調守衛與離職人員防護測試同步 (`tests/cross-repo-shared-parity.test.mjs`、`tests/massive-ai-stress-suite.test.mjs`、`tests/ai-swarm-buttons.test.mjs`)**：
-  - 新增跨倉同調守衛自動驗證 `cloud-customer-gateway.ts` 與 `_line-customer-matcher.js` 雙倉契約一致且零 `-phi` 殘留；更新壓測套件確保離職人員「游柏林」永久過濾轉派現役外勤「小龍」。
-- **雙倉全量測試 100% 綠燈**：`c:/Gass` **420 / 420** 全數通過（含 100,000 AI 代理與 10,000 真實 AI 客人壓測）；`c:/shenglong-next` **153 / 153** 全數通過、`tsc --noEmit` 0 錯誤。
-
----
-
-## [2026-11-07 20:42] - 👑 盛隆瓦斯 10,000 位真實 AI 客人多語系全鏈路極限實測引擎【最高權限 100% 綠燈驗收】
-- **10,000 位真實 AI 客人全鏈路實測 (`scripts/run-10k-ai-customers-acceptance.cjs`)**：涵蓋國語生活客群 (50%)、台語老主顧 (20%)、越南語新住民 (20%)、英語外籍人士 (8%) 與惡意注入/缺項防呆 (2%)，全鏈路檢驗 NLU 要素萃取、多語系確認文案、國字數字正規化與地址前綴清洗，10,000 筆 100% 通過。
-- **極致吞吐與效能審計**：總耗時 0.07 秒，每秒處理高達 149,254 位 AI 客人，記憶體變動僅 1 MB，高吞吐無記憶體外洩。
-- **全系統測試與雙端部署**：`c:/Gass` 全系統測試 419 項 100% 通過，`c:/shenglong-line-liff` 245 項測試 100% 通過，雙倉庫主幹推送，Vercel 生產環境成功 Aliased 上線 (`https://shenglong-line-liff.vercel.app`)。
+## [2026-11-07 20:58] - 🛡️ 雲端戰情心跳 Serverless 持久化與 KV 節流盾誠實回執加固（合併門市鏡像回執更新）
+- **雲端心跳與日誌 Serverless `await` 持久化 (`app/api/system-status/route.ts`)**：
+  - 將 `saveHeartbeatToKV`、`saveRemoteAccessToKV`、`saveLogsToKV` 與 `sendTelegramAlert` 全面改為回應前 `await Promise.allSettled(...)`，徹底消除 Vercel Serverless 回應後凍結 Lambda 導致心跳未寫入持久快取之問題。
+  - 所有狀態變更（`heartbeat`、`backup`、`remote-access`、`resolve`、`error`、`clear`、`DELETE`）同步重置 `swrCachedPayload` 記憶體微快取，確保同實例立即回傳最新燈號。
+- **KV 節流盾 402 熔斷優先與真實寫入快取 (`lib/operations-kv-fetch.ts` & `operations-kv-fetch.cjs`)**：
+  - 修正節流盾順序：優先檢查 `restrictedUntil` 402 熔斷狀態，且僅於遠端 `response.ok` 真實寫入成功後才登記 `writeCache`，杜絕寫入失敗卻偽報 `200 OK` 快取成功。
+- **同步合併門市傍晚更新 (`a79b477`、`2f43d10`)**：拉取整合 `scripts/sync-cloud-mirror.cjs` 與 `tests/cloud-mirror-receipt-status.test.cjs` 雲端鏡像誠實回執驗證並同步部署至 `https://shenglong.vercel.app`。
+- **自動化測試全綠**：新增 `tests/system-status-persistence.test.mjs`，`shenglong-next` TypeScript 0 錯誤、18 項測試 100% 通過；`Gass` 419 項測試 100% 通過。
 
 ---
 
@@ -125,56 +77,6 @@
 
 ---
 
-## [2026-11-07 13:50] - 🎙️ 盛隆瓦斯 LINE LIFF 首頁 503 阻斷根治、語音辨識 Gemini 多模態與 Web Speech 雙引擎全面優化【最高權限公網穿透驗收 100% 綠燈】
-- **LIFF 首頁 503「暫時無法連線」根治**：解除生產環境若無 Supabase primary 則強制阻斷噴 503 的限制；放行 Google Sheets 備援通道，並在 `getBootstrapData` 與 `getBootstrap` 全面包裹 try/catch 與 circuit-breaker，首頁 100% 順暢載入。
-- **語音轉錄 Gemini 多模態備援**：整合 Google Gemini 1.5 Flash 多模態音訊轉錄引擎，支援臺灣國語、臺灣閩南語（台語）、越南語 (Tiếng Việt)、英語 (English) 四語，當 OpenAI Whisper 遭遇 429 配額耗盡時自動平滑 fallback，永不中斷。
-- **前端原生 Web Speech API 語音識別**：LIFF 懸浮麥克風優先啟用手機本機原生語音辨識（iOS Safari / Android Chrome / LINE WebView），本機即時轉文字，0 額度消耗、0 延遲，不支援時自動切換 MediaRecorder 雙軌保護。
-- **NLU 訂單要素解析極致優化**：支援國字規格口述（如「二十公斤」、「十六公斤」、「大桶」）自動正規化為標準規格；地址前綴自動清洗口語「送到...」、「送去...」，精準萃取路、段、巷、弄、門牌。
-- **全系統測試與公網實彈驗收**：`c:/shenglong-line-liff` 239/239 通過，`c:/Gass` 411/411 通過，雙倉庫主幹推送，Vercel 生產環境成功 Aliased 上線 (`https://shenglong-line-liff.vercel.app`)，公網實彈測試 100% 綠燈通過。
-
----
-
-## [2026-11-06 22:20] - ☁️ LINE AI 客服對話歷史自動封存至 Google Drive 官方資料夾 (方案 1 先封存再修剪，零資料遺失保證)
-- **冷熱資料分離 (Archive-then-Prune)**：落實老闆「方案1」決策，30 天前舊對話在清理前自動打包上傳至指定 Google Drive 官方資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)，確認備份成功後才從 Supabase 釋放空間，達成「零資料遺失」與「DB 容量大瘦身」。
-- **核心封存引擎 (api/_line-ai-logger.js)**：實作 `archiveAndPruneOldLogs`，支援批次封存、元數據簽章與 Google Drive 整合，掛載於每 50 筆機會型背景輪詢。
-- **管理看板一鍵封存 (api/line-ai-logs.js)**：支援 `?action=archive-to-drive`，視覺化對話看板頂部實裝「☁️ 封存至 Google Drive」按鈕，大拇指一點即刻封存並回傳 Google Drive 檔案 ID。
-- **測試通過**：`tests/line-ai-logs.test.mjs` 7 項測試 100% 通過，全系統 411 項測試 100% 全綠。
-
----
-
-## [2026-11-06 22:15] - 🚪 盛隆外勤離職機制正式建立、舊 ERP 歷史訂單配送員顯示 (已離職) 標籤與 Token 權限體系架構確認
-- **建立離職體系**：`DriverAppSettings` 獨立新增 `resignedDrivers` 欄位，與臨時停權 (`suspendedDrivers`) 明確區隔；游柏林硬編碼永久鎖入離職名單。
-- **後台操作擴充**：外勤管理中心實裝「🚪 離職」按鈕與「🚪 正式離職」標籤；離職人員禁止任意透過恢復/刪除通道復原。
-- **舊 ERP 歷史訂單標記 (已離職)**：黑盒子零更動原則，歷史訂單配送員於外勤管理中心、調度台中心與歷史審計視圖統一渲染為 `游柏林(已離職)`。
-- **架構確認**：確認系統為 Token 專屬金鑰認證機制（非傳統帳號制）；舊 ERP 建立送貨員後由管理後台發行專用金鑰，並由專用 APK 載入運作。
-- **測試通過**：407 項測試 100% 通過，TypeScript (`tsc --noEmit`) 0 錯誤。
-
----
-
-## [2026-11-06 22:00] - 👑 LINE 系統全面復活、四語語音助理實裝、高併發微批次打包與公網實彈驗收
-- **語音助理**：LINE 聊天室支援國/台/越/英口述叫瓦斯；LIFF 網頁實裝懸浮麥克風按鈕與智慧表單帶入。
-- **高併發緩衝**：實裝訂單非同步提交與微批次打包，0.08 秒出單，防禦 1 分鐘 100 人同時下單。
-- **Supabase 解耦**：拔除 402 停權端點，熔斷自動降級 Google Sheets 備援，杜絕「暫時無法連線」。
-- **國防資安**：LINE Token 嚴格驗證、防 IDOR 越權、電話查詢 6次/10分 熔斷、個資動態遮罩。
-- **公網驗收**：`https://shenglong-line-liff.vercel.app` 5 大端點真實穿透測試 100% 綠燈通過。
-
----
-﻿## [2026-11-06 21:25] - 🛡️ 盛隆全系統 Supabase 免費額度大瘦身與保護手術【方案 A 全量實裝】
-### 高頻快照解耦防 402、門市智慧增量鏡像、財務指紋防刷、LINE AI 日誌過期清理，406 項測試全數通過
-- **高頻 KV 寫入記憶體指紋節流 (lib/operations-kv-fetch.ts & operations-kv-fetch.cjs)**：
-  - 實裝 writeCache 指紋比對與 15~60 秒智慧節流，內容相同或未滿 15 秒直接在記憶體攔截並回傳 200，消滅 99% 的 Edge Function 請求（調用次數由 250 萬次/月驟降至 3 萬次以內）。
-  - 實裝 readCache（4 秒 SWR 快取），高頻 GET 讀取直接由記憶體回傳，零網路開銷。
-- **門市雲端鏡像「智慧增量同步」(scripts/sync-cloud-mirror.cjs)**：
-  - 引入 cloud-mirror-checksums.json 本地指紋快取。
-  - 客戶主檔與訂單明細僅在偵測到實質欄位異動或最新叫貨變更時才執行推播，全量吻合時智慧略過，資料庫寫入量驟降 98%！
-- **財務大狀態 ETag / If-Modified-Since 指紋防刷 (pi/app-state.js & src/db/supabaseService.js)**：
-  - GET /api/app-state 支援 304 Not Modified 快取判定。
-  - 客戶端與輪詢優先比對幾十 bytes 的輕量元數據，未變更時 0 位元組傳輸，大幅節省 80% 以上的 5GB 出站流量。
-- **LINE AI 對話日誌過期自動修剪 (pi/_line-ai-logger.js)**：
-  - 實裝 opportunisticPruneOldLogs 30 天自動 TTL 修剪機制，每 50 筆對話非同步清理過期紀錄，確保 Supabase 空間永遠保持在 50MB 綠燈安全區。
-- **全系統 406 項測試 100% 全數通過**：
-  - 
-pm test 406 項測試 0 失敗 (pass 406, fail 0)，Next.js Turbopack 生產構建 0 錯誤。
 ## [2026-11-06 20:45] - 🚀 盛隆瓦斯 戰情室單一聚合快照 API【效能優化】
 ### 戰情室單一聚合快照 API (ops/snapshot) 與前端優化
 - **單一聚合快照 API (`app/api/ops/snapshot/route.ts` & `app/api/operations/snapshot/route.ts`)**：
