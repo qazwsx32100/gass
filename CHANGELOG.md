@@ -1,3 +1,14 @@
+## [2026-11-09 08:58] - 🔔 盛隆調度戰情中心 · 全方位即時通知系統實裝（新單進線／外勤送達／現場回報／來電快開／庫存警報＋側邊抽屜＋Toast橫幅＋桌面推播）[ver: 20261109_0858_operations_notification_center]
+- **盛隆調度中樞即時通知中心 (`app/operations/page.tsx`)**：
+  - **多通道聚合**：全面整合新單進線 (`ORDER_NEW`)、外勤配送送達 (`ORDER_STATUS`)、外勤現場狀況回報 (`FIELD_REPORT`)、來電進線開單 (`CALL_INCOMING`) 與 20kg 實瓶瓦斯偏低警報 (`SYSTEM_ALERT`) 5 大通知類別。
+  - **通知側邊抽屜**：頂部鈴鐺按鈕全面換裝未讀紅色徽章，點開滑出專屬通知中心抽屜，支援 6 大分類一鍵切換過濾、一鍵全部已讀、一鍵清空通知與 50 筆本地 SessionStorage 快取。
+  - **一鍵跳轉高亮**：點擊新單或完單通知卡片，自動跳轉至訂單看板並平滑捲動至該單，閃爍藍色光暈高亮聚焦；點擊來電通知直接開啟開單彈窗；點擊庫存警報直通庫存看板。
+  - **浮動 Toast 橫幅與桌面推播**：畫面右上角（手機版置頂）5 秒自動淡出 Toast 橫幅，支援點擊「開啟通知中心」；整合 Web Push 瀏覽器推播，後台運行亦不漏接。
+  - **雙大不可逾越鐵律守護**：司機外勤端 (`app/driver/page.tsx`) 嚴格維持 100% 零通知、零彈窗、靜默直接定位；門市舊 ERP 維持零變更黑盒子 (`WITH (NOLOCK)`)。
+  - **全量雙倉驗證**：新增 `tests/operations-notification-center.test.mjs` 通過；`shenglong-next` Next.js 16.3.6 Turbopack build 0 錯誤成功；`Gass` 全系統 429 項測試 100% 綠燈通過。
+
+---
+
 ﻿## [2026-11-08 14:10] - 🌐 盛隆五大系統獨立網址與專屬網域徹底切分（新 ERP shenglong-erp ＋ 門市客戶搜尋 shenglong-customers ＋ 公開庫存 shenglong-next/gas-stock ＋ APK 全面重簽）
 - **盛隆新 ERP 專屬獨立網域 (https://shenglong-erp.vercel.app)**：將 18 大模組營運下單／客戶／鋼瓶系統切出獨立網域，根路徑不再自動跳轉 /operations；ErpMainActivity.java 與 build-all-apks.cjs 改綁獨立網域，重簽產出 shenglong-erp.apk 並同步鏡像至桌面 sl（shenglong-erp.apk、盛隆新ERP_BOSS專屬.apk、盛隆新ERP_營運總裁專用.apk）。
 - **門市客戶搜尋中樞專屬獨立網域 (https://shenglong-customers.vercel.app)**：為門市櫃檯配置免登入秒查 3,934 筆客戶之獨立網域，首頁直接改寫渲染客戶搜尋元件，並在 middleware.ts 實裝嚴格安全隔離閘門（禁止存取任何後台操作 API）；桌面捷徑 盛隆瓦斯_門市客戶搜尋系統.url 與 盛隆瓦斯_系統導航總入口.html 同步對齊。

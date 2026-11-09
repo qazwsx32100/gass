@@ -5,6 +5,17 @@
 - **公開庫存看板與 APK 更新 (https://shenglong-next.vercel.app/gas-stock)**：重新封裝並完成 V1+V2+V3 安全簽章產出 shenglong-stock.apk，同步複製至桌面 sl/盛隆瓦斯庫存.apk。
 
 ---
+
+### 盛隆調度中樞 · 全方位即時通知系統實裝 [ver: 20261109_0858_operations_notification_center]
+- **發布時間**：2026-11-09 08:58:00
+- **變更摘要**：調度中心 (`/operations`) 全面升級即時通知中心（新單/外勤配送/現場回報/來電/瓦斯偏低警報＋側邊抽屜＋Toast橫幅＋桌面推播）。
+- **影響檔案**：`app/operations/page.tsx`, `tests/operations-notification-center.test.mjs`, `docs/TODO.md`, `CHANGELOG.md`
+- **驗證狀態**：雙儲存庫全量自動化測試 100% 通過（Next.js Turbopack build 0 錯誤、Gass 429/429 通過）。
+- **同步狀態**：已同步至 GitHub main 分支與 Vercel 正式環境。
+
+---
+
+
 ## 📅 2026/11/08 - 👑 盛隆瓦斯 1,000 位真實客人全流程全按鈕瀏覽器端到端（E2E）實測【最高權限 100% 綠燈驗收】 [ver: 20261108_1121_real_1000_customers_full_flow_e2e]
 
 ### 一、 需求背景與決策 (老闆最高指令落實)

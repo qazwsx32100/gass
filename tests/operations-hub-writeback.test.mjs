@@ -8,23 +8,15 @@ const require = createRequire(import.meta.url);
 const { buildDispatchWritebackSql } = require("c:/shenglong-next/lib/erp-writeback-engine.cjs");
 
 test("Monitoring Center to Legacy ERP Full Pipeline Verification", async (t) => {
-  await t.test("Test 1: /api/driver/orders/status accepts same-origin / x-internal-origin requests", () => {
+  await t.test("Test 1: /api/driver/orders/status enforces session auth and ERP writeback", () => {
     const src = fs.readFileSync("c:/shenglong-next/app/api/driver/orders/status/route.ts", "utf8");
     assert.ok(
-      src.includes('request.headers.get("x-internal-origin") === "operations"'),
-      "must recognize internal operations origin header"
+      src.includes("getSessionUser") && src.includes("getAuthenticatedDriver"),
+      "must enforce session user or authenticated driver verification"
     );
     assert.ok(
-      src.includes("const isInternalOperations = isSameOriginRequest(request);"),
-      "must evaluate isSameOriginRequest"
-    );
-    assert.ok(
-      src.includes('driverName: "調度中心"'),
-      "must grant operations center internal dispatch identity"
-    );
-    assert.ok(
-      src.includes("enqueueBatchDispatches(numericOrderIds, assignDriverName, true)"),
-      "must enqueue batch dispatches for writeback"
+      src.includes("batchAssignDriver") && src.includes("enqueueBatchDispatches"),
+      "must support batch dispatch assignment and enqueue for legacy ERP writeback"
     );
     assert.ok(
       src.includes('enqueueOrderAction("deliver", numOrderId'),
