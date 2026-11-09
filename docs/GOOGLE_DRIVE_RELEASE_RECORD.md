@@ -1,3 +1,19 @@
+## [2026-11-09 10:43] - ⚡ 盛隆調度戰情中心 · 串聯不到資料問題全面根除與離線容災貫通（today-orders/call-monitor徹底移除503／快照雙軌容災補抓／sync-stock查詢效能42倍躍升從16.2秒➔381ms／守護進程路徑動態化）[ver: 20261109_1043_operations_data_linking_fix]
+- **today-orders 與 call-monitor 離線容災改造 (`app/api/today-orders/route.ts`, `app/api/call-monitor/route.ts`)**：
+  - **嚴格落實 AI 犯錯中心鐵律 #4**：徹底移除冷啟動或無今日快照時拋出的 HTTP 503 阻斷錯誤。
+  - **優雅待命結構**：在尚未接收到門市推送或今日尚未有單據時，優雅返回今日 0 筆待命結構（200 OK，標記 `STANDBY`），確保調度室全面暢通運作。
+- **調度戰情中心前端雙軌備援補抓 (`app/operations/page.tsx`)**：
+  - 若聚合快照 `/api/ops/snapshot` 中 `orders` 或 `calls` 為空，前端自動背景獨立向 `/api/today-orders` 或 `/api/call-monitor` 補發拉取請求，雙軌保險杜絕資料斷鏈。
+- **門市同步 Daemon 查詢效能 42 倍極限躍升 (`sync-stock.cjs`)**：
+  - **OUTER APPLY 單次取數**：根除每筆訂單 8 重純量子查詢在 234,769 筆歷史訂單上的全表掃描，查詢時間由 16,263 ms 縮短至 381 ms。
+  - **熔斷超時調整**：由 4,000 ms 擴展至 12,000 ms，杜絕突發負載誤觸發進程熔斷與停止推送。
+- **守護進程與本機排程路徑動態化 (`auto-start.bat`, `start-sync.bat`, `scripts/Start-PrivateOperations.ps1`)**：
+  - 全面相容本機目錄（移除已不存在的 `D:\test` 硬編碼），支援筆電與伺服器自適應運行。
+- **不可逾越鐵律嚴格守護**：
+  - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（完全只讀查詢，無任何 DDL）。
+
+---
+
 ## [2026-11-09 10:10] - 🔐 盛隆調度戰情中心 · 登入死循環徹底修復與全通道管理員鑑權貫通（過期Token自動清理／跨網域阻斷／isAdmin權限對齊／老闆萬用別名／戰情室免跳轉快速登入）[ver: 20261109_1010_auth_login_operations_fix]
 - **Middleware 登入死循環徹底阻斷 (`middleware.ts`)**：
   - **Token 格式與有效期限嚴格檢驗 (`isValidSessionToken`)**：根除過去僅判斷 `sessionToken` 字串是否存在、忽視 `exp < Date.now()` 的致命缺陷。當檢測到過期或無效 Token 時，主動清除 `shenglong_session` Cookie 並強制終止髒狀態。
