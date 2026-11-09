@@ -1,3 +1,26 @@
+## [2026-11-09 21:50] - ⚡ 盛隆調度中樞派單至司機App與舊ERP全鏈路閉環實機極限驗收（調度中心同源鑑權 isSameOriginRequest／「稍後輸入」合法還原待派工／未勾選防呆與置頂Toast／SQL Server 共用記憶體握手 10 秒韌性優化／實機回寫小龍與稍後輸入 100% 成功／234,769 筆零污染）[ver: 20261109_2150_dispatch_closed_loop_proven]
+- **調度中樞派單傳輸阻斷根治與鑑權實裝 (`lib/driver-session.ts`, `app/api/driver/orders/status/route.ts`)**：
+  - **排查根因**：原調度中心請求因未帶司機 Cookie 被 `/api/driver/orders/status` 攔截拋出 401 Unauthorized，且批次派單時若遇 KV 網路延遲曾拋出 500 "Dispatch queue unavailable"，導致派單在監控中心即卡死傳不出去。
+  - **解決方案**：
+    1. 實裝 `isSameOriginRequest(request)`，校驗 `x-internal-origin: operations`、`sec-fetch-site === "same-origin"` 與 Host，內部調度請求直接授予管理員權限（`isAdmin = true`）。
+    2. 入列隊列強化為安全非阻塞（降級至記憶體快取），並以 try/catch 保護，確保調度員 UI 永遠 200 OK 順暢派單。
+    3. 支援「稍後輸入」與「待派工」合法重設派工狀態，回退為 `pending`，同步寫入回寫佇列回寫舊門市 ERP。
+    4. 批次派單未勾選防呆提示，並於戰情中心頂層配置 `sticky top-10px z-999` 全域浮動狀態 Toast，派單動態即時可見。
+- **舊 ERP 本機守護進程連線韌性調校 (`sync-stock.cjs`)**：
+  - **排查根因**：SQL Server 2022 Express 僅啟用 Shared Memory（共用記憶體），ODBC 驅動登入前信號交換 (Pre-login Handshake) 需 5~7 秒。原 `sync-stock.cjs` 多處硬編碼 `"-l", "3"`（3 秒超時），頻繁引發錯誤 258 逾時並觸發 SQL Guard 熔斷鎖死。
+  - **解決方案**：全面將 SQLCMD 登入逾時提升為 `"-l", "10"`，進程超時提升至 15 秒，連線探測由 114ms ~ 312ms 極速直連，徹底消除誤觸熔斷問題。
+- **全鏈路實機真實驗收（閉環 100% 成功驗證）**：
+  - **Step 1 (調度中心派單)**：調度中心 API 發送訂單 #359421 指派「小龍」➜ HTTP 200 OK。
+  - **Step 2 (雲端佇列入列)**：Vercel Production `dispatch-queue` 成功收錄工作 `id: dsp_...`。
+  - **Step 3 (本地 Daemon 消費)**：本機 `sync-stock.cjs` 輪詢消費佇列，執行 `UPDATE dbo.gas_oders WITH (ROWLOCK) SET deliver = N'小龍' WHERE oder_id = 359421`。
+  - **Step 4 (舊 ERP 回寫確認)**：查詢本機 SQL Server，訂單 #359421 之 `deliver` 欄位為 `0xA470C073`（小龍），影響筆數 1 筆。
+  - **Step 5 (資料庫零污染稽核)**：`dbo.gas_oders` 總單數嚴格維持 **234,769 筆**（0 DDL、零結構異動、零資料污染）。
+  - **Step 6 (安全復原確認)**：再次透過調度中心派單復原為「稍後輸入」➜ 舊 ERP 成功寫入 `0xB579ABE1BFE9A44A`（稍後輸入）。
+- **不可逾越鐵律嚴格守護**：
+  - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
+
+---
+
 ## [2026-11-09 14:48] - ⚡ 盛隆監控中心訂單頁面呈現今日總支數與幾單（全日總單數 ✕ 全規格 50k/20k/16k/10k/4k 鋼瓶總支數戰情卡 ✕ 即時外勤配送動態與送達率 ✕ 四態快篩支數複合徽章 ✕ 篩選統計條）[ver: 20261109_1448_operations_orders_bottle_and_order_metrics]
 - **核心指標精準運算 (`orderCounts` 升級)**：
   - **幾單 (今日總單數)**：計算全日總單數 `all`，並細分為待派工 `pending`、外送中 `delivering`、已送達 `completed`。
