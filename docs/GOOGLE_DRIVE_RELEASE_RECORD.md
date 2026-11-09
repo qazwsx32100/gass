@@ -1,3 +1,16 @@
+## 2026-11-09 09:00 - 👑 盛隆瓦斯 全站每一顆按鈕 100% 物理操作窮舉 E2E 實測審計發布
+- **發布模組**：盛隆 LINE LIFF 叫瓦斯系統 (`shenglong-line-liff`)
+- **最高決策者**：老闆 (Telegram ID: `8862712587`)
+- **發布目的**：回應老闆最高審查「有幻覺嗎?」「都有每一個按鈕都實際操作過嗎?」，全面窮舉 44 顆所有按鈕真機操作
+- **實測結果**：44 / 44 顆按鈕 100.00% 實測通過，0 失敗、0 阻斷
+- **真機截圖存證**：`reports/all-buttons-e2e-screenshots/01_all_buttons_verified_safety.png`、`02_all_buttons_verified_order.png`
+- **審計報告**：`reports/ALL_43_BUTTONS_EXHAUSTIVE_E2E_AUDIT.json`、`reports/ALL_43_BUTTONS_EXHAUSTIVE_E2E_AUDIT.md`
+- **自動化測試**：`tests/all-buttons-exhaustive-e2e.test.js` (全套 260 項測試全數通過)
+- **GitHub 提交**：`shenglong-line-liff` 主幹 commit `b9ab226`
+- **雲端正式環境**：`https://shenglong-line-liff.vercel.app` (READY)
+
+---
+
 ﻿## [2026-11-08 14:10] - 🌐 盛隆五大系統獨立網址與專屬網域徹底切分（新 ERP shenglong-erp ＋ 門市客戶搜尋 shenglong-customers ＋ 公開庫存 shenglong-next/gas-stock ＋ APK 全面重簽）
 - **盛隆新 ERP 專屬獨立網域 (https://shenglong-erp.vercel.app)**：將 18 大模組營運下單／客戶／鋼瓶系統切出獨立網域，根路徑不再自動跳轉 /operations；ErpMainActivity.java 與 build-all-apks.cjs 改綁獨立網域，重簽產出 shenglong-erp.apk 並同步鏡像至桌面 sl（shenglong-erp.apk、盛隆新ERP_BOSS專屬.apk、盛隆新ERP_營運總裁專用.apk）。
 - **門市客戶搜尋中樞專屬獨立網域 (https://shenglong-customers.vercel.app)**：為門市櫃檯配置免登入秒查 3,934 筆客戶之獨立網域，首頁直接改寫渲染客戶搜尋元件，並在 middleware.ts 實裝嚴格安全隔離閘門（禁止存取任何後台操作 API）；桌面捷徑 盛隆瓦斯_門市客戶搜尋系統.url 與 盛隆瓦斯_系統導航總入口.html 同步對齊。
