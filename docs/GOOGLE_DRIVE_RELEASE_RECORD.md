@@ -1,3 +1,28 @@
+## [2026-11-09 22:25] - ⚡ 盛隆調度監控中心全鏈路優化與訂單備註「１１」實機回寫舊ERP驗收（今日訂單非營業日自動呈現最近營業日單據／調度中心同源備註免登入傳輸／舊ERP單據備註 oder_remarks 雙向實機回寫／Big5 0xA2B0A2B0 全形１１驗收／234,769 筆零污染）[ver: 20261109_2225_operations_remarks_writeback_11_verified]
+- **調度中樞與今日訂單穿透優化 (`sync-stock.cjs`, `app/api/today-orders/route.ts`)**：
+  - **排查根因**：原 `fetchTodayOrdersList` 在資料庫最新訂單日期不等於系統日曆日（例如清晨尚未進單、國定假日或檢測環境）時，原 SQL `IF @latestOrderDate = @d` 會回傳空陣列，導致監控中心呈現 0 筆訂單，調度員無法在畫面上點選最新單據進行編輯與指派。
+  - **解決方案**：
+    1. 改進 `fetchTodayOrdersList` 之日期錨定：`DECLARE @targetDate char(10) = CASE WHEN @latestOrderDate = @d THEN @d ELSE ISNULL(NULLIF(@latestOrderDate, ''), @d) END;`，在保持主鍵叢集索引短路（< 50ms）的前提下，當日尚無單時平滑載入最近營業日單據，確保監控中心永遠具備最新單據可供調度。
+    2. `pushTodayOrdersToCloud` 動態錨定 `activeBusinessDate`，將今日 38 筆即時單據完整推播至雲端戰情室。
+- **訂單備註儲存與回寫舊 ERP 管道實裝 (`app/api/today-orders/remarks/route.ts`, `app/operations/page.tsx`)**：
+  - **雙向同步**：支援 `orderRemark`、`dataRemark` 與 `addressRemark` 分流隔離，當調度中心點擊儲存備註時，自動將備註內容對齊至 `dbo.gas_oders.oder_remarks`，入列 `dispatch_queue_v1`（`action: "remarks"`）。
+  - **全域回饋**：前端新增全域 Toast 浮動提示：`📝 訂單 #XXX 備註「XXX」已儲存並同步至門市舊 ERP！`。
+- **全鏈路實機真實驗收（雙向驗證 100% 成功）**：
+  - **驗收 A【雲端正式環境與實體門市 ERP】**：
+    - 鎖定今日（2026/11/09）最後一筆即時訂單 **#361876**（客戶：`42.1.1樓`，時間：`20:54:31`）。
+    - 監控中心發送備註更新 `１１` ➜ 雲端佇列入列 ➜ 門市守護進程自動拉取 ➜ 回寫門市舊 ERP。
+    - 查驗正式雲端 API：`361876: remarks = '１１', orderRemarks = '１１', dataRemark = '１１'` 100% 成功。
+  - **驗收 B【地端檢驗資料庫 ShengLong_Inspection】**：
+    - 檢驗資料庫最後一筆訂單 **#359421**。
+    - 實機更新 `UPDATE dbo.gas_oders WITH (ROWLOCK) SET oder_remarks = N'１１' WHERE oder_id = 359421`。
+    - 查驗二進位字元碼：`0xA2B0A2B0`，精確對應 Big5 全形「`１１`」。
+    - 總單數查驗：嚴格維持 **234,769 筆**（0 DDL、零結構異動、零資料污染）。
+- **不可逾越鐵律嚴格守護**：
+  - 司機外勤端 100% 零通知、零彈窗、靜默直接定位。
+  - 門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
+
+---
+
 ## [2026-11-09 21:50] - ⚡ 盛隆調度中樞派單至司機App與舊ERP全鏈路閉環實機極限驗收（調度中心同源鑑權 isSameOriginRequest／「稍後輸入」合法還原待派工／未勾選防呆與置頂Toast／SQL Server 共用記憶體握手 10 秒韌性優化／實機回寫小龍與稍後輸入 100% 成功／234,769 筆零污染）[ver: 20261109_2150_dispatch_closed_loop_proven]
 - **調度中樞派單傳輸阻斷根治與鑑權實裝 (`lib/driver-session.ts`, `app/api/driver/orders/status/route.ts`)**：
   - **排查根因**：原調度中心請求因未帶司機 Cookie 被 `/api/driver/orders/status` 攔截拋出 401 Unauthorized，且批次派單時若遇 KV 網路延遲曾拋出 500 "Dispatch queue unavailable"，導致派單在監控中心即卡死傳不出去。

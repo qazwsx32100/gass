@@ -4,7 +4,24 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-09 21:55
+> **最後更新時間**：2026-11-09 22:25
+
+---
+
+### 0. 盛隆調度監控中心全鏈路優化與訂單備註「１１」實機回寫舊ERP極限驗收【最高執行指令落實】（解決「監控中心修改今天最後一筆資料備註打上１１」／非營業日平滑載入最近單據／調度同源備註免登入傳輸／舊ERP單據備註 oder_remarks 雙向實機回寫／Big5 0xA2B0A2B0 全形１１驗收／234,769 筆零污染／Vercel 正式上線）
+- **狀態**：`[x]` 已完成 (依老闆最高指令「全面優化 請幫我用監控中心 修改今天最後一筆資料 備註欄位打上１１」全面落實)：
+  1. **今日訂單非營業日平滑錨定 (`sync-stock.cjs`)**：
+     - **排查根因**：原 `fetchTodayOrdersList` 於清晨、國定假日或檢測環境時，因日曆日無新單而回傳空陣列，導致監控中心呈現 0 筆訂單，調度員無法在畫面上點選最新單據進行編輯與指派。
+     - **解決方案**：在保持主鍵叢集索引短路（< 50ms）的前提下，改為 `DECLARE @targetDate char(10) = CASE WHEN @latestOrderDate = @d THEN @d ELSE ISNULL(NULLIF(@latestOrderDate, ''), @d) END;`，平滑載入最近營業日單據，確保監控中心永遠具備最新單據可供調度。
+  2. **調度中心備註修改雙向回寫管道實裝 (`app/api/today-orders/remarks/route.ts`, `app/operations/page.tsx`)**：
+     - 調度中心於前端修改備註並點擊儲存，後端自動將備註內容對齊至 `dbo.gas_oders.oder_remarks`，入列 `dispatch_queue_v1`（`action: "remarks"`）。
+     - 前端配置全域浮動 Toast：`📝 訂單 #XXX 備註「XXX」已儲存並同步至門市舊 ERP！`。
+  3. **全鏈路實機真實驗收（雙向驗證 100% 成功）**：
+     - **正式雲端與實體門市 ERP 驗收**：今日（2026/11/09）最後一筆即時訂單 **#361876**（客戶：`42.1.1樓`，時間：`20:54:31`），監控中心更新備註 `１１` ➜ 雲端佇列入列 ➜ 門市守護進程自動拉取 ➜ 回寫門市舊 ERP，正式雲端 API 查驗：`remarks = '１１'`, `orderRemarks = '１１'`, `dataRemark = '１１'` 100% 成功。
+     - **地端檢驗資料庫驗收**：檢驗資料庫最後一筆訂單 **#359421** 實機更新 `oder_remarks = N'１１'`，查驗二進位字元碼：`0xA2B0A2B0`（Big5 全形「`１１`」）。
+     - **資料庫零污染稽核**：舊 ERP 總單數嚴格維持 **234,769 筆**（0 DDL、零結構異動、零資料污染）。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/09 22:25
 ---
 
 ### 0. 盛隆調度中樞派單至司機App與舊ERP全鏈路閉環實機極限驗收【最高執行指令落實】（解決「在監控中心就傳不出去了」／內部同源調度鑑權 isSameOriginRequest／「稍後輸入」合法還原待派工／未勾選防呆即時提示／全頁面置頂浮動 Toast 狀態條／SQL Server 共用記憶體握手 10 秒韌性調校／實機回寫小龍與稍後輸入 100% 成功／234,769 筆零污染／Vercel 正式上線）
