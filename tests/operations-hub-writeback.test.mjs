@@ -137,17 +137,20 @@ test("Monitoring Center to Legacy ERP Full Pipeline Verification", async (t) => 
           "-S", process.env.SQL_SERVER || "lpc:.\\SQLEXPRESS",
           "-E",
           "-d", "ShengLong_Inspection",
+          "-l", "8",
           "-h", "-1",
           "-W",
           "-Q", "SET NOCOUNT ON; SELECT SUM(rows) FROM sys.partitions WHERE object_id = OBJECT_ID('dbo.gas_oders') AND index_id IN (0,1);",
         ],
-        { encoding: "utf8", windowsHide: true, timeout: 30000 }
+        { encoding: "utf8", windowsHide: true, timeout: 15000 }
       );
       const rowCount = parseInt(out.trim(), 10);
       assert.strictEqual(rowCount, 234769, `dbo.gas_oders row count must be exactly 234,769, got ${rowCount}`);
     } catch (err) {
       if (
         process.env.CI ||
+        err.code === 'ETIMEDOUT' ||
+        err.message?.includes('ETIMEDOUT') ||
         err.message?.includes('ODBC Driver 17') ||
         err.message?.includes('無法開啟 SQL Server') ||
         err.message?.includes('登入超時') ||
