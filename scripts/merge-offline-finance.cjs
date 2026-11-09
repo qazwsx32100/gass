@@ -11,17 +11,21 @@ function mergeOfflineFinance(payloadPath) {
     throw new Error(`找不到 Payload 檔案: ${payloadPath}`);
   }
 
-  const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
+  const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8').replace(/^\uFEFF/, ''));
   const offlinePath = path.join(__dirname, '../api/_offline_state.json');
   if (!fs.existsSync(offlinePath)) {
     throw new Error(`找不到 _offline_state.json: ${offlinePath}`);
   }
 
-  const root = JSON.parse(fs.readFileSync(offlinePath, 'utf8'));
+  const root = JSON.parse(fs.readFileSync(offlinePath, 'utf8').replace(/^\uFEFF/, ''));
   const state = root.state || {};
 
-  // 1. 建立安全備份
-  const backupPath = path.join(__dirname, `../api/backup_pre_sync_${Date.now()}.json`);
+  // 1. 建立安全備份至 backups/（由 .gitignore 忽略，避免雜物部署）
+  const backupDir = path.join(__dirname, '../backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  const backupPath = path.join(backupDir, `backup_pre_sync_${Date.now()}.json`);
   fs.writeFileSync(backupPath, JSON.stringify(root, null, 2), 'utf8');
 
   // 2. 處理 incomes (以 payload 中的收入更新，去除舊的 shenglong 收入並替換)
@@ -43,7 +47,14 @@ function mergeOfflineFinance(payloadPath) {
   }));
 
   // 3. 處理 expenses (舊 ERP 僅同步退押金，嚴格保留所有人工與試算表費用，如10月60筆$785,970)
-  const incomingExpenses = payload.expenses || [];
+  // 注意：10月份的 5 筆退押金在 10 月初次稽核時已由 Google 試算表以 EXP202610_SHEET_* 形式入帳（60筆/$785,970基線）
+  // 故 2026-10 的 SL-SYNC-EXP-BARREL-REFUND-* 不應重複加入
+  const incomingExpenses = (payload.expenses || []).filter(e => {
+    if (e.date && e.date.startsWith('2026-10') && (e.id || '').startsWith('SL-SYNC-EXP-BARREL-REFUND-')) {
+      return false;
+    }
+    return true;
+  });
   const incomingExpenseIds = new Set(incomingExpenses.map(e => e.id));
 
   const keptExpenses = (state.expenses || []).filter(item => {

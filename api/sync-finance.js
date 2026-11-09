@@ -136,8 +136,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // 6. 回傳標準成功回應 (與地端預期完全相容)
-  return sendJson(res, 200, {
+  // 6. 回傳標準成功回應 (與地端預期完全相容，同時支援 data 包裝與扁平結構)
+  const resultData = {
     success: true,
     channel: 'vercel_backup_channel',
     businessDate,
@@ -155,5 +155,10 @@ export default async function handler(req, res) {
     driveBackupLink,
     syncedAt: new Date().toISOString(),
     notice: syncNotice
+  };
+
+  return sendJson(res, 200, {
+    ...resultData,
+    data: resultData
   });
 }
