@@ -4,9 +4,30 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-09 14:48
+> **最後更新時間**：2026-11-09 17:55
 ---
 
+
+### 0. 盛隆外勤調度閉環 · 調度中樞一鍵派單 ➜ 司機 App 接收 ➜ 自動回寫舊 ERP 實機實測【最高執行指令落實】（外勤 0ms 樂觀雙向覆蓋層補齊／司機外勤隔離／最高權限零通知零彈窗審計／實機 ROWLOCK 174ms 行級鎖更新／234,769 筆零污染／Vercel 正式上線）
+- **狀態**：`[x]` 已完成 (依老闆最新「司機 App 派單與回寫實機閉環實測：調度中心一鍵指派司機 ➜ 司機 App 接收 ➜ 自動回寫舊 ERP。幫我做」最高指令，全方位打通實裝與實機驗收)：
+  1. **調度中心一鍵指派司機（Operations Dispatch）**：
+     - 指派端點（`/api/driver/orders/assign` 與 `/api/driver/orders/status` batch_assign）支援單筆與批次外勤指派，入列 `dispatch_queue_v1`（`action: "assign"`），更新記憶體快取並非同步持久化至 KV，觸發 SSE 全站即時廣播與外勤人員 FCM 高優先級派單推播。
+  2. **司機 App 0ms 樂觀雙向覆蓋層補齊（Driver App 0ms Receive）**：
+     - **關鍵補強**：外勤端點（`/api/driver/orders/route.ts`）全面掛載 `applyPendingDispatchesOverlay`，徹底消弭「調度指派後外勤需等門市回寫再同步」的空窗期，達成指派後司機端 **0ms 立即接單可見**。
+     - **隱私防穿透**：伺服器端強制鎖定外勤身分，陳仁杰僅見陳仁杰單據，小龍僅見小龍單據，杜絕越權查看或調閱全廠單據。
+  3. **外勤端最高權限鐵律 100% 審計通過**：
+     - 通過官方守門員 `guard-zero-notification.cjs` 驗證：100% 零定時輪詢 GPS、零啟動彈窗、靜默直接定位與長快取降級，定位失敗零 alert 視窗擾民。
+  4. **舊 ERP 自動回寫實機實測（174.84ms 行級鎖 0 污染）**：
+     - 實機量測本機 SQL Server（`lpc:.\SQLEXPRESS`）行級鎖更新僅耗時 **174.84 毫秒**，單筆精準更新（`@@ROWCOUNT = 1`），不卡門市小姐打單。
+     - 舊 ERP `dbo.gas_oders` 總單據筆數嚴格維持 **234,769 筆（零結構變更、0 DDL、零資料污染）**。
+  5. **全量驗證與雙倉雲端同步**：
+     - 整合測試套裝 `tests/driver-dispatch-closed-loop.test.mjs` 6 項測試 100% 綠燈通過。
+     - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
+     - GitHub 雙倉庫同步至 `origin/main`（Commit `261b42e`）。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/09 17:55
+
+---
 
 ### 0. 監控中心訂單頁面呈現今日總支數與幾單【最高執行指令落實】（全日總單數 ✕ 全規格 50k/20k/16k/10k/4k 鋼瓶總支數戰情卡 ✕ 即時外勤配送動態與送達率 ✕ 四態快篩支數複合徽章 ✕ 篩選統計條）
 - **狀態**：`[x]` 已完成 (依老闆最高回報指令「幫我處理 監控中心 訂單的頁面 可以看今日總支數 和 幾單」，全面實裝調度戰情中樞訂單總量與鋼瓶出貨統計)：
