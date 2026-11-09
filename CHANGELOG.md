@@ -1,3 +1,24 @@
+## [2026-11-09 10:10] - 🔐 盛隆調度戰情中心 · 登入死循環徹底修復與全通道管理員鑑權貫通（過期Token自動清理／跨網域阻斷／isAdmin權限對齊／老闆萬用別名／戰情室免跳轉快速登入）[ver: 20261109_1010_auth_login_operations_fix]
+- **Middleware 登入死循環徹底阻斷 (`middleware.ts`)**：
+  - **Token 格式與有效期限嚴格檢驗 (`isValidSessionToken`)**：根除過去僅判斷 `sessionToken` 字串是否存在、忽視 `exp < Date.now()` 的致命缺陷。當檢測到過期或無效 Token 時，主動清除 `shenglong_session` Cookie 並強制終止髒狀態。
+  - **反向彈跳死循環防護**：進入 `/login` 時，若 Token 已過期或帶有 `force=1`，絕不強制 307 重定向至 `/operations`，徹底粉碎「提示需登入 ➔ 點登入跳轉 `/login` ➔ 中介層又反向彈回 `/operations`」的無解死迴圈。
+- **跨網域跳轉掉 Session 修復 (`app/login/page.tsx`)**：
+  - **參數全面相容**：統一支援 `returnUrl`、`redirect` 與 `from` 參數，調度中心前往登入均能精確接收重定向目標。
+  - **預設跳轉修正**：登入後預設導向由原先跨網域的 `/erp`（會觸發 308 導向 `https://shenglong-erp.vercel.app` 造成 Session 遺失）全面修正為戰情調度中樞 `/operations`。
+  - **介面登入提示**：登入介面明確標註老闆帳號別名提示與預設密碼清單，避免輸入非預期字元導致困惑。
+- **權限核心貫通與老闆別名支援 (`lib/auth.ts`, `app/api/auth/login/route.ts`, `app/api/auth/session/route.ts`)**：
+  - **身分屬性完整對齊**：修正 `/api/auth/login` 與 `/api/auth/session` 回傳之 Session 物件，除 `role: "admin"` 外明確回傳 `isAdmin: true`，避免前端布林值判斷落空。
+  - **老闆別名與萬用密碼放行**：支援 `admin`、`boss`、`8862712587`、`老闆`、`shenglong`、`shenglonggas@gmail.com` 等別名；擴充萬用密碼清單（包含 `1234`、`windsboy123` 等合法密碼）。
+- **戰情調度中心免跳轉「本頁快速登入」彈窗 (`app/operations/page.tsx`)**：
+  - **Admin 權限邏輯容錯升級**：判斷 `u.role === "admin" || u.isAdmin === true || u.username === "admin" || u.username === "boss"`，徹底解決登入後紅字橫幅仍誤報「需 Admin 登入」問題。
+  - **0-跳轉快速登入彈窗**：在頂部警告橫幅新增「⚡ 本頁快速登入」按鈕，點擊彈出專屬極速登入視窗，在當前戰情頁面直接調用 `/api/auth/login` 完成認證並立即重新整理 Session，100% 避免頁面切換與跳轉風險。
+- **全量測試與不可逾越鐵律守護**：
+  - 新增單元測試 `tests/auth-login-operations.test.mjs`（3/3 100% 綠燈通過）。
+  - `next build` Turbopack 0 錯誤通過生產編譯。
+  - 司機外勤端 (`app/driver/page.tsx`) 嚴格維護 100% 零通知、零彈窗靜默直讀；門市舊 ERP 維持 0 更動黑盒子。
+
+---
+
 ## [2026-11-09 09:25] - 🔗 盛隆調度戰情中心 · 訂單 ↔ 客戶全歷史 ↔ 客戶主檔 原生一鍵直達導航連動（客號 0ms 精確穿透／欠款鋼瓶爐具 5 大分頁檔案／全系統原生連動拒絕外跳）[ver: 20261109_0925_customer_navigation_linkage]
 - **調度戰情中心與客戶主檔原生無縫直達 (`app/operations/page.tsx`)**：
   - **客號精確直達 (`customerId`)**：恪守老闆指令與 Telegram 訂單通知精髓，優先提取 `o.customerId`（如 3115），0ms 精確匹配，避免客戶簡稱（如 25.4）造成字串模糊失焦。

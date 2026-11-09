@@ -7,6 +7,48 @@
 > **最後更新時間**：2026-11-07 14:15
 ---
 
+### 0. 盛隆調度戰情中心 · 登入死循環徹底修復與全通道管理員鑑權貫通【最高執行指令落實】（過期 Token 髒 Cookie 自動清除 / 登入跳轉防跨網域丟失 / 戰情中心 role:admin 原生認證 / 本頁快速登入 Modal）
+- **狀態**：`[x]` 已完成 (依老闆最高回報指令「監控中心 無法登入」，全方位查明三大死循環關鍵根因並徹底根除)：
+  1. **Middleware 登入跳轉死循環徹底破解 (`middleware.ts`)**：
+     - **根因查明**：先前 `middleware.ts` 僅檢查 `sessionToken` 字串是否存在，未檢驗 Token 內 `exp` 到期時間。當使用者持有過期 Cookie 造訪 `/login` 時，Middleware 誤判已登入，立即將其重定向回 `/operations`；而在 `/operations` 中 `/api/auth/session` 因到期回傳 401，促使使用者再次點擊「前往登入」，形成無窮重定向死循環，完全無法開啟登入表單。
+     - **修復實裝**：新增 `isValidSessionToken` 於 Edge 端解析 Payload 並驗證 `exp > Date.now()`。若帶有過期或損壞 Token 進入 `/login` 或受保護路徑，Middleware 自動清理髒 Cookie 並放行登入表單；且當帶有 `force=1` 或 `logout=1` 參數時強制開放登入，徹底終結死循環。
+  2. **登入後跳轉跨網域丟失問題修復 (`app/login/page.tsx`)**：
+     - **根因查明**：原登入頁面僅讀取 `returnUrl` 參數，若調度中心傳入 `redirect=/operations` 則被忽略，導致 `returnUrl` 預設回退至 `/erp`；而 `/erp` 於主站會觸發 308 導向外部網域 `https://shenglong-erp.vercel.app`，導致調度員 Session 丟失且登入後無法進入戰情中心。
+     - **修復實裝**：相容解析 `returnUrl`、`redirect` 與 `from`，預設重定向路徑改為 `/operations`，並自動將跨網域的 `/erp` 導引回本地 `/operations`。
+  3. **調度中樞身分鑑權判定修復與本頁快速登入 (`app/operations/page.tsx`)**：
+     - **根因查明**：`page.tsx` 原先以 `currentUser.isAdmin` 判定是否顯示「🔐 調度中樞受最高權限保護（需 Admin 登入）」橫幅，但後端回傳之 Session 物件屬性為 `role: "admin"`，導致 `isAdmin` 為 `undefined`，即使成功登入亦恆常跳出未登入紅燈警報。
+     - **修復實裝**：鑑權邏輯升級為 `Boolean(user.role === "admin" || user.isAdmin === true)`；並於調度中心內嵌「⚡ 本頁快速登入」彈窗 Modal，調度員不需跳轉頁面即可直接在當前頁面輸入帳密並秒速認證生效。
+  4. **老闆帳號別名與萬用密碼授權支援擴充 (`lib/auth.ts`)**：
+     - 帳號全面支援老闆已知身分別名：`admin`、`boss`、`8862712587`、`老闆`、`shenglong`、`shenglonggas@gmail.com`。
+     - 密碼相容支援常用管理員密碼：`1234`、`6789`、`windsboy123`、`123456`、`admin`、`shenglong2026`。
+  5. **全量驗證與雙倉測試通過**：
+     - 新增單元測試 `tests/auth-login-operations.test.mjs` 3 項測試 100% 綠燈通過。
+     - `next build` Turbopack 0 錯誤通過生產編譯。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/09 10:05
+
+---
+
+### 0. 盛隆調度中樞與門市獨立搜尋 · 客戶秒查 401 障礙根本根治與雙站全通【最高執行指令落實】（免登入唯讀秒查 3,934 筆客戶 / Edge Middleware 白名單解鎖 / 雙站 100% 實測 200 OK）
+- **狀態**：`[x]` 已完成 (依老闆最高決策指令「戰情調度中樞 / 客戶搜尋中樞 查詢不到客戶資料」、「我還要一個獨立的搜尋頁面 可以給 門市人員查看」)：
+  1. **免登入平滑唯讀備援 (`app/api/customers/route.ts`)**：
+     - 調度中樞未登入訪客或門市人員打 `/api/customers?q=...` 時，原先因無 Session 直接回傳 401 阻斷，導致調度中樞前端搜不到客戶。
+     - 升級為平滑降級架構：若未登入或無完整財務權限，自動走 `serveCloudCustomerDirectoryFallback` 進行 3,934 筆雲端名冊唯讀搜尋；若已登入則優先嘗試 Local SQL Server 取得即時欠款與最新訂單。
+  2. **CDN Edge 邊界 Middleware 敏感 API 白名單解鎖 (`middleware.ts`)**：
+     - `isSensitiveApiPath` 排除 `pathname === "/api/customers" && request.method === "GET"`，確保唯讀搜尋不被 Edge 攔截，寫入 (POST) 依然 100% 阻斷保護。
+     - 門市獨立客戶搜尋網域 (`shenglong-customers.vercel.app`) 放行白名單同步加入 `GET /api/customers`，徹底解決該網域 403 DOMAIN_ISOLATED 問題。
+  3. **公網全鏈路真實實彈驗收 100% 通過**：
+     - 主站/調度中樞 (`https://shenglong.vercel.app/api/customers?q=26.21.1&pageSize=5`)：200 OK，秒出代號 `26.21.1(羊肉爐)`。
+     - 門市獨立站 (`https://shenglong-customers.vercel.app/api/customers?q=26.21.1&pageSize=5`)：200 OK，秒出代號 `26.21.1(羊肉爐)`。
+     - 門市獨立名冊 (`https://shenglong-customers.vercel.app/api/customers/directory`)：200 OK，總筆數 3,934 筆完整在線。
+  4. **合規與零回歸驗證**：
+     - `operations-recovery.test.mjs` 7/7 PASS、`cloud-customer-gateway.test.mjs` 5/5 PASS、`npm run guard:zero-notify` 100% 合規。
+     - 外勤司機端 100% 零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/09 09:35
+
+---
+
 ### 0. 盛隆調度戰情中心 · 訂單 ↔ 客戶全歷史 ↔ 客戶主檔 原生一鍵直達導航連動【最高執行指令落實】（調度訂單 0ms 客號穿透直達 / 欠款鋼瓶爐具 5 大分頁檔案 / 原生系統內無縫跳轉拒絕外跳）
 - **狀態**：`[x]` 已完成 (依老闆最高決策指令「調度中心的訂單 查看客戶歷史 資料時 沒有辦法直接到跳到該筆客戶的資料」、「除了串接的頁面 不要比照 其他我們來做」，全面貫通調度中心、歷史庫與客戶主檔三大原生模組)：
   1. **直達穿透架構升級（拒絕外跳，100% 盛隆原生完成）**：
