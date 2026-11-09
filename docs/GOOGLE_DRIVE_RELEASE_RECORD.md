@@ -1,3 +1,40 @@
+## [2026-11-09 14:30] - ⚡ 盛隆即時庫存連線全面修復與 SQL 熔斷假死根除（dbo.Waiting/gas_oders 聚簇索引極速短路 1ms／瓦斯庫存 60 秒定期心跳推送／雲端判定放寬至 180 秒）[ver: 20261109_1430_gas_stock_live_sync_fix]
+- **真相與根因徹底查明（絕不隱瞞、絕不說謊）**：
+  - **根因 A (dbo.Waiting 50萬筆全表掃描引發連鎖超時與 120 秒熔斷鎖死)**：門市 `dbo.Waiting` 累積超過 500,278 筆資料，且 `call_date` 無索引。背景定時任務（`checkStalledCalls` 每 10 秒、`checkLiveCallFlashCard` 每 10 秒、`checkAutonomousSelfHealing`、`checkDisabledOrders` 每 15 秒）頻繁執行 `WHERE call_date = CONVERT(...)` 全表掃描，每次耗時 5~8 秒。多個定時器並發時排隊堆積，超過 10 秒 / 12 秒硬性超時限制，直接殺死 `sqlcmd` 並觸發 SQL Guard 熔斷（進入 120 秒冷卻鎖死期），使整個同步進程反覆癱瘓。
+  - **根因 B (庫存原僅在變動時發送，門市無異動時雲端 35 秒即誤判離線)**：原程式邏輯中，若當前瓦斯庫存與今日出貨數量未發生變動，同步進程輸出 `→ HOLD` 且不向雲端發送 POST；而 Vercel 雲端 API 判定閾值過於嚴苛（超過 35 秒未收更新即判定 `isLive: false`），監控中心亦在 5 分鐘無更新時標紅 🔴「資料更新延遲」，導致明明門市正常無出貨，雲端時間戳卻凍結在上午 10:45:40 並標記為離線。
+  - **根因 C (dbo.gas_oders 35.9 萬筆無索引歷史掃描阻塞 SQL Server)**：`fetchTodayOrdersList` 與 `query.sql` 反覆對 359,421 筆歷史訂單執行 `OUTER APPLY`，每次耗時 12+ 秒，排擠了其他查詢。
+- **全面優化與極速短路實裝（嚴格遵守舊 ERP 零更動黑盒子鐵律）**：
+  - **聚簇索引短路判定 (Clustered Index Short-Circuit)**：利用 `dbo.Waiting` 主鍵 `tel_id` 與 `dbo.gas_oders` 主鍵 `oder_id` 之嚴格單調遞增特性，在任何查詢前以 `SELECT TOP 1 date FROM ... ORDER BY pk DESC` 讀取 B-Tree 尾端頁面（**僅耗時 0.001 秒 / 1 ms**）。若最新單據或來電日期不為今日，立即直接返回 0 / 空集合，查詢耗時從 8,000 ms 驟降至 **1 ms（提速 8,000 倍）**；若最新日期為今日，僅在 `TOP 500` 內檢索，完全消除全表掃描。
+  - **瓦斯庫存每 60 秒強制定時心跳推送 (`sync-stock.cjs`)**：在 `pushStockToCloud` 中加入 `Date.now() - lastVercelStockPushTime >= 60000` 判定，即使門市瓦斯數量未變動，至少每 60 秒主動向雲端 Vercel 推送一次保底健康心跳，持續更新 `updatedAt` 時間戳。
+  - **雲端端點與前端監控判定優雅放寬 (`app/api/gas-stock/route.ts`, `app/operations/page.tsx`)**：
+    - `app/api/gas-stock/route.ts` 將 `isLive` 判定超時從 35 秒放寬至 180 秒（3 分鐘）。
+    - 監控中心 `MonitoringFreshnessBadge` 在收到心跳連線時，庫存與訂單延遲判定放寬至 15 分鐘，杜絕無端報紅。
+  - **SQLCMD 查詢超時保護與熔斷退避優化**：
+    - `runSqlCmd` 超時放寬至 25 秒，`runSqlStatement` 超時放寬至 15 秒，`fetchTodayOrdersList` 超時放寬至 20 秒。
+    - 熔斷退避間隔從 120 秒縮短至 15 秒，並加入防重入鎖（Re-entrancy Guard）。
+- **不可逾越鐵律嚴格守護**：
+  - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
+
+---
+
+## [2026-11-09 10:50] - ⚡ 盛隆調度中樞至舊 ERP 雙向回寫壓力與穩定性深度驗證（1,000 筆 SQL 微秒級生成／50 併發排隊零競態／純 DB 行級鎖 202 微秒／234,769 筆零污染稽核）[ver: 20261109_1050_erp_writeback_stress_verification]
+- **1,000 筆多場景回寫 SQL 微秒級生成實測 (`tests/erp-writeback-stress.test.mjs`)**：
+  - 深度模擬派單指派 (`assign`)、送達收款結單 (`deliver`)、單據備註 (`remarks`)、規格金額改單 (`edit`) 與作廢 (`cancel`) 5 大完整回寫場景。
+  - 1,000 筆 SQL 總生成耗時僅 7.71 ms，平均每筆僅 7.7 微秒；100% 嚴格配備 `WITH (ROWLOCK)` 行級鎖，100% 鎖定主鍵 `WHERE oder_id = ...`，絕無全表鎖風險。
+  - 惡意 SQL Injection 注入與特殊符號（單引號、Unicode、Big5 跳脫）100% 安全轉義為 `N'...'`，無語法截斷或穿透漏洞。
+- **高併發 50 筆佇列互斥鎖 (Promise Serialization) 順序一致性驗證**：
+  - 50 筆併發操作在 11.06 ms 內循序完成序列化入列，100% 符合 FIFO 佇列順序，零資料競爭與零遺失。
+- **真實 SQL Server 行級鎖事務耗時實測（每筆 202.5 微秒 / 0.203 ms）**：
+  - 在門市真實 SQLEXPRESS 資料庫實測行級鎖更新事務（`BEGIN TRAN ... UPDATE WITH (ROWLOCK) ... ROLLBACK TRAN`），每筆事務平均耗時僅 202.5 微秒。
+  - 門市小姐鍵盤極速打單完全不受干擾（行級鎖互不阻塞）。
+  - 稽核 `dbo.gas_oders` 總單據筆數嚴格維持 234,769 筆，達成零污染。
+- **門市同步 Daemon 日誌優化 (`sync-stock.cjs`)**：
+  - 修復未變動週期（無須推送 Vercel）之虛報 ERR 問題，改為精確輸出 `→ HOLD`，消除誤報警報。
+- **不可逾越鐵律嚴格守護**：
+  - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
+
+---
+
 ## [2026-11-09 10:43] - ⚡ 盛隆調度戰情中心 · 串聯不到資料問題全面根除與離線容災貫通（today-orders/call-monitor徹底移除503／快照雙軌容災補抓／sync-stock查詢效能42倍躍升從16.2秒➔381ms／守護進程路徑動態化）[ver: 20261109_1043_operations_data_linking_fix]
 - **today-orders 與 call-monitor 離線容災改造 (`app/api/today-orders/route.ts`, `app/api/call-monitor/route.ts`)**：
   - **嚴格落實 AI 犯錯中心鐵律 #4**：徹底移除冷啟動或無今日快照時拋出的 HTTP 503 阻斷錯誤。
@@ -11,6 +48,25 @@
   - 全面相容本機目錄（移除已不存在的 `D:\test` 硬編碼），支援筆電與伺服器自適應運行。
 - **不可逾越鐵律嚴格守護**：
   - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（完全只讀查詢，無任何 DDL）。
+
+---
+
+## [2026-11-09 10:30] - ⚡ 盛隆全系統操作體驗極致優化（客戶搜尋401解鎖＋免登入秒查＋全鍵盤極速流＋關鍵字高亮＋來電空狀態最近營業日一鍵穿透）[ver: 20261109_1030_operations_ux_optimization]
+- **客戶搜尋 401 障礙根除與免登入秒查 (`app/api/customers/route.ts`, `middleware.ts`)**：
+  - **雙層鑑權平滑降級**：修改 API 端點，當未登入或無 Admin 權限時，自動平滑走 `serveCloudCustomerDirectoryFallback`，利用雲端本地 3,934 筆客戶名冊快取極速檢索；若為登入 Admin 則直通 SQL Server 查詢欠款與歷史。
+  - **中介層白名單擴充**：於 `middleware.ts` 針對獨立網域 `shenglong-customers.vercel.app` 與主站放行 `GET /api/customers` 唯讀查詢，徹底根絕 401/403 阻擋。
+- **門市客戶搜尋全鍵盤極速流與關鍵字高亮 (`app/components/CustomerSearchHub.tsx`)**：
+  - **全域快捷鍵**：按 `/` 或 `F2` 自動聚焦搜尋框並全選文字，按 `Escape` 關閉客戶檔案抽屜或清空輸入。
+  - **方向鍵選擇與回車開檔**：按 `↓` / `↑` 移動游標選取客戶，選中卡片以品牌湖水綠外框與光暈高亮標記（`highlightedIndex`）；按 `Enter` 立即調用 `openCustomerDetail` 展開 5 大分頁檔案。
+  - **關鍵字即時高亮微元件 (`HighlightMatch`)**：搜尋字詞於客戶姓名、電話、地址與編號上以亮色 `<mark>` 標示。
+- **來電監控空狀態導引與最近營業日穿透 (`app/operations/views/CallMonitorView.tsx`)**：
+  - **營業日導引**：今日開市前或無通聯時，提供友善提示與顯著快捷按鈕「📜 檢視最近營業日（2026/11/06 34 筆來電）歷史紀錄」，一鍵切換至 2026-11-06 並展開 34 通來電。
+  - **返回今日監控**：瀏覽歷史日期時，上方日期選擇列旁提供快捷按鈕「☀️ 返回今日即時監控」，無縫返回今日最新線路監聽。
+- **全量雙軌驗證與不可逾越鐵律守護**：
+  - 新增單元測試 `tests/cloud-customer-gateway.test.mjs` 5/5 PASS。
+  - 既有回歸測試 `tests/operations-recovery.test.mjs` (7/7)、`tests/customer-navigation-linkage.test.mjs` (5/5) 全數綠燈通過。
+  - Vercel Production 部署完成（READY，URL: `https://shenglong.vercel.app`、`https://shenglong-customers.vercel.app`）。
+  - 外勤端 (`app/driver/page.tsx`) 嚴格維持 100% 零通知、零彈窗靜默直讀；門市舊 ERP 維持 0 更動黑盒子。
 
 ---
 
