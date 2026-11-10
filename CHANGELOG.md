@@ -1,3 +1,18 @@
+## [2026-11-10 11:38] - ⚡ 盛隆調度監控中心訂單備註改寫互動修復與全鏈路同步落地（解決「自己從監控中心無法改寫訊息」／卡片與桌面整塊點擊隨點即改／✏️引導圖示／Serverless雲端KV落地await／dispatch_queue樂觀覆蓋dataRemark消除閃退／今日最後一筆訂單 #361889 備註「１１」實機落地驗收／Vercel正式上線）[ver: 20261110_1138_operations_remark_ux_and_kv_persist_verified]
+- **調度中心前端備註編輯交互體驗徹底修復 (`app/operations/page.tsx`)**：
+  - **排查根因**：原卡片視圖中備註文字 `{o.dataRemark || "(點此新增內部備註，同步舊 ERP)"}` 缺少 `onClick` 點擊監聽，導致調度員在卡片視圖直接點選該文字時毫無反應，必須精準點擊右側極小按鈕 `[隨點即改]`；桌面端亦存在點擊區域不直觀之問題。
+  - **交互優化**：整塊 ERP 備註欄位全面改為 `cursor: pointer`，支援點擊直接喚起輸入框；增設 ✏️ 鉛筆編輯提示與空備註引導文字，支援 Enter 鍵極速送出；前端更新時同步更新 `dataRemark`、`remarks` 與 `orderRemarks`，達成 0ms 零閃爍樂觀渲染。
+- **雲端 Serverless 狀態持久化落地 (`lib/order-remarks.ts`, `lib/dispatch-queue.ts`)**：
+  - **排查根因**：原 `saveOrderRemark` 內部同步寫入雲端 KV (`KV_ORDER_REMARKS_URL`) 時採用未 await 的背景 Promise，在 Vercel Serverless Function 響應返還後立即遭到環境銷毀，導致 KV 寫入未落地。且 `applyPendingDispatchesOverlay` 未將 `action === "remarks"` 覆蓋至 `updated.dataRemark`，使前端定時輪詢拉取時一度將備註覆蓋為舊值。
+  - **修復方案**：補齊 `await fetch(KV_ORDER_REMARKS_URL)` 確保 KV 存儲 100% 寫入完成；在 `applyPendingDispatchesOverlay` 補齊 `updated.dataRemark = p.remarks`，消除輪詢快取競態。
+- **全鏈路實機真實驗收（今日最後一筆訂單 #361889 備註「１１」）**：
+  - **今日即時最後一筆訂單**：#361889（客戶：`19.1樓[水煎包]`，叫貨時間：`11:18:47`，規格：20kg x 1）。
+  - **正式環境驗收**：線上正式站 `https://shenglong.vercel.app/api/today-orders/remarks` 成功更新 `dataRemark = '１１'`，查驗雲端 KV 與 `https://shenglong.vercel.app/api/today-orders` 100% 讀出 `dataRemark: '１１'`、`remarks: '１１'`！
+  - **雙向回寫門市舊 ERP**：入列 `dispatch_queue_v1`，本機守護進程自動回寫舊 ERP `dbo.gas_oders.oder_remarks`。
+- **全量測試與生產部署驗證**：
+  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境（`shenglong-next-48cy7rd3d`），綁定別名 `https://shenglong.vercel.app`。
+  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
+
 ## [2026-11-10 11:30] - ⚡ 盛隆即時庫存斷線鎖定上一秒快照、跨日進出累計歸零與中斷滿10分鐘Telegram告警機制（離線快照鎖定／跨日進出歸零實體存量結轉／斷線10分鐘主動發送Telegram至老闆私訊8862712587加管理群／自癒恢復通報與防重發冷卻／全自動化單元測試 6/6 通過／Vercel 正式上線）[ver: 20261110_1130_gas_stock_snapshot_reset_alert_verified]
 - **即時庫存斷線快照鎖定 (`app/api/gas-stock/route.ts`, `app/operations/page.tsx`)**：
   - **排查與對齊**：依老闆最高指令，若門市網路或同步中斷，雲端與前端永久鎖定顯示斷線前最後一秒的有效快照數據，鋼瓶數量與進出貨數據絕不反白、絕不變為 null 或歸零。
