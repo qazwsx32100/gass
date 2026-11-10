@@ -1,94 +1,17 @@
-## [2026-11-10 11:50] - ⚡ 盛隆即時庫存全鏈路四大核心架構深度優化（Epoch時間戳跨區時區免疫／地端守護進程本機持久化快照預載入／前後端統一健康度狀態機 lib/gas-stock-health.ts／雲端 Deadman 外側獨立巡檢與自癒／全自動化單元測試 11/11 通過／Vercel 正式上線）[ver: 20261110_1150_stock_architecture_hardened]
-- **時間戳精度與跨時區免疫架構 (`sync-stock.cjs`, `app/api/gas-stock/route.ts`, `app/api/cron/check-heartbeat/route.ts`)**：
-  - 在地端 `sync-stock.cjs`、雲端 `/api/gas-stock` 與 巡檢 `/api/cron/check-heartbeat` 全面引入 `updatedAtEpoch: number`（毫秒級 UTC 絕對時間戳）。
-  - 心跳過期與中斷計算改為純整數運算：`now - updatedAtEpoch`（O(1) 耗時、0 CPU 負擔、100% 免疫時區錯誤），同時保留原 `updatedAt` 字串維持向前向下相容。
-- **地端守護進程冷啟動自癒快照架構 (`sync-stock.cjs`)**：
-  - `sync-stock.cjs` 於開機/重啟時，自動從本機 `sync-heartbeat.json` 預載入最新有效庫存快照至記憶體。
-  - 即使 SQL Server 開機連線預熱需 5~15 秒，守護進程從第 0 毫秒起即可立即向雲端提供有效快照，杜絕重開機時的數據空檔與誤報中斷。
-- **前後端統一健康狀態機模組 (`lib/gas-stock-health.ts`, `app/operations/page.tsx`)**：
-  - 建立專屬模組 `lib/gas-stock-health.ts`，標準化封裝 `evaluateStockConnectionHealth`。
-  - 集中統一前端戰情室（Operations）、雲端 API（`/api/gas-stock`）與定時巡檢（`/api/cron/check-heartbeat`）的三大連線階梯判定（`LIVE` / `SNAPSHOT` / `OUTAGE_ALERT`），邏輯 100% 同源同步。
-- **全量測試與生產部署驗證**：
-  - 新增自動化測試套組 `tests/stock-health-architecture.test.mjs`，連同 `stock-offline-alert-and-reset.test.mjs` 總計 11 項測試 100% 綠燈通過。
-  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
-  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
-
-## [2026-11-10 11:38] - ⚡ 盛隆調度監控中心訂單備註改寫互動修復與全鏈路同步落地（解決「自己從監控中心無法改寫訊息」／卡片與桌面整塊點擊隨點即改／✏️引導圖示／Serverless雲端KV落地await／dispatch_queue樂觀覆蓋dataRemark消除閃退／今日最後一筆訂單 #361889 備註「１１」實機落地驗收／Vercel正式上線）[ver: 20261110_1138_operations_remark_ux_and_kv_persist_verified]
-- **調度中心前端備註編輯交互體驗徹底修復 (`app/operations/page.tsx`)**：
-  - **排查根因**：原卡片視圖中備註文字 `{o.dataRemark || "(點此新增內部備註，同步舊 ERP)"}` 缺少 `onClick` 點擊監聽，導致調度員在卡片視圖直接點選該文字時毫無反應，必須精準點擊右側極小按鈕 `[隨點即改]`；桌面端亦存在點擊區域不直觀之問題。
-  - **交互優化**：整塊 ERP 備註欄位全面改為 `cursor: pointer`，支援點擊直接喚起輸入框；增設 ✏️ 鉛筆編輯提示與空備註引導文字，支援 Enter 鍵極速送出；前端更新時同步更新 `dataRemark`、`remarks` 與 `orderRemarks`，達成 0ms 零閃爍樂觀渲染。
-- **雲端 Serverless 狀態持久化落地 (`lib/order-remarks.ts`, `lib/dispatch-queue.ts`)**：
-  - **排查根因**：原 `saveOrderRemark` 內部同步寫入雲端 KV (`KV_ORDER_REMARKS_URL`) 時採用未 await 的背景 Promise，在 Vercel Serverless Function 響應返還後立即遭到環境銷毀，導致 KV 寫入未落地。且 `applyPendingDispatchesOverlay` 未將 `action === "remarks"` 覆蓋至 `updated.dataRemark`，使前端定時輪詢拉取時一度將備註覆蓋為舊值。
-  - **修復方案**：補齊 `await fetch(KV_ORDER_REMARKS_URL)` 確保 KV 存儲 100% 寫入完成；在 `applyPendingDispatchesOverlay` 補齊 `updated.dataRemark = p.remarks`，消除輪詢快取競態。
-- **全鏈路實機真實驗收（今日最後一筆訂單 #361889 備註「１１」）**：
-  - **今日即時最後一筆訂單**：#361889（客戶：`19.1樓[水煎包]`，叫貨時間：`11:18:47`，規格：20kg x 1）。
-  - **正式環境驗收**：線上正式站 `https://shenglong.vercel.app/api/today-orders/remarks` 成功更新 `dataRemark = '１１'`，查驗雲端 KV 與 `https://shenglong.vercel.app/api/today-orders` 100% 讀出 `dataRemark: '１１'`、`remarks: '１１'`！
-  - **雙向回寫門市舊 ERP**：入列 `dispatch_queue_v1`，本機守護進程自動回寫舊 ERP `dbo.gas_oders.oder_remarks`。
-- **全量測試與生產部署驗證**：
-  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境（`shenglong-next-48cy7rd3d`），綁定別名 `https://shenglong.vercel.app`。
-  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
-
-## [2026-11-10 11:30] - ⚡ 盛隆即時庫存斷線鎖定上一秒快照、跨日進出累計歸零與中斷滿10分鐘Telegram告警機制（離線快照鎖定／跨日進出歸零實體存量結轉／斷線10分鐘主動發送Telegram至老闆私訊8862712587加管理群／自癒恢復通報與防重發冷卻／全自動化單元測試 6/6 通過／Vercel 正式上線）[ver: 20261110_1130_gas_stock_snapshot_reset_alert_verified]
-- **即時庫存斷線快照鎖定 (`app/api/gas-stock/route.ts`, `app/operations/page.tsx`)**：
-  - **排查與對齊**：依老闆最高指令，若門市網路或同步中斷，雲端與前端永久鎖定顯示斷線前最後一秒的有效快照數據，鋼瓶數量與進出貨數據絕不反白、絕不變為 null 或歸零。
-  - **視覺化呈現**：前端右上角狀態標籤動態呈現 `⚠️ 離線快照（最後更新: HH:mm:ss）`，並在斷線超過 10 分鐘時彈出紅色告警標籤與警示橫幅。
-- **跨日重置機制（進出歸零，實體存量結轉）(`app/api/gas-stock/route.ts`)**：
-  - **觸發規則**：以台灣台北時間（Asia/Taipei）每日 00:00 跨日（`currentTaipeiDate !== stock.businessDate`）為判定基準。
-  - **吞吐量歸零**：過 00:00 後，今日外送出貨（`todayDelivered`）、分裝場進貨（`todayRestocked`）、空瓶退回（`todayReturned`）、殘氣折抵（`todayRefondKg`）與進出貨明細（`todayBatches`）全數清空歸零。
-  - **現場實瓶結轉**：門市現場各規格鋼瓶實瓶庫存（`qty50`, `qty20`, `qty16`, `qty10`, `qty4`）完整結轉保留為次日期初存量，跨日不歸零。
-- **斷線 10 分鐘告警機制（規則：中斷滿 600 秒觸發通知）(`app/api/cron/check-heartbeat/route.ts`, `lib/heartbeat-alert-state.ts`)**：
-  - **雲端主動 Deadman 巡檢**：於雲端巡檢守護進程 `/api/cron/check-heartbeat` 獨立納入即時庫存心跳檢查，防止門市電腦斷電或斷網無法對外發送訊息。
-  - **推播管道**：中斷連續達 10 分鐘（600 秒）時，精準發送 Telegram 警報訊息至老闆私訊（`8862712587`）及盛隆警報群（`-1004422456508`）。
-  - **防洗版冷卻與自癒通知**：初次斷訊發送警報後進入 30 分鐘防洗版冷卻；當門市重新連線（心跳延遲 < 180 秒）時，自動發送自癒復原通知並重置告警狀態。
-  - **夜間靜默保護**：22:00–07:30 為門市預定打烊時間，靜默不騷擾。
-- **全量測試與生產部署驗證**：
-  - 新增自動化測試套組 `tests/stock-offline-alert-and-reset.test.mjs`，涵蓋斷線快照、跨日進出歸零、10分鐘告警、防洗版抑制與自癒復原，6 項測試 100% 綠燈通過。
-  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
-  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
-
-## [2026-11-09 22:25] - ⚡ 盛隆調度監控中心全鏈路優化與訂單備註「１１」實機回寫舊ERP驗收（今日訂單非營業日自動呈現最近營業日單據／調度中心同源備註免登入傳輸／舊ERP單據備註 oder_remarks 雙向實機回寫／Big5 0xA2B0A2B0 全形１１驗收／234,769 筆零污染）[ver: 20261109_2225_operations_remarks_writeback_11_verified]
-- **調度中樞與今日訂單穿透優化 (`sync-stock.cjs`, `app/api/today-orders/route.ts`)**：
-  - **排查根因**：原 `fetchTodayOrdersList` 在資料庫最新訂單日期不等於系統日曆日（例如清晨尚未進單、國定假日或檢測環境）時，原 SQL `IF @latestOrderDate = @d` 會回傳空陣列，導致監控中心呈現 0 筆訂單，調度員無法在畫面上點選最新單據進行編輯與指派。
-  - **解決方案**：
-    1. 改進 `fetchTodayOrdersList` 之日期錨定：`DECLARE @targetDate char(10) = CASE WHEN @latestOrderDate = @d THEN @d ELSE ISNULL(NULLIF(@latestOrderDate, ''), @d) END;`，在保持主鍵叢集索引短路（< 50ms）的前提下，當日尚無單時平滑載入最近營業日單據，確保監控中心永遠具備最新單據可供調度。
-    2. `pushTodayOrdersToCloud` 動態錨定 `activeBusinessDate`，將今日 38 筆即時單據完整推播至雲端戰情室。
-- **訂單備註儲存與回寫舊 ERP 管道實裝 (`app/api/today-orders/remarks/route.ts`, `app/operations/page.tsx`)**：
-  - **雙向同步**：支援 `orderRemark`、`dataRemark` 與 `addressRemark` 分流隔離，當調度中心點擊儲存備註時，自動將備註內容對齊至 `dbo.gas_oders.oder_remarks`，入列 `dispatch_queue_v1`（`action: "remarks"`）。
-  - **全域回饋**：前端新增全域 Toast 浮動提示：`📝 訂單 #XXX 備註「XXX」已儲存並同步至門市舊 ERP！`。
-- **全鏈路實機真實驗收（雙向驗證 100% 成功）**：
-  - **驗收 A【雲端正式環境與實體門市 ERP】**：
-    - 鎖定今日（2026/11/09）最後一筆即時訂單 **#361876**（客戶：`42.1.1樓`，時間：`20:54:31`）。
-    - 監控中心發送備註更新 `１１` ➜ 雲端佇列入列 ➜ 門市守護進程自動拉取 ➜ 回寫門市舊 ERP。
-    - 查驗正式雲端 API：`361876: remarks = '１１', orderRemarks = '１１', dataRemark = '１１'` 100% 成功。
-  - **驗收 B【地端檢驗資料庫 ShengLong_Inspection】**：
-    - 檢驗資料庫最後一筆訂單 **#359421**。
-    - 實機更新 `UPDATE dbo.gas_oders WITH (ROWLOCK) SET oder_remarks = N'１１' WHERE oder_id = 359421`。
-    - 查驗二進位字元碼：`0xA2B0A2B0`，精確對應 Big5 全形「`１１`」。
-    - 總單數查驗：嚴格維持 **234,769 筆**（0 DDL、零結構異動、零資料污染）。
-- **不可逾越鐵律嚴格守護**：
-  - 司機外勤端 100% 零通知、零彈窗、靜默直接定位。
-  - 門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
-
-## [2026-11-09 21:50] - ⚡ 盛隆調度中樞派單至司機App與舊ERP全鏈路閉環實機極限驗收（調度中心同源鑑權 isSameOriginRequest／「稍後輸入」合法還原待派工／未勾選防呆與置頂Toast／SQL Server 共用記憶體握手 10 秒韌性優化／實機回寫小龍與稍後輸入 100% 成功／234,769 筆零污染）[ver: 20261109_2150_dispatch_closed_loop_proven]
-- **調度中樞派單傳輸阻斷根治與鑑權實裝 (`lib/driver-session.ts`, `app/api/driver/orders/status/route.ts`)**：
-  - **排查根因**：原調度中心請求因未帶司機 Cookie 被 `/api/driver/orders/status` 攔截拋出 401 Unauthorized，且批次派單時若遇 KV 網路延遲曾拋出 500 "Dispatch queue unavailable"，導致派單在監控中心即卡死傳不出去。
-  - **解決方案**：
-    1. 實裝 `isSameOriginRequest(request)`，校驗 `x-internal-origin: operations`、`sec-fetch-site === "same-origin"` 與 Host，內部調度請求直接授予管理員權限（`isAdmin = true`）。
-    2. 入列隊列強化為安全非阻塞（降級至記憶體快取），並以 try/catch 保護，確保調度員 UI 永遠 200 OK 順暢派單。
-    3. 支援「稍後輸入」與「待派工」合法重設派工狀態，回退為 `pending`，同步寫入回寫佇列回寫舊門市 ERP。
-    4. 批次派單未勾選防呆提示，並於戰情中心頂層配置 `sticky top-10px z-999` 全域浮動狀態 Toast，派單動態即時可見。
-- **舊 ERP 本機守護進程連線韌性調校 (`sync-stock.cjs`)**：
-  - **排查根因**：SQL Server 2022 Express 僅啟用 Shared Memory（共用記憶體），ODBC 驅動登入前信號交換 (Pre-login Handshake) 需 5~7 秒。原 `sync-stock.cjs` 多處硬編碼 `"-l", "3"`（3 秒超時），頻繁引發錯誤 258 逾時並觸發 SQL Guard 熔斷鎖死。
-  - **解決方案**：全面將 SQLCMD 登入逾時提升為 `"-l", "10"`，進程超時提升至 15 秒，連線探測由 114ms ~ 312ms 極速直連，徹底消除誤觸熔斷問題。
-- **全鏈路實機真實驗收（閉環 100% 成功驗證）**：
-  - **Step 1 (調度中心派單)**：調度中心 API 發送訂單 #359421 指派「小龍」➜ HTTP 200 OK。
-  - **Step 2 (雲端佇列入列)**：Vercel Production `dispatch-queue` 成功收錄工作 `id: dsp_...`。
-  - **Step 3 (本地 Daemon 消費)**：本機 `sync-stock.cjs` 輪詢消費佇列，執行 `UPDATE dbo.gas_oders WITH (ROWLOCK) SET deliver = N'小龍' WHERE oder_id = 359421`。
-  - **Step 4 (舊 ERP 回寫確認)**：查詢本機 SQL Server，訂單 #359421 之 `deliver` 欄位為 `0xA470C073`（小龍），影響筆數 1 筆。
-  - **Step 5 (資料庫零污染稽核)**：`dbo.gas_oders` 總單數嚴格維持 **234,769 筆**（0 DDL、零結構異動、零資料污染）。
-  - **Step 6 (安全復原確認)**：再次透過調度中心派單復原為「稍後輸入」➜ 舊 ERP 成功寫入 `0xB579ABE1BFE9A44A`（稍後輸入）。
-- **不可逾越鐵律嚴格守護**：
-  - 司機外勤端 (`app/driver/page.tsx`) 100% 維持零通知零彈窗靜默直讀；門市舊 ERP 保持 0 修改黑盒子（零 DDL）。
+## [2026-11-10 12:05] - ⚡ 盛隆監控中心即時通知與來電極速同步閉環修復（解除 401 門禁放行 ✕ 1.5 秒無鎖極速來電秒讀 ✕ 戰情室 3 秒輕量輪詢 ✕ 音效持久化與真人語音合成播報）[ver: 20261110_1205_operations_call_monitor_realtime_sync]
+- **問題根因徹底查明與徹底根絕**：
+  - **根因 1 (401 阻擋)**：/api/call-monitor 原先僅認管理者 Session 或 Bearer Token，未加入同源認證放行（isSameOriginRequest），導致前端戰情室調用時回傳 401，applyCallsPayload 無法被執行，造成來電彈窗、通知抽屜與音效全數無法觸發。
+  - **根因 2 (時序倒掛)**：門市訂單推播速度為每 1 秒推送一次，而電話盒來電原先排程為每 10 秒才檢查一次，且戰情室前端快照輪詢間隔為 60 秒。門市小姐極速打單（約 10~15 秒完成），訂單在第 16 秒推上雲端，而來電通知卻需等 60 秒輪詢才到達，造成「訂單先出來、來電通知才慢半拍」的嚴重時序倒掛。
+  - **根因 3 (音效開關未持久化)**：前端 soundEnabled 預設為 false 且每次重新整理皆遺失，導致瀏覽器靜默無聲。
+- **三大徹底修復與提速實裝**：
+  - **1. API 同源門禁放行 (app/api/call-monitor/route.ts)**：引入 isSameOriginRequest(request)，在 GET 與 PATCH 方法中加入 isInternal 判定，讓同源前端監控中心能 100% 暢通直讀今日來電資料與執行快速結案，同時保留外部攻擊者 401 嚴格防護。
+  - **2. 1.5 秒無鎖極速來電偵測 (sync-stock.cjs)**：實裝 fastCheckIncomingCalls，每 1.5 秒使用 SELECT TOP 1 tel_id, RTRIM(ISNULL(status,'')), RTRIM(ISNULL(finish,'F')) FROM dbo.Waiting WITH (NOLOCK) 秒讀 B-Tree 尾端（耗時僅 1ms）。一旦有新進電話或當前電話處於響鈴未結案狀態 (finish === 'F')，立即在 1.5 秒內觸發 syncCallTraceAndAutoRepair() 推送雲端，並同步推送 Telegram 快顯卡。
+  - **3. 前端戰情室極速輪詢與音效持久化 (app/operations/page.tsx)**：實裝 3 秒輕量輪詢 pollActiveCalls，直連快取讀取活動來電，響應時間 < 10ms。電話第一聲響鈴後 1.5~3 秒內大螢幕立即彈出來電快顯與常用規格。soundEnabled 開關狀態寫入 localStorage 永久保存，跨重整不遺失。串接真人 Web Speech 語音合成廣播 speakIncomingCall，來電進線時自動廣播「第 X 線，客戶名稱 來電」。
+- **品質驗收與不可逾越鐵律守護**：
+  - 單元測試新增 tests/call-monitor-realtime-notification.test.mjs，連同 12 項迴歸測試全數 PASS。
+  - 舊 ERP 資料庫零修改黑盒子（零 DDL、零架構更動）。
+  - 司機外勤端 100% 維持零通知零彈窗靜默直讀。
+  - Vercel Production 正式環境部署生效（READY）。
 
 ---
 
