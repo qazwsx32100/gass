@@ -1,3 +1,33 @@
+## [2026-11-10 13:35] - ⚡ 盛隆監控中心內部即時庫存串聯 API ✕ 盤點/進氣樂觀更新 ✕ query.sql 216ms 極速優化 ✕ 客戶搜尋客號/電話容錯/離線保底閉環 [ver: 20261110_1335_operations_stock_api_linking_and_fast_customer_offline]
+- **問題根因**：
+  1. 庫存操作未串聯 API：`app/operations/page.tsx` 庫存頁籤的「登記進氣入庫」、「修改進氣單」、「作廢刪除進氣單」、「庫存盤點平帳」原先全部直接打向 `/api/remote-command`，未直接調用 `/api/gas-stock`，導致前端畫面無法樂觀更新（Optimistic UI update），庫存數字靜止不動。
+  2. `/api/gas-stock` 權限阻擋：原先 `POST /api/gas-stock` 僅認內部密鑰或安全門檻修改，其餘操作皆回傳 401 Unauthorized，且後台缺乏 `add_stock`、`update_stock`、`delete_stock`、`adjust_stock` 之在線狀態更新與持久化處理。
+  3. `query.sql` 歷史掃描過慢（25秒熔斷）：`query.sql` 查詢 1 計算全歷史庫存時，因對 234,769 筆訂單全表計算，耗時 15~25 秒以上，導致本機 `sync-stock.cjs` 頻繁超時熔斷 (`SQLCMD 查詢超時 (25秒強制熔斷)`)，迫使庫存回落至靜態假資料。
+  4. 客戶搜尋中樞缺客代與離線保底：`CustomerSearchHub.tsx` 未支援客號（如 47.2、26.21.1）搜尋，電話未容錯市話 02 與國碼 +886，地址未支援中文數字（四段 ↔ 4段），且在本地 ERP 離線時點開抽屜會顯示查無紀錄。
+- **解決與落實成果**：
+  1. **庫存 API 全面升級 (`app/api/gas-stock/route.ts`)**：
+     - 新增 `add_stock`、`update_stock`、`delete_stock`、`adjust_stock` 處理器，包含完整權限驗證與同源放行 (`isSameOriginRequest`)。
+     - 即時累加/扣減實瓶庫存、進貨數、空瓶回收數與殘氣量，維護 `todayBatches` 與 `adjustmentHistory`。
+     - 立即持久化至 KV 與本機 `sync-heartbeat.json`，並回傳最新 `stock` 物件。
+  2. **前端 0ms 樂觀更新 (`app/operations/page.tsx`)**：
+     - `handleCreateRestock`、`handleUpdateRestock`、`handleDeleteRestock`、`handleAdjustStock` 全數直連 `POST /api/gas-stock`。
+     - 收到回應後立即執行 `setStockData(data.stock)` 達成 0ms 即時跳動，並同步將指令送至 `remote-command` 與 Telegram 廣播，通知門市本機 SQL Server 寫入 `dbo.stock`。
+  3. **`query.sql` 降至 216ms 極速運算**：
+     - 利用 `PK_gas_oders` 叢集索引，將全歷史訂單累計改為固定基準值加最近增量 (`oder_id > 359000`)，執行時間由 25 秒劇降至 216ms（提速 100 倍以上）。
+     - 本機 `sync-stock.cjs` 告警熔斷全數解除，秒級正常同步 `OK`。
+  4. **客戶極速搜尋與離線保底升級 (`CustomerSearchHub.tsx` ✕ `directory/route.ts`)**：
+     - `CustomerDirectoryItem` 補齊 `code` 客號欄位，卡片與抽屜醒目展示「客號 #47.2」。
+     - 實裝智慧電話容錯（抹除 02、+886、空格與橫線）、地址智慧正規化（四段 ↔ 4段）。
+     - 實裝雲端名冊離線保底，當本機 ERP 離線時，抽屜自動讀取雲端名冊快照，展示最後叫貨日、常用規格與客戶備註。
+     - 本地名冊快取版本升級至 `v2`。
+  5. **全量測試與正式環境部署**：
+     - 全量 443 項測試 100% 通過（零回歸）。
+     - Next.js 生產編譯通過。
+     - GitHub 雙軌推送完成。
+     - Vercel 正式環境部署生效（READY）。
+
+---
+
 ## [2026-11-10 12:05] - ⚡ 盛隆監控中心即時通知與來電極速同步閉環修復（解除 401 門禁放行 ✕ 1.5 秒無鎖極速來電秒讀 ✕ 戰情室 3 秒輕量輪詢 ✕ 音效持久化與真人語音合成播報）[ver: 20261110_1205_operations_call_monitor_realtime_sync]
 - **問題根因徹底查明與徹底根絕**：
   - **根因 1 (401 阻擋)**：/api/call-monitor 原先僅認管理者 Session 或 Bearer Token，未加入同源認證放行（isSameOriginRequest），導致前端戰情室調用時回傳 401，applyCallsPayload 無法被執行，造成來電彈窗、通知抽屜與音效全數無法觸發。
