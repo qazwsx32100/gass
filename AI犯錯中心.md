@@ -6,6 +6,7 @@
 
 ## 事故目錄與索引
 - [事故 001：2026-11-05/06 雲端 Supabase 配額耗盡引發 HTTP 402 與 429 登入連鎖阻斷](#事故-0012026-11-0506-雲端-supabase-配額耗盡引發-http-402-與-429-登入連鎖阻斷)
+- [事故 002：2026-11-10 LINE LIFF 叫瓦斯訂單頁面因 Supabase 402 欠缺熔斷器拋錯崩潰事故](#事故-0022026-11-10-line-liff-叫瓦斯訂單頁面因-supabase-402-欠缺熔斷器拋錯崩潰事故)
 
 ---
 
@@ -88,3 +89,38 @@
 3. **財報離線快照落地**：引入 `api/_offline_state.json`（11 月已對帳完畢最新數據），`_auth.js` 實裝自動優雅降級，即使 Supabase 402 亦可順暢登入查帳。
 4. **登入重試退還**：非密碼錯誤自動退還重試額度，杜絕 429 誤報。
 5. **全平台同步**：全數推送 GitHub `origin/main`，正式環境 Vercel READY 部署，Google Drive 雲端紀錄同步完成。
+
+
+---
+
+## 事故 002：2026-11-10 LINE LIFF 叫瓦斯訂單頁面因 Supabase 402 欠缺熔斷器拋錯崩潰事故
+
+### 一、事故基本資訊
+* **事故發生時間**：2026-11-10 16:30 至 2026-11-10 17:15
+* **影響範圍**：
+  1. 盛隆瓦斯 LINE 官方帳號顧客「立即叫瓦斯」LIFF 訂單頁面（`https://shenglong-line-liff.vercel.app`）
+  2. 後端核心入口 `api/index.js`、`api/_database-primary.js`、`api/peak-monitor.js`
+* **事故現象**：
+  - 顧客在 LINE 官方帳號點擊「立即叫瓦斯」按鈕，訂單頁面顯示「無法連線」或「正式資料庫目前無法使用，請稍後再試」（HTTP 503 / 500）。
+  - 後台日誌與 Supabase 端點持續報警：
+    `HTTP 402 Payment Required: exceed_edge_functions_invocations_quota, exceed_egress_quota`
+  - 同步模組 `api/legacy-sync.js` 遭遇 402 後持續死循環重試，日誌狂刷報警。
+
+---
+
+### 二、肇事責任與設計者追查
+* **根本肇因**：
+  - 雖然 11-06 已在財報系統實裝離線快照，但 LINE 下單系統（`shenglong-line-liff`）後端 `_database-primary.js` 欠缺全鏈路熔斷器（Circuit Breaker）。
+  - `getSessionState`、`getBootstrap` 等底層 `db.rpc` 呼叫未被安全 try/catch 隔離，遭遇 402 時直接向呼叫端拋出未捕獲異常。
+  - `api/index.js` 在生產環境原本配置「若無資料庫且無 Sheets 則噴 503」，違反「核心業務強制具備離線快照容災」鐵律。
+
+---
+
+### 三、本次事故處置與架構升級（全面自癒）
+1. **熔斷器全鏈路實裝**：`_database-primary.js` 實裝 `tripCircuit(err)` 與 `safeRpc()` 封裝，遭遇 402/503/Quota 瞬間觸發 5 分鐘自動熔斷，0ms 返回安全預設值，停止向雲端打請求。
+2. **多雲三軌平滑容災機制**：
+   - 第一軌（雲端主庫）：Supabase RPC。
+   - 第二軌（雲端備援）：Google Sheets 雙向同步（`GOOGLE_SPREADSHEET_ID`）。
+   - 第三軌（本機落盤）：本地實體 WAL 訂單持久化日誌（`data/line_orders.jsonl`），即使雲端兩軌全部癱瘓，每筆訂單仍 100% 寫入 WAL 磁碟並推播 Telegram/LINE，保證門市不丟單。
+3. **安全標準品項保護**：`getBootstrapData` 在後端雲端全失聯時，強制保底回傳盛隆 6 大瓦斯規格（20kg、16kg、10kg、4kg、4kg新瓶、50kg）牌價，確保前端下單頁面 100% 正常載入，絕不白屏。
+4. **Vercel 生產部署與 GitHub 同步**：提交 `ef43483`，正式環境 `https://shenglong-line-liff.vercel.app` 綠燈 READY 生效。
