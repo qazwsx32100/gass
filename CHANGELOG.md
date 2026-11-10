@@ -1,3 +1,21 @@
+## [2026-11-10 11:30] - ⚡ 盛隆即時庫存斷線鎖定上一秒快照、跨日進出累計歸零與中斷滿10分鐘Telegram告警機制（離線快照鎖定／跨日進出歸零實體存量結轉／斷線10分鐘主動發送Telegram至老闆私訊8862712587加管理群／自癒恢復通報與防重發冷卻／全自動化單元測試 6/6 通過／Vercel 正式上線）[ver: 20261110_1130_gas_stock_snapshot_reset_alert_verified]
+- **即時庫存斷線快照鎖定 (`app/api/gas-stock/route.ts`, `app/operations/page.tsx`)**：
+  - **排查與對齊**：依老闆最高指令，若門市網路或同步中斷，雲端與前端永久鎖定顯示斷線前最後一秒的有效快照數據，鋼瓶數量與進出貨數據絕不反白、絕不變為 null 或歸零。
+  - **視覺化呈現**：前端右上角狀態標籤動態呈現 `⚠️ 離線快照（最後更新: HH:mm:ss）`，並在斷線超過 10 分鐘時彈出紅色告警標籤與警示橫幅。
+- **跨日重置機制（進出歸零，實體存量結轉）(`app/api/gas-stock/route.ts`)**：
+  - **觸發規則**：以台灣台北時間（Asia/Taipei）每日 00:00 跨日（`currentTaipeiDate !== stock.businessDate`）為判定基準。
+  - **吞吐量歸零**：過 00:00 後，今日外送出貨（`todayDelivered`）、分裝場進貨（`todayRestocked`）、空瓶退回（`todayReturned`）、殘氣折抵（`todayRefondKg`）與進出貨明細（`todayBatches`）全數清空歸零。
+  - **現場實瓶結轉**：門市現場各規格鋼瓶實瓶庫存（`qty50`, `qty20`, `qty16`, `qty10`, `qty4`）完整結轉保留為次日期初存量，跨日不歸零。
+- **斷線 10 分鐘告警機制（規則：中斷滿 600 秒觸發通知）(`app/api/cron/check-heartbeat/route.ts`, `lib/heartbeat-alert-state.ts`)**：
+  - **雲端主動 Deadman 巡檢**：於雲端巡檢守護進程 `/api/cron/check-heartbeat` 獨立納入即時庫存心跳檢查，防止門市電腦斷電或斷網無法對外發送訊息。
+  - **推播管道**：中斷連續達 10 分鐘（600 秒）時，精準發送 Telegram 警報訊息至老闆私訊（`8862712587`）及盛隆警報群（`-1004422456508`）。
+  - **防洗版冷卻與自癒通知**：初次斷訊發送警報後進入 30 分鐘防洗版冷卻；當門市重新連線（心跳延遲 < 180 秒）時，自動發送自癒復原通知並重置告警狀態。
+  - **夜間靜默保護**：22:00–07:30 為門市預定打烊時間，靜默不騷擾。
+- **全量測試與生產部署驗證**：
+  - 新增自動化測試套組 `tests/stock-offline-alert-and-reset.test.mjs`，涵蓋斷線快照、跨日進出歸零、10分鐘告警、防洗版抑制與自癒復原，6 項測試 100% 綠燈通過。
+  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
+  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
+
 ## [2026-11-09 22:25] - ⚡ 盛隆調度監控中心全鏈路優化與訂單備註「１１」實機回寫舊ERP驗收（今日訂單非營業日自動呈現最近營業日單據／調度中心同源備註免登入傳輸／舊ERP單據備註 oder_remarks 雙向實機回寫／Big5 0xA2B0A2B0 全形１１驗收／234,769 筆零污染）[ver: 20261109_2225_operations_remarks_writeback_11_verified]
 - **調度中樞與今日訂單穿透優化 (`sync-stock.cjs`, `app/api/today-orders/route.ts`)**：
   - **排查根因**：原 `fetchTodayOrdersList` 在資料庫最新訂單日期不等於系統日曆日（例如清晨尚未進單、國定假日或檢測環境）時，原 SQL `IF @latestOrderDate = @d` 會回傳空陣列，導致監控中心呈現 0 筆訂單，調度員無法在畫面上點選最新單據進行編輯與指派。
