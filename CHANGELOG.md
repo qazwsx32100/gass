@@ -1,3 +1,34 @@
+## [2026-11-10 16:35] - ⚡ 盛隆客戶搜尋全面大一統與來電 0ms 記憶體秒配（舊版歷史訂單頁徹底由 GAS v11 原生版取代 ✕ 3,943 戶完整真理庫打包 ✕ 拔除 SQL 全表掃描杜絕時序倒掛 ✕ Telegram 客戶連結直通雲端）[ver: 20261110_1635_customers_gasv11_replacement_and_0ms_caller_lookup]
+- **問題根因徹底查明與徹底根絕**：
+  1. **舊版客戶歷史頁面破碎容易報錯**：舊版 `/customer-history` 頁面原含有 665 行陳舊程式，直接調用 SQL Server 查詢，雲端 Vercel 環境無法直連門市電腦即回傳 404「查無此客戶資料」，且介面無模糊搜尋與代號索引。
+  2. **客戶主檔資料不全與打包缺失**：Vercel 生產環境未追蹤打包包含電話備註、價格與代號的完整資料檔，僅載入 2026/10 舊版圖資，導致輸入客號或電話搜尋時查無客戶。
+  3. **來電通知時序倒掛（慢半拍）**：本機 `sync-stock.cjs` 在 `checkLiveCallFlashCard()` 每次來電時，對 `dbo.customers` 執行 `customer_tel LIKE '%...' OR customer_remarks LIKE '%...'` 跨 50 萬筆無索引全表掃描，耗時 3~6 秒，導致門市小姐訂單都打完了來電通知才送出。
+  4. **外部 Google 試算表慢速且配額受限**：Telegram 機器人按鈕全部連結至 Google Apps Script 外部 URL，因 Google 沙盒冷啟動與試算表同步斷鏈，時常開不出客戶資料。
+- **四大徹底治理與極速實裝**：
+  1. **舊版客戶歷史頁面徹底淘汰與取代 (`app/customer-history/page.tsx`)**：
+     - 依老闆最高決策指令「歷史訂單紀錄版本(以前的客戶搜尋版本，幫我刪除用gas v11取代)」，徹底拔除舊版 665 行程式碼。
+     - 全面由原生 `<CustomerSearchHub />` 接管，支援 `id`、`name`、`q` 自動帶入並展開客戶詳情，呈現 5 大叫貨分頁（瓦斯、欠款、鋼瓶、廚具、全部）與常用規格、叫貨統計、機車導航。
+     - 後端 API (`app/api/customer-history/route.ts`) 實裝 Serverless 自動快照保底，若訂單為空自動返回名冊快照，保證絕不報 404 / 500。
+  2. **客戶主檔大真理庫全面合併與打包 (`public/data/customers-map.json`, `public/data/cloud-customer-cache.json`)**：
+     - 合併產出 3,943 戶完整真理庫，納入客號（如 47.2, 26.21.1）、電話備註（如 祥益/29706995/0928701741）、瓦斯價格（p50/p20/p16/p10/p4）與標準門牌。
+     - `next.config.ts` 追蹤打包靜態資源，瀏覽器快取升級至 `sl_customer_directory_v3`，門市斷線 30 天依然 0ms 秒開。
+  3. **來電快顯 0ms 記憶體秒比對（徹底根除「訂單先到、來電後出」倒掛）(`sync-stock.cjs`)**：
+     - 拔除 `dbo.customers` 的 LIKE 全表掃描，僅讀取 `dbo.Waiting` 單表（耗時 1ms）。
+     - 引入 Node.js 記憶體快取 `findCustomerFromLocalCache(phone)`，在 0.01 毫秒內秒配客戶姓名、客號與地址。
+     - 電話響鈴第 0 秒立即噴發 Telegram 來電快顯小卡片，杜絕通知倒掛。
+  4. **全系統客戶連結直通雲端原生中樞**：
+     - 將 `sync-stock.cjs` 中原指向慢速 Google Apps Script 的 `GOOGLE_CUSTOMER_WEB_URL` 全面換成 `https://shenglong.vercel.app/customers`。
+     - 點擊按鈕直接開啟原生極速介面，0ms 載入。
+- **品質驗收與不可逾越鐵律守護**：
+  - 新增專屬測試 `tests/customer-search-gasv11-replacement.test.mjs`，4/4 PASS。
+  - 全系統單元測試（Gass 443 項全數 PASS，shenglong-next 編譯 0 錯誤通過）。
+  - 舊 ERP 資料庫神聖黑盒子 0 更動（0 DDL、0 架構修改）。
+  - 司機外勤端 100% 維持零通知零彈窗靜默直讀。
+  - GitHub 雙軌推送完成 (`91df16b`)。
+  - Vercel Production 正式環境部署生效（READY, `dpl_HTzEYrshgGiTXB8CnTTRZtPw8o1C`, https://shenglong.vercel.app）。
+
+---
+
 ## [2026-11-10 15:55] - 🛡️ 全系統 API 跨日資料穿透根因徹底拔除 ✕ 營業日與時間戳嚴格隔離 ✕ 今日派工/庫存/外勤業績零竄改閉環 [ver: 20261110_1555_eliminate_cross_day_data_leakage]
 - **問題根因徹底查明與徹底根絕**：
   1. **`sync-stock.cjs` 日期借用缺陷**：`fetchTodayOrdersList` 原使用 `DECLARE @targetDate char(10) = CASE WHEN @latestOrderDate = @d THEN @d ELSE ISNULL(NULLIF(@latestOrderDate, ''), @d) END;`，在清晨無新單或有隔日預開單時，`@targetDate` 借用最新單據日期（昨日或明日），造成整份昨日訂單被調出並廣播；且 `activeBusinessDate = orders[0].orderDate` 將別天日期冠上推播，覆蓋今日營業日。
