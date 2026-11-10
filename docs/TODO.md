@@ -4,7 +4,31 @@
 > **專案倉庫**：https://github.com/qazwsx32100/gass 與 https://github.com/qazwsx32100/shenglong-next  
 > **指定雲端資料夾**：[Google 雲端維護紀錄資料夾](https://drive.google.com/drive/u/1/folders/1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM) (1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM)  
 > **桌面即時鏡像**：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md  
-> **最後更新時間**：2026-11-10 11:30
+> **最後更新時間**：2026-11-10 11:50
+
+---
+
+### 0. 盛隆即時庫存全鏈路四大核心架構深度優化【最高執行指令落實】（解決「幫我再優化 架構」／Epoch 毫秒級時間戳跨區時區免疫／地端守護進程本機持久化快照預載入／前後端統一健康度狀態機 lib/gas-stock-health.ts／雲端 Deadman 外側獨立巡檢與自癒／全自動化單元測試 11/11 通過／Vercel 正式上線）
+- **狀態**：`[x]` 已完成 (依老闆最高指令完成全系統架構深度優化與加固)：
+  1. **時間戳精度與跨時區免疫架構（Zero-Parse Epoch Architecture）**：
+     - 在 `sync-stock.cjs`、`/api/gas-stock` 與 `/api/cron/check-heartbeat` 全面引入 `updatedAtEpoch: number`（毫秒級 UTC 絕對時間戳）。
+     - 心跳逾時與中斷判定全面升級為整數 O(1) 運算（`now - updatedAtEpoch`），徹底消除字串解析（Regex/Date.parse）在 Vercel 跨伺服器區域（HND1/IAD1）產生的潛在時區偏差與 CPU 損耗。
+  2. **地端守護進程冷啟動自癒快照架構（Local Snapshot Pre-Bootstrapping）**：
+     - `sync-stock.cjs` 於開機/重啟時，自動從本機 `sync-heartbeat.json` 預載入最新有效庫存快照至記憶體。
+     - 即使 SQL Server 開機連線預熱需 5~15 秒，守護進程從第 0 毫秒起即可立即向雲端提供有效快照，杜絕重開機時的數據空檔與誤報中斷。
+  3. **前後端統一健康狀態機模組（Unified Health State Machine）**：
+     - 建立專屬模組 `lib/gas-stock-health.ts`，標準化封裝 `evaluateStockConnectionHealth`。
+     - 集中統一前端戰情室（Operations）、雲端 API（`/api/gas-stock`）與定時巡檢（`/api/cron/check-heartbeat`）的三大連線階梯判定：
+       - `LIVE`（< 180s）：即時綠燈連線。
+       - `SNAPSHOT`（180s ~ 599s）：離線快照鎖定黃燈。
+       - `OUTAGE_ALERT`（≥ 600s）：斷線 10 分鐘紅燈告警橫幅與 Telegram 推播。
+     - 前後端邏輯 100% 同源，杜絕「前端說連線、雲端說斷線」的認知分歧。
+  4. **全量驗證與雲端部署**：
+     - 新增自動化架構測試套件 `tests/stock-health-architecture.test.mjs`，連同 `stock-offline-alert-and-reset.test.mjs` 共 11 項測試全數通過（0 失敗）。
+     - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
+     - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
+- **優先級**：`P0` (老闆最高決策指令)
+- **完成日期**：2026/11/10 11:50
 
 ---
 

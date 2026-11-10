@@ -1,3 +1,18 @@
+## [2026-11-10 11:50] - ⚡ 盛隆即時庫存全鏈路四大核心架構深度優化（Epoch時間戳跨區時區免疫／地端守護進程本機持久化快照預載入／前後端統一健康度狀態機 lib/gas-stock-health.ts／雲端 Deadman 外側獨立巡檢與自癒／全自動化單元測試 11/11 通過／Vercel 正式上線）[ver: 20261110_1150_stock_architecture_hardened]
+- **時間戳精度與跨時區免疫架構 (`sync-stock.cjs`, `app/api/gas-stock/route.ts`, `app/api/cron/check-heartbeat/route.ts`)**：
+  - 在地端 `sync-stock.cjs`、雲端 `/api/gas-stock` 與 巡檢 `/api/cron/check-heartbeat` 全面引入 `updatedAtEpoch: number`（毫秒級 UTC 絕對時間戳）。
+  - 心跳過期與中斷計算改為純整數運算：`now - updatedAtEpoch`（O(1) 耗時、0 CPU 負擔、100% 免疫時區錯誤），同時保留原 `updatedAt` 字串維持向前向下相容。
+- **地端守護進程冷啟動自癒快照架構 (`sync-stock.cjs`)**：
+  - `sync-stock.cjs` 於開機/重啟時，自動從本機 `sync-heartbeat.json` 預載入最新有效庫存快照至記憶體。
+  - 即使 SQL Server 開機連線預熱需 5~15 秒，守護進程從第 0 毫秒起即可立即向雲端提供有效快照，杜絕重開機時的數據空檔與誤報中斷。
+- **前後端統一健康狀態機模組 (`lib/gas-stock-health.ts`, `app/operations/page.tsx`)**：
+  - 建立專屬模組 `lib/gas-stock-health.ts`，標準化封裝 `evaluateStockConnectionHealth`。
+  - 集中統一前端戰情室（Operations）、雲端 API（`/api/gas-stock`）與定時巡檢（`/api/cron/check-heartbeat`）的三大連線階梯判定（`LIVE` / `SNAPSHOT` / `OUTAGE_ALERT`），邏輯 100% 同源同步。
+- **全量測試與生產部署驗證**：
+  - 新增自動化測試套組 `tests/stock-health-architecture.test.mjs`，連同 `stock-offline-alert-and-reset.test.mjs` 總計 11 項測試 100% 綠燈通過。
+  - Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production 正式環境。
+  - GitHub 雙倉庫主幹（`origin/main`）同步推送完成。
+
 ## [2026-11-10 11:38] - ⚡ 盛隆調度監控中心訂單備註改寫互動修復與全鏈路同步落地（解決「自己從監控中心無法改寫訊息」／卡片與桌面整塊點擊隨點即改／✏️引導圖示／Serverless雲端KV落地await／dispatch_queue樂觀覆蓋dataRemark消除閃退／今日最後一筆訂單 #361889 備註「１１」實機落地驗收／Vercel正式上線）[ver: 20261110_1138_operations_remark_ux_and_kv_persist_verified]
 - **調度中心前端備註編輯交互體驗徹底修復 (`app/operations/page.tsx`)**：
   - **排查根因**：原卡片視圖中備註文字 `{o.dataRemark || "(點此新增內部備註，同步舊 ERP)"}` 缺少 `onClick` 點擊監聽，導致調度員在卡片視圖直接點選該文字時毫無反應，必須精準點擊右側極小按鈕 `[隨點即改]`；桌面端亦存在點擊區域不直觀之問題。
