@@ -3485,3 +3485,17 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - [x] **最高權限**：Telegram ID `8862712587` (SuperAdmin 永久鎖定)
 
 
+
+---
+
+## 📅 發布紀錄：2026-11-10 11:50 (版本代號: 20261110_1150_stock_architecture_hardened)
+- **更新主題**：盛隆即時庫存全鏈路四大核心架構深度優化（Epoch 毫秒級時間戳跨區時區免疫／地端守護進程本機持久化快照預載入／前後端統一健康度狀態機 lib/gas-stock-health.ts／雲端 Deadman 外側獨立巡檢與自癒／全自動化單元測試 11/11 通過／Vercel 正式上線）
+- **發布內容摘要**：
+  1. **時間戳精度與跨時區免疫架構（Zero-Parse Epoch Architecture）**：在 sync-stock.cjs、/api/gas-stock 與 /api/cron/check-heartbeat 全面引入 updatedAtEpoch（毫秒級 UTC 絕對時間戳），消除跨伺服器區域（HND1/IAD1）潛在時區偏差與 CPU Regex 解析負擔。
+  2. **地端守護進程冷啟動自癒快照架構（Local Snapshot Pre-Bootstrapping）**：sync-stock.cjs 開機/重啟時自動從本機 sync-heartbeat.json 預載入最新有效庫存快照至記憶體，第 0 毫秒即時提供有效快照，杜絕 SQL Server 預熱期資料空檔與誤報。
+  3. **前後端統一健康狀態機模組（Unified Health State Machine）**：建立專屬模組 lib/gas-stock-health.ts，集中封裝 evaluateStockConnectionHealth，統一前端戰情室（Operations）、雲端 API（/api/gas-stock）與定時巡檢（/api/cron/check-heartbeat）三大連線階梯判定（LIVE / SNAPSHOT / OUTAGE_ALERT）。
+  4. **全量驗證與雲端部署**：新增 tests/stock-health-architecture.test.mjs 連同 tests/stock-offline-alert-and-reset.test.mjs 總計 11/11 測試全數通過，Next.js Turbopack 0 錯誤通過生產編譯，部署至 Vercel Production，GitHub 雙倉庫同步推送。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 雙倉庫（qazwsx32100/gass, qazwsx32100/shenglong-next）主幹同步完成
+  - [x] Vercel Production 正式上線：https://shenglong.vercel.app/api/gas-stock
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
