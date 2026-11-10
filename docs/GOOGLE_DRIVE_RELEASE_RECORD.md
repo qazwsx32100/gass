@@ -1,3 +1,11 @@
+## 2026-11-10 15:55 (ver: 20261110_1555_eliminate_cross_day_data_leakage)
+- 專案：盛隆瓦斯中控戰情中心 ✕ 調度派單 ✕ 司機外勤端 ✕ 內部庫存
+- 修正：API 跨日資料串位異常徹底根除（營業日嚴格隔離，杜絕昨日/明日單據穿透今日）
+- 部署：GitHub main (7924dd9) + Vercel Production (dpl_Bd9hWKyu65SHnbaMnBWTk4aj9ybs, READY)
+- 驗證：tests/date-cross-isolation.test.mjs 100% PASS，Gass 443 項測試全數通過
+
+---
+
 ## [2026-11-10 13:35] - ⚡ 盛隆監控中心內部庫存全面串聯 API ✕ 0ms 極速樂觀更新 ✕ 聚簇索引突破 100 倍提速 ✕ 客戶急速查詢代號/電話/地址正規化與雲端離線容災保底 [ver: 20261110_1335_operations_stock_api_and_customer_directory_v2]
 - **監控中心內部庫存雙向閉環全面串接 API (`app/api/gas-stock/route.ts`, `app/operations/page.tsx`)**：
   - **排查根因**：原監控中心內部庫存進出貨管理介面（新增進氣、修改單據、刪除進貨、盤點平帳）僅將指令傳送至 `/api/remote-command`，從未調用 `/api/gas-stock` 或變更前端 React 狀態；且 `POST /api/gas-stock` 缺乏同源驗證放行，除更新閾值外一律拋出 401，導致操作後介面數字毫無反應，必須等待門市輪詢同步。

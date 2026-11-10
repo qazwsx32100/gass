@@ -1,3 +1,27 @@
+## [2026-11-10 15:55] - 🛡️ 全系統 API 跨日資料穿透根因徹底拔除 ✕ 營業日與時間戳嚴格隔離 ✕ 今日派工/庫存/外勤業績零竄改閉環 [ver: 20261110_1555_eliminate_cross_day_data_leakage]
+- **問題根因徹底查明與徹底根絕**：
+  1. **`sync-stock.cjs` 日期借用缺陷**：`fetchTodayOrdersList` 原使用 `DECLARE @targetDate char(10) = CASE WHEN @latestOrderDate = @d THEN @d ELSE ISNULL(NULLIF(@latestOrderDate, ''), @d) END;`，在清晨無新單或有隔日預開單時，`@targetDate` 借用最新單據日期（昨日或明日），造成整份昨日訂單被調出並廣播；且 `activeBusinessDate = orders[0].orderDate` 將別天日期冠上推播，覆蓋今日營業日。
+  2. **`today-orders/route.ts` 偽造今日日期缺陷**：GET 端點在離線待命降級時，原程式碼使用三元運算子 `(cachedTodayOrders && cachedTodayOrders.orders.length > 0) ? { ...cachedTodayOrders, businessDate: todayStr }`，竟將記憶體內昨日保留的 38 筆訂單強行竄改為今日日期標籤，導致戰情中心今日即時派工直接看到昨天整天訂單！
+  3. **`query.sql` 條件短路誤殺今日出貨**：`IF @latestOrderDate = @d BEGIN ... END ELSE BEGIN SELECT 0,0,0,0,0 END;`，一旦門市預開隔日單，`@latestOrderDate` 變成明日，導致今日出貨量直接被誤判跳過回傳 0。
+  4. **`gas-stock/route.ts` 進氣無差別累加**：`add_stock` 未比對 `inputDate === currentTaipeiDate`，無差別將所有補建或歷史進氣批次累加入今日進氣累計 `todayRestocked` 與 `todayBatches`。
+  5. **外勤端 `driver/orders` 與 `driver/earnings` 未嚴格鎖定當日**：`fetchTodayOrders` 與 `fetchTodayOrdersFromKV` 未驗證 `bDate === defaultDate`，若快照為昨日，外勤端即刻顯示昨日單據；業績統計亦將昨日單載入今日區間。
+- **六大徹底治本修復**：
+  1. **`query.sql` 拔除短路守衛**：移除 `IF @latestOrderDate = @d` 與 `IF @latestStockDate = @d` 短路，直查 `WHERE o.oder_date = @d AND o.disable = 'N'`，永不漏算今日實體出貨與進氣。
+  2. **`sync-stock.cjs` 嚴格鎖定當日**：`fetchTodayOrdersList` 嚴格限制 `WHERE o.oder_date = @d`，`activeBusinessDate` 永遠固定為當前營業日 `businessDate`，絕不借用歷史日期。
+  3. **`today-orders/route.ts` 零容忍跨日竄改**：GET 待命回退嚴格返回空陣列 `{ businessDate: todayStr, orders: [] }`，絕不將昨日訂單包裝成今日；POST 接收時嚴格驗證 `payload.businessDate === todayStr`，跨日單據一律安全阻斷，並過濾 `o.orderDate === todayStr`。
+  4. **`gas-stock/route.ts` 嚴格進氣日期比對**：`add_stock` 僅在 `inputDate === currentTaipeiDate` 時才累加入 `todayRestocked` 與 `todayBatches`，補單歷史進氣絕不污染今日統計。
+  5. **`driver/orders` 與 `driver/earnings` 當日保證**：嚴格比對 `bDate === defaultDate`，昨日快照絕不出現在今日司機待送清單中；業績匯總嚴格過濾 `oDate === todayNorm`。
+  6. **`operations/order-history` 嚴格校驗快照日期**：雲端備援查今日歷史時，先驗證 `cachedToday.businessDate === targetDate` 方才採用。
+- **品質驗收與不可逾越鐵律守護**：
+  - 新增專屬測試套件 `tests/date-cross-isolation.test.mjs`，5/5 項目 100% 通過。
+  - `npm test` 雙邊全量通過（Gass 443 項測試全數 PASS，shenglong-next Next.js 生產構建 100% 通過）。
+  - 舊 ERP 資料庫神聖黑盒子 0 更動（0 DDL、0 架構修改）。
+  - 司機外勤端 100% 維持零通知零彈窗靜默直讀。
+  - GitHub 雙軌推送完成 (`7924dd9`)。
+  - Vercel 正式環境部署生效（READY, `dpl_Bd9hWKyu65SHnbaMnBWTk4aj9ybs`）。
+
+---
+
 ## [2026-11-10 13:35] - ⚡ 盛隆監控中心內部即時庫存串聯 API ✕ 盤點/進氣樂觀更新 ✕ query.sql 216ms 極速優化 ✕ 客戶搜尋客號/電話容錯/離線保底閉環 [ver: 20261110_1335_operations_stock_api_linking_and_fast_customer_offline]
 - **問題根因**：
   1. 庫存操作未串聯 API：`app/operations/page.tsx` 庫存頁籤的「登記進氣入庫」、「修改進氣單」、「作廢刪除進氣單」、「庫存盤點平帳」原先全部直接打向 `/api/remote-command`，未直接調用 `/api/gas-stock`，導致前端畫面無法樂觀更新（Optimistic UI update），庫存數字靜止不動。
