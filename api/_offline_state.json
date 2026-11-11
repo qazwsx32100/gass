@@ -41736,6 +41736,86 @@
         "createdBy": "SYSTEM",
         "createdByName": "盛隆每日財務同步",
         "createdAt": "2026-11-11T13:07:02.0236572Z"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261107-淺藍-加油-220",
+        "companyId": "COMP001",
+        "date": "2026-11-07",
+        "accountCode": "610302",
+        "amount": 220,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "車輛油資｜塑膠車 PKA-7032（淺藍）加油",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-11T15:23:50.858Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-11 23:20:00"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261107-5417j8-加油-878",
+        "companyId": "COMP001",
+        "date": "2026-11-07",
+        "accountCode": "610306",
+        "amount": 878,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "車輛油資｜貨車 5417-J8 加油",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-11T15:23:50.859Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-11 23:20:00"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261108-工錢-小龍-200",
+        "companyId": "COMP001",
+        "date": "2026-11-08",
+        "accountCode": "610110",
+        "amount": 200,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "工錢｜工錢 小龍 臨時派工",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-11T15:23:50.859Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-11 23:20:00"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261109-燈管-200",
+        "companyId": "COMP001",
+        "date": "2026-11-09",
+        "accountCode": "6106",
+        "amount": 200,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "修繕維護｜燈管更換耗材",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-11T15:23:50.859Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-11 23:20:00"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261110-淺藍-加油-205",
+        "companyId": "COMP001",
+        "date": "2026-11-10",
+        "accountCode": "610302",
+        "amount": 205,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "車輛油資｜塑膠車 PKA-7032（淺藍）加油",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-11T15:23:50.859Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-11 23:20:00"
       }
     ],
     "companies": [
@@ -120453,6 +120533,6 @@
       }
     ]
   },
-  "updated_at": "2026-11-11T13:07:05.200Z",
-  "updated_by": "shenglong_failover_sync"
+  "updated_at": "2026-11-11T15:23:50.860Z",
+  "updated_by": "Antigravity-NovReconcile-Sync"
 }
