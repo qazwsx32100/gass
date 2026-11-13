@@ -1,3 +1,6 @@
+- [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
+- [ ] 待辦：gas_oders 全量鏡像至 Supabase，讓 ERP 離線時客戶歷年明細完整可查
+
 ## [2026-11-10 16:35] - ⚡ 盛隆客戶搜尋全面大一統與來電 0ms 記憶體秒配（舊版歷史訂單頁徹底由 GAS v11 原生版取代 ✕ 3,943 戶完整真理庫打包 ✕ 拔除 SQL 全表掃描杜絕時序倒掛 ✕ Telegram 客戶連結直通雲端）[ver: 20261110_1635_customers_gasv11_replacement_and_0ms_caller_lookup]
 - **問題根因徹底查明與徹底根絕**：
   1. **舊版客戶歷史頁面破碎容易報錯**：舊版 `/customer-history` 頁面原含有 665 行陳舊程式，直接調用 SQL Server 查詢，雲端 Vercel 環境無法直連門市電腦即回傳 404「查無此客戶資料」，且介面無模糊搜尋與代號索引。

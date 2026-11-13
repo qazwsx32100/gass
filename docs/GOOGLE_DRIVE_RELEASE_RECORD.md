@@ -1,3 +1,29 @@
+## [2026-11-13 21:13] - 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 極速版 ✕ order-history API 串接 3,943 戶雲端主檔 [ver: 20261113_2113_operations_customer_history_gasv11]
+- **背景**：老闆指示檢查監控中心另一個「歷史查閱客戶資料」入口。
+- **查明問題**（`/operations` → 訂單 → 📜 歷史訂單紀錄 → 👤 依客戶全歷史）：
+  1. 前端仍是舊版搜尋卡，標示「2,909 戶」，不支援客號（47.2 / 26.21.1）與電話備註搜尋。
+  2. 後端 `app/api/operations/order-history/route.ts` 只比對舊版 `getCustomerMapData`（2,909 戶），雲端主檔 3,943 戶中新客戶查不到。
+  3. 訂單卡「📜 歷史」彈窗（`SharedCustomerHistoryModal`）不顯示客號與欠款。
+- **修正內容**：
+  1. `app/components/OperationsOrderHistoryView.tsx`：模式一改為內嵌 `<CustomerSearchHub />`（GAS v11 原生版，5 大分頁），支援 `initialQuery` / `initialCustomerId` 帶入；標籤改為 3,900+ 戶。模式二「依配送日期（全店日審計）」不變。
+  2. `app/operations/page.tsx`：「👤 查全歷史」按鈕同時傳入客號 `initialCustomerId`。
+  3. `app/api/operations/order-history/route.ts`：客戶定位優先使用 `cloud-customer-gateway`（3,943 戶，客號／電話正規化／備註電話），舊版 map 降為第二層；SQL 離線時先查 `fetchCloudCustomerOrders`，再查 KV／種子單據。
+  4. 最終保底：只有在所有來源皆無單據、但主檔有最後叫貨日時，才回傳一筆「主檔摘要」（金額 $0、無司機、付款狀態標為「主檔摘要」），**不捏造金額／司機／付款狀態**。
+  5. `app/components/SharedCustomerHistoryModal.tsx`：標題顯示客號徽章與欠款警示。
+- **過程中發現並已修正的回歸**：第一版 `3576d61` 將快照保底放在 KV／種子比對之前，導致 26.21.1 從 2 筆真實單據變為 1 筆快照；`e50bec4` 已改為最後才保底，線上驗證恢復 2 筆。
+- **前一版本**：shenglong-next `e5662cc`（2026-11-10 customers gasv11 replacement）
+- **影響檔案**：上列 4 個檔案 + `tests/operations-customer-history-upgrade.test.mjs`（新增）+ `tests/customer-search-gasv11-replacement.test.mjs`（47.2 斷言改讀 cloud-customer-cache，因 customers-map.json 依 Gass 測試須維持 3,934 筆且不含 note）
+- **驗證證據**：
+  - 單元測試：operations-customer-history-upgrade 4/4、customer-search-gasv11-replacement 4/4、customer-navigation-linkage 5/5、cloud-customer-gateway 全數通過（合計 18/18）。
+  - `tsc --noEmit` 變更檔 0 錯誤；`npm run build` 成功。
+  - 線上 `/api/operations/order-history?mode=CUSTOMER`：47.2 → id 1、code 47.2；26.21.1 → id 3049、2 筆真實單據（#361751 已付款 $790）；0928701741（備註電話）→ 命中 47.2；`/customer-history` 200。
+- **部署**：GitHub shenglong-next `3576d61` → `e50bec4`；Vercel Production `dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR`（READY）。
+- **還原方式**：`git revert e50bec4 3576d61` 後 `vercel --prod`；本次無資料庫異動。
+- **限制**：雲端主檔多數客戶無逐筆歷史單據，SQL 離線時僅能顯示 KV／種子近期單據或「主檔摘要」；完整歷年明細仍需門市 ERP 在線或後續將 gas_oders 全量鏡像至 Supabase。
+- **鐵律**：舊 ERP 0 DDL／0 更動；司機 App 未觸及。
+
+---
+
 ## [2026-11-10 16:35] - ⚡ 盛隆客戶搜尋全面大一統與來電 0ms 記憶體秒配（舊版歷史訂單頁徹底由 GAS v11 原生版取代 ✕ 3,943 戶完整真理庫打包 ✕ 拔除 SQL 全表掃描杜絕時序倒掛 ✕ Telegram 客戶連結直通雲端）[ver: 20261110_1635_customers_gasv11_replacement_and_0ms_caller_lookup]
 - **問題根因徹底查明與徹底根絕**：
   1. **舊版客戶歷史頁面破碎容易報錯**：舊版 `/customer-history` 頁面原含有 665 行陳舊程式，直接調用 SQL Server 查詢，雲端 Vercel 環境無法直連門市電腦即回傳 404「查無此客戶資料」，且介面無模糊搜尋與代號索引。
