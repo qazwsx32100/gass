@@ -1,3 +1,22 @@
+## [2026-11-14 00:30] - 👑 盛隆 LINE 會員系統與雲端資料庫全量平移至官方專案（shenglonggas@gmail.com 官方 Supabase xyfglvwvirqopbkqirew / 3,943 戶完整門市客戶主檔與電話地址 100% 導入 / 6 大瓦斯規格牌價完備 / Vercel 正式站台 READY 生效）[ver: 20261114_0030_line_members_supabase_migration]
+- **官方專案轉移與資產歸戶**：
+  - LINE 會員資料庫正式移轉至盛隆瓦斯官方帳號 `shenglonggas@gmail.com` 之專屬 Supabase 專案（Ref: `xyfglvwvirqopbkqirew`）。
+  - 徹底解除個人開發帳號（qazwsx32100）綁定，官方公務信箱完全自主掌控。
+- **資料庫結構與數據全量遷移驗證**：
+  - 執行全套一鍵建庫腳本，建置 36+ 張營運與會員資料表、RPC 預存程序及 RLS 安全防護。
+  - `cloud_customers`：3,943 戶完整門市客戶主檔（含 `47.2`、`26.21.1` 等經典代號、地址、電話、GPS 座標、慣用規格）100% 載入完畢。
+  - `sl_customers`：3,943 戶會員主檔 100% 載入完畢。
+  - `sl_customer_phones`：7,429 筆電話主檔（含市話、手機、備註聯絡電話）100% 載入完畢。
+  - `sl_addresses`：3,943 筆常用配送地址 100% 載入完畢。
+  - `sl_products` & `sl_price_rules`：嚴格落實 Directive #3（20kg 住家 $750/生意 $620、16kg $680、10kg $530、4kg/新4kg $400、50kg $1600）7 大品項牌價全數啟動。
+- **雲端生產環境與地端連線同步**：
+  - Vercel Production（`shenglong-line-liff`）環境變數即時覆寫切換至新專案，編譯無錯誤正式發布上線（READY）。
+  - 地端與監控中心同步設定檔 `sync-config.env` 更新指向新專案端點。
+- **各項核心鐵律檢驗**：
+  - 舊門市 SQL Server 黑盒子 0 結構更動（0 DDL）。
+  - 外勤司機端 100% 零通知、零彈窗。
+  - 核心業務具備離線快照與多軌容災保護。
+
 ## [2026-11-13 22:55] - 🛡️ 全系統離線唯一真理與客戶搜尋大一統（徹底移除 Google 試算表 ✕ 客戶搜尋全收斂 GAS v11 ✕ 訂單畫面與即時庫存離線封存快照保底 ✕ 26/26 測試全綠） [ver: 20261113_2255_offline_resilience_and_gasv11_unification]
 - **背景與問題根因**：
   1. **全系統未同步時「白板/0資料」根因**：過去 Serverless 邏輯將「今日尚未進線/尚未開機打單」粗暴判定為無效過期，直接回傳空陣列 orders: [] 或全 0 鋼瓶數，導致早晨開機前或離線時畫面空白；缺乏跨日持久化快照，雲端 Serverless 冷啟動若遇網路逾時直接呈現全 0。

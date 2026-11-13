@@ -3611,3 +3611,20 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
   - [x] GitHub 雙倉庫（qazwsx32100/gass, qazwsx32100/shenglong-next）主幹同步完成
   - [x] Vercel Production 正式上線：https://shenglong.vercel.app/api/gas-stock
   - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📅 發布紀錄：2026-11-14 00:30 (版本代號: 20261114_0030_line_members_supabase_migration)
+- **更新主題**：盛隆 LINE 會員系統與雲端資料庫全量平移至官方專案（shenglonggas@gmail.com 官方專屬 Supabase 啟用／3,943 戶門市客戶與 7,429 筆電話地址 100% 導入／牌價完備／Vercel 正式上線）
+- **發布內容摘要**：
+  1. **官方專案轉移與資產歸戶**：LINE 會員資料庫正式移轉至盛隆瓦斯官方帳號 `shenglonggas@gmail.com` 之專屬 Supabase 專案（Ref: `xyfglvwvirqopbkqirew`），徹底解除個人開發帳號（qazwsx32100）綁定，官方公務信箱完全自主掌控。
+  2. **數據全量導入**：
+     - `cloud_customers`：3,943 戶完整門市客戶主檔載入。
+     - `sl_customers`：3,943 戶 LINE 客戶主檔載入。
+     - `sl_customer_phones`：7,429 筆電話（含市話與備註電話）載入。
+     - `sl_addresses`：3,943 筆配送地址載入。
+     - `sl_products` & `sl_price_rules`：瓦斯規格與官方定價標準（20kg $750/$620, 16kg $680, 10kg $530, 4kg $400, 50kg $1600）全量就緒。
+  3. **雲端切換生效**：Vercel 生產環境（`shenglong-line-liff`）環境變數即時覆寫切換至新專案，發布成功（READY）。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 雙倉庫（qazwsx32100/gass, qazwsx32100/shenglong-next）主幹同步完成
+  - [x] Vercel Production 正式上線：https://shenglong-line-liff.vercel.app
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
