@@ -1,3 +1,26 @@
+## [2026-11-13 22:55] - 🛡️ 全系統離線唯一真理與客戶搜尋大一統（徹底移除 Google 試算表 ✕ 客戶搜尋全收斂 GAS v11 ✕ 訂單畫面與即時庫存離線封存快照保底 ✕ 26/26 測試全綠） [ver: 20261113_2255_offline_resilience_and_gasv11_unification]
+- **背景與問題根因**：
+  1. **全系統未同步時「白板/0資料」根因**：過去 Serverless 邏輯將「今日尚未進線/尚未開機打單」粗暴判定為無效過期，直接回傳空陣列 orders: [] 或全 0 鋼瓶數，導致早晨開機前或離線時畫面空白；缺乏跨日持久化快照，雲端 Serverless 冷啟動若遇網路逾時直接呈現全 0。
+  2. **客戶搜尋三大版本分歧問題**：過去殘留 Google 試算表備用 iframe 分頁、舊版客戶搜尋殘留，入口混亂且外部 Google Apps Script 載入緩慢。
+- **四大徹底升級與治理**：
+  1. **客戶搜尋全面收斂至唯一真理 GAS v11 原生版 (`CustomerSearchHub`)**：
+     - 徹底移除 `app/operations/page.tsx` 中的「📋 舊版試算表 (Google 備用)」分頁按鈕與 iframe，拔除死代碼。
+     - 訂單卡片「👤 查全歷史」與「👤 客戶中樞」全數統一直通 GAS v11 原生中樞，自動帶入客號展開 5 大情報抽屜與 2026 全量 8,953 筆訂單庫。
+  2. **訂單畫面 (`today-orders`) 離線封存快照保底**：
+     - 實裝 `loadOfflineSnapshotOrders` 與 `public/data/orders-last-known.json`（最近營業日封存單據）。
+     - 當今日尚未開機或斷線時，平滑返回封存快照，頂部醒目橫幅提示 `⚠️ 門市電腦離線／尚未開機・目前顯示最近營業日封存快照`，絕不偽造今日日期，絕不呈現空白 0 單。
+  3. **即時庫存 (`gas-stock`) 冷啟動持久快照保底**：
+     - 打包 `public/data/last-known-stock.json`，冷啟動時 0ms 注入保底鋼瓶存量，跨日保留實體鋼瓶結存，徹底杜絕閃現 0 支鋼瓶。
+  4. **全端測試與品質驗收**：
+     - `tests/offline-resilience-and-customer-orders.test.mjs` 擴充至 7 大項測試，與全鏈路測試共 26/26 項 100% 通過。
+     - Vercel Production 正式環境部署生效（READY, `dpl_5FPhktViVr9U1JJUMrLAhaxvRDFh`, https://shenglong.vercel.app）。
+- **鐵律檢驗**：
+  - 舊門市 SQL Server 黑盒子 0 結構修改（0 DDL）。
+  - 司機端外勤 100% 零通知、零彈窗、靜默直接定位。
+  - AI 犯錯中心：無腦高頻輪詢 0 違規。
+
+---
+
 ## [2026-11-13 21:13] - 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 極速版 ✕ order-history API 串接 3,943 戶雲端主檔 [ver: 20261113_2113_operations_customer_history_gasv11]
 - **背景**：老闆指示檢查監控中心另一個「歷史查閱客戶資料」入口。
 - **查明問題**（`/operations` → 訂單 → 📜 歷史訂單紀錄 → 👤 依客戶全歷史）：
