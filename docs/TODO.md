@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【司機端訂單畫面 6 大排版修正全量落地】1. 歷史備註改為其他電話(專屬過濾市話與手機支援直撥) 2. 桶子規格(綠框)與金額置於右上角 3. 本次備註改為訂單備註 4 & 6. 地址純化大字，客戶名稱與地址附註(C/備1/單)集中下一行同列 5. 超過150天挑桶訊息置於第一行同行(黃框)（shenglong-next 042956f）
 - [x] 2026-11-14 【盛隆即時庫存全鏈路架構手冊建立 ✕ 連線問題診斷與召喚機制】完整盤點 query.sql、supervisor-sync.cjs (48999)、sync-stock.cjs (48998)、gas-stock-health.ts 狀態機、StockDepletionPredictor 及離線容災快照，排查本機 MSSQL$SQLEXPRESS 停止連線異常；發布權威架構手冊、建立 Workspace Skill (shenglong-realtime-stock) 並落實自然語言關鍵字召喚機制（docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md）
 - [x] 2026-11-14 【司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示】依圖 1 重新打造高密度訂單卡片，高度自 550px 縮減 70% 至 ~150px，一屏瀏覽 3~4 單；左側工具列 (導航/電話/回報) ＆ 右側業務按鈕 (一鍵接單/送達收款)；後端開放 customerRemarks 並於卡片獨立高亮展示歷史備註與本次備註（shenglong-next fad7c49）
 - [x] 2026-11-14 【挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動】外勤配送「⚠️ 請挑桶」警示門檻統一自 45 日升級為 150 日（約 5 個月），相隔未滿 150 天（如 85 天）絕不誤跳；重構司機端換日與強制刷新解耦、防斷崖式清空保護與新單 5 分鐘存活保護（Smart Union Merge），徹底解決新單抵達後離奇消失與畫面抖動（shenglong-next 0118353，dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo READY)
@@ -31,6 +32,31 @@
   4. **全端召喚機制落實**：
      - 提供自然語言關鍵字召喚（`即時庫存架構`、`庫存連線問題`、`召喚即時庫存說明`、`庫存架構診斷`）。
      - 提供檔案參照召喚與桌面鏡像（`C:\Users\懶\Desktop\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`）。
+
+## [2026-11-14 14:15] - 🚀 司機端訂單畫面 6 大排版修正全量落地 [ver: 20261114_1415_driver_order_card_six_layout_refinements]
+- **背景與老闆決策**：
+  - 老闆指示進行 6 大排版修正：「1. 歷史備註名稱改成其他電話，我只要讀取市話和手機的資訊 2. 桶子規格和金額都放在右上角，桶子規格呈現綠色框框 3. 本次備註名稱改成訂單備註 4. 地址後面的備註如 C、備1、單等都放在下一行和客戶名稱同一行 5. 時間超過150天挑桶訊息放在第一行跟桶子規格、瓦斯價格放在同一行，呈現黃色框框 6. 客戶名稱放在地址的下一行和地址後面的備註同一行」。
+- **六大項目落實與技術細節**：
+  1. **其他電話專屬萃取與直撥 (app/driver/page.tsx)**：
+     - 實裝 extractOtherPhoneNumbers，精準以正規式只讀取合法台灣手機 (09xx-xxx-xxx) 與市話 (02-xxxx-xxxx、8碼市話)，排除雜訊與主電話重複項。
+     - 標題定為 📞 其他電話：，點擊每個電話膠囊直撥客戶通話。
+  2. **右上角桶子規格綠色框框與金額 (app/driver/page.tsx)**：
+     - 第一行右上角依序呈現：挑桶黃框 (如有) + 桶子規格綠框 (border: 1.5px solid #10b981; background: #ecfdf5; color: #047857) + 應收金額紅字。
+  3. **更名為「訂單備註」(app/driver/page.tsx)**：
+     - 正式將原「本次備註」替換為 📝 訂單備註：{o.orderRemarks}。
+  4. **地址純化，地址附註拆至下一行 (app/driver/page.tsx)**：
+     - 第二行僅呈現純路名門牌地址 (📍 addrParts.main)，大字粗體無贅字。
+  5. **超過 150 天挑桶訊息放第一行同行黃色框框 (app/driver/page.tsx)**：
+     - 僅在相隔天數 >= 150 天時，於第一行右上角規格左側以黃色框框 (border: 1.5px solid #f59e0b; background: #fef3c7; color: #b45309) 呈現 ⚠️ 請挑桶。
+  6. **客戶名稱與地址後綴備註同一行陳列 (app/driver/page.tsx)**：
+     - 第三行整齊同列：👤 客戶：{o.name} ＋ 醒目標籤 [🏷️ 備2]、[🏷️ 單]、[🏷️ C]。
+- **全端驗證與生產部署**：
+  - 新增測試 tests/driver-compact-card-and-customer-remarks.test.mjs (7/7 PASS)。
+  - 全量回歸測試 (22/22 PASS)。
+  - TypeScript 靜態型別 0 錯誤，Next.js 生產最佳化建置通過。
+  - GitHub 雙倉庫推送，Vercel Production 生效。
+
+---
 
 ## [2026-11-14 13:50] - 🚀 司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示 [ver: 20261114_1350_driver_compact_card_option_a_and_customer_remarks]
 - **背景與老闆決策**：
