@@ -1,3 +1,29 @@
+## [2026-11-14 09:15] - 🚀 司機端歷史紀錄無資料問題徹底根治 ✕ operationsKvFetch 三層降級鏈 ✕ 雙層離線保底 [ver: 20261114_0915_driver_history_kv_and_offline_resilience]
+- **背景與老闆反饋**：
+  - 老闆回報：「現在歷史紀錄沒資料了 今日 昨日 前日 本月 前月 都沒有資料」
+- **問題根因徹底查明 (Root Cause)**：
+  1. **KV 代理攔截未降級 (Critical)**：`lib/operations-kv-fetch.ts` 攔截所有對 `https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/*` 的請求改打 Supabase。然而 Supabase 專案尚未建置 `sl_operations_kv` 資料表，PostgREST 與 Edge Function 均返回 404 Not Found。舊代碼直接將 404 傳回給調用端，完全沒有自動降級回退到真實存放歷史數據的 `kvdb.io`！
+  2. **端點離線快照缺失**：後端 `/api/driver/earnings` 在 KV 呼叫失敗時，直接返回空陣列 `orders: []`，且 `next.config.ts` 未將離線資料打包至 `/api/driver/earnings` Serverless 容器中。
+- **三大核心修復與防護**：
+  1. **operationsKvFetch 三層降級鏈 (`lib/operations-kv-fetch.ts`)**：
+     - PostgREST ➔ Edge Function ➔ 原生 `globalThis.fetch(input, init)`（`[FALLBACK-TO-LEGACY-KV]`）。當 Supabase 尚未就緒或回傳 404/5xx 時，100% 自動無縫平滑讀取真實 `kvdb.io` 端點。
+  2. **歷史運費雙層離線真理保底 (`app/api/driver/earnings/route.ts`)**：
+     - `fetchTodayOrdersFromKV` 接入 `orders-last-known.json` 離線保底。
+     - `fetchDriverHistoryFromKV` 接入 `customer-orders-2026.json`（8,953 筆單據、小龍 1,636 筆）終極離線真理保底。
+  3. **Vercel Serverless Function 資源打包追蹤 (`next.config.ts`)**：
+     - 在 `outputFileTracingIncludes` 納入 `/api/driver/earnings`，確保包含 `customer-orders-*.json` 與 `orders-last-known.json`。
+- **全端驗證與實證數據**：
+  - 新增測試 `tests/driver-earnings-offline-resilience.test.mjs` (3/3 PASS)
+  - 新增端對端測試 `tests/e2e-driver-history-verification.test.mjs` (1/1 PASS)
+  - 線上正式環境 (`https://shenglong.vercel.app`, READY `dpl_6xzkDYEomULvdwr5HrQYN1jkv33o`) 實測穿透：
+    - 今日 (2026-11-14)：1 筆，總支數 1 支，預估運費 $70
+    - 昨日 (2026-11-13)：40 筆，總支數 51 支，預估運費 $3,640
+    - 前日 (2026-11-12)：27 筆，總支數 42 支，預估運費 $3,010
+    - 本月 (2026-11)：410 筆，總支數 558 支，預估運費 $39,550
+    - 前月 (2026-10)：344 筆，總支數 445 支，預估運費 $31,640
+
+---
+
 ## [2026-11-14 09:00] - 🏛️ 門市 ERP 歷年訂單 (2023~2025) 全量鏡像與雲端多年度離線融合 ✕ 歷史訂單卡片全面大一統 [ver: 20261114_0900_orders_historical_mirror_and_shared_card]
 - **背景與老闆決策**：
   1. 老闆指令：「1 先做」— 執行 P0 核心任務：門市 ERP 歷年訂單 (2023~2025) 鏡像至雲端 Supabase public.cloud_orders 與 Next.js 本地離線索引，讓門市電腦離線/未開機時，雲端全系統依然能 0ms 秒查客戶近 3 年完整叫貨明細、司機、金額與規格。
