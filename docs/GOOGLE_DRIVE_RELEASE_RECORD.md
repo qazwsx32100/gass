@@ -1,3 +1,28 @@
+## [2026-11-14 15:50] - 🚨 監控中心強制通知全面實裝 (新單 ✕ 新來電 全程提示音、真人語音合成、無感解鎖與持久推播) [ver: 20261114_1550_operations_forced_notifications]
+- **背景與老闆最高指示**：
+  - 老闆明確指示：「監控中心 的通知也要跟司機端一樣 強制通知 訂單和新的來電」
+- **核心架構升級與技術落實**：
+  1. **預設強制開啟聲音與語音**：
+     - `app/operations/page.tsx` 與 `CallMonitorView.tsx` 內 `soundEnabled` 與 `speechEnabled` 預設強制為 `true`，`localStorage` 預設持久化 `"true"`，徹底告別預設靜音。
+  2. **全域無感首次互動解鎖 (AudioContext & SpeechSynthesis)**：
+     - 瀏覽器（Chrome/Edge）因 Autoplay 政策預設靜默掛起音訊。系統實裝全域無感監聽（首次點擊、觸控或按鍵時），自動呼叫 `getSharedAudioContext()` 喚醒 `audioCtx.resume()`，並熱身 Web Speech API 語音合成引擎。
+     - 若瀏覽器桌面推播權限為 `default`，自動向調度人員主動請求授權。
+  3. **新進訂單強制聲響與真人語音播報 (`ORDER_NEW`)**：
+     - 實裝 `playOrderChime()`：專屬 C5-E5-G5 (523Hz -> 659Hz -> 784Hz) 明亮穿透大三和弦提示音。
+     - 實裝 `speakNewOrder()`：真人中文語音播報「新進訂單！客戶姓名，瓦斯規格」。
+     - 標題追加 `[強制通知]`，浮動 Toast 與側邊抽屜同步高亮。
+  4. **新進來電強制振鈴與真人語音播報 (`CALL_INCOMING`)**：
+     - 強化 `playCallChime()`：440Hz -> 659Hz -> 880Hz 電話進線雙頻振鈴。
+     - 強化 `speakIncomingCall()`：「第 X 線，某某客戶來電」真人中文播報。
+  5. **桌面推播強制停留 (`requireInteraction: true`)**：
+     - 瀏覽器桌面推播強制設定 `requireInteraction: true`，調度員切換至其他軟體或分頁時，通知會常駐在 Windows 螢幕右下角，直到調度人員手動點擊或處理，絕不錯過。
+- **全端測試與品質驗收**：
+  - 新增專屬測試 `tests/operations-forced-notifications.test.mjs` (1/1 PASS)
+  - 既有通知核心測試 `tests/operations-notification-center.test.mjs` (4/4 PASS)
+  - TypeScript 全庫靜態型別檢驗 (`tsc --noEmit`) 0 錯誤通過。
+
+---
+
 ## [2026-11-14 16:00] - 🔬 GEMINI 4 模型思考方式全鏈路極限檢驗與深度防禦強化 [ver: 20261114_1600_gemini4_deep_audit_and_hardening]
 - **背景與老闆決策**：
   - 老闆指示：「幫我用GEMNIN 4 的模型思考方式 重新檢驗一次」。

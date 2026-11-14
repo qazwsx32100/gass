@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【監控中心與外勤雙軌強制通知全量落地】依老闆指示監控中心全面比照司機端實裝「強制通知」：1. 預設強制開啟 soundEnabled 與 speechEnabled 2. 全域無感首次互動自動解鎖 AudioContext/SpeechSynthesis 與桌面推播 3. 新進訂單實裝 C5-E5-G5 提示音與「新進訂單！客戶名，規格」真人語音合成 4. 新來電強化 440-659-880Hz 振鈴與「第X線，客戶名來電」真人語音合成 5. 桌面推播設定 requireInteraction: true 強制保留在螢幕上直到調度員處理 6. CallMonitorView 同步強化強制開啟（shenglong-next a78e73d）
 - [x] 2026-11-14 【GEMINI 4 模型思考方式全鏈路極限檢驗與深度防禦強化】1. 商品規格映射盲點修復：api/legacy-sync.js historyKeyMap 補齊 GASNEW04、GAS04，確保 4kg 新舊規格自愈回寫 sl_customer_product_history 2. 實裝防禦性取整除法，避免極端非整除金額跳脫 3. 完成狀態機閉環、雙向冪等性、舊 ERP 20年黑盒子零改動(Directive #4)、Supabase 402/Quota 5分鐘熔斷降級多維度審查 4. 277 項測試全通，Vercel Production (dpl_8TnWUV5ECHKQSgmb8R2WXthLZVjY READY) 部署生效（shenglong-line-liff 296127a）
 - [x] 2026-11-14 【LINE 會員下單與舊 ERP 雙向同步根治 ✕ 備用連線全鏈路強化】1. 舊 ERP 雙向同步卡單排查：normalizeOutboundJobs 設 payload.total=null 由門市 ERP 權威動態計價並成功寫入 dbo.gas_oders (單號 362047)，reconcileOutboundLegacyPrice 自動自愈回寫客戶歷史單價至 $570，任務狀態綠燈 synced 2. 強化 createOrderPrimary：會員自動自愈、地址模糊防誤擋、Telegram 即時雙軌推播 3. 備用連線全鏈路強化：customer-lookup 頻率保護平滑降級、build-member-index 自動生成 3,943 戶 7 大規格離線快照（shenglong-line-liff 8f2727e，dpl_9GenGd9NcoiQMKGu735qq9YoTVE3 READY）
 - [x] 2026-11-14 【司機端訂單卡片移除冗餘精簡狀態標籤 (第 5 行)】依老闆指示移除卡片第 5 行冗餘標籤列，卡片高度降至 ~120px-140px，更加俐落；完整保留第 1 行挑桶黃框與規格綠框、第 2 行純地址、第 3 行客戶與門牌備註(C/備1/單)、第 4 行其他電話(直撥)與訂單備註，以及選項 A 底部按鈕（shenglong-next bc4ed19）\n- [x] 2026-11-14 【司機端訂單畫面 6 大排版修正全量落地】1. 歷史備註改為其他電話(專屬過濾市話與手機支援直撥) 2. 桶子規格(綠框)與金額置於右上角 3. 本次備註改為訂單備註 4 & 6. 地址純化大字，客戶名稱與地址附註(C/備1/單)集中下一行同列 5. 超過150天挑桶訊息置於第一行同行(黃框)（shenglong-next 042956f）
@@ -12,6 +13,31 @@
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 15:50] - 🚨 監控中心強制通知全面實裝 (新單 ✕ 新來電 全程提示音、真人語音合成、無感解鎖與持久推播) [ver: 20261114_1550_operations_forced_notifications]
+- **背景與老闆最高指示**：
+  - 老闆明確指示：「監控中心 的通知也要跟司機端一樣 強制通知 訂單和新的來電」
+- **核心架構升級與技術落實**：
+  1. **預設強制開啟聲音與語音**：
+     - `app/operations/page.tsx` 與 `CallMonitorView.tsx` 內 `soundEnabled` 與 `speechEnabled` 預設強制為 `true`，`localStorage` 預設持久化 `"true"`，徹底告別預設靜音。
+  2. **全域無感首次互動解鎖 (AudioContext & SpeechSynthesis)**：
+     - 瀏覽器（Chrome/Edge）因 Autoplay 政策預設靜默掛起音訊。系統實裝全域無感監聽（首次點擊、觸控或按鍵時），自動呼叫 `getSharedAudioContext()` 喚醒 `audioCtx.resume()`，並熱身 Web Speech API 語音合成引擎。
+     - 若瀏覽器桌面推播權限為 `default`，自動向調度人員主動請求授權。
+  3. **新進訂單強制聲響與真人語音播報 (`ORDER_NEW`)**：
+     - 實裝 `playOrderChime()`：專屬 C5-E5-G5 (523Hz -> 659Hz -> 784Hz) 明亮穿透大三和弦提示音。
+     - 實裝 `speakNewOrder()`：真人中文語音播報「新進訂單！客戶姓名，瓦斯規格」。
+     - 標題追加 `[強制通知]`，浮動 Toast 與側邊抽屜同步高亮。
+  4. **新進來電強制振鈴與真人語音播報 (`CALL_INCOMING`)**：
+     - 強化 `playCallChime()`：440Hz -> 659Hz -> 880Hz 電話進線雙頻振鈴。
+     - 強化 `speakIncomingCall()`：「第 X 線，某某客戶來電」真人中文播報。
+  5. **桌面推播強制停留 (`requireInteraction: true`)**：
+     - 瀏覽器桌面推播強制設定 `requireInteraction: true`，調度員切換至其他軟體或分頁時，通知會常駐在 Windows 螢幕右下角，直到調度人員手動點擊或處理，絕不錯過。
+- **全端測試與品質驗收**：
+  - 新增專屬測試 `tests/operations-forced-notifications.test.mjs` (1/1 PASS)
+  - 既有通知核心測試 `tests/operations-notification-center.test.mjs` (4/4 PASS)
+  - TypeScript 全庫靜態型別檢驗 (`tsc --noEmit`) 0 錯誤通過。
+
+---
 
 ## [2026-11-14 14:35] - 📦 盛隆即時庫存全鏈路架構手冊建立 ✕ 連線問題診斷與召喚機制 [ver: 20261114_1435_realtime_stock_architecture_and_summon_skill]
 - **背景與老闆指示**：
