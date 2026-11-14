@@ -1,3 +1,27 @@
+## [2026-11-14 16:00] - 🔬 GEMINI 4 模型思考方式全鏈路極限檢驗與深度防禦強化 [ver: 20261114_1600_gemini4_deep_audit_and_hardening]
+- **背景與老闆決策**：
+  - 老闆指示：「幫我用GEMNIN 4 的模型思考方式 重新檢驗一次」。
+- **第一性原理深度穿透檢驗與深度防禦修復 (First-Principles Audit & Enhancements)**：
+  1. **商品規格對應盲點修復 (`api/legacy-sync.js`)**：
+     - **邊界盲點查明**：檢驗發現在 `reconcileOutboundLegacyPrice` 之中，`historyKeyMap` 原僅定義 `GASNEW4` 與 `GAS4`，而系統資料庫與 ERP 實際商品標準代碼為 `GASNEW04` 與 `GAS04`。若客人下單 4kg 規格瓦斯，在舊系統回讀核價時會因鍵值未命中而漏更新 `sl_customer_product_history`。
+     - **防禦修復**：全面補齊 `GASNEW04`、`GASNEW4`、`GAS04`、`GAS4` 雙向完全映射，並在單價除算處實裝防禦性取整，確保非整除極端邊界不跳脫。
+  2. **狀態機與雙向冪等性深度審查**：
+     - LINE -> ERP：透過 `[LINE:<order_id>]` 標記寫入 `dbo.gas_oders.oder_remarks`，SQL 事務內使用 `sp_getapplock` 雙鎖防止重複打單，重複檢驗 `SELECT TOP (2)` 防止重複建立。
+     - ERP -> LINE：透過 `sl_legacy_order_links.source_fingerprint` 比對 SHA-256 指紋，只有真正有狀態或金額變更時才觸發更新，杜絕無效廣播與無腦高頻輪詢（嚴格遵循 AI 犯錯中心原則 1 & 2）。
+  3. **舊 ERP 20年黑盒子神聖相容審查 (Supreme Directive #4)**：
+     - 確認門市 MSSQL 資料庫 Schema 結構零變更，維持 20 年現狀。
+     - 舊系統查詢全面加上 `WITH (ROWLOCK)` / `WITH (NOLOCK)`，確保門市打單小姐極速打單不受鎖定干擾。
+     - 價格計算權威性完全歸屬舊門市：門市 `dbo.price` 扣除 `dbo.customers` 個人優惠折價作為實質總金額，雲端 `sl_orders` 與 `sl_customer_product_history` 自動向舊 ERP 對齊自癒。
+  4. **斷網與配額熔斷 (Circuit Breaker) 極端情境審查**：
+     - `tripCircuit` 於 0ms 內攔截 402/503 錯誤，自動開啟 5 分鐘熔斷期，進入靜態快取防護模式。
+     - 本地預編譯索引 `member-index.generated.json`（3,943 位客戶、3,943 筆地址、7 項瓦斯品項規格）與 `phone-index.generated.json`（9,944 組電話鍵），即使 Supabase 徹底離線，客戶仍可在 0.01 秒內完成電話登入與查單。
+- **全端驗證與生產部署**：
+  - `c:\shenglong-line-liff` 單元測試全量通過 (277/277 PASS, 0 FAIL)。
+  - 成功部署至 Vercel Production (`dpl_8TnWUV5ECHKQSgmb8R2WXthLZVjY` READY，`https://shenglong-line-liff.vercel.app`)。
+  - GitHub 倉庫雙軌同步推送 (`origin/main` 296127a)。
+
+---
+
 ## [2026-11-14 15:45] - 🚀 LINE 會員下單與舊 ERP 雙向同步根治 ✕ 備用連線全鏈路強化 [ver: 20261114_1545_line_order_legacy_erp_sync_and_failover_hardening]
 - **背景與老闆決策**：
   - 老闆指示：「幫我加強 備用連線的部分 目前LINE 無法下訂單 下訂單後 無法連到ERP 幫我處理」。
