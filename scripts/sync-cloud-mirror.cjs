@@ -131,7 +131,7 @@ async function runCloudMirror(options = {}) {
   console.log(`🖥️ 本機端點: SQL_SERVER=${SQL_SERVER}, SQL_DB=${SQL_DB}`);
   console.log("=================================================================\n");
 
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://ytwhfiudhhdkmzobqmqq.supabase.co").trim();
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://xyfglvwvirqopbkqirew.supabase.co").trim();
   const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "").trim();
 
   // ── 步驟 1：提取全店客戶主檔 (WITH (NOLOCK) 零鎖定) ──

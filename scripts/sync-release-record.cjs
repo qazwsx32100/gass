@@ -13,7 +13,7 @@ const releaseRecord = `## 📅 2026/11/06 - 👑 盛隆瓦斯 LINE 系統全面�
    - 支援 國語、台語、越南語 (Tiếng Việt)、英語 (English) 四大語言與意圖分析，回覆前自動冠上 \`🎙️ 【盛隆 AI 語音辨識】「...」\`，完全透明防呆。
    - 正式站 \`vercel.json\` 解鎖 \`Permissions-Policy\` 麥克風權限（\`microphone=(self)\`），前端 LIFF 首頁實裝懸浮麥克風按鈕與錄音彈窗。
 2. **LINE 會員系統「暫時無法連線」根治與 Supabase 402 解耦**：
-   - 拔除停權之 Supabase Edge Function (\`ytwhfiudhhdkmzobqmqq.supabase.co\`)，清空 \`api-endpoints.generated.js\`。
+   - 拔除停權之 Supabase Edge Function (\`xyfglvwvirqopbkqirew.supabase.co\`)，清空 \`api-endpoints.generated.js\`。
    - \`_database-primary.js\` 注入 \`supabaseCircuitOpen\` 熔斷保護，遇到 402/503 自動進入 5 分鐘冷卻，平滑回退至 Google Sheets 備援，杜絕門市打單受阻。
 3. **高併發防護（1 分鐘 100 人同時下單）微批次打包與秒級出單**：
    - 客戶送出訂單後立即核發單號，0.08 秒內回傳成功，體感零延遲。

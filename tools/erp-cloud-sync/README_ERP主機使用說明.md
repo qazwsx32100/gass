@@ -36,7 +36,7 @@
 用筆記本（Notepad）開啟資料夾內的 `sync-config.env`：
 ```env
 # 1. 雲端 Supabase 連線資訊
-SUPABASE_URL=https://ytwhfiudhhdkmzobqmqq.supabase.co
+SUPABASE_URL=https://xyfglvwvirqopbkqirew.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=您的_SUPABASE_SERVICE_ROLE_KEY
 
 # 2. 門市 SQL Server 連線設定 (通常維持預設即可自動探測)

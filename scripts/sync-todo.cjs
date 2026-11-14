@@ -12,7 +12,7 @@ const newItem = `### 0. 盛隆瓦斯 LINE 系統全面復活、四語語音助�
      - **回覆防呆透明度**：在所有 AI / 知識庫回覆前自動冠上 \`🎙️ 【盛隆 AI 語音辨識】「...」\`，讓客戶清楚看見語音轉文字結果，消除誤解。
      - **麥克風權限解鎖**：正式站 \`vercel.json\` 修正 \`Permissions-Policy\` 由 \`microphone=()\` 改為 \`microphone=(self)\`。
   2. **LINE 會員系統「暫時無法連線」根治與 Supabase 402 解耦**：
-     - **前端解耦**：清空 \`api-endpoints.generated.js\`，徹底斷開前端對 402 停權端點 (\`ytwhfiudhhdkmzobqmqq.supabase.co\`) 的失效請求。
+     - **前端解耦**：清空 \`api-endpoints.generated.js\`，徹底斷開前端對 402 停權端點 (\`xyfglvwvirqopbkqirew.supabase.co\`) 的失效請求。
      - **雙向自動降級**：\`api/_database-primary.js\` 實裝 \`supabaseCircuitOpen\` 熔斷器，遇 402/503 自動開啟 5 分鐘冷卻，平滑回退 Google Sheets 備援，杜絕門市 503 阻斷。
   3. **高併發防護（1 分鐘 100 人同時下單）微批次打包與秒級出單 (\`api/index.js\`)**：
      - **秒級出單 (80ms)**：客人於手機 LIFF 送出訂單後，後端立即核發訂單編號並於 0.08 秒內回傳成功，體感零延遲。
