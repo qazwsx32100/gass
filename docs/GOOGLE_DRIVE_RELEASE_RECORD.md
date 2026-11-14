@@ -1,3 +1,16 @@
+## 📋 最新紀錄：2026-11-14 19:35 (版本號: 20261114_1935_driver_incoming_phone_priority_and_remove_delivering_badge)
+- **更新主題**：司機端訂單卡片「配送中」狀態刪除／優先以打來的電話為主顯示「來電電話：」／其他電話專門萃取自備註裡的電話／雙 Android APK 重新編譯簽名並覆蓋桌面 sl／GitHub 雙軌同步／Vercel Production READY
+- **主要內容與成果**：
+  1. **刪除配送中狀態標籤**：司機端訂單卡片第 1 行右側徹底移除「🚚 配送中」，保持畫面極簡直覺，僅保留新單待接警示。
+  2. **優先顯示來電電話**：優先以打來的電話（callerPhone / incomingPhone / tel）為主，顯示「📞 來電電話：[號碼]」，底部撥號按鈕同步優先撥打。
+  3. **備註電話萃取為其他電話**：自動讀取備註並過濾排除主號碼，顯示「📞 其他電話：[號碼]」。
+  4. **APK 封裝與測試**：10/10 單元測試通過，Next.js 生產建置通過，Android APK 產出並覆蓋至桌面 sl。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 雙倉庫（qazwsx32100/gass, qazwsx32100/shenglong-next）主幹同步推送
+  - [x] Vercel Production 正式上線：https://shenglong.vercel.app/driver
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\sl\盛隆外送_小龍專用.apk、外出app.apk
+---
+
 ## [2026-11-14 19:25] - 🚀 根治推播延遲與開APP才跳訊息 ✕ FCM雙軌全通知 ✕ 監控中心背景輪詢解凍 [ver: 20261114_1925_fix_late_notifications_and_app_open_popup]
 - **背景與老闆指示**：
   - 老闆指示：「通知的問題：1.太晚 會延遲 2.開APP(司機端 和 監控中心 ) 才會跳出訊息。幫我執行，執行後跟我說 為什麼剛剛跟我打包票 做完 就跳票」。

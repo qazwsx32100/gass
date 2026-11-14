@@ -1,3 +1,19 @@
+## [2026-11-14 19:35] - 🛡️ 司機端訂單卡片「配送中」刪除 ✕ 優先以打來的電話為主顯示「來電電話：」 ✕ 備註萃取「其他電話」 [ver: 20261114_1935_driver_incoming_phone_priority_and_remove_delivering_badge]
+- **背景與老闆指示**：
+  - 老闆指示：「司機 訂單 配送中也刪除；電話的部分 優先以打來的電話為主，顯示  來電電話：，其他電話是備註裡的電話」。
+- **三大核心改動落實 (Core Implementations)**：
+  1. **司機訂單卡片徹底刪除「配送中」狀態標籤**：
+     - 司機端 (`app/driver/page.tsx`) 卡片第 1 行右側徹底刪除「🚚 配送中」，已接單配送中之訂單不再顯示冗餘狀態膠囊，介面極簡乾淨；新指派待接訂單維持保留「📢 待接單」藍點警示。
+  2. **電話部分優先以打來的電話為主，顯示「來電電話：」**：
+     - 解析訂單來電號碼（優先讀取 `o.callerPhone || o.caller_phone || o.incomingPhone || o.incomingTel || o.rawTel || o.tel`），透過 `formatPhoneNumber` 標準化顯示（手機 `09xx-xxx-xxx`、雙北市話 `02-xxxx-xxxx`）。
+     - 於卡片第 4 行第一優先顯示「📞 來電電話：[號碼]」，並具備一鍵撥號與 Android 原生直撥能力；底部「電話」工具按鈕亦同步優先鎖定來電電話撥打。
+  3. **其他電話專門萃取自備註裡的電話**：
+     - `extractOtherPhoneNumbers(order, incomingPhone)` 專門從客戶主檔備註、訂單備註與歷史備註中萃取市話與手機，並自動過濾排除已在「來電電話」顯示的號碼，顯示為「📞 其他電話：[號碼1] [號碼2]」。
+- **品質驗證與交付**：
+  - 10 項專屬單元測試全數通過（`tests/driver-compact-card-and-customer-remarks.test.mjs` 10/10 PASS）。
+  - Next.js Turbopack 生產編譯 0 錯誤通過 (Exit code 0)。
+  - 重新編譯簽名 `盛隆外送_小龍專用.apk` (5.83 MB) 與 `外出app.apk` (5.80 MB)，並自動複製覆蓋至桌面 `C:\Users\懶\Desktop\sl\`。
+
 ## [2026-11-14 19:25] - 🚀 根治推播延遲與開APP才跳訊息 ✕ FCM雙軌全通知 ✕ 監控中心背景輪詢解凍 [ver: 20261114_1925_fix_late_notifications_and_app_open_popup]
 - **背景與老闆指示**：
   - 老闆指示：「通知的問題：1.太晚 會延遲 2.開APP(司機端 和 監控中心 ) 才會跳出訊息。幫我執行，執行後跟我說 為什麼剛剛跟我打包票 做完 就跳票」。
