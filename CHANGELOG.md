@@ -1,3 +1,26 @@
+## [2026-11-14 21:00] - 🛠️ LINE 後台結單狀態修改通道 ✕ 舊 ERP 雙向同步 ✕ 配送備註不推播通知全量落地 [ver: 20261114_2100_admin_completed_order_channel_and_silence_notes]
+- **背景與老闆最高指示**：
+  - 老闆明確指示：「**配送備註 不用通知。LINE 後台設定一個通道 可以修改結單後的狀態 修改後 LINE會員 和 eRP 也會同步更新**」。
+- **三大核心成果與技術落地 (Key Implementations)**：
+  1. **配送備註徹底靜默更新，絕不騷擾推播 (Silence Note Notifications)**：
+     - 修改 `c:\shenglong-line-liff\api\legacy-sync.js`，將 `isModified` 邏輯收斂為僅由品項 (`itemsChanged`) 或金額 (`totalChanged`) 決定；備註變更 (`noteChanged`) 不再判定為 `isModified`，絕不觸發 LINE 內容變更推播。
+     - 推播卡片格式中徹底移除 `noteChange`，門市修改或清除備註時僅靜默寫入資料庫，完全落實「配送備註不用通知」。
+  2. **LINE 後台專屬通道：修改結單後狀態 (Admin Completed Order Channel)**：
+     - 升級 `c:\shenglong-line-liff\api\_operations.js` 之 `updateOrderStatus`，打破過去結單 (`completed`) 不可逆與阻擋 LINE 訂單之限制。
+     - 後台管理人員可直接在「即時營運中心 / 訂單配送」將已結單 (`completed`) 訂單點擊或選擇通道改回「配送中 (`delivering`)」、「已接單 (`accepted`)」或「已取消 (`cancelled`)」。
+     - 狀態更新時同步清除/設定 `completed_at` 或 `cancelled_at`，並向 LINE 會員推播最新狀態（不顯示司機姓名）。
+  3. **舊 ERP 雙向即時同步更新 (Bidirectional Legacy ERP Sync)**：
+     - 當後台通道修改訂單狀態後，自動在雲端 `sl_legacy_sync_jobs` 排入 `to_legacy` 工作（`order_update` / `order_cancel`）。
+     - 升級 `c:\shenglong-line-liff\scripts\legacy-sync-agent.js`：
+       - 改回「配送中 (`delivering`)」：SQL Server `dbo.gas_oders` 自動將 `payed` 設為 `'N'`、`payed_date` 清空、`disable` 設為 `'N'`，重回外送調度！
+       - 改為「已接單 (`accepted`)」：`payed` 設為 `'N'`、`deliver` 重設為 `'稍後輸入'`。
+       - 改為「已完成 (`completed`)」：`payed` 設為 `'Y'`、`payed_date` 設為當日。
+       - 改為「已取消 (`cancelled`)」：`disable` 設為 `'Y'`、`disable_date` 設為當日。
+  4. **全端測試與雲端部署**：
+     - `shenglong-line-liff` 單元測試全量 290 項 100% 綠燈通過。
+     - GitHub 雙向推送完成（Commit `ab17814`）。
+     - Vercel Production 正式環境同步部署生效。
+
 ## [2026-11-14 20:55] - 👑 本機非門市營業主機最高隔離鐵律正式落地 (Directive #6 ✕ AGENTS.md ✕ AI犯錯中心事故003) [ver: 20261114_2055_dev_host_vs_store_host_supreme_directive]
 - **背景與老闆最高指示**：
   - 老闆明確下達不可逾越最高權限指令：「**這台主機 不是營業主機 幫我把這設定為最高權限**」。
