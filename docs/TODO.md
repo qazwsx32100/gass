@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【LINE 會員系統無法連線徹底根治與 4,993 筆歷史規格單價全量同步】修復 `/admin/operations` 重導向迴圈、移除 `#error` 違反 CSP 之 inline `onclick` 並實裝 OAuth Stale Code 自動清理重試、`fast-bootstrap` Cookie 優先渲染、補齊 `sl_verify_and_bind_member` 等 RPC PostgREST 原生降級，並將 4,993 筆客戶歷史叫貨規格單價全數同步至 `xyfglvwvirqopbkqirew`（shenglong-line-liff 82c5919，dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK READY）
 - [x] 2026-11-14 【外勤雙實戰 ✕ 戰情雙自動全量上線】司機端空瓶退殘氣折抵計算器 (1-A, $22.63/kg)、商業戶電子手寫簽名板 (1-B, Canvas/Base64/雲端存證)、老闆 Telegram 每日 08:30 營運晨報排程 (2-A, Vercel Cron/8862712587)、雙軌自動對帳一鍵全自動批次平帳 (2-B, Batch Settle/即時平帳)（shenglong-next 91a27c5）
 - [x] 2026-11-14 【司機端歷史運費無資料徹底根治】operationsKvFetch 三層降級鏈 (PostgREST➔Edge Function➔KVDB 原生降級)、雙層離線真理保底 (orders-last-known + customer-orders-2026)、Vercel 打包追蹤，線上正式還原昨日 (40單)、前日 (27單)、本月 (410單)、前月 (344單)（shenglong-next 150d330，dpl_6xzkDYEomULvdwr5HrQYN1jkv33o READY）
 - [x] 2026-11-14 【司機端歷史運費防跳動與移除叫貨歷史按鈕】後端 earnings API 強制時間與單號穩定降序、前端導入請求序號計數器 (activeEarningsReqIdRef) 杜絕競態、移除叫貨歷史按鈕與死代碼（shenglong-next 547a73f）
@@ -5,6 +6,25 @@
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 10:15] - 🚀 LINE 會員系統無法連線徹底根治 ✕ CSP 重試修復 ✕ RPC 原生降級 ✕ 4,993 筆客戶歷史規格單價全量同步 [ver: 20261114_1015_line_member_connection_and_history_sync]
+- **背景與老闆反饋**：
+  - 老闆回報：「line 會員系統 目前沒有辦法連線 幫我處理一下」
+- **問題根因徹底查明 (Root Cause)**：
+  1. **前端 `#error` 重試按鈕遭 CSP 阻擋與 OAuth 殘留參數卡死 (`public/index.html`, `public/app.js`)**：`index.html` 中「重新連線」按鈕使用 inline `onclick="location.reload()"`，遭嚴格 `Content-Security-Policy` (`script-src 'self' https://static.line-scdn.net`) 攔截失效；且當 `liff.init` 因過期 OAuth `code`/`state` 參數失敗時，即使 `fast-bootstrap` Cookie 已成功載入，仍被強制切換至 `#error`（「暫時無法連線」）。
+  2. **後台 `/admin/operations` 重導向與 Rewrite 衝突 (`vercel.json`)**：`redirects` 將 `/operations` 重導向至 `/admin/operations`，而 `rewrites` 又將 `/admin/operations` 指回 `/operations`，導致存取 `/admin/operations` 時觸發無限重導向錯誤。
+  3. **新 Supabase (`xyfglvwvirqopbkqirew`) 缺少 10/05 後增量 RPC 與 `sl_customer_product_history` 歷史單價 (`api/_database-primary.js`, `scripts/build-member-index.js`)**：`sl_verify_and_bind_member`、`sl_get_line_member_orders_page` 等增量 RPC 尚未建置，且 `build-member-index.js` 未讀取 `GOOGLE_CUSTOMER_SOURCE_SPREADSHEET_ID` (`客戶叫貨規格!A3:AG5000`)，導致 `sl_customer_product_history` 為 0 筆、360 戶 `contact_name` 空白。
+- **五大核心修復與防護**：
+  1. **前端連線韌性與 CSP 合規重試 (`public/index.html`, `public/app.js`)**：移除 inline `onclick`，改由 `#retry-connect` 事件監聽器自動清除過期 OAuth 查詢參數 (`code`, `state`, `liffClientId`, `liffRedirectUri`) 後重載；`liff.init` 失敗時自動清理參數重試一次，且若 `fast-bootstrap` 已成功載入會員階段，直接渲染下單/綁定畫面不阻斷。
+  2. **路由修復與 `.env` 清理 (`vercel.json`, `.vercelignore`)**：移除 `/operations` 衝突 redirect，確保 `/admin/operations` 與 `/operations` 均 200 OK；清除本機殘留 `[SENSITIVE]` `.env` 檔案並強化 `.vercelignore`。
+  3. **後端 RPC 原生 PostgREST 降級 (`api/_database-primary.js`, `api/index.js`)**：實裝 `verifyAndBindMemberFallback`（直接驗證門牌「號/樓」並綁定 `sl_line_members`）、訂單查詢降級 `sl_get_member_orders`，以及管理端資料表查詢容錯。
+  4. **4,993 筆客戶歷史規格單價與 360 戶聯絡人全量同步 (`scripts/build-member-index.js`)**：建置階段自動讀取 `GOOGLE_CUSTOMER_SOURCE_SPREADSHEET_ID` (`客戶叫貨規格!A3:AG5000`)，將 **4,993 筆** `sl_customer_product_history` 寫入 `xyfglvwvirqopbkqirew`，並補齊 360 戶 `contact_name`，確保綁定會員立即顯示專屬「歷史單價」。
+- **全端測試與線上驗收**：
+  - 單元與整合測試：`277 pass, 0 fail`。
+  - 線上正式環境 (`https://shenglong-line-liff.vercel.app`, READY `dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK`)：`/`、`/api/health`、`/api/peak-monitor`、`/admin`、`/admin/operations` 全數 HTTP `200 OK`。
+  - 官方 Supabase (`xyfglvwvirqopbkqirew`) 實證：`sl_customers` 3,943 筆、`sl_customer_phones` 7,427 筆、`sl_addresses` 3,943 筆、`sl_customer_product_history` 4,993 筆、`sl_products` 7 筆。
+
+---
 
 ## [2026-11-14 09:40] - 🚀 外勤雙實戰 (退殘氣計算器 ✕ 商業戶電子簽名) ✕ 戰情雙自動 (08:30 晨報排程 ✕ 雙軌批次平帳) [ver: 20261114_0940_driver_refund_sig_and_reconcile_cron]
 - **背景與老闆決策**：

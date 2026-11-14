@@ -1,3 +1,22 @@
+## [2026-11-14 10:15] - 🚀 LINE 會員系統無法連線徹底根治 ✕ CSP 重試修復 ✕ RPC 原生降級 ✕ 4,993 筆客戶歷史規格單價全量同步 [ver: 20261114_1015_line_member_connection_and_history_sync]
+- **背景與老闆反饋**：
+  - 老闆回報：「line 會員系統 目前沒有辦法連線 幫我處理一下」
+- **問題根因徹底查明 (Root Cause)**：
+  1. **前端 `#error` 重試按鈕遭 CSP 阻擋與 OAuth 殘留參數卡死 (`public/index.html`, `public/app.js`)**：`index.html` 中「重新連線」按鈕使用 inline `onclick="location.reload()"`，遭嚴格 `Content-Security-Policy` (`script-src 'self' https://static.line-scdn.net`) 攔截失效；且當 `liff.init` 因過期 OAuth `code`/`state` 參數失敗時，即使 `fast-bootstrap` Cookie 已成功載入，仍被強制切換至 `#error`（「暫時無法連線」）。
+  2. **後台 `/admin/operations` 重導向與 Rewrite 衝突 (`vercel.json`)**：`redirects` 將 `/operations` 重導向至 `/admin/operations`，而 `rewrites` 又將 `/admin/operations` 指回 `/operations`，導致存取 `/admin/operations` 時觸發無限重導向錯誤。
+  3. **新 Supabase (`xyfglvwvirqopbkqirew`) 缺少 10/05 後增量 RPC 與 `sl_customer_product_history` 歷史單價 (`api/_database-primary.js`, `scripts/build-member-index.js`)**：`sl_verify_and_bind_member`、`sl_get_line_member_orders_page` 等增量 RPC 尚未建置，且 `build-member-index.js` 未讀取 `GOOGLE_CUSTOMER_SOURCE_SPREADSHEET_ID` (`客戶叫貨規格!A3:AG5000`)，導致 `sl_customer_product_history` 為 0 筆、360 戶 `contact_name` 空白。
+- **五大核心修復與防護**：
+  1. **前端連線韌性與 CSP 合規重試 (`public/index.html`, `public/app.js`)**：移除 inline `onclick`，改由 `#retry-connect` 事件監聽器自動清除過期 OAuth 查詢參數 (`code`, `state`, `liffClientId`, `liffRedirectUri`) 後重載；`liff.init` 失敗時自動清理參數重試一次，且若 `fast-bootstrap` 已成功載入會員階段，直接渲染下單/綁定畫面不阻斷。
+  2. **路由修復與 `.env` 清理 (`vercel.json`, `.vercelignore`)**：移除 `/operations` 衝突 redirect，確保 `/admin/operations` 與 `/operations` 均 200 OK；清除本機殘留 `[SENSITIVE]` `.env` 檔案並強化 `.vercelignore`。
+  3. **後端 RPC 原生 PostgREST 降級 (`api/_database-primary.js`, `api/index.js`)**：實裝 `verifyAndBindMemberFallback`（直接驗證門牌「號/樓」並綁定 `sl_line_members`）、訂單查詢降級 `sl_get_member_orders`，以及管理端資料表查詢容錯。
+  4. **4,993 筆客戶歷史規格單價與 360 戶聯絡人全量同步 (`scripts/build-member-index.js`)**：建置階段自動讀取 `GOOGLE_CUSTOMER_SOURCE_SPREADSHEET_ID` (`客戶叫貨規格!A3:AG5000`)，將 **4,993 筆** `sl_customer_product_history` 寫入 `xyfglvwvirqopbkqirew`，並補齊 360 戶 `contact_name`，確保綁定會員立即顯示專屬「歷史單價」。
+- **全端測試與線上驗收**：
+  - 單元與整合測試：`277 pass, 0 fail`。
+  - 線上正式環境 (`https://shenglong-line-liff.vercel.app`, READY `dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK`)：`/`、`/api/health`、`/api/peak-monitor`、`/admin`、`/admin/operations` 全數 HTTP `200 OK`。
+  - 官方 Supabase (`xyfglvwvirqopbkqirew`) 實證：`sl_customers` 3,943 筆、`sl_customer_phones` 7,427 筆、`sl_addresses` 3,943 筆、`sl_customer_product_history` 4,993 筆、`sl_products` 7 筆。
+
+---
+
 ## [2026-11-14 09:40] - 🚀 外勤雙實戰 (退殘氣計算器 ✕ 商業戶電子簽名) ✕ 戰情雙自動 (08:30 晨報排程 ✕ 雙軌批次平帳) [ver: 20261114_0940_driver_refund_sig_and_reconcile_cron]
 - **背景與老闆決策**：
   - 老闆決策指示推進 P1（外勤功能 1-A + 1-B）與 P2（戰情自動化 2-A + 2-B）全量上線，深化外勤司機結單收費精準度與戰情室自動化營運水準。
