@@ -1,6 +1,6 @@
 {
-  "reportId": "AI-1000-QUESTIONS-1794637800958",
-  "timestamp": "2026-11-14T06:30:00.958Z",
+  "reportId": "AI-1000-QUESTIONS-1794641872927",
+  "timestamp": "2026-11-14T07:37:52.927Z",
   "directive": "Boss Directive: Real Customer 1000 Questions Acceptance Test",
   "superAdminTelegram": "8862712587",
   "summary": {
@@ -8,8 +8,8 @@
     "passedQuestions": 1000,
     "failedQuestions": 0,
     "passRate": "100.00%",
-    "totalDurationMs": 464,
-    "averageQps": 2155,
+    "totalDurationMs": 809,
+    "averageQps": 1236,
     "memoryDeltaMb": 2,
     "safetyInterceptRate": "100.00%",
     "storeRulesComplianceRate": "100.00%",
@@ -35,80 +35,80 @@
       "batch": 1,
       "count": 100,
       "cumulative": 100,
-      "durationMs": 47,
-      "qps": 2128,
+      "durationMs": 66,
+      "qps": 1515,
       "memoryDeltaMb": 0
     },
     {
       "batch": 2,
       "count": 100,
       "cumulative": 200,
-      "durationMs": 22,
-      "qps": 4545,
+      "durationMs": 69,
+      "qps": 1449,
       "memoryDeltaMb": 1
     },
     {
       "batch": 3,
       "count": 100,
       "cumulative": 300,
-      "durationMs": 22,
-      "qps": 4545,
+      "durationMs": 98,
+      "qps": 1020,
       "memoryDeltaMb": 1
     },
     {
       "batch": 4,
       "count": 100,
       "cumulative": 400,
-      "durationMs": 60,
-      "qps": 1667,
+      "durationMs": 42,
+      "qps": 2381,
       "memoryDeltaMb": 2
     },
     {
       "batch": 5,
       "count": 100,
       "cumulative": 500,
-      "durationMs": 14,
-      "qps": 7143,
+      "durationMs": 17,
+      "qps": 5882,
       "memoryDeltaMb": 1
     },
     {
       "batch": 6,
       "count": 100,
       "cumulative": 600,
-      "durationMs": 33,
-      "qps": 3030,
+      "durationMs": 31,
+      "qps": 3226,
       "memoryDeltaMb": 1
     },
     {
       "batch": 7,
       "count": 100,
       "cumulative": 700,
-      "durationMs": 49,
-      "qps": 2041,
+      "durationMs": 95,
+      "qps": 1053,
       "memoryDeltaMb": 1
     },
     {
       "batch": 8,
       "count": 100,
       "cumulative": 800,
-      "durationMs": 22,
-      "qps": 4545,
+      "durationMs": 79,
+      "qps": 1266,
       "memoryDeltaMb": 1
     },
     {
       "batch": 9,
       "count": 100,
       "cumulative": 900,
-      "durationMs": 30,
-      "qps": 3333,
+      "durationMs": 43,
+      "qps": 2326,
       "memoryDeltaMb": 2
     },
     {
       "batch": 10,
       "count": 100,
       "cumulative": 1000,
-      "durationMs": 26,
-      "qps": 3846,
+      "durationMs": 42,
+      "qps": 2381,
       "memoryDeltaMb": 2
     }
   ]

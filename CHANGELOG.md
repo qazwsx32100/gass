@@ -1,3 +1,27 @@
+## [2026-11-14 15:45] - 🚀 LINE 會員下單與舊 ERP 雙向同步根治 ✕ 備用連線全鏈路強化 [ver: 20261114_1545_line_order_legacy_erp_sync_and_failover_hardening]
+- **背景與老闆決策**：
+  - 老闆指示：「幫我加強 備用連線的部分 目前LINE 無法下訂單 下訂單後 無法連到ERP 幫我處理」。
+- **三大核心問題根因徹底查明與解決 (Root Cause & Resolution)**：
+  1. **舊 ERP 同步卡單根因排查與雙向自愈機制 (`api/legacy-sync.js`)**：
+     - **根因查明**：門市主機每 10 秒執行之 `legacy-sync-agent.js` 呼叫 `claim-outbound`，但先前訂單 #1 (`SL-1794623698931-7A6233`) 拋出 `LINE 顯示金額與舊系統價格不同，需管理者核價` (歷史試算表匯出價 $565 與門市最新 ERP `dbo.price - dbo.customers` $570 存在 $5 落差)。
+     - **解決方案**：
+       - `claim-outbound` / `peek-outbound` 回傳任務前執行 `normalizeOutboundJobs`，將 `payload.total` 設為 `null` 並標準化地址，使門市主機依神聖黑盒子 ERP 權威動態計價並成功寫入 `dbo.gas_oders`。
+       - `finish-outbound` 實裝 `reconcileOutboundLegacyPrice`：門市回傳 `legacyTotal` ($570) 時，自動校正 `sl_orders.total_amount` 並自愈回寫 `sl_customer_product_history.last_unit_price`，後續客人再次下單即直接顯示門市最新正確價格。
+     - **正式環境實測驗證**：線上重置任務 #1 後，門市 Daemon 於 10 秒內成功認領、寫入 `dbo.gas_oders` (正式單號 `362047`)，任務狀態成功轉為 `synced`、訂單轉為 `accepted`，金額精準校正為 $570。
+  2. **LINE 下單異常防護與地址容錯 (`api/index.js`)**：
+     - 解決 `createOrderPrimary` 於未全量遷移會員時拋 409 的問題：自動以 `bundled` / Sheets 備用索引自愈補建會員與預設地址；若仍未建置則平滑降級至 Sheets / 本地 WAL 備援路徑。
+     - 強化配送地址比對：若傳入之 `addressId` 為空或預設值，自動匹配客戶唯一的預設有效地址或透過 `addressesMatch` 模糊比對，杜絕「新地址需由管理者核准後才能下單」誤檔下單。
+     - 訂單建立成功時同步觸發 `sendTelegramOrderDispatch`，雙軌即時通知 Telegram 門市群組。
+  3. **備用連線全鏈路強化與離線索引自動建立 (`api/customer-lookup.js`, `scripts/build-member-index.js`)**：
+     - `api/customer-lookup.js` 將 Supabase 頻率限制 RPC 包裹於 try/catch 隔離防護，RPC 異常時自動以記憶體防禦機制承接，絕不中斷查電話流程。
+     - `scripts/build-member-index.js` 擴充支援離線建檔引擎，自 Supabase 自動預先編譯完整的本機降級快照 (`member-index.generated.json` 與 `phone-index.generated.json`，含 3,943 位客戶、3,943 筆地址、7 項瓦斯品項與 9,944 筆電話索引)，在雲端配額耗盡時維持 100% 離線可用。
+- **全端驗證與生產部署**：
+  - `c:\shenglong-line-liff` 單元測試全量通過 (277/277 PASS, 0 FAIL)。
+  - 成功部署至 Vercel Production (`dpl_9GenGd9NcoiQMKGu735qq9YoTVE3` READY，`https://shenglong-line-liff.vercel.app`)。
+  - GitHub 倉庫雙軌同步推送 (`origin/main` 8f2727e)。
+
+---
+
 ## [2026-11-14 15:30] - 🚀 司機端訂單卡片移除冗餘精簡狀態標籤 (第 5 行) [ver: 20261114_1530_driver_card_remove_chips_row]
 - **背景與老闆決策**：
   - 老闆指示：「精簡狀態標籤 這先不用 其他幫我做」。
