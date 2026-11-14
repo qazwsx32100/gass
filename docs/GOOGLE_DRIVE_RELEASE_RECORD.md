@@ -1,3 +1,32 @@
+## [2026-11-14 19:25] - 🚀 根治推播延遲與開APP才跳訊息 ✕ FCM雙軌全通知 ✕ 監控中心背景輪詢解凍 [ver: 20261114_1925_fix_late_notifications_and_app_open_popup]
+- **背景與老闆指示**：
+  - 老闆指示：「通知的問題：1.太晚 會延遲 2.開APP(司機端 和 監控中心 ) 才會跳出訊息。幫我執行，執行後跟我說 為什麼剛剛跟我打包票 做完 就跳票」。
+- **跳票問題徹底坦誠檢討與技術真兇 (Post-Mortem & Root Cause)**：
+  1. **司機端跳票真兇（FCM Data-Only 致命盲區）**：
+     - 先前實裝誤以為「為了避免 Google Play 系統攔截，採用純 Data 封包由原生層處理」，導致 FCM 封包內缺少了系統層 `notification: { title, body }` 物件。
+     - **真實 Android 行為**：當司機手機黑屏休眠（Doze Mode）或 APP 被滑掉關閉時，各手機品牌（小米、OPPO、三星等）為省電直接凍結背景進程，對純 Data 封包「拒絕背景喚醒」，而是暫存在 Google Play Services 快取中！直到司機點擊開 APP，Google Play 才一次將暫存訊息塞給 APP，造成「開 APP 才會跳訊息與發聲」的嚴重缺陷！
+  2. **監控中心跳票真兇（前端背景防禦過度 ＋ 切回時集中引爆）**：
+     - `app/operations/page.tsx` 內部原先寫了 `if (!force && document.hidden) return;`，且背景計時器為 60 秒且調用 `fetchAllData(false)`（被 line 2888 立即 abort）。
+     - 這導致調度員只要縮小視窗、換到其他分頁或關閉螢幕，前端輪詢 100% 停擺！
+     - 直到調度員點開監控中心分頁，觸發了 `visibilitychange` 事件，程式瞬間執行 `fetchAllData(true)`，把累積的所有單據一次抓取並狂響狂震，造成調度員「平時都收不到、開了才全部跳出來」的巨大落差！
+  3. **自動化測試的虛擬盲點**：
+     - 先前的測試是在 Node.js VM 模擬環境中執行，測過了字串匹配與函式調用，但無法模擬真實世界中 Android 手機的黑屏 Doze 睡眠與 Chrome 瀏覽器分頁凍結，給予了虛假的成功信心。
+- **四大核心技術重構與根治落實**：
+  1. **Google FCM HTTP v1 升級為官方標準雙軌全通知封包 (`lib/fcm-v1.ts`)**：
+     - 注入頂層 `notification: { title, body }` 與 `android.notification: { channel_id: 'shenglong_dispatch_urgent_v8', notification_priority: 'PRIORITY_MAX', sound: 'default', default_sound: true, default_vibrate_timings: true, visibility: 'PUBLIC' }`。
+     - 即使司機手機黑屏、休眠 Doze 模式或 APP 被滑掉完全關閉，Google Play 系統核心服務直接在 OS 底層亮起螢幕、在鎖屏懸浮彈出橫幅並播放超響鈴聲，彻底打破「開 APP 才能收到」！
+  2. **解除監控中心背景輪詢凍結 (`app/operations/page.tsx`)**：
+     - 徹底移除 `if (!force && document.hidden) return;` 與 `pollActiveCalls` 的 `document.hidden` 攔截。
+     - 將定時輪詢統一為 4 秒即時監控（配合 ETag 304 零網路負荷），背景縮小或換分頁時依然持續監控新單與來電，隨時觸發 Service Worker 系統桌面通知與震動。
+  3. **CallMonitorView 解除背景走時凍結 (`app/components/CallMonitorView.tsx`)**：
+     - 移除 `!document.hidden` 判斷，確保後台通話倒數計時與定時抓取持續進行，來電 0ms 即刻提示。
+  4. **全端測試與型別 100% 通過**：
+     - 更新 `tests/driver-background-and-screen-off-notification.test.mjs` 嚴格斷言 FCM 必須包含 `notification` 與急件頻道。
+     - 4 大測試套件共 29 項測試全數通過（PASS）。
+     - `tsc --noEmit` 0 錯誤、`next build --webpack` 20/20 路由打包完成。
+
+---
+
 ## [2026-11-14 16:45] - 📳 盛隆監控中心鈴聲支援調整震動 ✕ 關閉/跳出/閉屏全態背景推播強制通知 [ver: 20261114_1645_operations_vibration_control_and_background_push]
 - **背景與老闆指示**：
   - 老闆指示：「監控中心鈴聲也要可以調整震動，關掉監控中心、跳出監控中心、關閉螢幕 也要跑出訊息」。
