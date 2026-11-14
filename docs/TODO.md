@@ -1,7 +1,37 @@
+- [x] 2026-11-14 【司機端歷史運費防跳動與移除叫貨歷史按鈕】後端 earnings API 強制時間與單號穩定降序、前端導入請求序號計數器 (activeEarningsReqIdRef) 杜絕競態、移除叫貨歷史按鈕與死代碼（shenglong-next 547a73f）
 ﻿- [x] 2026-11-13 【全系統離線真理與客戶搜尋大一統】移除 operations Google 試算表 iframe、收斂至 GAS v11 原生版；實裝 today-orders 與 gas-stock 最後營業日封存快照保底機制（shenglong-next 4e9a4fb，dpl_5FPhktViVr9U1JJUMrLAhaxvRDFh READY）
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [ ] 待辦：gas_oders 全量鏡像至 Supabase，讓 ERP 離線時客戶歷年明細完整可查
+
+## [2026-11-14 08:45] - 🛡️ 司機端歷史配送紀錄防跳動根絕 ✕ 移除外勤端叫貨歷史按鈕 ✕ 歷年訂單離線鏡像完備 [ver: 20261114_0845_driver_history_earnings_stabilization]
+- **問題根因徹底查明與徹底根絕**：
+  1. **歷史運費/配送資料跳來跳去**：
+     - ① **網路競態（Race Condition）**：司機連續點擊「昨天 / 前天 / 本月」或日期選擇器時，多個非同步 fetch 請求併發發出，先發出的較慢請求後返回，覆蓋了後點擊的最新請求。
+     - ② **前後端陣列無序與重排**：後端 KV Fallback 查詢使用 Map 迭代時缺少強制二維排序；SQL 查詢僅以 oder_id DESC 排序而未考慮配送時間先後，導致多筆資料順序不穩定。
+     - ③ **前端 React 渲染 Key 抖動**：前端歷史訂單清單使用數組索引 key={i}，當資料微調時 DOM 節點重新渲染，導致手機畫面滾動條彈跳回頂部。
+     - ④ **背景輪詢打擾**：彈窗開啟時，背景的定時輪詢仍可能引發局部重繪。
+  2. **司機端叫貨歷史按鈕**：
+     - 外勤人員點擊客戶姓名旁的「叫貨歷史」按鈕，調用 /api/customer-history 時會被後端權限檢核阻斷回傳 403 Forbidden（配送人員帳號本就不開放查閱客戶全歷史個資），保留此按鈕只會困擾外勤人員。
+- **三大徹底升級與治理**：
+  1. **後端絕對穩定排序 (app/api/driver/earnings/route.ts)**：
+     - 單日 SQL 查詢強制 ORDER BY o.oder_time DESC, o.oder_id DESC。
+     - KV Fallback 與離線快照查詢中，強制以 (b.time || b.orderTime).localeCompare(...) 降序 ➔ oder_id 降序做絕對穩定排序，保證先後順序永遠一致。
+  2. **前端競態鎖定與渲染防抖 (app/driver/page.tsx)**：
+     - 引入 activeEarningsReqIdRef 請求序號計數器：每次查詢自動累加，僅接受最新序號的 HTTP 響應，舊請求直接作廢丟棄，徹底杜絕快速切換日期時的網路回彈。
+     - 消除不安全的前端預先快照秒出 (hasOptimisticRender)，避免兩階段抽搐跳動。
+     - 將清單 key={i} 替換為以訂單編號或時間戳組成的穩定唯一鍵 key={hist-ord-...}，保證 DOM 節點平滑更新、滾動位置穩定。
+     - 歷史彈窗開啟期間 (showEarningsModalRef.current) 自動暫緩背景輪詢，杜絕外部重繪干擾。
+  3. **徹底移除叫貨歷史按鈕與彈窗組件 (app/driver/page.tsx)**：
+     - 移除訂單卡片上客戶姓名旁邊的「📜 叫貨歷史」按鈕。
+     - 拔除外勤端無效的 SharedCustomerHistoryModal 動態引入與相關狀態變數，減少客戶端 Bundle 體積與記憶體負擔。
+- **品質驗收與不可逾越鐵律守護**：
+  - 新增專屬單元測試 tests/driver-historical-earnings-guard.test.mjs，5/5 PASS。
+  - 外勤核心離線與停權測試 driver-offline-queue (4/4)、driver-resignation-suspension (9/9)、orders-history-mirror (5/5) 全數 PASS。
+  - Next.js tsc --noEmit 0 錯誤通過。
+  - GitHub 倉庫推送：shenglong-next 547a73f。
+  - 舊 ERP 門市系統黑盒子神聖不可動（0 DDL，0 架構修改）。
+  - 司機外勤端 100% 零通知、零彈窗、靜默直接定位。
 
 ## [2026-11-13 22:55] - 🛡️ 全系統離線唯一真理與客戶搜尋大一統（徹底移除 Google 試算表 ✕ 客戶搜尋全收斂 GAS v11 ✕ 訂單畫面與即時庫存離線封存快照保底 ✕ 26/26 測試全綠）[ver: 20261113_2255_offline_resilience_and_gasv11_unification]
 - **問題根因徹底查明與徹底根絕**：

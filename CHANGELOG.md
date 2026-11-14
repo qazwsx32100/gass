@@ -1,3 +1,37 @@
+## [2026-11-14 08:45] - 🛡️ 司機端歷史配送紀錄防跳動根絕 ✕ 移除外勤端叫貨歷史按鈕 ✕ 歷年訂單離線鏡像完備 [ver: 20261114_0845_driver_history_earnings_stabilization]
+- **背景與老闆決策**：
+  1. 老闆指令：「我想要先解決一下 司機App 資料串接問題，目前查看歷史紀錄 資料會一直跳來跳去 懂我意思嗎？執行 a」
+  2. 老闆指令：「另外司機 沒有辦法 查看 歷史訂單紀錄，這按鈕要拿掉」
+- **問題根因徹底查明**：
+  1. **歷史運費/配送資料跳來跳去**：
+     - ① **網路競態（Race Condition）**：司機連續點擊「昨天 / 前天 / 本月」或日期選擇器時，多個非同步 `fetch` 請求併發發出，先發出的較慢請求後返回，覆蓋了後點擊的最新請求。
+     - ② **前後端陣列無序與重排**：後端 KV Fallback 查詢使用 `Map` 迭代時缺少強制二維排序；SQL 查詢僅以 `oder_id DESC` 排序而未考慮配送時間先後，導致多筆資料順序不穩定。
+     - ③ **前端 React 渲染 Key 抖動**：前端歷史訂單清單使用數組索引 `key={i}`，當資料微調時 DOM 節點重新渲染，導致手機畫面滾動條彈跳回頂部。
+     - ④ **背景輪詢打擾**：彈窗開啟時，背景的定時輪詢仍可能引發局部重繪。
+  2. **司機端叫貨歷史按鈕**：
+     - 外勤人員點擊客戶姓名旁的「叫貨歷史」按鈕，調用 `/api/customer-history` 時會被後端權限檢核阻斷回傳 403 Forbidden（配送人員帳號本就不開放查閱客戶全歷史個資），保留此按鈕只會困擾外勤人員。
+- **三大徹底升級與治理**：
+  1. **後端絕對穩定排序 (`app/api/driver/earnings/route.ts`)**：
+     - 單日 SQL 查詢強制 `ORDER BY o.oder_time DESC, o.oder_id DESC`。
+     - KV Fallback 與離線快照查詢中，強制以 `(b.time || b.orderTime).localeCompare(...)` 降序 ➔ `oder_id` 降序做絕對穩定排序，保證先後順序永遠一致。
+  2. **前端競態鎖定與渲染防抖 (`app/driver/page.tsx`)**：
+     - 引入 `activeEarningsReqIdRef` 請求序號計數器：每次查詢自動累加，僅接受最新序號的 HTTP 響應，舊請求直接作廢丟棄，徹底杜絕快速切換日期時的網路回彈。
+     - 消除不安全的前端預先快照秒出（`hasOptimisticRender`），避免兩階段抽搐跳動。
+     - 將清單 `key={i}` 替換為以訂單編號或時間戳組成的穩定唯一鍵 `key={hist-ord-...}`，保證 DOM 節點平滑更新、滾動位置穩定。
+     - 歷史彈窗開啟期間 (`showEarningsModalRef.current`) 自動暫緩背景輪詢，杜絕外部重繪干擾。
+  3. **徹底移除叫貨歷史按鈕與彈窗組件 (`app/driver/page.tsx`)**：
+     - 移除訂單卡片上客戶姓名旁邊的「📜 叫貨歷史」按鈕。
+     - 拔除外勤端無效的 `SharedCustomerHistoryModal` 動態引入與相關狀態變數，減少客戶端 Bundle 體積與記憶體負擔。
+- **品質驗收與不可逾越鐵律守護**：
+  - 新增專屬單元測試 `tests/driver-historical-earnings-guard.test.mjs`，5/5 PASS。
+  - 外勤核心離線與停權測試 `driver-offline-queue` (4/4)、`driver-resignation-suspension` (9/9)、`orders-history-mirror` (5/5) 全數 PASS。
+  - Next.js `tsc --noEmit` 0 錯誤通過。
+  - GitHub 倉庫推送：shenglong-next `547a73f`。
+  - 舊 ERP 門市系統黑盒子神聖不可動（0 DDL，0 架構修改）。
+  - 司機外勤端 100% 零通知、零彈窗、靜默直接定位。
+
+---
+
 ## [2026-11-14 00:30] - 👑 盛隆 LINE 會員系統與雲端資料庫全量平移至官方專案（shenglonggas@gmail.com 官方 Supabase xyfglvwvirqopbkqirew / 3,943 戶完整門市客戶主檔與電話地址 100% 導入 / 6 大瓦斯規格牌價完備 / Vercel 正式站台 READY 生效）[ver: 20261114_0030_line_members_supabase_migration]
 - **官方專案轉移與資產歸戶**：
   - LINE 會員資料庫正式移轉至盛隆瓦斯官方帳號 `shenglonggas@gmail.com` 之專屬 Supabase 專案（Ref: `xyfglvwvirqopbkqirew`）。
