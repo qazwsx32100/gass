@@ -183,3 +183,85 @@ Invoke-RestMethod -Uri "https://shenglong.vercel.app/api/gas-stock" -Method Get
 # 4. 檢視本地持久化心跳檔案
 Get-Content C:\shenglong-next\sync-heartbeat.json | ConvertFrom-Json
 ```
+
+---
+
+## 🖥️ 六、 ERP 主機（門市實體主機）部署與執行指引 (ERP Server Runbook)
+
+> [!IMPORTANT]
+> **環境隔離原則**：
+> 1. **開發筆電（本機）**：僅供代碼撰寫、測試與打包，**嚴禁常駐運行同步 Daemon**，避免因筆電無門市資料庫而向雲端發送 `SQL: [FAIL]` 假警報。
+> 2. **門市 ERP 實體主機**：才是真正存放 20 年 SQL Server 資料庫（`gas_station_ShengLong` / `127.0.0.1,1000`）的主機，**所有守護與同步進程必須在 ERP 主機常駐執行**！
+
+### 步驟 1：在 ERP 主機同步最新程式碼
+在 ERP 主機（通常位於 `D:\test\` 或 `C:\`）開啟終端機：
+```cmd
+cd D:\test\shenglong-next
+git pull origin main
+
+cd D:\test\gass
+git pull origin main
+```
+*(若 ERP 主機無法直連外網 Git，可直接用隨身碟將 `shenglong-next` 與 `gass` 複製過去)*
+
+---
+
+### 步驟 2：確認 ERP 主機環境變數 (`.env`)
+確認 ERP 主機 `D:\test\shenglong-next\.env` 中的資料庫端點設定正確：
+```env
+# 門市主機通常配置
+SQL_SERVER=127.0.0.1,1000
+SQL_DB=gas_station_ShengLong
+
+# 若門市主機是使用本機 SQLEXPRESS 執行個體：
+# SQL_SERVER=.\SQLEXPRESS
+# SQL_DB=ShengLong_Inspection
+```
+
+---
+
+### 步驟 3：在 ERP 主機啟動四大核心守護進程
+
+#### 🟢 任務 A：即時庫存與派工同步守護進程（最重要，核心心跳）
+* **【推薦：開機自動常駐（免人工管）】**：
+  在 ERP 主機上，以 **滑鼠右鍵點擊 ➜ 以系統管理員身分執行**：
+  `D:\test\shenglong-next\register-autostart.bat`
+  *(系統會建立 Windows 工作排程任務 `ShengLongAutoStart`，每次開機登入自動於背景啟動 `supervisor-sync.cjs`，零彈窗干擾門市打單)*
+* **【手動單次前台測試】**：
+  在命令提示字元（cmd）中執行：
+  ```cmd
+  cd D:\test\shenglong-next
+  node supervisor-sync.cjs
+  ```
+
+#### 🟢 任務 B：LINE 訂單自動匯入門市進銷存 Daemon
+* **【開機自動常駐】**：
+  在 ERP 主機上，以管理員身分開啟 PowerShell 執行：
+  ```powershell
+  cd D:\test\gass
+  powershell -ExecutionPolicy Bypass -File scripts\install_windows_startup_task.ps1
+  ```
+* **【手動單次啟動】**：
+  雙擊執行 `D:\test\gass\scripts\start_ingest_daemon.bat`。
+
+#### 🟢 任務 C：門市主檔與歷史訂單雲端鏡像同步（Tools）
+* **【每日 21:05 自動備份】**：
+  在 `tools\erp-cloud-sync` 資料夾中，右鍵以管理員身分執行：
+  `安裝每日21點自動同步排程.bat`。
+* **【隨時手動一鍵全量同步】**：
+  直接雙擊 `tools\erp-cloud-sync\一鍵同步門市資料至雲端.bat`。
+
+---
+
+### 步驟 4：在 ERP 主機驗證是否成功連線
+
+1. **查看本機同步日誌**：
+   在 ERP 主機開啟 `D:\test\shenglong-next\logs\sync-stock.log`，確認看到：
+   ```text
+   [Sync 15:30:00] 庫存:[50k:X 20k:X 16k:X 10k:X 4k:X] | 今日已出:[...] -> OK
+   [Heartbeat] 主機: SHENGLONG-SRV, SQL: [OK]
+   ```
+2. **查看線上正式戰情室**：
+   使用手機或瀏覽器開啟 [盛隆戰情室](https://shenglong.vercel.app/operations) 或 [今日調度台](https://shenglong.vercel.app/today-orders)，確認即時庫存徽章顯示為：
+   🟢 **`即時連線（最後同步: XX:XX:XX）`**。
+

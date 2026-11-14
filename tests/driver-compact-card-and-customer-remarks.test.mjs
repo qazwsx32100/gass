@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-test("🛡️ 司機端訂單畫面 6 大排版修正規格檢驗", async (t) => {
+test("🛡️ 司機端訂單畫面 6 大排版修正 ＆ 移除精簡狀態標籤檢驗", async (t) => {
   let driverRoutePath = path.resolve("../shenglong-next/app/api/driver/orders/route.ts");
   let driverPagePath = path.resolve("../shenglong-next/app/driver/page.tsx");
 
@@ -15,7 +15,6 @@ test("🛡️ 司機端訂單畫面 6 大排版修正規格檢驗", async (t) =>
   assert.ok(fs.existsSync(driverRoutePath), "app/api/driver/orders/route.ts 必須存在");
   assert.ok(fs.existsSync(driverPagePath), "app/driver/page.tsx 必須存在");
 
-  const routeContent = fs.readFileSync(driverRoutePath, "utf8");
   const pageContent = fs.readFileSync(driverPagePath, "utf8");
 
   await t.test("1. 歷史備註名稱改為「其他電話」，僅讀取市話與手機資訊並支援直撥", () => {
@@ -50,6 +49,11 @@ test("🛡️ 司機端訂單畫面 6 大排版修正規格檢驗", async (t) =>
     assert.match(pageContent, /1\.5px solid #f59e0b/);
     assert.match(pageContent, /#fef3c7/);
     assert.match(pageContent, /⚠️ 請挑桶/);
+  });
+
+  await t.test("6. 依老闆指示：「精簡狀態標籤 這先不用」，卡片不呈現第 5 行冗餘標籤列", () => {
+    assert.doesNotMatch(pageContent, /第 5 行：資訊標籤列 \(Chips\)/);
+    assert.doesNotMatch(pageContent, /🔄 現場備桶: \{currentReport\.backupCount\} 支/);
   });
 
   await t.test("7. 選項 A 底部按鈕排版維持完整：左側工具列 (導航/電話/回報) ＆ 右側業務按鈕 (一鍵接單/送達收款)", () => {
