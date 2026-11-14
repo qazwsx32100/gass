@@ -1,3 +1,17 @@
+## [2026-11-14 19:35] - 🚀 真實 10 組客戶真機瀏覽器端到端下單 ✕ 舊 ERP 雙向同步驗證 ✕ 門市常駐程式 Big5 截斷 bug 修復 [ver: 20261114_1935_10_real_customers_browser_flow_and_legacy_erp_sync]
+- **背景與老闆指示**：
+  - 老闆指示：「1.找10組 資料庫真實的客戶 2.真實的跑一次LINE下訂單的流程 3.不要只跑API 討論一下：1. 不用測試字樣 2. 方案B（保留舊ERP訂單讓門市小姐核對）」。
+- **核心成果 (Key Achievements)**：
+  1. **真機 Edge 瀏覽器 10 筆端到端真實下單**：
+     - 模擬真實客人在 LINE 內點擊品項、修改數量、輸入自然真實備註、點擊「送出訂單」。
+     - 產出 20 張高精度真機流程截圖存證（填單與送出確認各 10 張）。
+  2. **TDS RPC Parameter 16 截斷 bug 修復**：
+     - 解決 legacy-sync-agent.js 寫入 dbo.gas_oders.oder_remarks 超過 50 Bytes 時被 SQL Server 拒絕的 TDS 0xA7 錯誤，改用 truncateToBig5Bytes(..., 50)。
+  3. **Supabase ✕ 舊 ERP 100% 雙向入庫成功**：
+     - LINE Order ID: SL-1794655373909-93CE25 ~ SL-1794655424720-917112
+     - Legacy ERP ID: 362057 ~ 362066 (共 10 筆全數 SYNCED)
+     - 完整落實方案 B 保留於舊系統。
+
 ## [2026-11-14 19:35] - 🛡️ 司機端訂單卡片「配送中」刪除 ✕ 優先以打來的電話為主顯示「來電電話：」 ✕ 備註萃取「其他電話」 [ver: 20261114_1935_driver_incoming_phone_priority_and_remove_delivering_badge]
 - **背景與老闆指示**：
   - 老闆指示：「司機 訂單 配送中也刪除；電話的部分 優先以打來的電話為主，顯示  來電電話：，其他電話是備註裡的電話」。

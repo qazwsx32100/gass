@@ -1,3 +1,14 @@
+## 📋 最新紀錄：2026-11-14 19:35 (版本號: 20261114_1935_10_real_customers_browser_flow_and_legacy_erp_sync)
+- **更新主題**：真實 10 組客戶真機瀏覽器端到端下單 ✕ 舊 ERP 雙向同步驗證 ✕ 門市常駐程式 Big5 截斷 bug 修復
+- **主要內容與成果**：
+  1. **真實 10 組客戶資料庫選樣**：挑選 9 位活躍常客 (825, 3659, 132, 2217, 1455, 1701, 3071, 2143, 1552)，對應 10 種真實叫貨情境與歷史品項（20kg、16kg、50kg雙桶、10kg、4kg）。
+  2. **真機 Edge 瀏覽器 UI 實操（非純 API）**：透過 Microsoft Edge 手機版視圖 (414x896) 真實填單、輸入自然客製備註（無測試標記）、點擊「送出訂單」，完整擷取 20 張高解析度實拍截圖（填單截圖 + 成功確認截圖），存證於 reports/10-real-orders-screenshots/。
+  3. **TDS RPC Parameter 16 (@oder_remarks) Big5 截斷 Bug 修復**：排查發現門市端舊 ERP dbo.gas_oders 之 oder_remarks 欄位限制 varchar(50) (50 Bytes)，當前綴加上 [LINE:SL-...] (31 Bytes) 後，中文備註超過 9 字即觸發 TDS 0xA7 報錯。在 scripts/legacy-sync-agent.js 實裝 truncateToBig5Bytes 函式，自動精確截斷至 50 位元組以內。
+  4. **全量 100% 成功入庫**：
+     - Supabase sl_orders: SL-1794655373909-93CE25 ~ SL-1794655424720-917112 全數 accepted。
+     - 舊 ERP dbo.gas_oders: 單號 362057 ~ 362066 全數寫入成功，狀態 SYNCED。
+  5. **遵循老闆指示方案 B**：保留所有 10 筆訂單於舊 ERP，供門市小姐核對。
+
 ## 📋 最新紀錄：2026-11-14 19:35 (版本號: 20261114_1935_driver_incoming_phone_priority_and_remove_delivering_badge)
 - **更新主題**：司機端訂單卡片「配送中」狀態刪除／優先以打來的電話為主顯示「來電電話：」／其他電話專門萃取自備註裡的電話／雙 Android APK 重新編譯簽名並覆蓋桌面 sl／GitHub 雙軌同步／Vercel Production READY
 - **主要內容與成果**：
