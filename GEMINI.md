@@ -72,7 +72,20 @@
   3. **擴充資料外掛雲端**：任何現代化所需之擴充屬性（如 AI 辨識標籤、GPS 座標、FCM Token、離職停權標記、沙盒隔離戳記等），一律存於外部雲端（Supabase / Vercel KV / 內部快取），絕不強行塞入或修改舊 ERP 既有資料表。
   4. **嚴格保護門市打單**：所有向舊門市資料庫執行的查詢或狀態同步，必須使用 `WITH (ROWLOCK)` 或 `WITH (NOLOCK)`，絕不佔用表級鎖，確保門市小姐 20 年鍵盤極速打單完全不受干擾。
 
-### 5. 📝 待增加 (Dynamic Expansion Reserved)
+### 5. 📦 盛隆即時庫存全鏈路架構與連線診斷權威規範 (Realtime Stock Architecture Standard)
+* **核心鐵律**：全系統即時庫存計算、守護同步 Daemon、健康度狀態機與多端連線診斷，必須絕對嚴格遵循權威架構手冊：[`docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md`](docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md)。
+* **專屬召喚指令與關鍵字**：
+  1. 自然語言關鍵字：`即時庫存架構`、`庫存連線問題`、`召喚即時庫存說明`、`庫存架構診斷`、`查即時庫存`
+  2. Workspace Skill：`shenglong-realtime-stock`
+  3. 權威文件：`docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md`
+  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`
+* **四大核心防護原則**：
+  1. **資料源神聖計算**：由 `query.sql` 透過 `dbo.stock` 減去 `dbo.gas_oders` 動態精算，強制使用 `WITH (NOLOCK)`，絕不佔用表級鎖干擾門市打單。
+  2. **雙守護進程**：本地端由 `supervisor-sync.cjs` (Port 48999) 守護 `sync-stock.cjs` (Port 48998)，具備單例鎖定與孤兒進程清理。
+  3. **SQL Guard 熔斷與離線快照**：SQL 連線中斷時退避至 15~120 秒，自動鎖定最後有效快照 `sync-heartbeat.json`，絕不歸零或反白。
+  4. **同源狀態機健康度判定**：雲端與前端統一採用 `lib/gas-stock-health.ts` 評估連線狀態（`LIVE` < 180s、`SNAPSHOT` 180s~599s、`OUTAGE_ALERT` >= 600s）。
+
+### 6. 📝 待增加 (Dynamic Expansion Reserved)
 * 預留擴充槽位，後續若老闆下達新最高執行指令，隨時依序增補並嚴格落實。
 
 ---
@@ -101,3 +114,6 @@
 
 ### 6. 📱 桌面 sl 目錄專屬規範 (Desktop sl Folder Rule)
 * `C:\Users\懶\Desktop\sl` 專門且僅限存放 Android `.apk` 安裝包，嚴禁堆積文件或雜項。
+
+### 7. 📦 即時庫存手冊聯動規範 (Realtime Stock Runbook Sync)
+* 涉及即時庫存邏輯、同步 Daemon 或 API 改動時，必須強制聯動同步維護 `docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md` 與桌面鏡像。

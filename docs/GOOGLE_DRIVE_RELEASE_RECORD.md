@@ -1,3 +1,27 @@
+## [2026-11-14 14:35] - 📦 盛隆即時庫存全鏈路架構手冊建立 ✕ 連線問題診斷與召喚機制 [ver: 20261114_1435_realtime_stock_architecture_and_summon_skill]
+- **背景與老闆指示**：
+  - 使用者提問：「即時庫存 連線的問題 幫我查詢一下 目前即時庫存的架構」以及「幫我把這次的說明 建立GITHUB 並且跟我說 要如何召喚這次說明」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **本機 SQL 服務停止**：`.env` 指向 `SQL_SERVER=.\SQLEXPRESS` 與 `SQL_DB=ShengLong_Inspection`，本機 Windows 服務 `MSSQL$SQLEXPRESS` 目前狀態為 `Stopped`，導致 `sync-stock.cjs` 呼叫 `SQLCMD.EXE` 執行 `query.sql` 時回傳 `ODBC Driver 17 : 定位指定的伺服器/執行個體時發生錯誤 [xFFFFFFFF]` 與 `登入逾時`。
+  2. **自動容災防護表現**：`sync-stock.cjs` 觸發 SQL Guard 熔斷保護，自動降級採用上一秒快照 `lastKnownStock` (`sync-heartbeat.json`) 繼續推送，雲端戰情室依據 `gas-stock-health.ts` 評估延遲，標記為 `SNAPSHOT` 或 `OUTAGE_ALERT`，保證前端數據不歸零、不反白。
+- **四大核心交付與建立**：
+  1. **權威架構與診斷手冊 (docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md)**：
+     - 完整撰寫即時庫存 4 大層級架構（資料源層、守護中繼層、雲端 API 層、多端展現層）與 Mermaid 流程圖。
+     - 盤點 `query.sql` 秒級精算公式、`supervisor-sync.cjs` (Port 48999) + `sync-stock.cjs` (Port 48998) 雙守護機制。
+     - 詳解連線健康度狀態機（`LIVE` < 180s、`SNAPSHOT` 180s~599s、`OUTAGE_ALERT` >= 600s）。
+     - 詳解 `StockDepletionPredictor.tsx` 消耗速率預測與智慧補氣模型。
+     - 撰寫連線故障排查 Runbook 與應急修復指令速查表。
+  2. **Antigravity 專屬 Workspace Skill (shenglong-realtime-stock)**：
+     - 於 `.agents/skills/shenglong-realtime-stock/SKILL.md` 建立專屬技能，支援智能匹配與即時召喚。
+  3. **最高準則與 SOP 聯動更新 (GEMINI.md)**：
+     - 正式增補 Supreme Directive #5《盛隆即時庫存全鏈路架構與連線診斷權威規範》。
+     - 增訂 SOP #7 即時庫存手冊聯動保護規則。
+  4. **全端召喚機制落實**：
+     - 提供自然語言關鍵字召喚（`即時庫存架構`、`庫存連線問題`、`召喚即時庫存說明`、`庫存架構診斷`）。
+     - 提供檔案參照召喚與桌面鏡像（`C:\Users\懶\Desktop\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`）。
+
+---
+
 ## [2026-11-14 13:50] - 🚀 司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示 [ver: 20261114_1350_driver_compact_card_option_a_and_customer_remarks]
 - **背景與老闆決策**：
   - 老闆附戰情現場回報卡片截圖指示：「司機APP 訂單畫面我想改成這樣 圖1，單子多看得會比較清楚，討論一下」。

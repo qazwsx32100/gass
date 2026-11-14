@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【盛隆即時庫存全鏈路架構手冊建立 ✕ 連線問題診斷與召喚機制】完整盤點 query.sql、supervisor-sync.cjs (48999)、sync-stock.cjs (48998)、gas-stock-health.ts 狀態機、StockDepletionPredictor 及離線容災快照，排查本機 MSSQL$SQLEXPRESS 停止連線異常；發布權威架構手冊、建立 Workspace Skill (shenglong-realtime-stock) 並落實自然語言關鍵字召喚機制（docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md）
 - [x] 2026-11-14 【司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示】依圖 1 重新打造高密度訂單卡片，高度自 550px 縮減 70% 至 ~150px，一屏瀏覽 3~4 單；左側工具列 (導航/電話/回報) ＆ 右側業務按鈕 (一鍵接單/送達收款)；後端開放 customerRemarks 並於卡片獨立高亮展示歷史備註與本次備註（shenglong-next fad7c49）
 - [x] 2026-11-14 【挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動】外勤配送「⚠️ 請挑桶」警示門檻統一自 45 日升級為 150 日（約 5 個月），相隔未滿 150 天（如 85 天）絕不誤跳；重構司機端換日與強制刷新解耦、防斷崖式清空保護與新單 5 分鐘存活保護（Smart Union Merge），徹底解決新單抵達後離奇消失與畫面抖動（shenglong-next 0118353，dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo READY)
 - [x] 2026-11-14 【LINE 會員系統無法連線徹底根治與 4,993 筆歷史規格單價全量同步】修復 `/admin/operations` 重導向迴圈、移除 `#error` 違反 CSP 之 inline `onclick` 並實裝 OAuth Stale Code 自動清理重試、`fast-bootstrap` Cookie 優先渲染、補齊 `sl_verify_and_bind_member` 等 RPC PostgREST 原生降級，並將 4,993 筆客戶歷史叫貨規格單價全數同步至 `xyfglvwvirqopbkqirew`（shenglong-line-liff 82c5919，dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK READY）
@@ -8,6 +9,28 @@
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 14:35] - 📦 盛隆即時庫存全鏈路架構手冊建立 ✕ 連線問題診斷與召喚機制 [ver: 20261114_1435_realtime_stock_architecture_and_summon_skill]
+- **背景與老闆指示**：
+  - 使用者提問：「即時庫存 連線的問題 幫我查詢一下 目前即時庫存的架構」以及「幫我把這次的說明 建立GITHUB 並且跟我說 要如何召喚這次說明」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **本機 SQL 服務停止**：`.env` 指向 `SQL_SERVER=.\SQLEXPRESS` 與 `SQL_DB=ShengLong_Inspection`，本機 Windows 服務 `MSSQL$SQLEXPRESS` 目前狀態為 `Stopped`，導致 `sync-stock.cjs` 呼叫 `SQLCMD.EXE` 執行 `query.sql` 時回傳 `ODBC Driver 17 : 定位指定的伺服器/執行個體時發生錯誤 [xFFFFFFFF]` 與 `登入逾時`。
+  2. **自動容災防護表現**：`sync-stock.cjs` 觸發 SQL Guard 熔斷保護，自動降級採用上一秒快照 `lastKnownStock` (`sync-heartbeat.json`) 繼續推送，雲端戰情室依據 `gas-stock-health.ts` 評估延遲，標記為 `SNAPSHOT` 或 `OUTAGE_ALERT`，保證前端數據不歸零、不反白。
+- **四大核心交付與建立**：
+  1. **權威架構與診斷手冊 (docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md)**：
+     - 完整撰寫即時庫存 4 大層級架構（資料源層、守護中繼層、雲端 API 層、多端展現層）與 Mermaid 流程圖。
+     - 盤點 `query.sql` 秒級精算公式、`supervisor-sync.cjs` (Port 48999) + `sync-stock.cjs` (Port 48998) 雙守護機制。
+     - 詳解連線健康度狀態機（`LIVE` < 180s、`SNAPSHOT` 180s~599s、`OUTAGE_ALERT` >= 600s）。
+     - 詳解 `StockDepletionPredictor.tsx` 消耗速率預測與智慧補氣模型。
+     - 撰寫連線故障排查 Runbook 與應急修復指令速查表。
+  2. **Antigravity 專屬 Workspace Skill (shenglong-realtime-stock)**：
+     - 於 `.agents/skills/shenglong-realtime-stock/SKILL.md` 建立專屬技能，支援智能匹配與即時召喚。
+  3. **最高準則與 SOP 聯動更新 (GEMINI.md)**：
+     - 正式增補 Supreme Directive #5《盛隆即時庫存全鏈路架構與連線診斷權威規範》。
+     - 增訂 SOP #7 即時庫存手冊聯動保護規則。
+  4. **全端召喚機制落實**：
+     - 提供自然語言關鍵字召喚（`即時庫存架構`、`庫存連線問題`、`召喚即時庫存說明`、`庫存架構診斷`）。
+     - 提供檔案參照召喚與桌面鏡像（`C:\Users\懶\Desktop\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`）。
 
 ## [2026-11-14 13:50] - 🚀 司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示 [ver: 20261114_1350_driver_compact_card_option_a_and_customer_remarks]
 - **背景與老闆決策**：
