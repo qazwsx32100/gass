@@ -1,3 +1,29 @@
+## [2026-11-14 09:40] - 🚀 外勤雙實戰 (退殘氣計算器 ✕ 商業戶電子簽名) ✕ 戰情雙自動 (08:30 晨報排程 ✕ 雙軌批次平帳) [ver: 20261114_0940_driver_refund_sig_and_reconcile_cron]
+- **背景與老闆決策**：
+  - 老闆決策指示推進 P1（外勤功能 1-A + 1-B）與 P2（戰情自動化 2-A + 2-B）全量上線，深化外勤司機結單收費精準度與戰情室自動化營運水準。
+- **四大核心交付與技術落實**：
+  1. **1-A: 司機端空瓶退殘氣折抵計算器 (`app/components/SharedDeliveryCollectionModal.tsx`)**：
+     - 內建殘氣公斤數輸入與 1.0kg ~ 5.0kg 快捷鍵，以盛隆官方標準進價 **$22.63/kg** 自動核算折抵金額。
+     - 實收金額即時聯動扣減，具備防呆上限（折抵金額不可大於應收金額）。
+     - 自動在結單備註寫入 `【退殘氣:X.Xkg折$YY】`，供舊門市 ERP 回寫顯示。
+  2. **1-B: 商業戶 / 月結電子手寫簽名板 (`app/components/SharedDeliveryCollectionModal.tsx`)**：
+     - 內建 HTML5 Canvas 觸控手寫板，支援手機手指/觸控筆流暢簽名，附帶「清除重簽」按鈕。
+     - 結單自動生成 PNG Base64 圖檔，透過雲端快照安全存證（不破壞舊門市 SQL Server Schema，嚴格遵守 Directive #4 黑盒子鐵律）。
+     - 離線寄件匣 `lib/driver-offline-storage.ts` 完整支援殘氣折抵與簽名圖檔的 IndexedDB 持久化暫存與斷線重播。
+  3. **2-A: 老闆 Telegram 每日 08:30 營運晨報排程 (`vercel.json`, `app/api/telegram/daily-report/route.ts`)**：
+     - 配置 Vercel Cron 定時器（`30 0 * * *` = 台北時間上午 08:30），自動觸發 `/api/telegram/daily-report?send=1`。
+     - 授權支援 `x-vercel-cron` 標頭直接放行，每日準時推播當日即時營運指標至老闆專屬 Telegram (ID: `8862712587`)。
+  4. **2-B: 雙軌自動對帳一鍵全自動批次平帳 (`app/api/operations/reconcile/route.ts`, `app/components/ReconciliationPanel.tsx`)**：
+     - 新增 `POST` 端點支援 `action: "batch_settle"`，自動鎖定當日門市與雲端訂單狀態，並以高速快照持久化 `SETTLED` 平帳狀態。
+     - 戰情中心對帳介面掛載「⚡ 一鍵批次平帳」操作按鈕與成功 Toast 反饋，消除雙軌人工核對負擔。
+- **全端測試與品質驗收**：
+  - 新增測試 `tests/driver-refund-gas-and-signature.test.mjs` (4/4 PASS)
+  - 新增測試 `tests/daily-morning-report-and-reconcile.test.mjs` (4/4 PASS)
+  - TypeScript 全庫靜態型別檢驗 (`tsc --noEmit`) 0 錯誤通過。
+  - 嚴格遵守 Directive #3 官方標準成本、Directive #4 舊 ERP 黑盒子鐵律、最高權限司機 100% 靜默無干擾鐵律。
+
+---
+
 ## [2026-11-14 09:15] - 🚀 司機端歷史紀錄無資料問題徹底根治 ✕ operationsKvFetch 三層降級鏈 ✕ 雙層離線保底 [ver: 20261114_0915_driver_history_kv_and_offline_resilience]
 - **背景與老闆反饋**：
   - 老闆回報：「現在歷史紀錄沒資料了 今日 昨日 前日 本月 前月 都沒有資料」
