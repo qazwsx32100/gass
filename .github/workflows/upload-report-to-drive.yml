@@ -7,6 +7,8 @@ on:
       - 'docs/SHENGLONG_AI_SYSTEM_MASTER_ARCHITECTURE.md'
       - 'docs/GOOGLE_DRIVE_RELEASE_RECORD.md'
       - 'docs/LINE_ORDER_INGEST_STAGE2_REPORT.md'
+      - 'docs/line-membership/**'
+      - 'public/images/line-membership/**'
       - 'public/reports/stage2.html'
 
 permissions:

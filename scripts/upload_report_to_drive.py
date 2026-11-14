@@ -133,6 +133,30 @@ def main():
         print(f"✅ HTML 網頁版上傳成功: {res_html.get('webViewLink')}")
         results.append(res_html)
 
+    # 5. 上傳盛隆生活圈 LINE 會員計畫書 PPTX 與 5 大視覺架構圖
+    line_membership_dir = root_dir / "docs" / "line-membership"
+    if line_membership_dir.exists():
+        pptx_file = line_membership_dir / "盛隆生活圈_LINE會員共創三贏計畫書_V2.0_改善精進版.pptx"
+        if pptx_file.exists():
+            res_pptx = upload_file(
+                drive,
+                pptx_file,
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "盛隆生活圈_LINE會員共創三贏計畫書_V2.0_改善精進版.pptx"
+            )
+            print(f"✅ 盛隆生活圈 PPTX 簡報上傳成功: {res_pptx.get('webViewLink')}")
+            results.append(res_pptx)
+
+        for img_path in sorted(line_membership_dir.glob("*.png")):
+            res_img = upload_file(
+                drive,
+                img_path,
+                "image/png",
+                img_path.name
+            )
+            print(f"✅ 盛隆生活圈視覺圖上傳成功 ({img_path.name}): {res_img.get('webViewLink')}")
+            results.append(res_img)
+
     print("\n==========================================")
     print("🎉 報告已成功同步至 Google Drive 指定資料夾！")
     for r in results:
