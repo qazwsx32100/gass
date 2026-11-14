@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示】依圖 1 重新打造高密度訂單卡片，高度自 550px 縮減 70% 至 ~150px，一屏瀏覽 3~4 單；左側工具列 (導航/電話/回報) ＆ 右側業務按鈕 (一鍵接單/送達收款)；後端開放 customerRemarks 並於卡片獨立高亮展示歷史備註與本次備註（shenglong-next fad7c49）
 - [x] 2026-11-14 【挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動】外勤配送「⚠️ 請挑桶」警示門檻統一自 45 日升級為 150 日（約 5 個月），相隔未滿 150 天（如 85 天）絕不誤跳；重構司機端換日與強制刷新解耦、防斷崖式清空保護與新單 5 分鐘存活保護（Smart Union Merge），徹底解決新單抵達後離奇消失與畫面抖動（shenglong-next 0118353，dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo READY)
 - [x] 2026-11-14 【LINE 會員系統無法連線徹底根治與 4,993 筆歷史規格單價全量同步】修復 `/admin/operations` 重導向迴圈、移除 `#error` 違反 CSP 之 inline `onclick` 並實裝 OAuth Stale Code 自動清理重試、`fast-bootstrap` Cookie 優先渲染、補齊 `sl_verify_and_bind_member` 等 RPC PostgREST 原生降級，並將 4,993 筆客戶歷史叫貨規格單價全數同步至 `xyfglvwvirqopbkqirew`（shenglong-line-liff 82c5919，dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK READY）
 - [x] 2026-11-14 【外勤雙實戰 ✕ 戰情雙自動全量上線】司機端空瓶退殘氣折抵計算器 (1-A, $22.63/kg)、商業戶電子手寫簽名板 (1-B, Canvas/Base64/雲端存證)、老闆 Telegram 每日 08:30 營運晨報排程 (2-A, Vercel Cron/8862712587)、雙軌自動對帳一鍵全自動批次平帳 (2-B, Batch Settle/即時平帳)（shenglong-next 91a27c5）
@@ -7,6 +8,37 @@
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 13:50] - 🚀 司機端訂單畫面重構為戰情高密度風格 (選項 A) ✕ 補齊客戶歷史備註顯示 [ver: 20261114_1350_driver_compact_card_option_a_and_customer_remarks]
+- **背景與老闆決策**：
+  - 老闆附戰情現場回報卡片截圖指示：「司機APP 訂單畫面我想改成這樣 圖1，單子多看得會比較清楚，討論一下」。
+  - 經討論確認執行方針：「1. 選項A（左側導航/電話/回報，右側接單/送達） 2. 看不到歷史備註（解決司機端看不到歷史備註痛點） 來做吧」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **舊訂單卡片過度臃腫**：原卡片單張垂直高度達 450px~600px，多層巢狀方塊（規格框、舊系統列印大框、大導航電話按鈕、大送達按鈕），外勤人員手上有 10~20 筆單時狂滑好幾頁，嚴重影響看路與掌握全局。
+  2. **歷史備註遭 API 封鎖與前端無欄位 (Critical)**：app/api/driver/orders/route.ts 第 333 行原將 customerRemarks 限縮為 auth.isAdmin ? safeCustomerRemarks : undefined，外勤同仁存取時永遠被抹為 undefined；且前端 OrderItem 型別與卡片中從未渲染該欄位，導致司機端「完全看不到歷史備註」。
+- **五大核心技術實裝與修復**：
+  1. **後端 API 補齊客戶歷史備註 (app/api/driver/orders/route.ts)**：
+     - 將 customerRemarks 調整為 safeCustomerRemarks || undefined，安全過濾電話清單後直接開放予外勤人員端，確保門市登記之客戶長期特性、送貨指示（如廚房位置、備空瓶、特殊交代）100% 傳遞至司機手機。
+  2. **前端型別擴充與備註展示 (app/driver/page.tsx)**：
+     - OrderItem 補齊 customerRemarks?: string;。
+     - 卡片以醒目紫/靛色專屬區塊展示 💬 歷史備註：{o.customerRemarks}，與 📝 本次備註、⚠️ 歷史欠款 明確分流，一眼看懂。
+  3. **仿圖 1 高密度卡片頂部與地址層級 (app/driver/page.tsx)**：
+     - 頂部第一行：狀態膠囊（📢 待接單 藍點未接提示 / 🚚 配送中 / ✅ 已送達）+ 單號 # + 派單時間 + 應收金額高亮（應收: $XXX）。
+     - 地址第二行：👤 圖示 + 主要地址粗體大字 + 樓層附註高亮 + 客戶姓名 + 📍 已定點 / 標記大門 距離標籤。
+  4. **資訊標籤化陳列 (Chips - 仿圖 1)**：
+     - 規格運費（🏷️ 20kg (運+$70)）、樓層費（🪜 樓層 +$XX）、現場標籤（🏷️ 標籤: ...）、現場備桶（🔄 現場備桶: X 支）、挑桶警示（⚠️ 請挑桶）、順路合併（🧭 順路）、離線暫存（📴 離線待回傳）。
+  5. **選項 A 底部緊湊操作列 (app/driver/page.tsx)**：
+     - 左側緊湊工具組：[🗺️ 導航] 一鍵導航、[📞 電話] 一鍵撥號、[🏷️ 回報] 現場回報。
+     - 右側核心業務按鈕：未接單呈現 [📥 一鍵接單]、配送中呈現 [✅ 送達收款]（完全保留殘氣秤重計算器與電子簽名板）、已完成呈現 ✓ 已送達完成。
+     - 卡片高度由 550px 大幅降至 ~145px - 165px，單一手機螢幕可同時瀏覽 3~4 張單，效率激增！
+- **全端測試與品質驗收**：
+  - 新增測試 tests/driver-compact-card-and-customer-remarks.test.mjs (8/8 PASS)。
+  - 全量回歸測試 (22 項) 全數通過。
+  - TypeScript 靜態型別 (tsc --noEmit) 0 錯誤通過。
+  - Next.js 生產建置 (next build) 56s 編譯成功，19/19 靜態與動態路由全綠燈。
+  - GitHub 雙倉庫同步推送完成。
+
+---
 
 ## [2026-11-14 10:25] - 🚀 挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動 [ver: 20261114_1025_pick_bottle_150d_and_order_retention]
 - **背景與老闆指示**：
