@@ -15,6 +15,8 @@ test('KnowledgeBase: Store rules metadata integrity', () => {
   assert.ok(SHENGLONG_STORE_RULES.emergencyLeakSteps.length >= 4);
   assert.ok(SHENGLONG_STORE_RULES.residualGasPolicy.includes('不退殘氣費'));
   assert.ok(SHENGLONG_STORE_RULES.safetyInspection.includes('300 元'));
+  assert.ok(SHENGLONG_STORE_RULES.naturalGasInstallationPolicy.includes('基礎的天然瓦斯爐具、熱水器設備和簡易安裝'));
+  assert.ok(SHENGLONG_STORE_RULES.naturalGasInstallationPolicy.includes('需要評估'));
 });
 
 test('KnowledgeBase: matchBestFaq accurately matches relevant queries', () => {
@@ -67,6 +69,13 @@ test('KnowledgeBase: matchBestFaq accurately matches relevant queries', () => {
   const pipeMatch = matchBestFaq('師傅送來會幫忙接管子嗎？');
   assert.ok(pipeMatch, 'Should find pipe match');
   assert.ok(pipeMatch.category.includes('安裝'));
+
+  // 11. Natural gas installation query
+  const ngMatch = matchBestFaq('請問你們有天然瓦斯安裝嗎？');
+  assert.ok(ngMatch, 'Should find natural gas installation match');
+  assert.ok(ngMatch.category.includes('天然瓦斯'));
+  assert.ok(ngMatch.standardAnswer.includes('基礎的天然瓦斯爐具、熱水器設備和簡易安裝'));
+  assert.ok(ngMatch.standardAnswer.includes('需要評估'));
 });
 
 test('KnowledgeBase: getOptimizedSystemPrompt generates comprehensive prompt', () => {
@@ -208,6 +217,12 @@ test('KnowledgeBase & AI-Chat: Dynamic prompt injection and line entity extracti
   const residualQuery = '請問剩下的瓦斯可以秤重退錢嗎？';
   const residualPrompt = getOptimizedSystemPrompt(residualQuery, 'fast', '');
   assert.ok(residualPrompt.includes('無現場秤重服務，亦不退殘氣費'), 'Residual gas policy must be strictly enforced');
+
+  // 3.1 測試天然瓦斯安裝與設備核心原則 -> 基礎設備簡易安裝 + 高規格需評估
+  const ngPrompt = getOptimizedSystemPrompt('請問你們有天然瓦斯安裝熱水器和瓦斯爐嗎？', 'expert', '');
+  assert.ok(ngPrompt.includes('天然瓦斯安裝與設備核心原則'), 'Prompt must contain natural gas installation policy title');
+  assert.ok(ngPrompt.includes('基礎的天然瓦斯爐具、熱水器設備和簡易安裝'), 'Prompt must specify basic NG equipment and simple installation');
+  assert.ok(ngPrompt.includes('需要評估'), 'Prompt must state higher spec equipment and installation requires evaluation');
 
   // 4. 測試多輪對話訂單要素整合
   const orderHistory = [

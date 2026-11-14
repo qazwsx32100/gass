@@ -1,3 +1,17 @@
+## 【2026-11-14 21:50 發布紀錄】🛠️ AI 系統天然瓦斯安裝與設備答覆標準化 (基礎設備簡易安裝 ✕ 高規格需評估)
+- **發布版本**：`20261114_2150_ai_natural_gas_installation_rules`
+- **老闆指示**：「只要回答到 天然瓦斯安裝 相關的問題 目前只有基礎的天然瓦斯爐具、熱水器設備 和 簡易安裝 ，如果要配置比較高規格的設備和安裝 需要評估」
+- **變更摘要**：
+  1. AI 知識庫與提示詞更新 (`api/_knowledge-base.js`)：新增 `naturalGasInstallationPolicy`、提示詞業務規則第 9 條、Category 11b 條目與 Few-Shot 範例。
+  2. 消費者 300 題知識庫更新 (`docs/GAS_CONSUMER_FAQ_300.md`) 第 9 條守則與 Q203，同步更新桌面鏡像。
+  3. 官網常見問題與線上智慧客服更新 (`website/faqs-data.js`, `website/index.html`)。
+  4. 單元測試通過 (`tests/knowledge-base.test.mjs` 8/8 PASS)。
+- **連動檔案**：`api/_knowledge-base.js`, `tests/knowledge-base.test.mjs`, `docs/GAS_CONSUMER_FAQ_300.md`, `website/faqs-data.js`, `website/index.html`, `docs/TODO.md`, `CHANGELOG.md`, `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（qazwsx32100/gass）主幹同步推送
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md、C:\Users\懶\Desktop\盛隆瓦斯_消費者常見問題300題知識庫.md
+---
+
 ## 【2026-11-14 20:55 發布紀錄】👑 本機非門市營業主機最高隔離鐵律 (Directive #6)
 - **發布版本**：`20261114_2055_dev_host_vs_store_host_supreme_directive`
 - **老闆指示**：「這台主機 不是營業主機 幫我把這設定為最高權限」
