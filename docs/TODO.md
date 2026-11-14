@@ -1,3 +1,4 @@
+- [x] 2026-11-14 【挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動】外勤配送「⚠️ 請挑桶」警示門檻統一自 45 日升級為 150 日（約 5 個月），相隔未滿 150 天（如 85 天）絕不誤跳；重構司機端換日與強制刷新解耦、防斷崖式清空保護與新單 5 分鐘存活保護（Smart Union Merge），徹底解決新單抵達後離奇消失與畫面抖動（shenglong-next 0118353，dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo READY)
 - [x] 2026-11-14 【LINE 會員系統無法連線徹底根治與 4,993 筆歷史規格單價全量同步】修復 `/admin/operations` 重導向迴圈、移除 `#error` 違反 CSP 之 inline `onclick` 並實裝 OAuth Stale Code 自動清理重試、`fast-bootstrap` Cookie 優先渲染、補齊 `sl_verify_and_bind_member` 等 RPC PostgREST 原生降級，並將 4,993 筆客戶歷史叫貨規格單價全數同步至 `xyfglvwvirqopbkqirew`（shenglong-line-liff 82c5919，dpl_Bq1NpYdpqajLmwF9evtEMyCe3zrK READY）
 - [x] 2026-11-14 【外勤雙實戰 ✕ 戰情雙自動全量上線】司機端空瓶退殘氣折抵計算器 (1-A, $22.63/kg)、商業戶電子手寫簽名板 (1-B, Canvas/Base64/雲端存證)、老闆 Telegram 每日 08:30 營運晨報排程 (2-A, Vercel Cron/8862712587)、雙軌自動對帳一鍵全自動批次平帳 (2-B, Batch Settle/即時平帳)（shenglong-next 91a27c5）
 - [x] 2026-11-14 【司機端歷史運費無資料徹底根治】operationsKvFetch 三層降級鏈 (PostgREST➔Edge Function➔KVDB 原生降級)、雙層離線真理保底 (orders-last-known + customer-orders-2026)、Vercel 打包追蹤，線上正式還原昨日 (40單)、前日 (27單)、本月 (410單)、前月 (344單)（shenglong-next 150d330，dpl_6xzkDYEomULvdwr5HrQYN1jkv33o READY）
@@ -6,6 +7,35 @@
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
 - [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 10:25] - 🚀 挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動 [ver: 20261114_1025_pick_bottle_150d_and_order_retention]
+- **背景與老闆指示**：
+  1. 老闆回報並附截圖：上次送貨為 115/08/21（相隔 85 天），卡片卻顯示「⚠️ 請挑桶 (上次叫貨相隔85天)」，要求：「1. 要挑桶的時間設定為 150 日」。
+  2. 老闆回報：「2. 新訂單跳出來時 沒過多久會不見 跟歷史紀錄(師傅薪水)一樣，討論一下」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **挑桶天數門檻偏低**：原設定 pickBottleThresholdDays 預設值為 45 天，存於雲端 KV driver_settings_v2，導致超過 45 天（如 85 天）即被標記挑桶，造成外勤配送困擾；且後端 app/api/driver/orders/route.ts 存在多餘覆蓋行導致首次叫貨與規格比對邏輯易受干擾。
+  2. **新單離奇消失根本原因 (Critical)**：
+     - **換日與強制刷新過度耦合**：前端 app/driver/page.tsx 中 const isDateChanged = forceRefresh || ...，當外勤人員收到 FCM 推播或解鎖螢幕（visibilitychange）觸發背景強制抓取時，前端誤將 forceRefresh: true 判定為「跨日操作」，直接清空本機暫存並繞過防抖保護。
+     - **Serverless 冷啟動與 KV 延遲瞬斷**：多實例冷啟動時，若雲端 KV 短暫 404 或未備妥，API 短暫回傳 orders: []；前端在 1.2 秒階梯補抓未有資料時，瞬間將畫面單據刷空（斷崖式清空）。
+- **三大核心技術實裝與修復**：
+  1. **挑桶門檻全面升級 150 日 (150 Days Threshold)**：
+     - 修改 driver-settings.json 與管理員後台 app/driver/admin/page.tsx，將 pickBottleThresholdDays 升級為 150。
+     - 即時更新線上雲端 KV https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/driver_settings_v2（HTTP 200 OK）。
+     - 修改 app/api/driver/orders/route.ts 預設回退為 150，並修復第 273 行 alertMessage 覆蓋漏洞。
+     - 線上正式驗收：訂單 362029（長樂街 85 天）實測 alertPickBottle: false、hasPickBottleAlert: false，完全不再跳出警示。
+  2. **換日與強制刷新徹底解耦 (Decouple Date Change & Force Refresh)**：
+     - 前端重構為 isRealDateChanged = isExistingFromOldDate || (Boolean(savedDate) && savedDate !== activeDate)。
+     - 強制刷新、推播喚醒與前景恢復絕不再誤觸換日清空邏輯。
+  3. **防斷崖式清空與新單 5 分鐘存活保護 (Smart Union Merge & Non-Destructive Fallback)**：
+     - 非跨日狀態下，若後端短暫返回空資料或未就緒，強制維持當前畫面單據（hasExistingTodayOrders），絕不抹除。
+     - 引入 orderArrivalTimestampsRef 記錄新派單抵達時刻；5 分鐘安全期內之 assigned/accepted 新單，若背景輪詢短暫遺漏，自動合流保留（Smart Union Merge），徹底根除「幾秒內不見」之痛點。
+- **全端驗證與部署生效**：
+  - 單元測試 tests/pick-bottle-threshold-and-order-retention.test.mjs (4/4 PASS)。
+  - 全量回歸測試（包括歷史運費與離線韌性）全數 PASS。
+  - Next.js 最佳化生產建置通過，c:\shenglong-next 已推送到 GitHub main（commit: 0118353）。
+  - Vercel Production 正式環境部署完畢（Deployment: dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo，https://shenglong.vercel.app READY）。
+
+---
 
 ## [2026-11-14 10:15] - 🚀 LINE 會員系統無法連線徹底根治 ✕ CSP 重試修復 ✕ RPC 原生降級 ✕ 4,993 筆客戶歷史規格單價全量同步 [ver: 20261114_1015_line_member_connection_and_history_sync]
 - **背景與老闆反饋**：

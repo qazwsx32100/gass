@@ -1,3 +1,32 @@
+## [2026-11-14 10:25] - 🚀 挑桶門檻調整為 150 日 ✕ 徹底根除新訂單消失與畫面抖動 [ver: 20261114_1025_pick_bottle_150d_and_order_retention]
+- **背景與老闆指示**：
+  1. 老闆回報並附截圖：上次送貨為 115/08/21（相隔 85 天），卡片卻顯示「⚠️ 請挑桶 (上次叫貨相隔85天)」，要求：「1. 要挑桶的時間設定為 150 日」。
+  2. 老闆回報：「2. 新訂單跳出來時 沒過多久會不見 跟歷史紀錄(師傅薪水)一樣，討論一下」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **挑桶天數門檻偏低**：原設定 pickBottleThresholdDays 預設值為 45 天，存於雲端 KV driver_settings_v2，導致超過 45 天（如 85 天）即被標記挑桶，造成外勤配送困擾；且後端 app/api/driver/orders/route.ts 存在多餘覆蓋行導致首次叫貨與規格比對邏輯易受干擾。
+  2. **新單離奇消失根本原因 (Critical)**：
+     - **換日與強制刷新過度耦合**：前端 app/driver/page.tsx 中 const isDateChanged = forceRefresh || ...，當外勤人員收到 FCM 推播或解鎖螢幕（visibilitychange）觸發背景強制抓取時，前端誤將 forceRefresh: true 判定為「跨日操作」，直接清空本機暫存並繞過防抖保護。
+     - **Serverless 冷啟動與 KV 延遲瞬斷**：多實例冷啟動時，若雲端 KV 短暫 404 或未備妥，API 短暫回傳 orders: []；前端在 1.2 秒階梯補抓未有資料時，瞬間將畫面單據刷空（斷崖式清空）。
+- **三大核心技術實裝與修復**：
+  1. **挑桶門檻全面升級 150 日 (150 Days Threshold)**：
+     - 修改 driver-settings.json 與管理員後台 app/driver/admin/page.tsx，將 pickBottleThresholdDays 升級為 150。
+     - 即時更新線上雲端 KV https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/driver_settings_v2（HTTP 200 OK）。
+     - 修改 app/api/driver/orders/route.ts 預設回退為 150，並修復第 273 行 alertMessage 覆蓋漏洞。
+     - 線上正式驗收：訂單 362029（長樂街 85 天）實測 alertPickBottle: false、hasPickBottleAlert: false，完全不再跳出警示。
+  2. **換日與強制刷新徹底解耦 (Decouple Date Change & Force Refresh)**：
+     - 前端重構為 isRealDateChanged = isExistingFromOldDate || (Boolean(savedDate) && savedDate !== activeDate)。
+     - 強制刷新、推播喚醒與前景恢復絕不再誤觸換日清空邏輯。
+  3. **防斷崖式清空與新單 5 分鐘存活保護 (Smart Union Merge & Non-Destructive Fallback)**：
+     - 非跨日狀態下，若後端短暫返回空資料或未就緒，強制維持當前畫面單據（hasExistingTodayOrders），絕不抹除。
+     - 引入 orderArrivalTimestampsRef 記錄新派單抵達時刻；5 分鐘安全期內之 assigned/accepted 新單，若背景輪詢短暫遺漏，自動合流保留（Smart Union Merge），徹底根除「幾秒內不見」之痛點。
+- **全端驗證與部署生效**：
+  - 單元測試 tests/pick-bottle-threshold-and-order-retention.test.mjs (4/4 PASS)。
+  - 全量回歸測試（包括歷史運費與離線韌性）全數 PASS。
+  - Next.js 最佳化生產建置通過，c:\shenglong-next 已推送到 GitHub main（commit: 0118353）。
+  - Vercel Production 正式環境部署完畢（Deployment: dpl_HWq1fN6UKdwbDGULTg4fA8YpGsyo，https://shenglong.vercel.app READY）。
+
+---
+
 ## [2026-11-14 10:15] - 🚀 LINE 會員系統無法連線徹底根治 ✕ CSP 重試修復 ✕ RPC 原生降級 ✕ 4,993 筆客戶歷史規格單價全量同步 [ver: 20261114_1015_line_member_connection_and_history_sync]
 - **背景與老闆反饋**：
   - 老闆回報：「line 會員系統 目前沒有辦法連線 幫我處理一下」
