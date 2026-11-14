@@ -1,3 +1,34 @@
+## [2026-11-14 16:45] - 📳 盛隆監控中心鈴聲支援調整震動 ✕ 關閉/跳出/閉屏全態背景推播強制通知 [ver: 20261114_1645_operations_vibration_control_and_background_push]
+- **背景與老闆指示**：
+  - 老闆指示：「監控中心鈴聲也要可以調整震動，關掉監控中心、跳出監控中心、關閉螢幕 也要跑出訊息」。
+- **問題根因徹底查明 (Root Cause)**：
+  1. **震動回饋缺乏開關與模式選擇**：原先僅有鈴聲開關，且僅在按鈕點擊處有固定 10ms 觸覺，缺乏針對新訂單進線與新來電之專屬震動時序與強弱/節奏調節。
+  2. **分頁關閉/閉屏後純前端無作用**：原先 `showBrowserNotification` 僅能在分頁開啟且未被瀏覽器凍結時運作；一旦分頁關閉（Tab Closed）、最小化跳出或手機關閉螢幕鎖屏，客戶端 JavaScript 執行緒與 SSE 連線中斷，無法接收新訂單與新來電。
+- **三大核心技術實裝與修復**：
+  1. **監控中心震動調節與專屬節奏模型 (app/operations/page.tsx, app/components/CallMonitorView.tsx)**：
+     - 支援震動總開關 (`vibrationEnabled`)，提供 3 種節奏模式選擇：
+       - ⚡ **強力連震 (Urgent)**：`[300, 100, 300, 100, 500]`（3 連擊長急促，嘈雜門市推薦）
+       - 🔔 **標準提醒 (Standard)**：`[250, 100, 250, 100, 350]`（適中節奏雙擊）
+       - 🫨 **短促微震 (Pulse)**：`[150, 80, 150]`（輕巧觸覺反饋）
+       - 🚨 **來電專屬振鈴**：`[400, 150, 400, 150, 600]`（長短交替來電震動）
+     - 頂部導航列實裝 `📳 震動開 / 📴 震動關` 快捷按鈕與 `⚙️` 模式調節抽屜彈窗，支援立即試震與 `localStorage` 本地持久化保存。
+     - `CallMonitorView.tsx` 同步實裝震動開關按鈕與來電震動。
+  2. **伺服器端 Web Push 雙軌廣播與嚴格司機隔離 (lib/web-push.ts, app/api/operations/push-subscribe)**：
+     - 實裝 `sendPushToOperations`：專門向登記為「調度員 / 監控中心 / operations / admin」之裝置發送 Web Push。
+     - 嚴格隔離外勤司機手機：徹底排除 `/native/` 端點與外勤名冊，100% 遵循司機端「零干擾、零彈窗」最高權限鐵律。
+     - 新增 `app/api/operations/push-subscribe/route.ts` 端點，支援監控中心設備登記與一鍵測試推播 (`test_push`)。
+     - 於 `app/api/stream/events/route.ts` (來電/新單) 及 `app/api/today-orders/route.ts` (門市新單) 雙軌發射 Web Push。
+  3. **Service Worker 跨狀態喚醒與導航路由 (public/sw.js)**：
+     - `push` 事件監聽器支援解析 `target === 'operations'` 與專屬震動時序。
+     - 若監控中心視窗當前處於可見且聚焦狀態，透過 `postMessage` 靜默刷新；若**分頁關閉、跳出最小化、切換分頁或手機關閉螢幕鎖屏**，強制觸發 `self.registration.showNotification`，掛載 `requireInteraction: true`、`renotify: true` 與硬體震動，點擊通知秒速聚焦或直接開啟 `/operations`！
+- **全端測試與品質驗收**：
+  - 新增測試 `tests/operations-vibration-and-background-notifications.test.mjs` (8/8 PASS)。
+  - 核心通知與司機端排版測試全量通過 (36 項全綠燈)。
+  - TypeScript 靜態型別 (`tsc --noEmit`) 0 錯誤通過。
+  - Next.js 生產建置 (`next build --webpack`) 20/20 靜態與動態路由全數打包成功。
+
+---
+
 ## [2026-11-14 16:45] - 👑 HYDROGEN HIGH 實際 10 張真實客戶訂單全鏈路實操驗證 [ver: 20261114_1645_hydrogen_high_10_real_orders_simulation]
 - **背景與老闆決策**：
   - 老闆指示：「用4 HYDROGEN HIGH模型思考 依照 用實際10張的訂單 去操作 整個用LINE叫瓦斯的流程」。
