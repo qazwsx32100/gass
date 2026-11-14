@@ -2,7 +2,38 @@
 ﻿- [x] 2026-11-13 【全系統離線真理與客戶搜尋大一統】移除 operations Google 試算表 iframe、收斂至 GAS v11 原生版；實裝 today-orders 與 gas-stock 最後營業日封存快照保底機制（shenglong-next 4e9a4fb，dpl_5FPhktViVr9U1JJUMrLAhaxvRDFh READY）
 - [x] 2026-11-13 【離線真理與客戶全歷史】建立 2026 離線歷史訂單索引 (8,953筆/1,181戶)，接入 cloud-customer-gateway，修復來電監控 OFFLINE_SNAPSHOT 平滑顯示（shenglong-next ee6b2d8)
 - [x] 2026-11-13 監控中心「歷史訂單紀錄 → 依客戶全歷史」改用 GAS v11 CustomerSearchHub，order-history API 串接 3,943 戶雲端主檔（shenglong-next e50bec4，dpl_2nPF9CdPrbsMxrAJzgBQQnLhaDYR READY）
-- [ ] 待辦：gas_oders 全量鏡像至 Supabase，讓 ERP 離線時客戶歷年明細完整可查
+- [x] 2026-11-14 【歷年訂單歷史鏡像與雲端中樞多年度離線融合】實裝 sync-orders-2023-2025.cjs 鏡像引擎、整合 cloud-customer-gateway 0ms 離線檢索與去重、歷史視圖全面掛載 SharedOrderCard（shenglong-next da4b7ed，dpl_31f6ES7rT67NGQ89f37o13Ah1b21 READY）
+
+## [2026-11-14 09:00] - 🏛️ 門市 ERP 歷年訂單 (2023~2025) 全量鏡像與雲端多年度離線融合 ✕ 歷史訂單卡片全面大一統 [ver: 20261114_0900_orders_historical_mirror_and_shared_card]
+- **背景與老闆決策**：
+  1. 老闆指令：「1 先做」— 執行 P0 核心任務：門市 ERP 歷年訂單 (2023~2025) 鏡像至雲端 Supabase public.cloud_orders 與 Next.js 本地離線索引，讓門市電腦離線/未開機時，雲端全系統依然能 0ms 秒查客戶近 3 年完整叫貨明細、司機、金額與規格。
+  2. 歷年訂單視圖全面掛載 SharedOrderCard (variant="history")，實現全系統卡片樣式、瓦斯規格膠囊與操作按鈕標準化。
+- **四大核心交付與技術落實**：
+  1. **歷年訂單鏡像引擎 (scripts/sync-orders-2023-2025.cjs)**：
+     - 安靜極速 SQL 端點探測 (testSqlPair 逾時 2.5s，靜音輸出)，準確判斷 SQL Server 在線/離線狀態。
+     - 完整 SQL 查詢：WITH (NOLOCK)、disable = 'N'、範圍 2023/01/01 至 2025/12/31。
+     - 自動正規化：外勤司機別名映射、付款狀態、鋼瓶數量與規格、退存氣、金額與備註。
+     - 生成 0ms 離線客戶 Tuple 索引 (public/data/customer-orders-2023-2025.json)。
+     - 微批次推送 Supabase (public.cloud_orders 每批 500 筆，間隔 120ms，on_conflict=order_id)。
+     - 支援 --dry-run、--push-only、--extract-only。
+  2. **雲端中樞多年度全歷史融合 (lib/cloud-customer-gateway.ts)**：
+     - 新增 ensureLocalHistoricalOrdersLoaded() 與 getLocalHistoryOrdersForCustomer()。
+     - 自動載入並融合 customer-orders-2026.json 與 customer-orders-2023-2025.json，依 id 去重並按日期時間倒序排列。
+     - getLocal2026OrdersForCustomer 向下相容，直通全歷史中樞。
+     - fetchCloudCustomerOrders 優先融合 Supabase 雲端資料庫與歷年離線索引，離線時 0ms 直接返回近 4 年完整訂單。
+  3. **歷史視圖全面落地掛載 SharedOrderCard (OperationsOrderHistoryView.tsx)**：
+     - 歷史訂單卡片全面統一使用 <SharedOrderCard variant="history">。
+     - 強化 SharedOrderCard 歷史視圖：支援客戶個人檔案一鍵跳轉、門牌地址、電話撥號與自訂操作列插槽 {children}。
+  4. **全端測試與品質驗收**：
+     - orders-history-mirror.test.mjs (5/5 PASS)
+     - cloud-customer-gateway.test.mjs (5/5 PASS)
+     - offline-resilience-and-customer-orders.test.mjs (7/7 PASS)
+     - driver-historical-earnings-guard.test.mjs (5/5 PASS)
+     - shared-components.test.mjs (12/12 PASS)
+     - cloud-data-sync-pipeline.test.mjs, domain-unification.test.mjs, operations-hub-writeback.test.mjs (15/15 PASS)
+     - Vercel Production 正式環境部署生效（READY, dpl_31f6ES7rT67NGQ89f37o13Ah1b21, https://shenglong.vercel.app）。
+
+---
 
 ## [2026-11-14 08:45] - 🛡️ 司機端歷史配送紀錄防跳動根絕 ✕ 移除外勤端叫貨歷史按鈕 ✕ 歷年訂單離線鏡像完備 [ver: 20261114_0845_driver_history_earnings_stabilization]
 - **問題根因徹底查明與徹底根絕**：

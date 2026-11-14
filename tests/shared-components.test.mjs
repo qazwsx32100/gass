@@ -165,13 +165,11 @@ test("🧩 Shared Components (P2): 雙桶戶壓瓶標籤與外勤歷史速查 (D
   const historyContent = fs.readFileSync(historyModalPath, "utf8");
   assert.ok(historyContent.includes("/api/customer-history"), "歷史彈窗必須介接 customer-history API");
 
-  // 3. 驗證 Driver App 已整合 SharedCustomerHistoryModal
+  // 3. 驗證 Driver App 嚴格遵循外勤最高鐵律：拔除干擾彈窗，回歸專注配送
   const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
   const driverContent = fs.readFileSync(driverPagePath, "utf8");
-  assert.ok(driverContent.includes("SharedCustomerHistoryModal"), "Driver App 必須導入 SharedCustomerHistoryModal");
-  assert.ok(driverContent.includes("historyModalOpen"), "Driver App 必須維護歷史彈窗開關狀態");
-  assert.ok(driverContent.includes("叫貨歷史"), "客戶姓名旁必須包含「叫貨歷史」速查按鈕");
-  assert.ok(driverContent.includes("<SharedCustomerHistoryModal"), "Driver App 必須實裝掛載 <SharedCustomerHistoryModal");
+  assert.ok(!driverContent.includes("SharedCustomerHistoryModal"), "Driver App 依外勤最高鐵律不可含有 SharedCustomerHistoryModal 彈窗");
+  assert.ok(!driverContent.includes("<span>叫貨歷史</span>"), "Driver App 依外勤最高鐵律不可含有干擾叫貨歷史按鈕");
 });
 
 test("🛵 Google Maps 定位防飄移三步全聯動 (Two Wheeler + Uber Mode + Google Maps API)", async () => {
