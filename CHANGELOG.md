@@ -1,3 +1,17 @@
+## [2026-11-14 20:05] - 📱 LINE 訂單通知全面隱藏外送員姓名 ✕ 訂單全生命週期及 ERP 連動機制權威核定 [ver: 20261114_2005_hide_driver_in_line_notification_and_order_rules]
+- **背景與老闆指示**：
+  - 老闆指示：「LINE 的訂單通知，不要顯示配送的人。跟我說一下目前LINE下訂單的規則：1.從下訂單 到 結單 整個流程 2.ERP更動甚麼項目會影響到訂單通知 3.（補充核心注意事項）」。
+- **核心成果 (Key Achievements)**：
+  1. **LINE 客戶端推播通知徹底隱藏配送人員姓名**：
+     - 修改 `c:\shenglong-line-liff\api\index.js`（`orderStatusMessage`），移除 `（外送員：${order.deliver}）`，狀態統一顯示純「最新進度：配送中」。
+     - 修改 `c:\shenglong-line-liff\api\legacy-sync.js`（`pushStatusUpdate`），移除 `order.deliver ? 配送中（外送員：...） : 配送中`，統一為「最新進度：配送中」。
+     - 確立對外統一「盛隆瓦斯官方公司服務」形象，保護外勤司機個人隱私，避免私下聯絡與服務糾紛。
+  2. **自動化驗證與零回歸**：
+     - `shenglong-line-liff` 全量單元測試 288 項 100% 綠燈通過（0 失敗）。
+  3. **雙軌全面同步與部署**：
+     - GitHub 遠端儲存庫已推送（commit: `fde35f8`）。
+     - Vercel Production 正式環境同步部署生效。
+
 ## [2026-11-14 19:35] - 🚀 真實 10 組客戶真機瀏覽器端到端下單 ✕ 舊 ERP 雙向同步驗證 ✕ 門市常駐程式 Big5 截斷 bug 修復 [ver: 20261114_1935_10_real_customers_browser_flow_and_legacy_erp_sync]
 - **背景與老闆指示**：
   - 老闆指示：「1.找10組 資料庫真實的客戶 2.真實的跑一次LINE下訂單的流程 3.不要只跑API 討論一下：1. 不用測試字樣 2. 方案B（保留舊ERP訂單讓門市小姐核對）」。
