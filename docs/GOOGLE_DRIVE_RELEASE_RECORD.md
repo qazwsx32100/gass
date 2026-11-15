@@ -1,3 +1,17 @@
+## 【2026-11-15 11:10 發布紀錄】🎨 司機端完成訂單右下角「結單」標籤刪除
+- **發布版本**：`20261115_1110_driver_remove_finished_order_settle_label`
+- **老闆指示**：「幫我刪除 完成訂單 右下角 的 結單」
+- **變更摘要**：
+  1. 完成訂單（`isFinished === true`）右下角「結單」文字標籤徹底刪除不顯示。
+  2. 待接單與配送中訂單正常保留業務操作按鈕。
+  3. 單元測試 13/13 全數 PASS。
+- **連動檔案**：`app/driver/page.tsx`, `tests/driver-compact-card-and-customer-remarks.test.mjs`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 09:10 發布紀錄】🎨 司機端 UI 細緻優化三項全數落地
 - **發布版本**：`20261115_0910_driver_ui_refinements`
 - **老闆指示**：「修改的地方：1.回報 下方房覆蓋安全保護標語 刪除 2.今日運費 後面的 | 刪除 3.字體選擇的部分 先隱藏」

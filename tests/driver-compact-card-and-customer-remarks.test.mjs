@@ -70,9 +70,10 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.match(pageContent, /fontSize:\s*"16\.5px"/);
   });
 
-  await t.test("8. 右下角的已送達完成改成「結單」", () => {
-    assert.match(pageContent, />\s*結單\s*<\/span>/);
+  await t.test("8. 完成訂單 右下角的「結單」標籤刪除不顯示", () => {
+    assert.doesNotMatch(pageContent, />\s*結單\s*<\/span>/);
     assert.doesNotMatch(pageContent, /✓ 已送達完成/);
+    assert.match(pageContent, /依指示：完成訂單右下角「結單」刪除不顯示/);
   });
 
   await t.test("9. 導航、電話、回報 刪除圖片（無圖示 emoji，純文字按鈕）", () => {
