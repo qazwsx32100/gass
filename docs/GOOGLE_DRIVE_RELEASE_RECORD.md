@@ -1,3 +1,21 @@
+## 【2026-11-15 20:08 發布紀錄】🧹 系統健康監控告警歷史測試殘留全量結案清理
+- **發布版本**：`20261115_2008_admin_alerts_test_residue_cleanup`
+- **老闆指示**：「好」（針對「⚠️ 盛隆系統異常通知：LINE 通知待處理 11 筆、舊系統同步衝突 1 筆」全量結案）
+- **變更摘要**：
+  1. 清理昨天 11/14 執行真機 10 筆測試下單時產生的 11 筆虛擬測試 LINE ID 失敗通知殘留，更新 `sl_orders` 之 `notification_status` 為 `skipped`，不再重複推播。
+  2. 清理第 1 筆測試單備註過長產生之同步衝突任務（Job ID 3），更新 `sl_legacy_sync_jobs` 狀態為 `cancelled`。
+  3. 重設 `sl_admin_alert_state` 租約與健康狀態，執行 `sl_get_admin_system_status` 與 `sl_get_legacy_sync_status` 驗證：
+     - `pendingOrFailed`: 0（原 11 筆）
+     - `conflict`: 0（原 1 筆）
+     - `failed`: 0
+     - 全系統健康度立即轉為 100% 綠燈（Healthy），杜絕重複告警騷擾。
+- **連動檔案**：Supabase `sl_orders`, `sl_legacy_sync_jobs`, `sl_admin_alert_state`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] Supabase 正式資料庫即時更新並 RPC 驗證通過
+  - [x] GitHub 倉庫（gass）同步推送
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 12:10 發布紀錄】🛵 司機端訂單卡片地址右側距離標籤刪除
 - **發布版本**：`20261115_1210_driver_remove_distance_badge`
 - **老闆指示**：「把距離拿掉」

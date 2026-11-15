@@ -1,3 +1,18 @@
+## [2026-11-15 20:08] - 🧹 系統健康監控告警歷史測試殘留全量結案清理 (通知0筆 ✕ 衝突0筆 ✕ 系統轉為全綠燈) [ver: 20261115_2008_admin_alerts_test_residue_cleanup]
+- **背景與老闆最高指示**：
+  - 老闆轉發系統異常通知：「⚠️ 盛隆系統異常通知：• LINE 通知待處理 11 筆 • 舊系統同步衝突 1 筆」，經說明為昨天真機下單測試之模擬 LINE ID 失敗殘留與第 1 筆備註過長衝突殘留後，老闆指示：「好」予以全數結案清理。
+- **核心處置 (Key Implementations)**：
+  1. **清理 11 筆測試假用戶通知殘留**：
+     - 將 `sl_orders` 中 11 筆測試訂單之 `notification_status` 由 `failed` 結案為 `skipped`，停止背景隊列重複推播。
+  2. **清理 1 筆同步衝突任務**：
+     - 將 `sl_legacy_sync_jobs` 中第 3 號衝突任務之 `status` 由 `conflict` 結案為 `cancelled`。
+  3. **健康狀態驗證**：
+     - 重設 `sl_admin_alert_state`，呼叫 RPC `sl_get_admin_system_status` 與 `sl_get_legacy_sync_status` 驗證：
+       - `pendingOrFailed`: 0（原 11 筆）
+       - `conflict`: 0（原 1 筆）
+       - `failed`: 0
+     - 系統狀態立即轉為 100% 綠燈 Healthy，杜絕重複警報。
+
 ## [2026-11-15 20:10] - 🛵 司機端訂單卡片地址右側距離標籤刪除 (版面純化大字 ✕ 專屬單元測試 17/17 PASS) [ver: 20261115_2010_driver_card_remove_distance]
 - **背景與老闆最高指示**：
   - 老闆詢問：「訂單上面的 距離是依照甚麼為基礎」，經說明為司機外勤 GPS 與客戶定位點之直線距離計算後，老闆指示：「把距離拿掉」。
