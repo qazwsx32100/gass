@@ -30,7 +30,8 @@ export default async function handler(req, res) {
         const row = await fetchAppState();
         return sendJson(res, 200, {
           ok: true,
-          persisted: true,
+          persisted: row?.isOfflineSnapshot !== true,
+          readOnly: row?.isOfflineSnapshot === true,
           data: row?.state?.websiteCms || null,
           updatedAt: row?.updated_at || null
         });
@@ -127,11 +128,15 @@ export default async function handler(req, res) {
   const startedAt = Date.now();
 
   try {
-    await fetchAppState();
-    return sendJson(res, 200, {
-      ok: true,
+    const row = await fetchAppState();
+    const offline = row?.isOfflineSnapshot === true;
+    return sendJson(res, offline ? 503 : 200, {
+      ok: !offline,
       service: 'gass-erp-api',
-      database: 'reachable',
+      database: offline ? 'unreachable' : 'reachable',
+      status: offline ? 'DEGRADED' : 'HEALTHY',
+      readOnly: offline,
+      source: offline ? 'offline_snapshot' : 'database',
       timestamp: new Date().toISOString(),
       latencyMs: Date.now() - startedAt
     });

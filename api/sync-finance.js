@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         buffer: Buffer.from(JSON.stringify(payload, null, 2), 'utf8'),
         description: `盛隆門市財務備用通道同步快照: ${businessDate}, 營收=${revenueTotal}, 收入筆數=${incomeRows}`
       });
-      driveBackupLink = driveRes?.webViewLink || driveRes?.id || 'uploaded';
+      driveBackupLink = driveRes?.id ? (driveRes.webViewLink || driveRes.id) : null;
     } catch (driveErr) {
       console.warn('Google Drive backup archive notice:', driveErr?.message || driveErr);
     }
@@ -138,7 +138,11 @@ export default async function handler(req, res) {
 
   // 6. 回傳標準成功回應 (與地端預期完全相容，同時支援 data 包裝與扁平結構)
   const resultData = {
-    success: true,
+    success: supabaseSynced,
+    persisted: supabaseSynced || Boolean(driveBackupLink),
+    applied: supabaseSynced,
+    archived: Boolean(driveBackupLink),
+    status: supabaseSynced ? 'applied' : driveBackupLink ? 'archived_pending_apply' : 'persistence_failed',
     channel: 'vercel_backup_channel',
     businessDate,
     revenueTotal,
@@ -151,13 +155,14 @@ export default async function handler(req, res) {
     expenseRowsPreserved: expenseRows,
     refundExpenseRows: expenseRows,
     supabaseSynced,
-    backupId: backupId || `VERCEL-FALLBACK-${Date.now()}`,
+    backupId,
     driveBackupLink,
     syncedAt: new Date().toISOString(),
     notice: syncNotice
   };
 
-  return sendJson(res, 200, {
+  if (!supabaseSynced) res.setHeader('Retry-After', '60');
+  return sendJson(res, supabaseSynced ? 200 : 503, {
     ...resultData,
     data: resultData
   });
