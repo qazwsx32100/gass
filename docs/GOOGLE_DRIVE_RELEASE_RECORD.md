@@ -1,3 +1,17 @@
+## 【2026-11-15 11:35 發布紀錄】🎨 司機端卡片「[ ✅ 送達收款 ]」按鈕刪除
+- **發布版本**：`20261115_1135_driver_remove_delivery_collection_button`
+- **老闆指示**：「[ ✅ 送達收款 ] 刪除」
+- **變更摘要**：
+  1. 司機端訂單卡片右下角原綠色「[ ✅ 送達收款 ]」按鈕徹底刪除。
+  2. 訂單卡片右下角純粹呈現外勤提成明細（運費$XX、樓層費$YY），介面更為極簡俐落。
+  3. 單元測試 15/15 全數 PASS，`tsc --noEmit` 0 錯誤通過。
+- **連動檔案**：`app/driver/page.tsx`, `tests/driver-compact-card-and-customer-remarks.test.mjs`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 11:20 發布紀錄】💰 司機端顯示總金額與訂單右下角運費及樓層費
 - **發布版本**：`20261115_1120_driver_total_price_and_bottom_right_fees`
 - **老闆指示**：「門市會是這樣的狀況：目前是總金額 樓層費要另外扣。我會改成：瓦斯費 和 樓層費 分開，但是我要 司機端 顯示 總金額 和 樓層費。UI介面顯示 在訂單右下角 運費$70 樓層費$30」

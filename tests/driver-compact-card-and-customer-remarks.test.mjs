@@ -108,4 +108,9 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.match(pageContent, /運費\s*\$\{comm\}/);
     assert.match(pageContent, /樓層費\s*\$\{floorFee\}/);
   });
+
+  await t.test("14. 依指示：[ ✅ 送達收款 ] 刪除", () => {
+    assert.doesNotMatch(pageContent, />\s*送達收款\s*<\/span>/);
+    assert.match(pageContent, /依指示：\[ ✅ 送達收款 \] 刪除/);
+  });
 });
