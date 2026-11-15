@@ -41,7 +41,7 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.match(pageContent, /全部置左：1\. 桶子規格\(綠框\) 2\. 金額 3\. 請挑桶\(黃框\)/);
     // 檢查順序：規格在前，金額居中，請挑桶在後
     const specIdx = pageContent.indexOf('{o.items || (o.totalBottles');
-    const priceIdx = pageContent.indexOf('${o.price || 0}');
+    const priceIdx = pageContent.indexOf('${totalDisplayPrice || 0}');
     const pickIdx = pageContent.indexOf('⚠️ 請挑桶');
     assert.ok(specIdx !== -1 && priceIdx !== -1 && pickIdx !== -1, "三者必須在第一行存在");
     assert.ok(specIdx < priceIdx, "1. 桶子規格必須在 2. 金額之前");
@@ -73,7 +73,6 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
   await t.test("8. 完成訂單 右下角的「結單」標籤刪除不顯示", () => {
     assert.doesNotMatch(pageContent, />\s*結單\s*<\/span>/);
     assert.doesNotMatch(pageContent, /✓ 已送達完成/);
-    assert.match(pageContent, /依指示：完成訂單右下角「結單」刪除不顯示/);
   });
 
   await t.test("9. 導航、電話、回報 刪除圖片（無圖示 emoji，純文字按鈕）", () => {
@@ -101,5 +100,12 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
   await t.test("12. 字體選擇的部分 先隱藏", () => {
     assert.match(pageContent, /依指示：字體選擇的部分 先隱藏/);
     assert.match(pageContent, /五段式字體切換[\s\S]*?\{false && \(/);
+  });
+
+  await t.test("13. 訂單金額顯示為總金額（瓦斯費＋樓層費），且訂單右下角顯示 運費$70 樓層費$30", () => {
+    assert.match(pageContent, /totalDisplayPrice/);
+    assert.match(pageContent, /gasPrice \+ floorFee/);
+    assert.match(pageContent, /運費\s*\$\{comm\}/);
+    assert.match(pageContent, /樓層費\s*\$\{floorFee\}/);
   });
 });
