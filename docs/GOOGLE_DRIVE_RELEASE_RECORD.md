@@ -6,6 +6,28 @@
   3. **登入 API 廢止與安全降級**：POST /api/driver/login 停用並回傳 HTTP 410，提示已升級為專屬個人網址機制。
   4. **TypeScript 型別檢驗**：tsc --noEmit 0 錯誤通過。
 
+## 【2026-11-15 20:58 發布紀錄】📊 營運後台頂部 6 大數據小卡點擊聯動與平滑導航實裝
+- **發布版本**：`20261115_2058_operations_clickable_metrics_navigation`
+- **老闆指示**：「這小卡 我可以點進去 觀看項目」
+- **變更摘要**：
+  1. 營運後台頂部 6 大核心指標小卡全面具備可點擊互動能力（Hover 手勢放大、綠框加深、提示箭頭 `›`）：
+     - 點擊「1 待配送訂單」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「即時訂單」區塊。
+     - 點擊「0 今日訂單」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「即時訂單」區塊。
+     - 點擊「0 啟用配送員」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「人員與路線」區塊。
+     - 點擊「0 90天內需檢驗」➜ 自動切換至「鋼瓶」Tab 並平滑捲動至「鋼瓶清單」區塊。
+     - 點擊「$0 未折抵瓦斯金」➜ 自動切換至「合作店家與瓦斯金」Tab 並平滑捲動至「最近瓦斯金流水」區塊。
+     - 點擊「0 14天內提醒」➜ 自動切換至「叫瓦斯提醒」Tab 並平滑捲動至「未來14天可能需要叫瓦斯」區塊。
+  2. 目標面板加入綠色脈衝聚焦動畫（`highlight-panel` 1.5s），老闆點擊後視線能瞬間鎖定目標明細。
+  3. 版本號升級防快取（`?v=20261115-clickable-metrics`）。
+  4. 296 項單元測試 100% 綠燈通過。
+  5. GitHub 倉庫同步推送（`3013bbe`）並完成 Vercel Production 正式部署（`dpl_6YQQo3HLCU2kFcvAgW3JB4DqFN1C` READY）。
+- **連動檔案**：`public/operations.js`, `public/operations.css`, `public/operations.html`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 20:46 發布紀錄】🔑 LINE管理後台多重萬用管理碼通道實裝與憑證持久化
 - **發布版本**：`20261115_2046_admin_auth_universal_codes_and_db_persistence`
 - **老闆指示**：「windsboy123 和 shenglong2026 密碼都不對」

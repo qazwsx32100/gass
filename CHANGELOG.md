@@ -6,6 +6,25 @@
   2. **未授權時友善引導**：未帶 Token 時呈現專屬說明卡片，提示聯繫調度台或使用專用 App。
   3. **API 停用**：POST /api/driver/login 停用並回傳 410，後台維持透過 /driver/admin 一鍵複製或重設專屬網址。
 
+## [2026-11-15 20:58] - 📊 營運後台頂部 6 大數據小卡點擊聯動與平滑導航實裝 (即時Tab切換 ✕ 脈衝高亮聚焦 ✕ Vercel READY) [ver: 20261115_2058_operations_clickable_metrics]
+- **背景與老闆最高指示**：
+  - 老闆於登入營運管理後台後指示：「這小卡 我可以點進去 觀看項目」。
+- **核心改動 (Key Implementations)**：
+  1. **6 大數據小卡全面支援點擊聯動 (Clickable Metrics)**：
+     - 在 `public/operations.js` 之 `metric` 元件注入 `data-tab` 與 `data-target` 屬性，並在 `metrics` 容器實裝委派點擊監聽器。
+     - 點擊「待配送訂單」或「今日訂單」➜ 切換至「訂單配送」Tab，並平滑捲動至「即時訂單」區塊。
+     - 點擊「啟用配送員」➜ 切換至「訂單配送」Tab，並捲動至「配送人員與路線」區塊。
+     - 點擊「90天內需檢驗」➜ 切換至「鋼瓶」Tab，並捲動至「鋼瓶清單」區塊。
+     - 點擊「未折抵瓦斯金」➜ 切換至「合作店家與瓦斯金」Tab，並捲動至「最近瓦斯金流水」區塊。
+     - 點擊「14天內提醒」➜ 切換至「叫瓦斯提醒」Tab，並捲動至「未來14天可能需要叫瓦斯」區塊。
+  2. **視線引導與高精動畫 (Visual Focus & Pulse Highlight)**：
+     - 卡片增加 hover 手勢、陰影浮起與質感箭頭 `›`。
+     - 跳轉目標面板實裝 `pulseHighlight` 綠色光暈聚焦動畫（1.5s），瞬間抓住老闆視線。
+  3. **防快取版本升級與雲端發布**：
+     - 升級靜態資源引用版本號 `v=20261115-clickable-metrics`。
+     - 296/296 單元測試 PASS。
+     - GitHub 倉庫推送完成（`3013bbe`），Vercel 正式環境部署生效（`dpl_6YQQo3HLCU2kFcvAgW3JB4DqFN1C` READY）。
+
 ## [2026-11-15 20:46] - 🔑 LINE管理後台多重萬用管理碼通道實裝與憑證持久化 (雙密碼100%支援 ✕ 296/296 PASS ✕ Vercel READY) [ver: 20261115_2046_admin_auth_universal_codes]
 - **背景與老闆最高指示**：
   - 老闆回報：「windsboy123 和 shenglong2026 密碼都不對」。
