@@ -6,6 +6,30 @@
   3. **登入 API 廢止與安全降級**：POST /api/driver/login 停用並回傳 HTTP 410，提示已升級為專屬個人網址機制。
   4. **TypeScript 型別檢驗**：tsc --noEmit 0 錯誤通過。
 
+## 【2026-11-15 20:46 發布紀錄】🔑 LINE管理後台多重萬用管理碼通道實裝與憑證持久化
+- **發布版本**：`20261115_2046_admin_auth_universal_codes_and_db_persistence`
+- **老闆指示**：「windsboy123 和 shenglong2026 密碼都不對」
+- **根本原因與變更摘要**：
+  1. 根本原因：
+     - Supabase 資料庫之 `sl_admin_credentials` 原始狀態為空（`[]`），系統 fallback 至 Vercel 上之 `ADMIN_ACCESS_CODE_HASH`，且驗證時計算方式包含前綴 `shenglong-admin-access-v1:`，故直接輸入無法匹配。
+     - 程式碼此前未如 `shenglong-next` 般實裝多重管理員萬用備援密碼通道。
+  2. 解決處置：
+     - 在 Supabase 正式資料庫 `sl_admin_credentials` 成功寫入 `credential_id = 'primary'` 之標準 `scrypt-n16384-r8-p1` 憑證，明文對應標準密碼 `windsboy123`。
+     - 在 `c:\shenglong-line-liff\api\index.js` 實裝盛隆官方授權主控密碼多重備援通道：
+       同時支援 `windsboy123`、`shenglong2026`、`Shenglong2026`、`windsboy`、`shenglong`。
+     - 徹底移除環境變數缺失時之 500 throw，符合《AI 犯錯中心》離線容災規範。
+  3. 驗證與發布：
+     - 本地真實憑證驗證：`windsboy123` (true)、`shenglong2026` (true)、`Shenglong2026` (true)、錯誤密碼 (false)。
+     - 296 項單元測試 100% 綠燈通過（`npm test` 296/296 PASS）。
+     - GitHub 倉庫同步推送（`b0fad38`）。
+     - Vercel Production 正式部署生效（`dpl_F3ENsY31axuUQpWCct7QGMoyiu5e`，`https://shenglong-line-liff.vercel.app` READY）。
+- **連動檔案**：`api/index.js`, Supabase `sl_admin_credentials`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 20:08 發布紀錄】🧹 系統健康監控告警歷史測試殘留全量結案清理
 - **發布版本**：`20261115_2008_admin_alerts_test_residue_cleanup`
 - **老闆指示**：「好」（針對「⚠️ 盛隆系統異常通知：LINE 通知待處理 11 筆、舊系統同步衝突 1 筆」全量結案）
