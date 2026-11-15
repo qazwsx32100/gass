@@ -1,3 +1,12 @@
+## 【2026-11-15 08:15 發布紀錄】🚀 門市主機 1 秒本地輕量探測 ✕ 0.5 秒新單事件微推播
+- **發布版本**：`20261115_0815_fast_order_probe_and_event_micropush`
+- **老闆指示**：「門市主機恢復『1 秒本地輕量探測』... 有新單 0.5 秒微推播（事件驅動）... 平時沒新單時，完全不發送任何雲端請求，1 個月呼叫量不到免費額度的 1%，徹底免除 402 風險。我們來做」
+- **變更摘要**：
+  1. `sync-stock.cjs` 實裝 1 秒本地無鎖探測 (`WITH (NOLOCK)`) 與 `MAX(oder_id)` 監聽。
+  2. 新單 0.5 秒微推播啟動 (`force=true`)，並行觸發 Google FCM 司機推播與 Telegram 派工通知。
+  3. 7 項專屬單元測試全數通過，Next.js 生產建置 100% 成功。
+- **連動檔案**：`sync-stock.cjs`, `tests/fast-order-probe-and-event-micropush.test.mjs`, `docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md`, `docs/TODO.md`, `CHANGELOG.md`
+
 ## 【2026-11-14 21:50 發布紀錄】🛠️ AI 系統天然瓦斯安裝與設備答覆標準化 (基礎設備簡易安裝 ✕ 高規格需評估)
 - **發布版本**：`20261114_2150_ai_natural_gas_installation_rules`
 - **老闆指示**：「只要回答到 天然瓦斯安裝 相關的問題 目前只有基礎的天然瓦斯爐具、熱水器設備 和 簡易安裝 ，如果要配置比較高規格的設備和安裝 需要評估」

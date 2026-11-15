@@ -1,3 +1,22 @@
+## [2026-11-15 08:15] - 🚀 門市主機 1 秒本地輕量探測 ✕ 0.5 秒新單事件微推播全面實裝 (零鎖表 ✕ 零配額浪費 ✕ 極速跳單) [ver: 20261115_0815_fast_order_probe_and_event_micropush]
+- **背景與老闆指示**：
+  - 老闆指示：「門市主機恢復『1 秒本地輕量探測』：門市主機每 1 秒在本地執行 SELECT MAX(oder_id) FROM dbo.gas_oders WITH (NOLOCK)。這個查詢只耗時 2 毫秒，純記憶體比對，對門市小姐打單 0 負擔、0 鎖表。有新單 0.5 秒微推播（事件驅動）：只要發現 MAX(oder_id) 變大，代表門市小姐剛按存檔，0.5 秒內立刻單筆推送雲端並觸發 FCM 司機推播！平時沒新單時，完全不發送任何雲端請求，1 個月呼叫量不到免費額度的 1%，徹底免除 402 風險。我們來做」。
+- **三大核心技術實裝 (Core Implementations)**：
+  1. **門市主機 1 秒本地輕量探測 (1000ms)**：
+     - `sync-stock.cjs` 將 `fastCheckOrders` 定時器精確調整為 1000ms（每 1 秒執行一次）。
+     - 本地 SQL 查詢強制採用 `READ UNCOMMITTED` 與 `WITH (NOLOCK)`，秒讀 `ISNULL(MAX(oder_id), 0), COUNT(1), ISNULL(CHECKSUM_AGG(BINARY_CHECKSUM(oder_id, deliver, payed, oder_price, oder_time, disable)), 0)`。
+     - 查詢耗時僅 ~2ms，走 SQL Server 記憶體執行計畫，對門市小姐打單 0 鎖表、0 衝突、0 卡頓。
+  2. **有新單 0.5 秒微推播（事件驅動）**：
+     - 維護 `lastMaxOrderId` 基準線。一旦 `currentMaxOrderId > lastMaxOrderId`，代表小姐剛按下儲存，0.5 秒內即刻調用 `pushTodayOrdersToCloud(..., true)` 以 `force=true` 繞過所有重試延遲，並行觸發 `checkNewOrders()`。
+     - 雲端收到即時單據後，以 0ms 延遲非同步發射 Google FCM HTTP v1 司機推播通知、SSE 即時串流廣播與調度戰情室 Web Push。
+  3. **平時零呼叫零浪費（徹底免除 402 風險）**：
+     - 當 `currentMaxOrderId` 未增加且指紋未改變時，系統 100% 靜默待命，絕不向外部發送任何 HTTP 請求。
+     - 一個月 API 呼叫次數完全控制在平台免費額度的 1% 以內，兼顧「極速體感」與「雲端安全」。
+- **品質驗收與交付**：
+  - 新增專屬單元測試 `tests/fast-order-probe-and-event-micropush.test.mjs`（7/7 PASS）。
+  - 既有雲端預算測試 `tests/cloud-sync-budget.test.cjs`（5/5 PASS）。
+  - Next.js Turbopack 生產編譯 0 錯誤通過 (Exit code 0, 20/20 路由生成成功)。
+
 ## [2026-11-14 21:50] - 🛠️ AI 系統天然瓦斯安裝與設備答覆口徑標準化 (基礎設備簡易安裝 ✕ 高規格需評估) [ver: 20261114_2150_ai_natural_gas_installation_rules]
 - **背景與老闆最高指示**：
   - 老闆指示：「**只要回答到 天然瓦斯安裝 相關的問題 目前只有基礎的天然瓦斯爐具、熱水器設備 和 簡易安裝 ，如果要配置比較高規格的設備和安裝 需要評估**」。

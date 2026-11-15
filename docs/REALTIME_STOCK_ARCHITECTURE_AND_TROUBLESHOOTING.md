@@ -92,6 +92,12 @@ flowchart TD
 * **安全機制**：所有 SQL 查詢皆強制使用 `WITH (NOLOCK)` 與 `READ UNCOMMITTED`，絕對零鎖定門市小姐打單。
 
 ### 2. 本地守護中繼進程（`supervisor-sync.cjs` + `sync-stock.cjs`）
+* **門市主機 1 秒本地輕量探測 ✕ 0.5 秒新單事件微推播 (2026-11-15 升級)**：
+  - **1 秒無鎖本地探測**：門市營業主機每 1 秒（1000ms）在本地執行 `SELECT ISNULL(MAX(oder_id), 0), COUNT(1), ISNULL(CHECKSUM_AGG(BINARY_CHECKSUM(oder_id, deliver, payed, oder_price, oder_time, disable)), 0) FROM dbo.gas_oders WITH (NOLOCK) WHERE oder_date = CONVERT(char(10), GETDATE(), 111);`。
+  - **0 負擔 0 鎖表**：查詢僅耗時 ~2ms，走純記憶體快速比對，強制 `WITH (NOLOCK)` 與 `READ UNCOMMITTED`，對門市小姐鍵盤極速打單 0 負擔、0 鎖表。
+  - **有新單 0.5 秒微推播（事件驅動）**：只要偵測到 `MAX(oder_id)` 變大（代表小姐剛按存檔），0.5 秒內立刻單筆推送雲端 (`force=true`)，並瞬間觸發 Google FCM 司機極速推播、SSE 戰情廣播與 Telegram 派工通知！
+  - **零配額浪費**：平時沒新單且指紋一致時，100% 靜默待命，完全不發送任何雲端請求，1 個月 API 消耗量不到平台免費額度的 1%，徹底免除 Supabase 402 風險。
+
 * **`supervisor-sync.cjs`（父進程）**：
   - 常駐監聽 `127.0.0.1:48999` 單例端口。
   - 負責看守子進程 `sync-stock.cjs` 與 `advisor-bot.cjs`，當子進程異常崩潰或超時假死時，自動重啟並清理孤兒進程。
