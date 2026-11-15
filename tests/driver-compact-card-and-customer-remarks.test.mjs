@@ -84,4 +84,21 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.doesNotMatch(pageContent, /href=\{navUrl\}[\s\S]*?>🗺️<\/span>/);
     assert.doesNotMatch(pageContent, /href=\{`tel:\$\{dialTel\}`\}[\s\S]*?>📞<\/span>/);
   });
+
+  await t.test("10. 回報 下方防覆蓋安全保護標語 刪除", () => {
+    assert.doesNotMatch(pageContent, /<strong>防覆蓋安全保護：<\/strong>/);
+    assert.doesNotMatch(pageContent, /現場回報資料將送達調度台，由管理員在後台確認後手動儲存客戶備註/);
+    assert.match(pageContent, /依指示：現場狀況回報下方防覆蓋安全保護標語已刪除/);
+  });
+
+  await t.test("11. 今日運費 後面的 | 刪除", () => {
+    assert.match(pageContent, /<span>💰 今日運費：<\/span>/);
+    assert.match(pageContent, /依指示：今日運費後方 \| 已刪除/);
+    assert.doesNotMatch(pageContent, />💰 今日運費：[\s\S]*?<span>｜<\/span>[\s\S]*?今日樓層費/);
+  });
+
+  await t.test("12. 字體選擇的部分 先隱藏", () => {
+    assert.match(pageContent, /依指示：字體選擇的部分 先隱藏/);
+    assert.match(pageContent, /五段式字體切換[\s\S]*?\{false && \(/);
+  });
 });
