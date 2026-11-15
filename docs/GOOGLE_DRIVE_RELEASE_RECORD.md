@@ -1,3 +1,17 @@
+## 【2026-11-15 12:10 發布紀錄】🛵 司機端訂單卡片地址右側距離標籤刪除
+- **發布版本**：`20261115_1210_driver_remove_distance_badge`
+- **老闆指示**：「把距離拿掉」
+- **變更摘要**：
+  1. 司機端訂單卡片第 2 行地址右側之即時距離膠囊（XX公尺 / X.X公里）徹底刪除不顯示。
+  2. 卡片地址擁有完整橫向空間，版面極度乾淨純粹。
+  3. 單元測試 17/17 全數 PASS，`tsc --noEmit` 0 錯誤通過。
+- **連動檔案**：`app/driver/page.tsx`, `tests/driver-compact-card-and-customer-remarks.test.mjs`, `docs/TODO.md`, `CHANGELOG.md`
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 【2026-11-15 11:45 發布紀錄】🧭 司機端新訂單下方必定具備導航電話回報
 - **發布版本**：`20261115_1145_driver_new_order_actions_bar`
 - **老闆指示**：「新的訂單 下方也要有 導航 電話 回報」

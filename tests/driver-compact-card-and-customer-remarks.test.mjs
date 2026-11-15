@@ -123,4 +123,8 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     // 新單懸浮橫幅亦包含導航、電話、回報
     assert.match(pageContent, /新派單到達即時懸浮大橫幅[\s\S]*?依指示：新的訂單 下方也要有 導航 電話 回報/);
   });
+  await t.test("16. 依指示：卡片上的距離標籤拿掉不顯示", () => {
+    assert.doesNotMatch(pageContent, /formatDistanceMeters\(getDistanceMeters/);
+    assert.match(pageContent, /依(?:老闆)?指示：距離標籤刪除不顯示/);
+  });
 });

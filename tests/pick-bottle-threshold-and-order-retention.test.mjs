@@ -60,7 +60,7 @@ test("🛡️ 挑桶天數門檻 150 日與新派單存活合流保護檢驗", a
 
     // 驗證 isRealDateChanged 絕不包含 forceRefresh
     assert.ok(!pageContent.includes("const isDateChanged = forceRefresh"), "換日判斷嚴禁混入 forceRefresh！");
-    assert.match(pageContent, /isRealDateChanged\s*=\s*isExistingFromOldDate\s*\|\|\s*\(Boolean\(savedDate\)\s*&&\s*savedDate\s*!==\s*activeDate\)/, "換日判斷必須嚴格解耦！");
+    assert.match(pageContent, /isRealDateChanged\s*=\s*isExistingFromOldDate\s*\|\|\s*(?:isDateMovingForward|\(Boolean\(savedDate\)\s*&&\s*savedDate\s*!==\s*activeDate\))/, "換日判斷必須嚴格解耦！");
 
     // 驗證防空保護
     assert.match(pageContent, /!isRealDateChanged\s*&&\s*data\.orders\.length\s*===\s*0\s*&&\s*hasExistingTodayOrders/, "非換日情況下，伺服器若短暫回空必須鎖定保留現有單據！");
