@@ -113,4 +113,14 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.doesNotMatch(pageContent, />\s*送達收款\s*<\/span>/);
     assert.match(pageContent, /依指示：\[ ✅ 送達收款 \] 刪除/);
   });
+
+  await t.test("15. 依指示：新的訂單下方也必定要有 導航 電話 回報", () => {
+    assert.match(pageContent, /依指示：新的訂單下方也必定要有 導航 電話 回報/);
+    assert.match(pageContent, />\s*<span>導航<\/span>\s*<\/a>/);
+    assert.match(pageContent, />\s*<span>電話<\/span>\s*<\/a>/);
+    assert.match(pageContent, />\s*<span>電話<\/span>\s*<\/button>/);
+    assert.match(pageContent, />\s*<span>\{hasReport \? "已回報" : "回報"\}<\/span>\s*<\/button>/);
+    // 新單懸浮橫幅亦包含導航、電話、回報
+    assert.match(pageContent, /新派單到達即時懸浮大橫幅[\s\S]*?依指示：新的訂單 下方也要有 導航 電話 回報/);
+  });
 });

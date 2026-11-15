@@ -44,6 +44,19 @@
   - GitHub 倉庫同步推送（commit `733718e`）。
   - Vercel Production 正式部署生效（`dpl_56Uav1jKddfZjbk7xML6QmsmqPpy`，`https://shenglong-line-liff.vercel.app` READY）。
 
+## [2026-11-15 11:45] - 🧭 司機端新訂單下方必定具備導航電話回報 [ver: 20261115_1145_driver_new_order_actions_bar]
+- **背景與老闆指示**：
+  - 老闆指示：「新的訂單 下方也要有 導航 電話 回報」。
+- **三大核心改動 (Key Implementations)**：
+  1. **訂單卡片底部「導航、電話、回報」全面常駐與防擠壓保護**：
+     - 在 `app/driver/page.tsx` 中為底部工具列與各按鈕添加 `flexShrink: 0`，防止在窄螢幕手機上因右側提成或操作鍵而遭到擠壓變形。
+     - 若新訂單之客戶主檔或備註暫無登記電話，電話按鈕依舊正常渲染（外觀維持一致），點擊時防呆提示「此訂單尚未登記電話號碼」，確保外勤人員看單 100% 隨時具備「導航、電話、回報」三鍵。
+  2. **新單即時懸浮大橫幅（newOrderBanner）同步補齊「導航、電話、回報」操作列**：
+     - 當新派單到達手機彈出上方即時通知橫幅時，橫幅下方同步附帶「導航、電話、回報」按鈕，外勤人員於行車途中收到新單即可直接一鍵喚起 Google Maps 機車導航或直接撥號。
+- **品質驗收**：
+  - 專屬單元測試 `tests/driver-compact-card-and-customer-remarks.test.mjs` 擴充至 16 項（16/16 PASS）。
+  - `tsc --noEmit` 0 錯誤通過。
+
 ## [2026-11-15 11:35] - 🎨 司機端卡片「[ ✅ 送達收款 ]」按鈕刪除 [ver: 20261115_1135_driver_remove_delivery_collection_button]
 - **背景與老闆指示**：
   - 老闆指示：「[ ✅ 送達收款 ] 刪除」。
