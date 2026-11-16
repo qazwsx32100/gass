@@ -2970,3 +2970,5 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 - [ ] 財務正式 Supabase 環境設定缺漏；ERP 離線快照根因待查。
 - [ ] Next／LINE 正式發布被自動審查阻擋：快照沿用與正式會員索引建置待明確授權。
 - [ ] 門市腳本安裝、通知 outbox、FCM／HSS／MQ 端到端驗收。
+
+狀態更正：Next 已觀察到包含修復的正式 READY 部署；LINE 發布仍被審查阻擋。門市心跳仍可能逾時，資料庫及端到端穩定性尚未驗收。

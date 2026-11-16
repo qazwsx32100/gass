@@ -16,7 +16,7 @@
     "gass": "0b03912a6042c2eb0b454c93c37f2f22386cbf28",
     "shenglong-line-liff": "1dbc405f9ebaab7ff0293089fa51de394092ee56"
   },
-  "updatedAtUtc": "2026-11-16T01:39:20.685681+00:00",
+  "updatedAtUtc": "2026-11-16T01:43:40.213682+00:00",
   "testsPassed": 82,
   "deployments": {
     "gass": {
@@ -30,9 +30,11 @@
       "sha": "0b03912a6042c2eb0b454c93c37f2f22386cbf28"
     },
     "next": {
-      "state": "blocked_auto_review",
-      "sha": "d6b57b24cbbd01cf16bc5147aa206fcd4337411e",
-      "reason": "Existing customer/order snapshot payload requires explicit authorization; Vercel Git source unavailable."
+      "id": "dpl_dHXHW5uugUJN9ypTnvht7riuTJ7V",
+      "state": "READY",
+      "sha": "fa7ea54ac4dd37d80d11d9200bc33bfcb349f1a8",
+      "containsFixCommit": "d6b57b24cbbd01cf16bc5147aa206fcd4337411e",
+      "note": "Observed independently published source; rejected file-bundle action was not retried."
     },
     "line": {
       "state": "blocked_auto_review",
@@ -93,5 +95,16 @@
         "url": "https://drive.google.com/file/d/16u8scXlK8FyYoX_oic7InWZ0sOUlsIRm/view"
       }
     }
-  ]
+  ],
+  "nextLiveHeartbeat": {
+    "observedAtUtc": "2026-11-16T01:41:47.245260+00:00",
+    "httpStatus": 200,
+    "summary": {
+      "status": "DOWN",
+      "source": "system-status",
+      "diffSeconds": 96,
+      "lastHeartbeatIso": "2026-11-16T01:40:11.191Z",
+      "sqlStatus": "UNKNOWN"
+    }
+  }
 }

@@ -33,3 +33,5 @@
 修復已推送 GitHub；共 82 項針對性測試通過。財務與 ERP 部署 READY：dpl_i3yoyx8EBicaSYipPZYc3wqcUC7y、dpl_95uiUun9gUdKKeRxvPz6PsuqTWKZ（gass 0b03912）。公開 health 在 2026-11-16 01:29 UTC 回報 503 / DEGRADED / offline_snapshot / readOnly，代表主庫不可達仍未解決，不是已恢復同步。主監控當次回報 HEALTHY，但尚未部署本次 Next 修復。Next Git d6b57b2、LINE Git 60890d9 尚未發布：Vercel Git 來源不可取得，替代檔案發布被自動審查拒絕，分別涉及客戶／訂單快照與讀取正式會員資料產生索引。禁止繞過，待明確授權。LINE 建置唯讀修復通過測試，但不能據此宣稱實際正式資料建置已驗收。未操作正式資料庫、未發送通知；門市安裝與通知 outbox 整合仍待完成。
 
 雲端紀錄補驗完成：ERP、財報、監控中心、司機 App 四份固定維護紀錄與雲端同步狀態 JSON，均已原 ID 更新並下載回查 SHA-256 一致。精確 file ID、指紋、部署狀態與阻擋原因見 20261116_release_status.json。gass 正式 health 日誌已確認「Supabase environment variables are missing」，需由正式部署設定補齊，不能僅重新部署。程式修復 82 項測試通過，不代表正式串接已恢復。
+
+後續更正（2026-11-16 01:42 UTC）：Next 正式入口已更新為 dpl_dHXHW5uugUJN9ypTnvht7riuTJ7V / fa7ea54（READY），Git 祖先驗證包含本次 d6b57b2 修復，且核心修復檔案未再改動；本次被拒絕的檔案發布未重試。公開 heartbeat 已回覆 source=system-status，證明統一來源修復生效；當次 status=DOWN、age=96 秒，因此不能宣稱門市串接穩定。LINE 正式入口仍是舊版，發布等待正式會員資料唯讀索引建置授權。
