@@ -1,0 +1,52 @@
+{
+  "status": "uploaded_and_verified",
+  "reason": "Automatic approval review could not complete because its usage limit was reached. Google Drive writes were not executed. This was a review-service failure, not an unsafe-action determination.",
+  "reportedRetryTime": "4:52 AM (timezone not supplied by review service)",
+  "files": 5,
+  "lineDeployment": "dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn",
+  "lineStatus": "READY",
+  "githubRecordsPushed": true,
+  "completedAtUtc": "2026-11-16T14:03:15.340370+00:00",
+  "verification": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1iCqdCCdhOXjimsduAW2oPlRx7W7cS7Dh",
+        "verified": true,
+        "sha256": "98792581d224f84b2f14dbb74de99f40c563a8b39a53465d6713a171c6e31f59"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1RcZg6AidwhFoJVLLhCOGL5OU0ZgRwF35",
+        "verified": true,
+        "sha256": "f40da982d56db3f4444ea2b4508e091e18651f5826e9c88ef7c0095444102004"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1vIxDbS2yW3zaMNx5vXwpEwUyy9tG_QH4",
+        "verified": true,
+        "sha256": "07422f186ab0c5287dc93a90595cbdc571b3a3aad0e6e2e913932e366d7ce797"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1VQfhx4cP5kW-OIzHetp2KMNCA2zCUAyw",
+        "verified": true,
+        "sha256": "241a77e54d0e8714f0896ab56e0968f194a843d867121842841129d8f1c41c3a"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "16u8scXlK8FyYoX_oic7InWZ0sOUlsIRm",
+        "verified": true,
+        "sha256": "5b1198df1557fa392a6133d6af159256ad6acadc890844ba54ef496dfeb576d9"
+      }
+    }
+  ]
+}

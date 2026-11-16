@@ -48,3 +48,5 @@ LINE 已正式發布：dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn，來源 1031d26，包�
 門市監控當次有近期心跳（31 秒），整體 DEGRADED；這不是門市 Windows 服務的直接驗證。當前是雲端 Linux，尚待實際營業主機連線位址或 Codex 主機連線。授權已足夠，目前缺少的是設定來源與主機連線。
 
 驗證限制：LINE health 與建置成功不等於會員下單／通知完整流程已驗收；未操作正式訂單、未寫入資料庫、未發送通知。詳細機器可讀證據見 docs/maintenance/20261116_authorized_followup.json；程式還原可回退原 LINE 部署 dpl_ENSoWatWGfPdXnv4WAHhstLfHMSB，但那會失去本次穩定性修復，不涉及資料庫回復。
+
+補記（2026-11-16 UTC）：自動審查服務用量限制已恢復。五份固定 Google Drive 維護紀錄已補傳成功，全部下載回查 SHA-256 一致；詳見 20261116_authorized_cloud_verification.json。LINE 正式發布已完成；財務設定來源與實際門市主機連線尚待提供，並非等待追加授權。
