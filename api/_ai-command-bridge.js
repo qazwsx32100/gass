@@ -27,7 +27,7 @@ export function makeCommandHandler(callAi,env=process.env,readFinance=null,clock
   const result=await callAi({prompt:command,systemInstruction:PLANNER_SYSTEM+`\n本次台北日期 ${new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(clock())}，本月 ${taipeiMonth(clock())}。以此解讀未註明年份的月份；禁止未來月份月報。`,temperature:0,preferredModel:env.AI_ROTATOR_COMMAND_MODEL,strategy:'round-robin',mode:'readonly-command',toolRequest:{tools:[PLAN_TOOL],tool_choice:{type:'function',function:{name:'submit_readonly_plan'}},validate:validateCompletion}});
   validateCompletion(result.completion);
   const intent=resolveMonthlyIntent(command,clock());
-  if(intent){const calls=result.completion.choices[0].message.tool_calls;const plan=parsePlan(JSON.parse(calls[0].function.arguments));if(plan.status==='ready'&&(intent.period>taipeiMonth(clock())||plan.tasks.length!==1||plan.tasks[0].tool!=='finance.monthly-report'||plan.tasks[0].query!==intent.period))throw Error('MODEL_INVALID');}
+  if(intent){const calls=result.completion.choices[0].message.tool_calls;const plan=parsePlan(JSON.parse(calls[0].function.arguments));if(plan.status==='ready'&&(intent.period>taipeiMonth(clock())||plan.tasks.some(task=>!['finance.monthly-report','sl.monthly-summary','sl.orders.search','sl.money.search'].includes(task.tool)||task.query!==intent.period)))throw Error('MODEL_INVALID');}
 
   // Return a minimal compatible envelope; never return account names, keys, provider errors or raw usage.
   return res.status(200).json({choices:[{finish_reason:'tool_calls',message:{tool_calls:result.completion.choices[0].message.tool_calls.map(call=>({type:'function',function:{name:'submit_readonly_plan',arguments:call.function.arguments}}))}}]});
