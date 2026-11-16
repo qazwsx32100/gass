@@ -1,3 +1,34 @@
+## [2026-11-16 21:20] - 🔍 監控中心查看客戶歷史跳轉客戶主檔全鏈路修復 (7階智慧多維比對演算法 ✕ 雙向彈窗直達主檔) [ver: 20261116_2120_operations_customer_jump_fix]
+- **背景與老闆最高指示**：
+  - 老闆指示：「監控中心 查看客戶歷史 無法跳轉到 該客戶的資料」。
+- **問題根因徹底排查 (Root Cause)**：
+  1. **客戶比對演算法過度嚴苛 (全等比對陷阱)**：`CustomerSearchHub.tsx` 在接收外部 `initialQuery` 時，底層僅使用 `c.name.toLowerCase() === q`（嚴格完全相等）。然而，盛隆 3,934 戶客戶資料庫之戶名絕大多數皆帶有門市代號、樓層或方括號（例如 `60.1 [知高飯]`、`22.1[廣式]`、`1.42-1.1[水餃館]`）；當使用者在歷史中樞搜尋「知高飯」或從訂單帶入「60.1 [知高飯]」時，全等比對必然為 `false`，導致客戶詳情彈窗無法被喚醒。
+  2. **搜尋過濾器反向遮蔽**：`filteredCustomers` 亦僅有單向 `c.name.includes(q)`，當查詢字串 `q` 比客戶姓名長（例如 `q` 帶有電話或地址）時，直接返回空陣列，造成畫面呈現「查無此客戶」。
+  3. **今日訂單 API 未回傳 customerId**：`/api/today-orders` 回傳的訂單物件未主動關聯雲端客戶主檔的 `customerId`，導致調度台在點擊「查看歷史」與「客戶主檔」時只能依賴模糊姓名字串。
+  4. **彈窗層級遮蔽**：`CustomerSearchHub` 詳情彈窗原 `zIndex` 設為 9999，容易被監控中心頂部固定橫幅或外部浮層遮蔽。
+- **五大核心修復與防護 (Key Implementations)**：
+  1. **實裝 7 階智慧多維比對演算法 (findMatchingCustomer)**：
+     - Tier 1: 依客戶代號 (extractedCode) 精確命中。
+     - Tier 2: 依客號直接符合 (若 query 本身就是代號如 47.2)。
+     - Tier 3: 依方括號內店名 (bracketName) 精確命中。
+     - Tier 4: 去除客號與括號後之純名稱雙向包含比對。
+     - Tier 5: 姓名完全相同或雙向包含 (容錯 `60.1 [知高飯]` ↔ `知高飯`)。
+     - Tier 6: 電話號碼純數字容錯匹配 (>=6 碼)。
+     - Tier 7: 地址智慧正規化比對。
+  2. **CustomerSearchHub 檢索與彈窗升級**：
+     - `filteredCustomers` 升級為支援方括號與代號雙向檢索。
+     - 詳情彈窗 `zIndex` 升級至 `100000` 確保永遠頂層展示。
+  3. **SharedCustomerHistoryModal 與 OrderTimelineModal 補齊直達客戶檔案按鈕**：
+     - 客戶歷史彈窗標題列與操作列皆提供「👥 客戶資料 ↗」與「直接前往客戶檔案 →」按鈕。
+     - 訂單時間軸彈窗過往叫貨 Tab 新增「👥 客戶主檔 →」按鈕。
+  4. **全端 customerId 精準連動**：
+     - `/api/today-orders` 自動調用雲端網關補齊每筆訂單之 `customerId`。
+     - `OperationsOrderHistoryView` 單日審計列表點擊客戶姓名時，支援傳遞 `customerId`。
+     - `app/operations/page.tsx` 跳轉時自動平滑關閉開著的歷史彈窗與時間軸彈窗，0ms 秒開客戶主檔。
+  5. **全量測試驗收**：
+     - 專屬單元測試 `tests/operations-customer-jump.test.mjs` 6 項全數 PASS。
+     - 既有回歸測試 27 項全數 PASS，TypeScript 0 錯誤。
+
 ## [2026-11-16 18:35] - 🚑 門市推單 API 503 斷流與未即時更新徹底根治 (operationsKvFetch 寫入全鏈路容災回退 ✕ 今日訂單秒級推播恢復) [ver: 20261116_1835_today_orders_api_503_fix]
 - **背景與老闆最高指示**：
   - 老闆通報：「API 應該掛掉了 再幫我 檢查一下 不會即時更新」。
