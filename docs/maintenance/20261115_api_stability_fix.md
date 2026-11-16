@@ -35,3 +35,16 @@
 雲端紀錄補驗完成：ERP、財報、監控中心、司機 App 四份固定維護紀錄與雲端同步狀態 JSON，均已原 ID 更新並下載回查 SHA-256 一致。精確 file ID、指紋、部署狀態與阻擋原因見 20261116_release_status.json。gass 正式 health 日誌已確認「Supabase environment variables are missing」，需由正式部署設定補齊，不能僅重新部署。程式修復 82 項測試通過，不代表正式串接已恢復。
 
 後續更正（2026-11-16 01:42 UTC）：Next 正式入口已更新為 dpl_dHXHW5uugUJN9ypTnvht7riuTJ7V / fa7ea54（READY），Git 祖先驗證包含本次 d6b57b2 修復，且核心修復檔案未再改動；本次被拒絕的檔案發布未重試。公開 heartbeat 已回覆 source=system-status，證明統一來源修復生效；當次 status=DOWN、age=96 秒，因此不能宣稱門市串接穩定。LINE 正式入口仍是舊版，發布等待正式會員資料唯讀索引建置授權。
+
+
+## API-STABILITY-20261116-AUTHORIZED-03
+
+使用者已明確同意 LINE 正式會員資料唯讀索引建置與部署、財務連線設定修復及門市驗證；不寫入正式資料庫、不發送測試通知。
+
+LINE 已正式發布：dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn，來源 1031d26，包含 60890d9 唯讀建置修復。雲端建置 29 秒完成，必要索引由既有建置流程唯讀產生，沒有從本機上傳客戶索引。正式別名核對一致；2026-11-16 03:44 UTC health 200 / HEALTHY / database reachable。LINE 發布授權阻擋已解除。
+
+財務與 ERP health 仍為 503 / DEGRADED / offline_snapshot / readOnly。gass 專案缺少連線變數；erp 的既有 Vercel Secret 透過單筆讀取回報 decrypted=false、未提供值，故無法直接複製。未猜測設定、未改用其他 Supabase 專案、未新增不完整設定。需要既有受控設定檔或由管理者在 Vercel 私下補入，不在對話傳遞金鑰。
+
+門市監控當次有近期心跳（31 秒），整體 DEGRADED；這不是門市 Windows 服務的直接驗證。當前是雲端 Linux，尚待實際營業主機連線位址或 Codex 主機連線。授權已足夠，目前缺少的是設定來源與主機連線。
+
+驗證限制：LINE health 與建置成功不等於會員下單／通知完整流程已驗收；未操作正式訂單、未寫入資料庫、未發送通知。詳細機器可讀證據見 docs/maintenance/20261116_authorized_followup.json；程式還原可回退原 LINE 部署 dpl_ENSoWatWGfPdXnv4WAHhstLfHMSB，但那會失去本次穩定性修復，不涉及資料庫回復。
