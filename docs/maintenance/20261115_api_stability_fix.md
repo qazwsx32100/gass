@@ -27,3 +27,9 @@
 | package-lock.json | ab1552eab2fac2522e4948723484eab38e6510ac040788744f1347d1f6d0c636 | a1be32f220565e45f796e16ce93650a096027d8f0e773e968b31286c0592392b |
 
 補記：已保留主幹並行更新；完整發布前一版本與合併後 SHA-256 見 20261115_api_stability_hashes.json 的 releaseParent／releaseParentSha256／afterSha256。前述表格為首次候選版本，不覆蓋歷史。部署來源 CRLF 正規化後，本次稽核的 9 個核心檔案全數一致，先前「最新來源未確認」限制已釐清。
+
+## 發布結果補記（2026-11-16 UTC）
+
+修復已推送 GitHub；共 82 項針對性測試通過。財務與 ERP 部署 READY：dpl_i3yoyx8EBicaSYipPZYc3wqcUC7y、dpl_95uiUun9gUdKKeRxvPz6PsuqTWKZ（gass 0b03912）。公開 health 在 2026-11-16 01:29 UTC 回報 503 / DEGRADED / offline_snapshot / readOnly，代表主庫不可達仍未解決，不是已恢復同步。主監控當次回報 HEALTHY，但尚未部署本次 Next 修復。Next Git d6b57b2、LINE Git 60890d9 尚未發布：Vercel Git 來源不可取得，替代檔案發布被自動審查拒絕，分別涉及客戶／訂單快照與讀取正式會員資料產生索引。禁止繞過，待明確授權。LINE 建置唯讀修復通過測試，但不能據此宣稱實際正式資料建置已驗收。未操作正式資料庫、未發送通知；門市安裝與通知 outbox 整合仍待完成。
+
+雲端紀錄補驗完成：ERP、財報、監控中心、司機 App 四份固定維護紀錄與雲端同步狀態 JSON，均已原 ID 更新並下載回查 SHA-256 一致。精確 file ID、指紋、部署狀態與阻擋原因見 20261116_release_status.json。gass 正式 health 日誌已確認「Supabase environment variables are missing」，需由正式部署設定補齊，不能僅重新部署。程式修復 82 項測試通過，不代表正式串接已恢復。

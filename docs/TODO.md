@@ -2961,3 +2961,12 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ## API-STABILITY-20261115-01
 
 [/] API 穩定性修復：同步保存收據、派工 CAS、讀取授權、真實 health 與空白快照防護。隔離測試與編譯完成；發布與雲端紀錄同步待核對。P0/P1；約 1 小時；端點 Vercel／門市代理；使用者指示「修復」。詳見 docs/maintenance/20261115_api_stability_fix.md。門市安裝與通知 outbox 整合仍待驗收。
+
+
+### API-STABILITY-20261116 狀態更正
+
+- [x] 程式修復與 82 項隔離測試；GitHub 推送。
+- [x] 財務／ERP 程式部署 READY；五份雲端固定紀錄更新並 SHA-256 回查。
+- [ ] 財務正式 Supabase 環境設定缺漏；ERP 離線快照根因待查。
+- [ ] Next／LINE 正式發布被自動審查阻擋：快照沿用與正式會員索引建置待明確授權。
+- [ ] 門市腳本安裝、通知 outbox、FCM／HSS／MQ 端到端驗收。
