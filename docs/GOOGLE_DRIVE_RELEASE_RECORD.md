@@ -1,3 +1,18 @@
+## 📋 最新紀錄：2026-11-16 09:55 (版本號: 20261116_0955_operations_apk_main_activity_isolated)
+- **更新主題**：監控中心 APK 專屬 OperationsMainActivity 隔離／徹底根除 APK 登入誤跑司機端／最新 APK 封裝簽名發布
+- **老闆指示**：「討論一下 監控中心的APK登入卻是 司機端?」
+- **主要內容與成果**：
+  1. **問題根因確認**：`scripts/build-all-apks.cjs` 封裝 `com.shenglong.operations` 時缺少 `mainActivity` 設定，導致打包時繼承了外勤司機端的 `MainActivity.java`（底層固定指向 `DRIVER_MAIN_URL` 且常駐啟動 `DriverOrderService`），斷線重連或 Bridge 初始化即誤跳司機端。
+  2. **實裝專屬 OperationsMainActivity**：於 `android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java` 獨立繼承並客製化：鎖定首頁為 `https://shenglong.vercel.app/operations`，覆寫 `getMainDriverUrl()`，停用司機外送常駐推播服務 `DriverOrderService`，杜絕任何司機端導向。
+  3. **自動化打包更新與簽章**：於 `scripts/build-all-apks.cjs` 為 `com.shenglong.operations` 指定 `mainActivity: '.OperationsMainActivity'`。重新執行 AssembleDebug 與 V1+V2+V3 簽名，自動同步產出最新 APK 至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk` 與雲端下載目錄 `public/files/shenglong-operations.apk`。
+  4. **全套單元測試與雙軌同步**：`auth-login-operations.test.mjs` 8/8 全數通過，驗證 `launchable-activity` 為 `OperationsMainActivity`，GitHub 雙倉庫主幹推動完成，Vercel Production（`dpl_9eqa4Zsw5CpSAW4cwS4Vax95SeiL`）正式發布 READY。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-16 09:15 (版本號: 20261116_0915_operations_auth_unified_driver_login_deleted)
 - **更新主題**：監控中心連線改回營運登入畫面／派單系統登入畫面永久刪除／外勤派單端直通預設外勤／全域未授權統一收斂至唯一營運系統登入頁
 - **主要內容與成果**：
