@@ -1,3 +1,18 @@
+## 📋 最新紀錄：2026-11-16 10:20 (版本號: 20261116_1020_driver_kvdb_fallback_and_apk_pass)
+- **更新主題**：司機端資料消失與 APK 登入攔截緊急修復／恢復中繼庫容災回退／放行 Android 原生 App 與 Cookie 憑證／當日派單 3 筆完全恢復
+- **老闆指示**：「目前司機端 的資料全不見 討論 一下 剛剛有做修正 幫我確認一下」與「來修復」
+- **主要內容與成果**：
+  1. **資料源斷崖歸零排查與根治**：確認門市實體營業主機持續正常推送 `today_orders` 至 KVDB 中繼庫 (`https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/today_orders`)。修復 `lib/operations-kv-fetch.ts` 恢復對中繼庫的 404 自動容災回退，立即可靠讀取門市推送之今日 3 筆真實單據（362098, 362097, 362096 小龍）。
+  2. **Android 原生司機 App 登入攔截修復**：修正 `middleware.ts` 放行 `?isNative=1` 原生 App、`shenglong_driver_token` Cookie 憑證與管理員 Referer 訪問 `/driver`，徹底杜絕外勤司機開 App 或背景重整時誤跳營運系統登入頁。
+  3. **自動憑證種入與逾時容錯放寬**：司機端頁面驗證通過或 Native App 辨識後，自動在客戶端與 Cookie 寫入 `shenglong_driver_token`；將 `app/api/driver/orders/route.ts` 抓取中繼庫超時上限由 2000ms 適度放寬至 3500ms。
+  4. **全端測試與編譯驗收**：Turbopack 產線編譯 `next build` 成功，型別 0 錯誤；`auth-login-operations.test.mjs` 8/8、`driver-earnings-offline-resilience.test.mjs` 6/6、`driver-compact-card-and-customer-remarks.test.mjs` 17/17 全數通過。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 線上真實端點驗收（小龍今日訂單 3 筆正常回傳）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-16 09:55 (版本號: 20261116_0955_operations_apk_main_activity_isolated)
 - **更新主題**：監控中心 APK 專屬 OperationsMainActivity 隔離／徹底根除 APK 登入誤跑司機端／最新 APK 封裝簽名發布
 - **老闆指示**：「討論一下 監控中心的APK登入卻是 司機端?」

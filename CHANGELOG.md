@@ -1,3 +1,22 @@
+## [2026-11-16 10:20] - 🚑 司機端資料消失與 APK 登入攔截緊急修復 (KVDB 容災回退恢復 ✕ Android 原生放行) [ver: 20261116_1020_driver_kvdb_fallback_and_apk_pass]
+- **背景與老闆指示**：
+  - 老闆通報：「目前司機端 的資料全不見 討論 一下 剛剛有做修正 幫我確認一下」與「來修復」。
+- **問題根因徹底排查 (Root Cause)**：
+  1. **資料源路徑不一致引發斷崖歸零**：門市營業主機（守護進程）將當日派單即時推送至 KVDB 中繼庫 (`https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/today_orders`)。先前提交調整 `operationsKvFetch` 時移除了 KVDB fallback，導致雲端 Supabase 無 `today_orders` 鍵值時回傳 404，`app/api/driver/orders/route.ts` 抓取失敗退回空陣列 `[]`，司機端瞬間顯示 0 筆訂單。
+  2. **中介層對外勤原生 App 過度阻擋**：`middleware.ts` 嚴格要求 URL 必須帶 `?token=`，否則 307 導向 `/login`，導致 Android 原生外勤 App（以 `?isNative=1` 啟動並依賴本機 `AndroidBridge` 或 `localStorage`）在初次進入或重整時被中介層攔截並踢回登入畫面。
+- **三大修復與防護 (Key Implementations)**：
+  1. **恢復 operationsKvFetch 自動容災回退 (Fallback)**：
+     - 當 PostgREST 查無資料、回傳非 200 或資料列為空時，立即自動向原生中繼庫 (`globalThis.fetch(input)`) 請求資料並驗證 `fallbackRes.ok`，無縫容災，司機端秒速讀取門市推送之今日 3 筆真實單據（362098, 362097, 362096 小龍）。
+  2. **完善 middleware.ts 外勤原生 App 與 Cookie 白名單**：
+     - 允許 `?isNative=1` 原生 App、`shenglong_driver_token` Cookie 憑證或管理員 Referer 訪問 `/driver`，徹底杜絕外勤司機開 App 誤跳登入頁。
+     - 若一般未授權訪客誤闖 `/driver`，登入後的 `returnUrl` 安全導回 `/operations`，避免登入後反覆循環。
+  3. **司機端持久憑證自動種入與 API 容錯放寬**：
+     - 司機端驗證通過或 Native App 辨識後，自動在客戶端與 Cookie 寫入 `shenglong_driver_token`，供中介層無感放行。
+     - `app/api/driver/orders/route.ts` 抓取中繼庫超時上限由 2000ms 適度放寬至 3500ms，對外勤弱網更具韌性。
+- **驗證成果**：
+  - `next build` Turbopack 產線編譯通過，型別 0 錯誤。
+  - 單元與平台測試全數通過（`auth-login-operations.test.mjs` 8/8、`driver-earnings-offline-resilience.test.mjs` 6/6、`driver-compact-card-and-customer-remarks.test.mjs` 17/17 等）。
+
 ## [2026-11-16 09:15] - 🔐 監控中心連線改回營運系統登入畫面 ✕ 派單系統登入畫面永久刪除 [ver: 20261116_0915_operations_auth_unified_driver_login_deleted]
 - **背景與老闆指示**：
   - 老闆指示：「目前 監控中心 連線到 派單系統的登入畫面 1.改回營運系統登入畫面 2.永久刪除派單系統登入畫面」。

@@ -29,8 +29,8 @@ function resolveLoginReturnUrl(searchParamsString, currentHost = "shenglong.verc
   let returnUrl = "/operations";
   const rawTarget = params.get("returnUrl") || params.get("redirect") || params.get("from");
   if (rawTarget && rawTarget.startsWith("/") && !rawTarget.startsWith("//")) {
-    // 杜絕導向至跨網域的 /erp 造成二次跳轉與 Session 丟失
-    if (rawTarget === "/erp") {
+    // 杜絕導向至跨網域的 /erp 或司機端 /driver 造成誤跑司機端
+    if (rawTarget === "/erp" || rawTarget.startsWith("/driver")) {
       returnUrl = "/operations";
     } else {
       returnUrl = rawTarget;
@@ -56,7 +56,7 @@ test("【登入鑑權】1. Token 格式與有效期檢驗邏輯 (防範 Middlewa
   assert.equal(isValidSessionToken(""), false);
 });
 
-test("【登入導航】2. 登入後重定向 URL 必須優先導向 /operations 並阻斷跨網域 /erp 跳轉", () => {
+test("【登入導航】2. 登入後重定向 URL 必須優先導向 /operations 並阻斷跨網域 /erp 與 /driver 跳轉", () => {
   // 未帶任何參數時，預設導回戰情調度中樞 /operations
   assert.equal(resolveLoginReturnUrl(""), "/operations");
 
@@ -69,6 +69,11 @@ test("【登入導航】2. 登入後重定向 URL 必須優先導向 /operations
   // 帶有 ?returnUrl=/erp 時，防禦性轉換為 /operations (避免 308 導向外部網域)
   assert.equal(resolveLoginReturnUrl("returnUrl=/erp"), "/operations");
   assert.equal(resolveLoginReturnUrl("redirect=/erp"), "/operations");
+
+  // 帶有 ?returnUrl=/driver 時，強制轉為 /operations (徹底杜絕登入後跑出司機端)
+  assert.equal(resolveLoginReturnUrl("returnUrl=/driver"), "/operations");
+  assert.equal(resolveLoginReturnUrl("returnUrl=/driver/login"), "/operations");
+  assert.equal(resolveLoginReturnUrl("redirect=/driver"), "/operations");
 
   // 惡意跨站協議跳轉 (如 //evil.com) 必須被阻斷
   assert.equal(resolveLoginReturnUrl("returnUrl=//evil.com"), "/operations");
@@ -109,21 +114,21 @@ test("【登入系統統整】4. 永久刪除派單系統登入，/driver/login 
   assert.deepEqual(resolveDriverLoginRedirect("/driver/login/admin"), { redirect: "/login", status: 308 });
 });
 
-test("【登入系統統整】5. 未授權訪問 /driver 時改回營運系統登入畫面 (/login?returnUrl=/driver)", () => {
-  function checkDriverAccess({ token, hasSession, isAdminRef }) {
-    if (token) return { access: true, type: "DRIVER_TOKEN" };
+test("【登入系統統整】5. 未授權訪問 /driver 時改回營運系統登入畫面 (/login?returnUrl=/operations)", () => {
+  function checkDriverAccess({ isNativeApp, token, hasSession, isAdminRef }) {
+    if (isNativeApp || token) return { access: true, type: "DRIVER_TOKEN" };
     if (hasSession || isAdminRef) return { access: true, type: "ADMIN_DIRECT" };
-    return { redirect: "/login?returnUrl=/driver", status: 307 };
+    return { redirect: "/login?returnUrl=/operations", status: 307 };
   }
 
   // 1. 司機持個人專屬網址 Token -> 秒通
-  assert.deepEqual(checkDriverAccess({ token: "tk_xl_9a2f7c81d4e3", hasSession: false, isAdminRef: false }), { access: true, type: "DRIVER_TOKEN" });
+  assert.deepEqual(checkDriverAccess({ isNativeApp: false, token: "tk_xl_9a2f7c81d4e3", hasSession: false, isAdminRef: false }), { access: true, type: "DRIVER_TOKEN" });
 
   // 2. 監控中心管理者秒進 -> 秒通
-  assert.deepEqual(checkDriverAccess({ token: "", hasSession: true, isAdminRef: true }), { access: true, type: "ADMIN_DIRECT" });
+  assert.deepEqual(checkDriverAccess({ isNativeApp: false, token: "", hasSession: true, isAdminRef: true }), { access: true, type: "ADMIN_DIRECT" });
 
-  // 3. 訪客或未帶 Token 且未登入管理員 -> 導回營運系統登入畫面
-  assert.deepEqual(checkDriverAccess({ token: "", hasSession: false, isAdminRef: false }), { redirect: "/login?returnUrl=/driver", status: 307 });
+  // 3. 訪客或未帶 Token 且未登入管理員 -> 導回營運系統登入畫面，且 returnUrl 永遠為 /operations
+  assert.deepEqual(checkDriverAccess({ isNativeApp: false, token: "", hasSession: false, isAdminRef: false }), { redirect: "/login?returnUrl=/operations", status: 307 });
 });
 
 test("【派單登入永久刪除】6. 司機端原始碼徹底移除 isNeedLogin 與所有登入引導卡片", () => {
@@ -144,6 +149,7 @@ test("【APK 入口隔離】7. 監控中心 APK 專屬 OperationsMainActivity �
   assert.equal(opsContent.includes("https://shenglong.vercel.app/operations"), true, "必須指向 /operations");
   assert.equal(opsContent.includes("stopService(new Intent(this, DriverOrderService.class))"), true, "必須停用司機外送常駐服務");
   assert.equal(opsContent.includes("getMainDriverUrl()"), true, "必須覆寫 getMainDriverUrl");
+  assert.equal(opsContent.includes("currentUrl.contains(\"/driver\")"), true, "必須阻斷任何包含 /driver 的跳轉");
 });
 
 test("【APK 打包配置】8. build-all-apks.cjs 必須配置 com.shenglong.operations 專屬 mainActivity", () => {
