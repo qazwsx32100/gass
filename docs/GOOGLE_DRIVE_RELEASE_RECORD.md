@@ -1,3 +1,20 @@
+## 📋 最新紀錄：2026-11-16 21:40 (版本號: 20261116_2140_operations_address_floor_plain_text)
+- **更新主題**：監控中心地址樓層平實呈現／徹底拔除樓層特別標籤／自然地址門牌文字流融合
+- **老闆指示**：「監控中心  地址樓層的部分 不用特別標籤」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - `SharedAddressAction.tsx` 原先設計了「獨立高亮樓層反白膠囊」，將 `parseAddressForMobile` 萃取出之 `parsed.floor` 包裹在具備黑底 (`#334155` / `#0f172a`)、圓角 (`6px`)、內距 (`2px 8px`) 與陰影 (`boxShadow`) 之獨立膠囊標籤內。
+     - 依老闆最高指示，地址樓層部分不應刻意特別標籤化，應回歸平實自然的文字流呈現。
+  2. **自然平實文字融合 (fullStreetWithFloor)**：
+     - 徹底移除獨立樓層標籤 span 與其黑底膠囊樣式。
+     - 實裝 `fullStreetWithFloor` 運算：當地址解析具備樓層且未重複時，自動將 `parsed.streetAndNumber` 與 `parsed.floor` 平實結合成單一門牌字串（例如 `📍 重新路四段53號 3樓之2`）。
+     - 既完整保留樓層資訊供調度與派送閱讀，又徹底消除視覺突兀的「特別標籤」。
+  3. **共用卡片與架構規範聯動**：
+     - 同步更新 `SharedOrderCard.tsx` 與組件 JSDoc 註解說明，對齊全系統共用元件規範。
+  4. **全端測試驗證**：
+     - 撰寫專屬單元測試 `tests/operations-address-floor-display.test.mjs`，驗證無獨立膠囊樣式並驗證地址文字自然結合，100% PASS。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+
 ## 📋 最新紀錄：2026-11-16 21:20 (版本號: 20261116_2120_operations_customer_jump_fix)
 - **更新主題**：監控中心查看客戶歷史跳轉客戶主檔全鏈路修復／7階智慧比對演算法／代號括號去前綴容錯／客戶主檔直達連動
 - **老闆指示**：「監控中心 查看客戶歷史 無法跳轉到 該客戶的資料」
