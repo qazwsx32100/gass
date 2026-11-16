@@ -13,6 +13,30 @@
   - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
 ---
 
+## 📋 最新紀錄：2026-11-16 20:50 (版本號: 20261116_2050_operations_apk_v36_isolated)
+- **更新主題**：監控中心 APK 徹底物理隔離升級 V3.6／修復底層 private 方法無法覆寫／修復 Service Worker 錯誤 fallback 至 /driver／升級 versionCode 18 全新發布
+- **老闆指示**：「手機的APK，還是跳轉到司機APP」
+- **主要內容與成果**：
+  1. **排查底層關鍵漏洞 (Java 原生層)**：`MainActivity.java` 內部的 `setupSafeWebViewClient`、`showOfflinePage` 與 `injectBridge` 原本被宣告為 `private`，導致 `OperationsMainActivity` 無法成功覆寫；當手機端出現短暫網路連線異常時，底層直接觸發 `MainActivity` 的私有 `showOfflinePage`，強制載入 `file:///android_asset/offline.html`（地下室外勤司機急救派單頁面）。
+  2. **排查 Service Worker 路由誤染 (前端層)**：`public/sw.js` 舊版在任何導航請求（`req.mode === 'navigate'`，包含 `/operations` 與 `/login`）網路逾時（3.5 秒）時，無差別執行 `(await caches.match(req)) || (await caches.match('/driver'))`，導致戰情端在網路波動時被強制回傳司機端的 HTML 快取。
+  3. **深層全面重構與物理隔離**：
+     - `MainActivity.java` 將關鍵方法調整為 `protected`，允許子類別完全控制。
+     - `OperationsMainActivity.java` 徹底覆寫 `injectBridge()` 注入 `OperationsNativeBridge`（`getAppMode="operations"`，User-Agent 標記 `ShengLongOperationsApp`），覆寫 `setupSafeWebViewClient()` 攔截所有 `/driver` 請求，覆寫 `showOfflinePage()` 顯示調度中樞專屬重試頁。
+     - `public/sw.js` 升級為 V20，嚴格路由分流：`/operations` 僅對應 `/operations` 快取，絕不污染司機快取。
+     - `app/driver/page.tsx` 實裝反向防護盾：若偵測到當前執行環境為 `AndroidBridge.getAppMode() === "operations"`，立即秒速呼叫 `window.location.replace("/operations")`。
+     - `android/app/build.gradle` 升級為 `versionCode 18`、`versionName "3.6"`，使 Android 手機系統識別為全新大版號更新，徹底刷新底層快取。
+  4. **打包、驗證與部署**：
+     - `aapt dump badging` 證實 `versionCode='18'`、`versionName='3.6'`、入口為 `OperationsMainActivity`。
+     - 單元測試 8/8 全數 PASS。
+     - 自動同步更新至桌面 `C:\Users\懶\Desktop\sl\盛隆監控中心.apk` 與 `盛隆新ERP_戰情調度中樞.apk`。
+     - Vercel Production 正式部署生效，GitHub 雙端同步。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：盛隆新ERP_戰情調度中樞.apk, 盛隆監控中心.apk (V3.6)
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-16 18:30 (版本號: 20261116_1830_operations_apk_clean_build_isolated)
 - **更新主題**：監控中心 APK 徹底物理隔離與乾淨編譯／徹底根除誤跳司機端／最新 APK 封裝簽名發布
 - **老闆指示**：「修復 目前情況 進入監控中心的APK 會跳到 司機APP」
