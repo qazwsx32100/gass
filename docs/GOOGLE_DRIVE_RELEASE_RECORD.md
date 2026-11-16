@@ -1,3 +1,42 @@
+## 📋 最新紀錄：2026-11-16 18:35 (版本號: 20261116_1835_today_orders_api_503_fix)
+- **更新主題**：門市推單 API 503 斷流與未即時更新徹底根治／operationsKvFetch 寫入端全鏈路容災回退／今日訂單秒級推播與中繼持久化恢復
+- **老闆指示**：「API 應該掛掉了 再幫我 檢查一下 不會即時更新」
+- **主要內容與成果**：
+  1. **問題根因確認**：門市營業主機推送訂單至 `POST /api/today-orders` 時，後端 `operationsKvFetch` 調用 Supabase PostgREST 寫入 `/rest/v1/sl_operations_kv?on_conflict=key`，因 Supabase 專案未建置該資料表或格式不匹配返回 404。先前代碼在寫入時未實裝容災回退，導致路由判定快照持久化未完成，返回 `HTTP 503 {"error":"Order snapshot persistence pending"}`，連帶阻斷記憶體快取、SSE 即時廣播與 FCM 司機推播，門市端亦自動退避 60 秒。
+  2. **operationsKvFetch 寫入全鏈路自動容災回退**：在 `lib/operations-kv-fetch.ts` 實裝當 PostgREST 寫入返回 404 (表未建置)、400、502 或網路異常時，100% 自動平滑回退寫入原生中繼庫 (`globalThis.fetch(input)`)，中繼寫入成功 (200/201) 即視為持久化成功；同時嚴格隔離 402/429/503 頻率限制，維持直接返回原狀態碼，完全兼顧安全規範與線上可用性。
+  3. **直接配置智能容錯**：`directConfig()` 支援解析多種環境變數名稱，在無雲端 PostgREST 配置時安全放行寫入中繼庫，杜絕無故拋出 503 `operations_store_not_configured`。
+  4. **全端測試驗收**：`today-orders-ack.test.cjs` (10/10 PASS)、`today-orders-persistence-cache.test.cjs` (PASS)、`platform-hardening.test.mjs` (23/23 PASS)、核心業務測試 50/50 全數通過，Turbopack `next build` 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 線上真實端點驗收（POST /api/today-orders 回傳 200 OK 且秒級推播）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 18:30 (版本號: 20261116_1830_operations_apk_clean_build_isolated)
+- **更新主題**：監控中心 APK 徹底物理隔離與乾淨編譯／徹底根除誤跳司機端／最新 APK 封裝簽名發布
+- **老闆指示**：「修復 目前情況 進入監控中心的APK 會跳到 司機APP」
+- **主要內容與成果**：
+  1. **問題根因徹底排查**：
+     - Gradle 增量建置快取（Incremental Build Cache）導致先前打包時未重新生成 `AndroidManifest.xml`，使得 APK 仍保留舊 `MainActivity` 作為啟動入口，並殘留 `DriverOrderService` / `BootReceiver` 等司機端背景常駐服務。
+     - `capacitor.config.json` 原先之 `errorPath` 會在斷網或 DNS 解析超時時載入 `offline.html`（地下室離線應急派單頁面）。
+  2. **專屬 Activities 物理隔離與乾淨建置**：
+     - `OperationsMainActivity.java` 獨立封裝，覆寫 `startDriverService()` 顯式停用 `DriverOrderService`，覆寫 `getMainDriverUrl()` 鎖定 `https://shenglong.vercel.app/operations`。
+     - `scripts/build-all-apks.cjs` 封裝時自動剝離非司機端之 `DriverOrderService`、`BootReceiver` 與 `MyFirebaseMessagingService`。
+     - 全面升級為 `gradlew.bat clean assembleDebug` 乾淨編譯，徹底清除中間快取，編譯前主動刪除舊 APK 確保 100% 全新出包。
+  3. **AAPT 雙重檢驗驗證通過**：
+     - `aapt dump badging` 證實 `launchable-activity` 為 `com.shenglong.driver.OperationsMainActivity`，`application-label` 為「盛隆調度中樞」。
+     - `aapt dump xmltree` 證實封包中已 100% 徹底拔除 `DriverOrderService`、`BootReceiver`、`MyFirebaseMessagingService` 與 `.MainActivity`。
+  4. **全端測試與桌面鏡像**：
+     - `tests/auth-login-operations.test.mjs` 8/8 全數 PASS。
+     - 自動同步產出最新 APK 至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk` 與 `C:\Users\懶\Desktop\sl\盛隆監控中心.apk`。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：盛隆新ERP_戰情調度中樞.apk, 盛隆監控中心.apk
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-16 10:20 (版本號: 20261116_1020_driver_kvdb_fallback_and_apk_pass)
 - **更新主題**：司機端資料消失與 APK 登入攔截緊急修復／恢復中繼庫容災回退／放行 Android 原生 App 與 Cookie 憑證／當日派單 3 筆完全恢復
 - **老闆指示**：「目前司機端 的資料全不見 討論 一下 剛剛有做修正 幫我確認一下」與「來修復」

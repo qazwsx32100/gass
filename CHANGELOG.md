@@ -1,3 +1,22 @@
+## [2026-11-16 18:35] - 🚑 門市推單 API 503 斷流與未即時更新徹底根治 (operationsKvFetch 寫入全鏈路容災回退 ✕ 今日訂單秒級推播恢復) [ver: 20261116_1835_today_orders_api_503_fix]
+- **背景與老闆最高指示**：
+  - 老闆通報：「API 應該掛掉了 再幫我 檢查一下 不會即時更新」。
+- **問題根因徹底排查 (Root Cause)**：
+  1. **PostgREST 寫入缺少 404/異常降級回退**：門市實體營業主機守護進程檢測到新單時，透過 `pushTodayOrdersToCloud` 向雲端發送 `POST /api/today-orders`。雲端路由呼叫 `fetch(PRIMARY_KV_URL, { method: "POST" })` 持久化，但內部 `operationsKvFetch` 在調用 Supabase `/rest/v1/sl_operations_kv?on_conflict=key` 時，因 Supabase 專案尚未建置 `sl_operations_kv` 資料表或網址未完整配置，Supabase 返回 404 Not Found 或拋出例外。
+  2. **缺少寫入回退引發 503 連鎖中斷**：先前版本的 `operationsKvFetch` 僅在 GET 讀取時具備 404 回退至中繼庫 (KVDB)，但在 `isWrite` (POST/PUT) 時未實裝回退，直接將 404 視為失敗，導致 `app/api/today-orders/route.ts` 判定 `!orderPersisted` 並回傳 `HTTP 503 {"error":"Order snapshot persistence pending"}`。
+  3. **推播管線全線被阻斷**：一旦回傳 503，路由中後續的記憶體快取更新 (`cachedTodayOrders = payload`)、SSE 即時廣播 (`eventsBroker.broadcast`)、FCM 司機推播皆被跳過，且門市主機收到 503 後自動退避 60 秒 (`nextVercelOrdersAttemptTime = Date.now() + 60_000`)，造成前台與司機端「完全不會即時更新」。
+- **三大核心修復與防護 (Key Implementations)**：
+  1. **operationsKvFetch 寫入端實裝精準容災回退**：
+     - 在 `lib/operations-kv-fetch.ts` 中，當 Supabase PostgREST 寫入返回 404 (表未建置)、400、502 或發生網路/網址異常時，100% 自動平滑回退寫入原生中繼庫 (`globalThis.fetch(input)`)，中繼寫入成功 (200/201) 即視為持久化成功。
+     - 嚴格隔離 402/429/503 伺服器頻率限制，維持直接返回原狀態碼，完全符合 `platform-hardening.test.mjs` 與 `today-orders-persistence-cache.test.cjs` 的平台規範。
+  2. **直接配置智能容錯**：
+     - 在 `directConfig()` 中兼顧解析 `SUPABASE_URL` 與 `SHENGLONG_OPERATIONS_KV_URL`，金鑰支援 `SERVICE_ROLE_KEY`、`ANON_KEY`、`TOKEN`，並在無雲端配置時安全放行寫入中繼庫，絕不無故拋出 503 `operations_store_not_configured`。
+  3. **今日訂單全鏈路測試與上線驗證**：
+     - `today-orders-ack.test.cjs` (10/10 PASS)
+     - `today-orders-persistence-cache.test.cjs` (PASS)
+     - `platform-hardening.test.mjs` (23/23 PASS)
+     - 核心業務測試 50/50 全數 PASS，Turbopack 產線編譯 `next build` 成功。
+
 ## [2026-11-16 10:20] - 🚑 司機端資料消失與 APK 登入攔截緊急修復 (KVDB 容災回退恢復 ✕ Android 原生放行) [ver: 20261116_1020_driver_kvdb_fallback_and_apk_pass]
 - **背景與老闆指示**：
   - 老闆通報：「目前司機端 的資料全不見 討論 一下 剛剛有做修正 幫我確認一下」與「來修復」。
@@ -2753,6 +2772,7 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 * **實作重點**：
   * 戰情大螢幕支援即時庫存、推播監控與來電辨識自癒。
   * 階梯式磁碟維護排程與 SQL 斷線自動重連。
+
 
 
 
