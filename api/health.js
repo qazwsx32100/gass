@@ -139,7 +139,7 @@ export default async function handler(req, res) {
       readOnly: !probe.ready,
       source: probe.source,
       reason: probe.reason,
-      hasState: probe.hasState,
+      hasState: probe.reachable ? probe.hasState : null,
       probe: 'metadata',
       probeCheckedAt: new Date(probe.checkedAtEpoch).toISOString(),
       probeAgeMs: probe.ageMs,
