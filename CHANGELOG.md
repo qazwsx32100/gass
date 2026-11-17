@@ -2942,3 +2942,16 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ## API-STABILITY-20261115-01
 
 [/] API 穩定性修復：同步保存收據、派工 CAS、讀取授權、真實 health 與空白快照防護。隔離測試與編譯完成；發布與雲端紀錄同步待核對。P0/P1；約 1 小時；端點 Vercel／門市代理；使用者指示「修復」。詳見 docs/maintenance/20261115_api_stability_fix.md。門市安裝與通知 outbox 整合仍待驗收。
+
+
+## SB-HEALTH-BUDGET-20261117-01
+
+普通 GET /api/health 改用既有唯讀 erp_get_app_state_meta RPC，不再下載整份財務 app_state；同一程序的同時請求共用一次探測，成功／失敗都快取 60 秒，回覆含 probeCheckedAt、probeAgeMs、probeCached，避免將快取誤認即時探測。離線、缺狀態或探測異常皆回 503，保留唯讀離線容災；CMS 分支保持原介面。
+
+驗證：10 項流量／快取／併發／失敗回歸＋10 項同步保存測試全通過，Vite production build 通過。暖實例每分鐘至多一次探測；不是跨實例的全域配額保證，快取期間可能保留最多 60 秒前的狀態，回覆已標記年齡。沒有新增排程、沒有寫入正式資料庫、沒有改計費。
+
+版本核對：gass 相對現行部署只有文件與測試差異；erp 現行版本較舊，會建立以該部署為基準的修復發布提交，只帶入本次 health 修復，避免夾帶其他 API 改版。發布待核對。
+
+限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
+
+還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。

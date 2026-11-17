@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { captureServerException } from './_monitoring.js';
 import { fetchAppState, saveAppState, getClientIp, sendJson } from './_auth.js';
+import { getDatabaseReadiness } from './_health-readiness.js';
 
 function verifyCmsBridgeSignature(rawBody = '', providedSig = '') {
   const secret = process.env.WEBSITE_CMS_BRIDGE_KEY?.trim();
@@ -128,15 +129,21 @@ export default async function handler(req, res) {
   const startedAt = Date.now();
 
   try {
-    const row = await fetchAppState();
-    const offline = row?.isOfflineSnapshot === true;
-    return sendJson(res, offline ? 503 : 200, {
-      ok: !offline,
+    const probe = await getDatabaseReadiness();
+    if (!probe.ready) res.setHeader('Retry-After', '60');
+    return sendJson(res, probe.ready ? 200 : 503, {
+      ok: probe.ready,
       service: 'gass-erp-api',
-      database: offline ? 'unreachable' : 'reachable',
-      status: offline ? 'DEGRADED' : 'HEALTHY',
-      readOnly: offline,
-      source: offline ? 'offline_snapshot' : 'database',
+      database: probe.reachable ? 'reachable' : 'unreachable',
+      status: probe.ready ? 'HEALTHY' : 'DEGRADED',
+      readOnly: !probe.ready,
+      source: probe.source,
+      reason: probe.reason,
+      hasState: probe.hasState,
+      probe: 'metadata',
+      probeCheckedAt: new Date(probe.checkedAtEpoch).toISOString(),
+      probeAgeMs: probe.ageMs,
+      probeCached: probe.cached,
       timestamp: new Date().toISOString(),
       latencyMs: Date.now() - startedAt
     });

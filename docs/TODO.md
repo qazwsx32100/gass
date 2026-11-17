@@ -2997,3 +2997,16 @@ LINE 已正式發布：dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn，來源 1031d26，包�
 門市監控當次有近期心跳（31 秒），整體 DEGRADED；這不是門市 Windows 服務的直接驗證。當前是雲端 Linux，尚待實際營業主機連線位址或 Codex 主機連線。授權已足夠，目前缺少的是設定來源與主機連線。
 
 驗證限制：LINE health 與建置成功不等於會員下單／通知完整流程已驗收；未操作正式訂單、未寫入資料庫、未發送通知。詳細機器可讀證據見 docs/maintenance/20261116_authorized_followup.json；程式還原可回退原 LINE 部署 dpl_ENSoWatWGfPdXnv4WAHhstLfHMSB，但那會失去本次穩定性修復，不涉及資料庫回復。
+
+
+## SB-HEALTH-BUDGET-20261117-01
+
+普通 GET /api/health 改用既有唯讀 erp_get_app_state_meta RPC，不再下載整份財務 app_state；同一程序的同時請求共用一次探測，成功／失敗都快取 60 秒，回覆含 probeCheckedAt、probeAgeMs、probeCached，避免將快取誤認即時探測。離線、缺狀態或探測異常皆回 503，保留唯讀離線容災；CMS 分支保持原介面。
+
+驗證：10 項流量／快取／併發／失敗回歸＋10 項同步保存測試全通過，Vite production build 通過。暖實例每分鐘至多一次探測；不是跨實例的全域配額保證，快取期間可能保留最多 60 秒前的狀態，回覆已標記年齡。沒有新增排程、沒有寫入正式資料庫、沒有改計費。
+
+版本核對：gass 相對現行部署只有文件與測試差異；erp 現行版本較舊，會建立以該部署為基準的修復發布提交，只帶入本次 health 修復，避免夾帶其他 API 改版。發布待核對。
+
+限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
+
+還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。

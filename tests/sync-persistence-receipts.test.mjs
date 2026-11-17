@@ -8,6 +8,7 @@ function load(name,{db=false,drive=false,driveFail=false,offline=false}={}) {
   getSupabase:()=>({rpc:async()=>db?{data:{success:true,id:'receipt'},error:null}:{data:null,error:Error('test offline')}}),
   getClientIp:()=> 'test',createBoundedRateLimiter:()=>({check:()=>false}),isGoogleDriveBackupConfigured:()=>drive,
   uploadPrivateFileToGoogleDrive:async()=>{if(driveFail) throw Error('test offline');return{id:'fake-drive-receipt'};},
+  getDatabaseReadiness:async()=>({reachable:!offline,ready:!offline,hasState:!offline,source:offline?'offline_snapshot':'database',reason:offline?'database_unavailable':null,checkedAtEpoch:Date.now(),ageMs:0,cached:false}),
   sendJson:(r,status,body)=>{r.status=status;r.body=body;},fetchAppState:async()=>({state:{},isOfflineSnapshot:offline}),captureServerException:async()=>{},
  });
  const code=readFileSync(new URL('../api/'+name,import.meta.url),'utf8').replace(/^import\s[\s\S]*?;\s*$/gm,'').replace(/export default /g,'').replace(/\bexport\s+(?=(?:async\s+)?function|const|let)/g,'');
