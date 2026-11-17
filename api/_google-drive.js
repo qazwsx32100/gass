@@ -227,5 +227,16 @@ export const uploadBackupToGoogleDrive = async ({ filename, jsonText }) => {
 };
 
 // Server-only read adapter; never return this credential to callers.
-export const getGoogleDriveReadAccessToken = getAccessToken;
-
+export const getGoogleDriveReadAccessToken = async () => {
+ if (process.env.GOOGLE_DRIVE_CLIENT_ID && process.env.GOOGLE_DRIVE_CLIENT_SECRET && process.env.GOOGLE_DRIVE_REFRESH_TOKEN) {
+  const response=await fetchWithTimeout(GOOGLE_TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:process.env.GOOGLE_DRIVE_CLIENT_ID,client_secret:process.env.GOOGLE_DRIVE_CLIENT_SECRET,refresh_token:process.env.GOOGLE_DRIVE_REFRESH_TOKEN,grant_type:'refresh_token'})},10000);
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||typeof data.access_token!=='string'){
+   if(data.error==='invalid_grant')throw new Error('SL_DRIVE_REAUTHORIZE_REQUIRED');
+   if(data.error==='invalid_client'||data.error==='unauthorized_client')throw new Error('SL_DRIVE_CLIENT_INVALID');
+   throw new Error('SL_DRIVE_AUTH_UNAVAILABLE');
+  }
+  return data.access_token;
+ }
+ try{return await getServiceAccountAccessToken();}catch{throw new Error('SL_DRIVE_AUTH_UNAVAILABLE');}
+};

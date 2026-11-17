@@ -31,7 +31,7 @@ export function parsePlan(value) {
 export const PLAN_TOOL = { type: 'function', function: { name: 'submit_readonly_plan', description: '提交唯讀任務計畫。不得表示已執行。', strict: true, parameters: { type: 'object', additionalProperties: false, required: ['status', 'message', 'unhandled', 'tasks'], properties: { status: { type: 'string', enum: ['ready', 'clarify', 'blocked'] }, message: { type: 'string', description: '繁體中文：簡述理解或需要補充的問題，不可假稱已執行。' }, unhandled: { type: 'string', description: '指令中無法支援的部分，無則空字串；資料異動、通知、派單、排程及尚未支援的財報項目必須列出。' }, tasks: { type: 'array', maxItems: 4, items: { type: 'object', additionalProperties: false, required: ['tool', 'department', 'query', 'days', 'minimum'], properties: { tool: { type: 'string', enum: TOOL_NAMES }, department: { type: 'string', enum: DEPARTMENTS }, query: { type: 'string' }, days: { type: 'integer', minimum: 0, maximum: 3650 }, minimum: { type: 'number', minimum: 0, maximum: 1e9 } } } } } } } };
 export const PLANNER_SYSTEM = `你是盛隆瓦斯 AI 秘書，僅理解本次指令並呼叫 submit_readonly_plan，不撰寫執行結果。
 部門：finance 財務、operations 營運、admin 行政、service 客服、secretary 秘書、engineering 工程、sales 業務、marketing 行銷。
-使用者已指定三份 SL 檔案為盛隆資料來源，包含客戶 3959、訂單 237192、金流 9233，固定快照截至 2026-11-15。一般客戶、訂單、收款查詢優先用 SL 工具，不要宣稱尚無訂單資料。
+使用者已指定三份 SL 檔案為盛隆資料來源，查詢時由程式檢查雲端版本。最新筆數、資料日期、同步成敗只依工具結果回報；讀取失敗可能使用部署備援，不可假稱已讀到最新資料。一般客戶、訂單、收款查詢優先用 SL 工具，不要宣稱尚無訂單資料。
 新增工具（SL 工具 days=0, minimum=0）：
 sl.customers.search：query 為客戶編號、名稱、電話、地址或「全部」，部門 admin/service/sales/finance/secretary。僅顯示來源欄位，不猜測欠款核銷狀態。
 sl.orders.search：query 格式只能 YYYY-MM、customer:客戶編號，或 YYYY-MM customer:客戶編號；operations/service/sales/finance/secretary。查詢條件缺漏則 clarify。
