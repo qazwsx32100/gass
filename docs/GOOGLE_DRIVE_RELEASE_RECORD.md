@@ -1,3 +1,12 @@
+## [2026-11-17 10:25] - 監控中心頂部派工區精簡優化 ✕ 徹底移除5大冗餘按鈕 ✕ 派工子分頁緊湊分段膠囊重構
+- **版本號**：`20261117_1025_operations_remove_redundant_buttons_and_compact_subtabs`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 徹底移除調度台上方「車隊大地圖」、「CSV」、「複製 Line」、「路線分群」、「打烊日結」共 5 大按鈕，並一併移除次級重複橫幅「今日派工戰情 即時」。
+  2. 將「🛵 今日即時派工」、「📜 歷史訂單紀錄」、「⚖️ 雙軌自動對帳」重構為緊湊型分段控制膠囊列 (Segmented Control)，並將串流狀態燈整合至同列右側。
+  3. 釋放超過 155px 垂直高度，大幅提升各螢幕調度員看單效率。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-17 10:00] - 監控中心頂部導覽防遮蔽重構 ✕ 提示音效與震動設定置中浮動視窗
 - **版本號**：`20261117_1000_operations_header_and_centered_sound_settings_modal`
 - **影響範圍**：`app/operations/page.tsx`
@@ -33,31 +42,6 @@
      - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
 - **雲端與本機同步檢核**：
   - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
-  - [x] Vercel Production 正式環境部署生效（READY）
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
----
-
-## 📋 最新紀錄：2026-11-17 09:30 (版本號: 20261117_0930_admin_unified_nav_and_action_inbox)
-- **更新主題**：盛隆後台一體化導航／今日待辦中心／手機底部常駐快捷列／平滑滾動與觸控熱區全面升級
-- **老闆指示**：「我想把後台的介面優化 有什麼建議？」「來吧」
-- **主要內容與成果**：
-  1. **雙後台一體化頂部導航 (Desktop Unified Nav)**：
-     - 在 `/admin`（主管審核與價格台）與 `/admin/operations`（即時營運中心）實裝統一現代頂部導覽列：`📊 營運總覽` ｜ `📦 即時訂單` ｜ `👥 會員審核` ｜ `💰 價格管理` ｜ `🛡️ 系統健康`。
-     - 整合動態角標（Badges）：即時統計待配送訂單數與待處理審核數（身分綁定、地址申請、叫貨需求、門市同步衝突），後端 `getAdminPricingData` 同步回傳 `openOrdersCount`，後台隨時一目了然。
-  2. **今日待辦中心 (Action Hub / Inbox)**：
-     - 首屏顯眼位置實裝「今日待辦中心」：若有待辦，亮起琥珀黃呼吸燈動畫（`pulseDotWarn`），列出可點擊之直達行動卡（待配送訂單、會員審核、地址審核、舊系統同步衝突）；若無任何待辦，自動切換為綠色健全呼吸燈（`pulseDotHealthy`）「🎉 今日營運皆已就緒・門市同步 100% 綠燈健全」。
-  3. **手機端底部常駐快速導航 (Mobile Bottom Nav)**：
-     - 在手機與平板小螢幕自動隱藏頂部導覽，轉為底部常駐 5 大快捷按鈕（營運、訂單、審核、價格、系統），完整支援 iOS Safe Area，單手拇指秒速切換。
-  4. **手機端觸控防呆與流暢滾動**：
-     - 啟用 `html { scroll-behavior: smooth; }`，點擊跳轉平滑流暢。
-     - 所有操作按鈕觸控熱區全面擴大至 `>= 44px`，大幅降低騎車或現場看單時之誤觸率。
-     - `operations.js` 支援 Hash 導航（如 `#orders`），外部或導覽列點入自動切換並捲動至訂單區。
-  5. **全端測試與雲端部署**：
-     - 專屬單元測試 `tests/admin-ui-optimization.test.js` 通過，全套 303 項測試 100% PASS。
-     - GitHub 雙軌推送（`shenglong-line-liff` commit `1be0c9c`）。
-     - Vercel Production 正式部署上線（`dpl_HkrEMZM2u6tREsptUJ8zS8DNmGJi` READY，100% HEALTHY）。
-- **雲端與本機同步檢核**：
-  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
   - [x] Vercel Production 正式環境部署生效（READY）
   - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
 ---
