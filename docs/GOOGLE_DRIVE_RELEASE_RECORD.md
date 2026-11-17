@@ -1,3 +1,12 @@
+## [2026-11-17 09:45] - 監控中心連線健康度優化 (消除離峰無新單延遲誤報 ✕ 雙軌主機存活狀態機)
+- **版本號**：`20261117_0945_operations_freshness_host_alive_dual_track`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 重構 `MonitoringFreshnessBadge`，以 `isHostAlive = (heartbeatMs <= 240_000) || (stockMs <= 180_000)` 作為營業主機在線標準。
+  2. 消除門市守護進程離峰無新訂單時誤判延遲之假警報（防護 SOP 指紋抑制）。
+  3. 刷新週期縮短至 15 秒，測試全數 PASS。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
 ## 📋 最新紀錄：2026-11-17 09:35 (版本號: 20261117_0935_operations_address_full_width_actions_downward)
 - **更新主題**：監控中心卡片門牌地址最大化／地圖與電話按鈕下移佈局重構／門牌自然同一行不換行／雙端同步發布
 - **老闆指示**：「監控中心 的訂單 地圖和電話 可以在往下移動，盡量讓地址放在同一行，不要讓很快就換行」

@@ -1,3 +1,28 @@
+## [2026-11-17 09:45] - 🛡️ 監控中心連線健康度優化 (徹底消除離峰無新單延遲誤報 ✕ 雙軌主機存活狀態機) [ver: 20261117_0945_operations_freshness_host_alive_dual_track]
+- **背景與老闆最高指示**：
+  - 老闆提問：「監控中心 左上角很常顯示資料庫延遲的原因」。
+- **問題根因徹底排查 (Root Cause)**：
+  1. **離峰無新單誤觸 checks.some()**：
+     - `MonitoringFreshnessBadge` 過去以 `checks.some(({ time, limit }) => time !== null && now - time > limit)` 統一判定。
+     - 其中訂單檢查設定了 `limit: 180_000`（3 分鐘）。
+     - 門市實體營業主機守護進程嚴格落實 SOP 防護（避免無效全量重傳與 API 消耗），在沒有新訂單或電話進單時，今日訂單快照指紋不變，不會重複推送。
+     - 只要超過 3 分鐘沒有新單，`ordersUpdatedAt` 就會超過 180 秒，導致 `checks.some()` 直接評估為 `true`，左上角誤跳「🔴 資料更新延遲」！
+  2. **心跳與庫存閾值寬容度過窄**：
+     - 門市心跳排程為 180 秒一次（`setInterval(sendHeartbeatOnce, 180000)`），前端限制剛好也是 180 秒，偶發性網路微幅延遲 1~2 秒即閃爍紅燈。
+  3. **分頁休眠定時器限制 (Browser Throttling)**：
+     - 手機閉屏或瀏覽器切換標籤頁時，瀏覽器會將 `setInterval` 自動降頻至 60 秒以上，切回畫面時未即時更新。
+- **四大核心修復與優化 (Key Implementations)**：
+  1. **雙軌主機存活健康度判定 (isHostAlive)**：
+     - 對齊 Directive #5 權威手冊（`LIVE < 180s` 規範）。
+     - 只要 `heartbeatMs <= 240,000` 或 `stockMs <= 180,000`，即判定門市營業主機 100% 存活，離峰無新單維持綠燈「資料同步正常」。
+  2. **真延遲精準報警**：
+     - 僅在 `!isHostAlive && (isStockStale || isHeartbeatStale)`（即門市營業主機與資料庫真正失去心跳與即時庫存）時才觸發「🔴 資料更新延遲」。
+  3. **定時校正頻率優化**：
+     - 由 30 秒縮短至 15 秒，分頁喚醒後秒速校準。
+  4. **全端測試與編譯驗收**：
+     - 專屬單元測試 `tests/operations-freshness-logic.test.mjs` 全數 PASS。
+     - Next.js Turbopack 產線編譯 0 錯誤通過。
+
 ## [2026-11-17 09:35] - 📍 監控中心卡片門牌地址最大化 (地圖與電話按鈕下移 ✕ 門牌自然同一行不換行) [ver: 20261117_0935_operations_address_full_width_actions_downward]
 - **背景與老闆最高指示**：
   - 老闆指示：「監控中心 的訂單 地圖和電話 可以在往下移動，盡量讓地址放在同一行，不要讓很快就換行」。
