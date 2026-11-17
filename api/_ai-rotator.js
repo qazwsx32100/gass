@@ -161,9 +161,10 @@ export async function callAiWithFailover({
   temperature = 0.7,
   preferredModel = 'gemini-3-flash-preview',
   strategy = 'round-robin',
-  mode = 'fast'
+  mode = 'fast',
+  toolRequest = null
 }) {
-  if (process.env.NODE_ENV === 'test' && (!process.env.OPENAI_API_KEY && !process.env.GEMINI_KEY_1)) {
+  if (!toolRequest && process.env.NODE_ENV === 'test' && (!process.env.OPENAI_API_KEY && !process.env.GEMINI_KEY_1)) {
     return {
       text: '您好！這裡是盛隆瓦斯，很高興為您服務。瓦斯20公斤住家外送750元，請問需要配送到哪裡呢？',
       reply: '您好！這裡是盛隆瓦斯，很高興為您服務。瓦斯20公斤住家外送750元，請問需要配送到哪裡呢？',
@@ -174,6 +175,8 @@ export async function callAiWithFailover({
     };
   }
   const startTime = Date.now();
+  const deadline = toolRequest ? Date.now() + 18_000 : Infinity;
+  const signal = toolRequest ? AbortSignal.timeout(18_000) : undefined;
   const candidates = await getAiCandidates();
 
   // 整理輸入為標準 messages 陣列
@@ -197,8 +200,10 @@ export async function callAiWithFailover({
 
   const errors = [];
 
-  for (let i = 0; i < queue.length; i++) {
+  for (let i = 0; i < (toolRequest ? Math.min(queue.length, 4) : queue.length); i++) {
+    if (Date.now() >= deadline) break;
     const acc = queue[i];
+    if (toolRequest && (!acc.apiKey || (acc.status === 'cooldown' && acc.cooldownUntil > Date.now()))) continue;
     const attemptStart = Date.now();
     const isOpenAi = acc.provider === 'openai';
 
@@ -213,9 +218,12 @@ export async function callAiWithFailover({
       'gemini-3.8-flash'
     ])).filter(Boolean);
 
+    // Command planning has a strict budget: one model per account, at most four provider attempts.
+    if (toolRequest) candidateModels = candidateModels.slice(0, 1);
     let accountSucceeded = false;
 
     for (const targetModel of candidateModels) {
+      if (Date.now() >= deadline) break;
       try {
         const res = await fetchWithTimeout(targetUrl, {
           method: 'POST',
@@ -223,54 +231,75 @@ export async function callAiWithFailover({
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${acc.apiKey}`
           },
+          ...(toolRequest ? {signal, redirect: 'error'} : {}),
           body: JSON.stringify({
             model: targetModel,
             messages: fullMessages,
-            temperature
+            temperature,
+            ...(toolRequest ? {tools: toolRequest.tools, tool_choice: toolRequest.tool_choice, parallel_tool_calls: false, max_tokens: 1200} : {})
           })
-        }, 12000);
+        }, Math.min(12000, Math.max(1, deadline - Date.now())));
 
         const latencyMs = Date.now() - attemptStart;
 
         if (res.status === 429) {
-          const errText = await res.text().catch(() => '');
+          const errText = toolRequest ? (await res.body?.cancel(), '') : await res.text().catch(() => '');
           console.warn(`[AI Rotator] 帳號「${acc.name}」(${targetModel}) 觸發 429 限流，自動轉移至下一組...`);
           acc.status = 'cooldown';
           acc.cooldownUntil = Date.now() + 60_000;
-          reportCooldown(acc.id, 60, errText).catch(() => {});
+          if (!toolRequest) reportCooldown(acc.id, 60, errText).catch(() => {});
           errors.push({ account: acc.name, model: targetModel, status: 429, error: '429 Rate Limit' });
           break; // 429 為帳號級限流，換下一個帳號
         }
 
         if (res.status === 503 || res.status === 404) {
-          const errText = await res.text().catch(() => '');
+          const errText = toolRequest ? (await res.body?.cancel(), '') : await res.text().catch(() => '');
           console.warn(`[AI Rotator] 帳號「${acc.name}」模型「${targetModel}」暫時繁忙/不可用 (HTTP ${res.status})，嘗試備援模型...`);
           errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 100) });
           continue; // 嘗試此帳號下的備援模型 (如 gemini-3-flash-preview)
         }
 
         if (res.status >= 500) {
-          const errText = await res.text().catch(() => '');
+          const errText = toolRequest ? (await res.body?.cancel(), '') : await res.text().catch(() => '');
           console.warn(`[AI Rotator] 帳號「${acc.name}」伺服器錯誤 (HTTP ${res.status})，自動轉移至下一組...`);
           errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 100) });
           break; // 嚴重服務端錯誤，換下一個帳號
         }
 
         if (!res.ok) {
-          const errText = await res.text().catch(() => '');
+          const errText = toolRequest ? (await res.body?.cancel(), '') : await res.text().catch(() => '');
           errors.push({ account: acc.name, model: targetModel, status: res.status, error: errText.slice(0, 150) });
           continue;
         }
 
-        const json = await res.json();
+        let json;
+        if (toolRequest) {
+          const reader = res.body?.getReader();
+          if (!reader) throw new Error('MODEL_INVALID');
+          const chunks = []; let size = 0;
+          const cancel = () => { reader.cancel().catch(() => {}); };
+          signal.addEventListener('abort', cancel, {once:true});
+          try {
+            for (;;) {
+              if (signal.aborted) throw new Error('MODEL_TIMEOUT');
+              const {done, value} = await reader.read(); if (done) break;
+              size += value.byteLength; if (size > 32768) { await reader.cancel(); throw new Error('MODEL_INVALID'); }
+              chunks.push(value);
+            }
+            if (signal.aborted) throw new Error('MODEL_TIMEOUT');
+            json = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+            toolRequest.validate(json); // Validate before reporting success or returning a plan.
+          } finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }
+        } else { json = await res.json(); }
         const replyText = json.choices?.[0]?.message?.content || '';
         const totalTokens = json.usage?.total_tokens || 0;
 
         // 成功！非同步回報 Supabase
-        reportSuccess(acc.id, totalTokens, latencyMs, targetModel).catch(() => {});
+        if (!toolRequest) reportSuccess(acc.id, totalTokens, latencyMs, targetModel).catch(() => {});
 
         accountSucceeded = true;
         return {
+          ...(toolRequest ? {completion:json} : {}),
           text: replyText,
           accountId: acc.id,
           accountName: acc.name,
@@ -297,3 +326,4 @@ export async function callAiWithFailover({
   const allErrStr = errors.map(e => `${e.account}: ${e.error}`).join(' | ');
   throw new Error(`所有 AI 帳號皆已用盡或限流: ${allErrStr}`);
 }
+
