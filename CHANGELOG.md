@@ -1,3 +1,34 @@
+## [2026-11-17 09:20] - 🚚 完單分類邏輯修正 (欠款 O 與月結 M 送達後精準歸入已送達 ✕ 配送中僅保留真正外送瓦斯) [ver: 20261117_0920_operations_debt_completed_classification]
+- **背景與老闆最高指示**：
+  - 老闆指示：「修正完單分類邏輯（建議）：將舊 ERP 的 O（欠款）與 M（月結）在送達後歸入「已送達」分類，卡片維持標註 ⏳ 欠款 或 📝 月結，讓「🚚 配送中」只保留「真正還在車上、路上外送中的瓦斯」，調度台不會被誤導。」
+- **問題根因徹底排查 (Root Cause)**：
+  1. **舊門市 ERP payed 付款狀態碼**：
+     - 在門市 SQL Server `dbo.gas_oders.payed` 中：
+       - `Y`：已付款
+       - `T`：已收款
+       - `M`：月結
+       - `O`：欠款（未當場收款，掛帳欠款）
+       - 空白 / `N`：未付款
+  2. **分類邏輯過於狹隘**：
+     - 在 `app/operations/page.tsx` 中，過去 `isOrderCompleted` 僅判定 `payed === "Y" || payed === "T"`，未將已完成配送但為欠款 (`O`) 或月結 (`M`) 的訂單納入。
+     - 由於司機已外送接單或完成送達（`driver` 欄位為司機姓名），且 `isOrderPending` 為 `false`，導致欠款單被落入：
+       `isOrderDelivering = !isOrderPending && !isOrderCompleted`
+     - 造成如今日訂單 `#362110`（龍門路42號4樓，20kg × 1，小龍外送，已完單收款標註為欠款 `O`），一直卡在調度台「🚚 配送中 (1 單)」，誤導調度人員以為該瓦斯仍在外送車上。
+- **四大核心修復與優化 (Key Implementations)**：
+  1. **修正完單分類判定 (isOrderCompleted)**：
+     - 於 `app/operations/page.tsx` 中，擴充 `isOrderCompleted` 包含 `rawPayed === "O"` (欠款) 與 `rawPayed === "M"` (月結)。
+     - 頂部統計膠囊與過濾條件將已送達之欠款單與月結單精準計入「已送達」，「🚚 配送中」100% 只保留真正外送中的瓦斯。
+  2. **新增專屬欠款膠囊識別 (SharedOrderStatusBadge)**：
+     - `SharedOrderStatusBadge.tsx` 新增 `debt` 狀態類型，呈現琥珀金 `⏳ 欠款`（文字 `#d97706`，背景 `rgba(217, 119, 6, 0.14)`，外框 `rgba(217, 119, 6, 0.35)`），與 `📝 月結`（藍色 `#2563eb`）及 `✅ 已送達`（亮綠 `#16a34a`）明確區隔。
+  3. **卡片與操作列狀態一致性 (SharedOrderCard & page.tsx)**：
+     - `SharedOrderCard.tsx` operations 視圖卡片右上角統一渲染 `SharedOrderStatusBadge`，明確顯示 `⏳ 欠款`、`📝 月結` 或 `✅ 已送達`。
+     - 操作列按鈕邏輯更新，若為欠款或月結單，按鈕不反綠，防呆更清楚。
+  4. **今日訂單 API 冷啟動防重複推播**：
+     - `/app/api/today-orders/route.ts` 於冷啟動過濾歷史完單時，納入 `ordPayed === "M" || ordPayed === "O"`，避免系統冷啟動時對已完單的欠款/月結重複派發推播。
+- **全端驗證與部署**：
+  - 專屬單元測試 `tests/operations-completed-debt-classification.test.mjs` 100% PASS。
+  - Next.js Turbopack 產線編譯 0 錯誤。
+
 ## [2026-11-16 21:40] - 🏢 監控中心地址樓層平實呈現 (拔除樓層特別標籤 ✕ 自然門牌文字流融合) [ver: 20261116_2140_operations_address_floor_plain_text]
 - **背景與老闆最高指示**：
   - 老闆指示：「監控中心  地址樓層的部分 不用特別標籤」。

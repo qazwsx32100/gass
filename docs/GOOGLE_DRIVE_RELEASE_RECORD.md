@@ -1,3 +1,25 @@
+## 📋 最新紀錄：2026-11-17 09:20 (版本號: 20261117_0920_operations_debt_completed_classification)
+- **更新主題**：完單分類邏輯修正／欠款(O)與月結(M)送達後精準歸入已送達／配送中僅保留真正外送瓦斯／新增專屬欠款膠囊
+- **老闆指示**：「修正完單分類邏輯（建議）：將舊 ERP 的 O（欠款）與 M（月結）在送達後歸入「已送達」分類，卡片維持標註 ⏳ 欠款 或 📝 月結，讓「🚚 配送中」只保留「真正還在車上、路上外送中的瓦斯」，調度台不會被誤導。」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - 舊 ERP `dbo.gas_oders.payed` 付款狀態碼包含 `Y`（已付）、`T`（已收）、`M`（月結）、`O`（欠款）。
+     - 先前 `isOrderCompleted` 僅判定 `Y` 或 `T`，排除 `O` 與 `M`。由於欠款單已有司機，導致 `isOrderDelivering = !isOrderPending && !isOrderCompleted = true`，使已送達的欠款單持續留在「🚚 配送中」，嚴重干擾調度判定。
+  2. **調度中樞分類判定全面重構**：
+     - `app/operations/page.tsx` 中將 `rawPayed === "O"` (欠款) 與 `rawPayed === "M"` (月結) 納入 `isOrderCompleted`。
+     - 頂部計數與篩選器中，「已送達」完整包含現金完單、欠款完單與月結完單；「🚚 配送中」100% 僅保留車上派送中的即時訂單。
+  3. **專屬狀態膠囊分流 (SharedOrderStatusBadge & SharedOrderCard)**：
+     - 新增 `debt` 琥珀金膠囊 `⏳ 欠款`，卡片視覺直觀一目了然，與 `📝 月結` 及 `✅ 已送達` 分流。
+     - 保持收款操作列安全防呆。
+  4. **全端測試驗證**：
+     - 專屬單元測試 `tests/operations-completed-debt-classification.test.mjs` 100% PASS。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-16 21:40 (版本號: 20261116_2140_operations_address_floor_plain_text)
 - **更新主題**：監控中心地址樓層平實呈現／徹底拔除樓層特別標籤／自然地址門牌文字流融合
 - **老闆指示**：「監控中心  地址樓層的部分 不用特別標籤」
