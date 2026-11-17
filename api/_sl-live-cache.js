@@ -24,16 +24,20 @@ export function makeLiveSL({drive,cache,secret,columns,clock=Date.now,minRows=MI
   const meta=await drive.metadata(),id=fingerprint(meta),sourceAsOf=new Date(Math.max(...meta.map(m=>Date.parse(m.modifiedTime)))).toISOString();
   if(clock()-Date.parse(sourceAsOf)<120_000)throw Error('SL_FILES_STILL_UPLOADING');
   if(previous&&previous.snapshotId===id&&!force){const m={...previous,sourceAsOf,sync:{automatic:true,checkedAt:new Date(now).toISOString(),state:'fresh',intervalSeconds:3600}};await put('active',m);return m;}
-  const buffers=await Promise.all(meta.map(async m=>{const buffer=await drive.download(m.dataset,m);if(createHash('md5').update(buffer).digest('hex')!==m.md5Checksum)throw Error('SL_DRIVE_CHANGED_DURING_READ');return [m,buffer];}));
   const all={},datasets={},files=[];let through='';
-  for(const [m,buffer] of buffers){const dataset=m.dataset,c=columns[dataset];if(!c)throw Error('SL_CSV_SCHEMA_CHANGED');const rows=parseSLCSV(buffer,c,dataset==='orders'?'訂單編號':dataset==='money'?'流水號':'客戶編號');if(rows.length<(minRows[dataset]||1))throw Error('SL_SOURCE_INCOMPLETE');all[dataset]=rows;datasets[dataset]={name:m.name,rows:rows.length,columns:c,sourceSha256:sha(buffer)};}
+  for(const m of meta){const dataset=m.dataset,c=columns[dataset];if(!c)throw Error('SL_CSV_SCHEMA_CHANGED');let records=null;
+   if(previous?.datasets[dataset]?.sourceMd5===m.md5Checksum){try{records=await readRows(previous,dataset);}catch{records=null;}}
+   if(records===null){const buffer=await drive.download(dataset,m);if(createHash('md5').update(buffer).digest('hex')!==m.md5Checksum)throw Error('SL_DRIVE_CHANGED_DURING_READ');records=parseSLCSV(buffer,c,dataset==='orders'?'訂單編號':dataset==='money'?'流水號':'客戶編號');datasets[dataset]={name:m.name,rows:records.length,columns:c,sourceSha256:sha(buffer),sourceMd5:m.md5Checksum};}
+   else datasets[dataset]={...previous.datasets[dataset]};
+   if(records.length<(minRows[dataset]||1))throw Error('SL_SOURCE_INCOMPLETE');all[dataset]=records;
+  }
   if(fingerprint(await drive.metadata())!==id)throw Error('SL_DRIVE_CHANGED_DURING_READ');
   for(const [dataset,rows] of Object.entries(all)){const c=columns[dataset],dateIndex=c.indexOf(dataset==='orders'?'出貨日期':dataset==='money'?'入帳日期':'交易起始日'),groups=new Map();
    for(const r of rows){const d=isoDate(r[dateIndex]);if(r[dateIndex].trim()&&!d)throw Error('SL_CSV_DATE_INVALID');if(d&&d>through)through=d;const year=dataset==='customers'?'all':d?.slice(0,4)||'unknown';const g=groups.get(year)||[];g.push(r);groups.set(year,g);}
-   for(const [year,items] of groups){for(let offset=0;offset<items.length;offset+=5000){const slice=items.slice(offset,offset+5000),name=`${dataset}-${year}-${offset/5000}`,cacheKey=id+':'+name;await put(cacheKey,slice);files.push({dataset,year,name,cacheKey,rows:slice.length});}}
+   for(const [year,items] of groups){for(let offset=0;offset<items.length;offset+=5000){const slice=items.slice(offset,offset+5000),name=`${dataset}-${year}-${offset/5000}`,cacheKey=datasets[dataset].sourceMd5+':'+name;const existing=await get(cacheKey);if(!Array.isArray(existing)||existing.length!==slice.length)await put(cacheKey,slice);files.push({dataset,year,name,cacheKey,rows:slice.length});}}
   }
   const manifest={version:1,snapshotId:id,sourceAsOf,dataThrough:through,datasets,files,sync:{automatic:true,checkedAt:new Date(now).toISOString(),state:'fresh',intervalSeconds:3600}};
-  const older=await get('previous');if(previous&&previous.snapshotId!==manifest.snapshotId)await put('previous',previous);await put('active',manifest);if(older&&older.snapshotId!==manifest.snapshotId&&older.snapshotId!==previous?.snapshotId){for(const file of older.files){memory.delete(file.cacheKey);try{await cache.delete?.(prefix+file.cacheKey);}catch{}}}await put('retry',{after:0,code:null});return manifest;
+  const older=await get('previous');if(previous&&previous.snapshotId!==manifest.snapshotId)await put('previous',previous);await put('active',manifest);if(older&&older.snapshotId!==manifest.snapshotId&&older.snapshotId!==previous?.snapshotId){const retained=new Set([...manifest.files,...(previous?.files||[])].map(f=>f.cacheKey));for(const file of older.files){if(retained.has(file.cacheKey))continue;memory.delete(file.cacheKey);try{await cache.delete?.(prefix+file.cacheKey);}catch{}}}await put('retry',{after:0,code:null});return manifest;
  }catch(e){const code=/^SL_[A-Z_]+$/.test(e?.message||'')?e.message:'SL_DRIVE_UNAVAILABLE';await put('retry',{after:clock()+300_000,code});if(previous)return {...previous,sync:{...previous.sync,state:'stale',error:code}};throw Error(code);}
  }
  async function ensure(force=false){if(!pending){pending=refresh(force).finally(()=>{pending=null;});}return pending;}
