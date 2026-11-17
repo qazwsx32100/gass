@@ -4,15 +4,30 @@
     "sin1"
   ],
   "functions": {
+    "api/sl-source.js": {
+      "maxDuration": 60
+    },
     "api/*.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/customer-history", "destination": "/api/telegram-webhook" },
-    { "source": "/api/ecpay-checkout", "destination": "/api/ecpay" },
-    { "source": "/api/ecpay-callback", "destination": "/api/ecpay" },
-    { "source": "/api/backup-status", "destination": "/api/backups?type=backup" }
+    {
+      "source": "/api/customer-history",
+      "destination": "/api/telegram-webhook"
+    },
+    {
+      "source": "/api/ecpay-checkout",
+      "destination": "/api/ecpay"
+    },
+    {
+      "source": "/api/ecpay-callback",
+      "destination": "/api/ecpay"
+    },
+    {
+      "source": "/api/backup-status",
+      "destination": "/api/backups?type=backup"
+    }
   ],
   "headers": [
     {
