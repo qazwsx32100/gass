@@ -1,0 +1,40 @@
+{
+  "id": "SB-HEALTH-BUDGET-20261117-01",
+  "baseCommit": "286d2e7f8d534275b6b3f4e100762a318193b8ae",
+  "testedAtUtc": "2026-11-17T04:53:57.014559+00:00",
+  "tests": {
+    "healthBandwidth": 10,
+    "syncPersistence": 10,
+    "failed": 0
+  },
+  "build": "Vite production build passed",
+  "databaseWrites": false,
+  "billingChanges": false,
+  "deploymentStatus": "pending",
+  "scope": [
+    "erp production health endpoint"
+  ],
+  "files": [
+    {
+      "path": "api/health.js",
+      "beforeSha256": "0cb9620008feac400df95fa3ec95e7f3cd7e44f1135ae0ac1560cfbc0819ae56",
+      "afterSha256": "0adf1184bf4396a1bc1c2ab3902b6e4e2954118d9c1feb56446eadaa64b30bc8"
+    },
+    {
+      "path": "api/_health-readiness.js",
+      "beforeSha256": null,
+      "afterSha256": "953f8b57c283d4e4b1af04b4d508326c06114c929ec48f7ffbaccf1b269da1bf"
+    },
+    {
+      "path": "tests/health-bandwidth.test.mjs",
+      "beforeSha256": null,
+      "afterSha256": "d80ff264345ae755d23b63b35c8b9fed19aa2e49ac97c863f9a0e0ce99f41bb4"
+    },
+    {
+      "path": "tests/sync-persistence-receipts.test.mjs",
+      "beforeSha256": "9ff5e9d0b65ec0b76515e32c4675d1f7077c7f59aac803c4be79ded7d89c2fd4",
+      "afterSha256": "c8d7150f7e70e2194cb15ab1ab40814739cfd703f3ab65c277f098da8118b344"
+    }
+  ],
+  "backportedFrom": "f74b56991e58d7813a8fb0dc32d59c4115d6b599"
+}
