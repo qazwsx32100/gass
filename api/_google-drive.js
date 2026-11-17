@@ -225,3 +225,7 @@ export const uploadBackupToGoogleDrive = async ({ filename, jsonText }) => {
     webViewLink: data.webViewLink
   };
 };
+
+// Server-only read adapter; never return this credential to callers.
+export const getGoogleDriveReadAccessToken = getAccessToken;
+
