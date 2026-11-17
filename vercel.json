@@ -4,11 +4,11 @@
     "sin1"
   ],
   "functions": {
-    "api/*.js": {
-      "maxDuration": 30
-    },
     "api/sl-source.js": {
       "maxDuration": 60
+    },
+    "api/*.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
