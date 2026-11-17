@@ -3010,3 +3010,18 @@ LINE 已正式發布：dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn，來源 1031d26，包�
 限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
 
 還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。
+
+
+## SB-HEALTH-BUDGET-20261117-01 發布與補充查核結果
+
+主幹修復 68e94b1、ERP 最小回移 9ea0dc6 均已推送 GitHub；財務 dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT、ERP dpl_3ohaRUsgibMHhmWzpn5TaDukv56q 正式部署均 READY，別名與來源已核對。20 項針對性測試全通過，Vite build 通過。普通 health 已使用 metadata RPC、60 秒程序內快取與同時請求合併，公開回覆帶探測時間與年齡；主庫不可達時 hasState=null，仍回 503 / offline_snapshot / readOnly，沒有把受限狀態誤報成功。這是降低後續耗用，並非已解除 Supabase 限制。
+
+補充：另一個可管理專案 buacrgrprrpbgtekqdfi 名稱雖為 Task Amigo，確有財務 app_state 與四個財務 RPC，帳號識別指紋與既有財務離線快照一致。使用既有 anon 公開 key 對 REST 端點讀取零筆資料，回覆 402，限制為 exceed_edge_functions_invocations_quota、exceed_egress_quota；組織 Otaku Power 為 Free。Postgres ACTIVE_HEALTHY 只代表資料庫執行個體狀態，不代表 REST 閘道未受配額限制。
+
+資料新鮮度：該主庫 app_state 停在 2026-11-04，現行離線快照為 2026-11-15；恢復 API 後仍須先唯讀對帳，不能直接宣稱最新財務已入庫。未修改正式資料庫、未重送財務同步、未調整方案或 Spend Cap、未發送通知。普通健康檢查以外的 CMS 讀取介面維持原行為。
+
+財務入口的既有受保護同步設定讀取未成功，因此沒有建立部分／猜測的環境設定。現有健康專案 ytwhfiudhhdkmzobqmqq 未見所需 public 財務 RPC，沒有改接該專案。受限歷史候選 pdaacjkyrlflxztbqjnv 的管理查詢被拒；不將其當成已確認的現行財務綁定。
+
+下一步：確認 Free 額度恢復途徑或評估組織付費方案；Pro 基礎與額外計算／超額費用需以控制台確認，沒有自動變更收費。由受控原始設定來源補齊 Vercel 財務設定，並在恢復後核對新舊資料。
+
+完整機器證據、來源與限制見 docs/maintenance/20261117_supabase_health_release.json。還原可回退本次各入口的部署；程式回退不包含資料庫回復。
