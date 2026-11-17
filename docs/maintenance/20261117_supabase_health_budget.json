@@ -1,6 +1,6 @@
 {
   "id": "SB-HEALTH-BUDGET-20261117-01",
-  "baseCommit": "286d2e7f8d534275b6b3f4e100762a318193b8ae",
+  "baseCommit": "01eba13ccfa195dbd070f0362aedd8a60398689c",
   "testedAtUtc": "2026-11-17T04:53:57.014559+00:00",
   "tests": {
     "healthBandwidth": 10,
@@ -12,6 +12,7 @@
   "billingChanges": false,
   "deploymentStatus": "pending",
   "scope": [
+    "gass production health endpoint",
     "erp production health endpoint"
   ],
   "files": [
@@ -35,6 +36,5 @@
       "beforeSha256": "9ff5e9d0b65ec0b76515e32c4675d1f7077c7f59aac803c4be79ded7d89c2fd4",
       "afterSha256": "c8d7150f7e70e2194cb15ab1ab40814739cfd703f3ab65c277f098da8118b344"
     }
-  ],
-  "backportedFrom": "f74b56991e58d7813a8fb0dc32d59c4115d6b599"
+  ]
 }

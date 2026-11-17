@@ -30,15 +30,11 @@ test("Operations Remarks Pipeline & Legacy ERP Writeback", async (t) => {
     );
   });
 
-  await t.test("3. today-orders/route.ts permits same-origin operations requests in GET", () => {
+  await t.test("3. today-orders/route.ts permits authorized session or sync bearer in GET", () => {
     const src = fs.readFileSync("c:/shenglong-next/app/api/today-orders/route.ts", "utf8");
     assert.ok(
-      src.includes("const isInternal = isSameOriginRequest(request);"),
-      "must check isSameOriginRequest in GET"
-    );
-    assert.ok(
-      src.includes("const isAllowed = isSyncBearer || isInternal || (user !== null && userCan(user, \"orders.view\"));"),
-      "must include isInternal in isAllowed"
+      src.includes('const isAllowed = isSyncBearer || (user !== null && userCan(user, "orders.view"));'),
+      "must check session user orders.view or sync bearer in GET"
     );
   });
 

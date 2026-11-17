@@ -1,0 +1,110 @@
+{
+  "id": "API-STABILITY-20261115-01",
+  "startedAt": "2026-11-15T13:23:41.228951+00:00",
+  "status": "partially_deployed_blocked_review",
+  "scope": "durable sync acknowledgement, dispatch CAS, authorization, truthful health, polling",
+  "before": {
+    "shenglong-next": {
+      "commit": "4c34fffdd784b18ea4c6b256cf7a188448ef0686"
+    },
+    "gass": {
+      "commit": "64b2711173be04cf9edf1d9520e524d7467882fa"
+    }
+  },
+  "commits": {
+    "shenglong-next": "d6b57b24cbbd01cf16bc5147aa206fcd4337411e",
+    "gass": "0b03912a6042c2eb0b454c93c37f2f22386cbf28",
+    "shenglong-line-liff": "1dbc405f9ebaab7ff0293089fa51de394092ee56"
+  },
+  "updatedAtUtc": "2026-11-16T01:43:40.213682+00:00",
+  "testsPassed": 82,
+  "deployments": {
+    "gass": {
+      "id": "dpl_i3yoyx8EBicaSYipPZYc3wqcUC7y",
+      "state": "READY",
+      "sha": "0b03912a6042c2eb0b454c93c37f2f22386cbf28"
+    },
+    "erp": {
+      "id": "dpl_95uiUun9gUdKKeRxvPz6PsuqTWKZ",
+      "state": "READY",
+      "sha": "0b03912a6042c2eb0b454c93c37f2f22386cbf28"
+    },
+    "next": {
+      "id": "dpl_dHXHW5uugUJN9ypTnvht7riuTJ7V",
+      "state": "READY",
+      "sha": "fa7ea54ac4dd37d80d11d9200bc33bfcb349f1a8",
+      "containsFixCommit": "d6b57b24cbbd01cf16bc5147aa206fcd4337411e",
+      "note": "Observed independently published source; rejected file-bundle action was not retried."
+    },
+    "line": {
+      "state": "blocked_auto_review",
+      "sha": "60890d999b9167db04bdd9ab633662a34c22f10b",
+      "reason": "Build reads production member/phone/address/price data to generate required indexes; explicit authorization required."
+    }
+  },
+  "databaseWritesPerformedByAgent": false,
+  "notificationsSentByAgent": false,
+  "cloudRecordStatus": "verified",
+  "confirmedRuntimeCause": {
+    "gass": "Supabase environment variables are missing (GET /api/health production runtime warning 2026-11-16T01:29:19Z)",
+    "erp": "offline snapshot confirmed; underlying dependency failure not yet identified"
+  },
+  "cloudVerification": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1iCqdCCdhOXjimsduAW2oPlRx7W7cS7Dh",
+        "verified": true,
+        "sha256": "7f95d6de13dd8067360a63b338c16a3aff51d3684d8c13d38d59110d94b20c0b",
+        "url": "https://drive.google.com/file/d/1iCqdCCdhOXjimsduAW2oPlRx7W7cS7Dh/view"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1RcZg6AidwhFoJVLLhCOGL5OU0ZgRwF35",
+        "verified": true,
+        "sha256": "8f1c5488bdea246396ebf98a7cb55516467baf6eefb5f4fde79c1a7009d0866c",
+        "url": "https://drive.google.com/file/d/1RcZg6AidwhFoJVLLhCOGL5OU0ZgRwF35/view"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1vIxDbS2yW3zaMNx5vXwpEwUyy9tG_QH4",
+        "verified": true,
+        "sha256": "74c4eee000cc0b9e9597329a38d068918cc0cac7bacd58038fd61dbceea84928",
+        "url": "https://drive.google.com/file/d/1vIxDbS2yW3zaMNx5vXwpEwUyy9tG_QH4/view"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1VQfhx4cP5kW-OIzHetp2KMNCA2zCUAyw",
+        "verified": true,
+        "sha256": "4f6facaeac0673cf3ea92b2d9106c7831e79094fe8668333bee576ba0ea22adf",
+        "url": "https://drive.google.com/file/d/1VQfhx4cP5kW-OIzHetp2KMNCA2zCUAyw/view"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "16u8scXlK8FyYoX_oic7InWZ0sOUlsIRm",
+        "verified": true,
+        "sha256": "619c9770d7d04492a21764b67589ada8ee0c720db4a6126930b476b9cbc394b3",
+        "url": "https://drive.google.com/file/d/16u8scXlK8FyYoX_oic7InWZ0sOUlsIRm/view"
+      }
+    }
+  ],
+  "nextLiveHeartbeat": {
+    "observedAtUtc": "2026-11-16T01:41:47.245260+00:00",
+    "httpStatus": 200,
+    "summary": {
+      "status": "DOWN",
+      "source": "system-status",
+      "diffSeconds": 96,
+      "lastHeartbeatIso": "2026-11-16T01:40:11.191Z",
+      "sqlStatus": "UNKNOWN"
+    }
+  }
+}

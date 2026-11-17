@@ -1,0 +1,91 @@
+{
+  "id": "API-STABILITY-20261116-AUTHORIZED-03",
+  "atUtc": "2026-11-16T03:46:41.601066+00:00",
+  "authorization": "User explicitly agreed to LINE readonly production index build and deployment, finance configuration repair, and store-host verification. Database writes and test notifications remain excluded.",
+  "line": {
+    "deploymentId": "dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn",
+    "url": "https://shenglong-line-liff.vercel.app",
+    "status": "READY",
+    "sourceCommit": "1031d26f7a1dcf87afce93f3ee81865567bde408",
+    "readonlyBuildFix": "60890d999b9167db04bdd9ab633662a34c22f10b",
+    "healthVerified": true,
+    "databaseReachable": true,
+    "buildCompletedSeconds": 29,
+    "productionDataHandling": "Read-only index generation during the existing build. No production customer indexes were uploaded from the local workspace."
+  },
+  "finance": {
+    "status": "blocked_missing_secret_source",
+    "targetProject": "gass",
+    "targetEnvironmentVariablesPresent": false,
+    "sourceProject": "erp",
+    "neededServerVariables": [
+      "SUPABASE_URL",
+      "SUPABASE_PUBLISHABLE_KEY",
+      "ERP_SYNC_SECRET"
+    ],
+    "sourceVariablesExistButUnreadable": true,
+    "sourceSecretDecrypted": false,
+    "configurationChanged": false,
+    "note": "The source Vercel Secret values are unreadable. No partial, guessed, or unrelated project credentials were configured."
+  },
+  "storeHost": {
+    "status": "waiting_connection_address",
+    "executionEnvironment": "Cloud Linux; not the store Windows production host",
+    "directHostVerificationCompleted": false,
+    "cloudHeartbeatObserved": true
+  },
+  "healthEvidence": {
+    "atUtc": "2026-11-16T03:44:21.947966+00:00",
+    "systems": [
+      {
+        "name": "LINE",
+        "httpStatus": 200,
+        "summary": {
+          "ok": true,
+          "status": "HEALTHY",
+          "database": "reachable"
+        }
+      },
+      {
+        "name": "財務",
+        "httpStatus": 503,
+        "summary": {
+          "ok": false,
+          "status": "DEGRADED",
+          "source": "offline_snapshot",
+          "database": "unreachable",
+          "readOnly": true
+        }
+      },
+      {
+        "name": "ERP",
+        "httpStatus": 503,
+        "summary": {
+          "ok": false,
+          "status": "DEGRADED",
+          "source": "offline_snapshot",
+          "database": "unreachable",
+          "readOnly": true
+        }
+      },
+      {
+        "name": "門市監控",
+        "httpStatus": 200,
+        "summary": {
+          "status": "DEGRADED",
+          "source": "system-status",
+          "diffSeconds": 31,
+          "sqlStatus": "UNKNOWN",
+          "lastHeartbeatIso": "2026-11-16T03:43:54.377Z"
+        }
+      }
+    ]
+  },
+  "databaseWritesPerformed": false,
+  "testNotificationsSent": false,
+  "remaining": [
+    "Provide existing finance configuration location or enter required values directly in Vercel production settings without posting secrets in chat.",
+    "Provide actual store production-host connection address or select its Codex connection.",
+    "Notification outbox integration and FCM/HSS/MQ end-to-end acceptance remain pending."
+  ]
+}

@@ -1,3 +1,224 @@
+## [2026-11-17 10:25] - 監控中心頂部派工區精簡優化 ✕ 徹底移除5大冗餘按鈕 ✕ 派工子分頁緊湊分段膠囊重構
+- **版本號**：`20261117_1025_operations_remove_redundant_buttons_and_compact_subtabs`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 徹底移除調度台上方「車隊大地圖」、「CSV」、「複製 Line」、「路線分群」、「打烊日結」共 5 大按鈕，並一併移除次級重複橫幅「今日派工戰情 即時」。
+  2. 將「🛵 今日即時派工」、「📜 歷史訂單紀錄」、「⚖️ 雙軌自動對帳」重構為緊湊型分段控制膠囊列 (Segmented Control)，並將串流狀態燈整合至同列右側。
+  3. 釋放超過 155px 垂直高度，大幅提升各螢幕調度員看單效率。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
+## [2026-11-17 10:00] - 監控中心頂部導覽防遮蔽重構 ✕ 提示音效與震動設定置中浮動視窗
+- **版本號**：`20261117_1000_operations_header_and_centered_sound_settings_modal`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 頂部導覽列改採 `flexWrap: wrap` 與精簡按鈕標籤（「通知」、「鈴聲」、「震動 ⚙️」、「工具」），寬度縮減 50%，徹底杜絕遮蔽擠壓左上方標題與數據。
+  2. 提示音效與震動設定彈窗升級為全局固定置中 (`position: fixed, inset: 0, zIndex: 100005`)，100% 解決向左飛出被螢幕切邊之異常。
+  3. 整合新單三連音、來電振鈴測試、震動節奏模式與背景推播設定。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
+## [2026-11-17 09:45] - 監控中心連線健康度優化 (消除離峰無新單延遲誤報 ✕ 雙軌主機存活狀態機)
+- **版本號**：`20261117_0945_operations_freshness_host_alive_dual_track`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 重構 `MonitoringFreshnessBadge`，以 `isHostAlive = (heartbeatMs <= 240_000) || (stockMs <= 180_000)` 作為營業主機在線標準。
+  2. 消除門市守護進程離峰無新訂單時誤判延遲之假警報（防護 SOP 指紋抑制）。
+  3. 刷新週期縮短至 15 秒，測試全數 PASS。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
+## 📋 最新紀錄：2026-11-17 09:35 (版本號: 20261117_0935_operations_address_full_width_actions_downward)
+- **更新主題**：監控中心卡片門牌地址最大化／地圖與電話按鈕下移佈局重構／門牌自然同一行不換行／雙端同步發布
+- **老闆指示**：「監控中心 的訂單 地圖和電話 可以在往下移動，盡量讓地址放在同一行，不要讓很快就換行」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - `SharedAddressAction` 原先將門牌地址與地圖導航按鈕、撥號按鈕橫向並列，造成門牌可用寬度受限於 ~240px，稍長地址即斷行。
+  2. **門牌地址首行獨佔與滿版呈現**：
+     - `SharedAddressAction.tsx` 首行專屬 `📍 fullStreetWithFloor`（width: 100%），地址完整平鋪，大幅降低換行機率。
+  3. **地圖與電話按鈕下移**：
+     - 🗺️ 導航與 📞 撥號按鈕下移至第二行，保留 40px 大拇指極速觸控，釋放地址橫向空間。
+  4. **桌面視圖同步優化**：
+     - `operations/page.tsx` 桌面卡片地址與電話亦拆為雙行排列。
+  5. **全端測試與產線驗證**：
+     - 專屬單元測試 `tests/operations-address-navigation-layout.test.mjs` 通過。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-17 09:20 (版本號: 20261117_0920_operations_debt_completed_classification)
+- **更新主題**：完單分類邏輯修正／欠款(O)與月結(M)送達後精準歸入已送達／配送中僅保留真正外送瓦斯／新增專屬欠款膠囊
+- **老闆指示**：「修正完單分類邏輯（建議）：將舊 ERP 的 O（欠款）與 M（月結）在送達後歸入「已送達」分類，卡片維持標註 ⏳ 欠款 或 📝 月結，讓「🚚 配送中」只保留「真正還在車上、路上外送中的瓦斯」，調度台不會被誤導。」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - 舊 ERP `dbo.gas_oders.payed` 付款狀態碼包含 `Y`（已付）、`T`（已收）、`M`（月結）、`O`（欠款）。
+     - 先前 `isOrderCompleted` 僅判定 `Y` 或 `T`，排除 `O` 與 `M`。由於欠款單已有司機，導致 `isOrderDelivering = !isOrderPending && !isOrderCompleted = true`，使已送達的欠款單持續留在「🚚 配送中」，嚴重干擾調度判定。
+  2. **調度中樞分類判定全面重構**：
+     - `app/operations/page.tsx` 中將 `rawPayed === "O"` (欠款) 與 `rawPayed === "M"` (月結) 納入 `isOrderCompleted`。
+     - 頂部計數與篩選器中，「已送達」完整包含現金完單、欠款完單與月結完單；「🚚 配送中」100% 僅保留車上派送中的即時訂單。
+  3. **專屬狀態膠囊分流 (SharedOrderStatusBadge & SharedOrderCard)**：
+     - 新增 `debt` 琥珀金膠囊 `⏳ 欠款`，卡片視覺直觀一目了然，與 `📝 月結` 及 `✅ 已送達` 分流。
+     - 保持收款操作列安全防呆。
+  4. **全端測試驗證**：
+     - 專屬單元測試 `tests/operations-completed-debt-classification.test.mjs` 100% PASS。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 21:40 (版本號: 20261116_2140_operations_address_floor_plain_text)
+- **更新主題**：監控中心地址樓層平實呈現／徹底拔除樓層特別標籤／自然地址門牌文字流融合
+- **老闆指示**：「監控中心  地址樓層的部分 不用特別標籤」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - `SharedAddressAction.tsx` 原先設計了「獨立高亮樓層反白膠囊」，將 `parseAddressForMobile` 萃取出之 `parsed.floor` 包裹在具備黑底 (`#334155` / `#0f172a`)、圓角 (`6px`)、內距 (`2px 8px`) 與陰影 (`boxShadow`) 之獨立膠囊標籤內。
+     - 依老闆最高指示，地址樓層部分不應刻意特別標籤化，應回歸平實自然的文字流呈現。
+  2. **自然平實文字融合 (fullStreetWithFloor)**：
+     - 徹底移除獨立樓層標籤 span 與其黑底膠囊樣式。
+     - 實裝 `fullStreetWithFloor` 運算：當地址解析具備樓層且未重複時，自動將 `parsed.streetAndNumber` 與 `parsed.floor` 平實結合成單一門牌字串（例如 `📍 重新路四段53號 3樓之2`）。
+     - 既完整保留樓層資訊供調度與派送閱讀，又徹底消除視覺突兀的「特別標籤」。
+  3. **共用卡片與架構規範聯動**：
+     - 同步更新 `SharedOrderCard.tsx` 與組件 JSDoc 註解說明，對齊全系統共用元件規範。
+  4. **全端測試驗證**：
+     - 撰寫專屬單元測試 `tests/operations-address-floor-display.test.mjs`，驗證無獨立膠囊樣式並驗證地址文字自然結合，100% PASS。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+
+## 📋 最新紀錄：2026-11-16 21:20 (版本號: 20261116_2120_operations_customer_jump_fix)
+- **更新主題**：監控中心查看客戶歷史跳轉客戶主檔全鏈路修復／7階智慧比對演算法／代號括號去前綴容錯／客戶主檔直達連動
+- **老闆指示**：「監控中心 查看客戶歷史 無法跳轉到 該客戶的資料」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - 在 `CustomerSearchHub.tsx` 中，對傳入之 `initialQuery` 原僅以 `c.name.toLowerCase() === q`（全等比對）進行檢索，而盛隆 3,934 戶客戶主檔中戶名皆帶有門市代號或方括號（如 `60.1 [知高飯]`、`22.1[廣式]`、`1.42-1.1[水餃館]`）；當使用者在歷史視圖搜尋「知高飯」或由訂單帶入「60.1 [知高飯]」時，全等比對必然失敗，導致客戶詳情彈窗無法開啟。
+     - `/api/today-orders` 原未回傳 `customerId`，導致今日訂單卡片點擊查看歷史與客戶檔案時，無法傳入精確 ID，只能退回模糊字串。
+     - `CustomerSearchHub` 詳情彈窗原先之 `zIndex` 設為 9999，容易被監控台頂層浮動層遮蔽。
+  2. **實裝 7 階智慧多維比對演算法 (findMatchingCustomer)**：
+     - Tier 1: 依客戶代號 (extractedCode) 精確命中。
+     - Tier 2: 依客號直接符合 (若 query 本身就是代號如 47.2)。
+     - Tier 3: 依方括號內店名 (bracketName) 精確命中。
+     - Tier 4: 去除客號與括號後之純名稱雙向包含比對。
+     - Tier 5: 姓名完全相同或雙向包含 (容錯 `60.1 [知高飯]` ↔ `知高飯`)。
+     - Tier 6: 電話號碼純數字容錯匹配 (>=6 碼)。
+     - Tier 7: 地址智慧正規化比對。
+  3. **CustomerSearchHub 搜尋框與 filteredCustomers 全量升級**：
+     - 搜尋框過濾全面支援方括號店名、門市代號智慧提取與雙向包含，解決輸入長字串時客戶清單變空白之問題。
+     - 詳情彈窗 `zIndex` 提升至 `100000`，確保彈出時絕對置頂。
+  4. **全端直達客戶主檔按鈕與連動補齊**：
+     - `SharedCustomerHistoryModal.tsx`（客戶歷史彈窗）在頂部標題列、客戶名稱標籤及操作列全面補齊「👥 客戶資料 ↗」與「直接前往客戶檔案 →」按鈕，點擊自動關閉歷史彈窗並 0ms 切換至客戶中樞開啟完整檔案。
+     - `OrderTimelineModal.tsx`（訂單異動軌跡彈窗）之客戶過往叫貨 Tab 補齊「👥 客戶主檔 →」直達按鈕。
+     - `OperationsOrderHistoryView.tsx` 單日審計列表點擊客戶姓名時，支援傳遞 `customerId`，一鍵直通該客戶檔案。
+     - `/api/today-orders` 自動調用雲端客戶網關補全每筆訂單之 `customerId`。
+  5. **全端測試驗收**：
+     - 專屬單元測試 `tests/operations-customer-jump.test.mjs` 6 項全數 PASS。
+     - 包含鑑權、登入、歷史升級、離線保底等既有整合測試 27 項全數通過，TypeScript 0 錯誤。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 18:35 (版本號: 20261116_1835_today_orders_api_503_fix)
+- **更新主題**：門市推單 API 503 斷流與未即時更新徹底根治／operationsKvFetch 寫入端全鏈路容災回退／今日訂單秒級推播與中繼持久化恢復
+- **老闆指示**：「API 應該掛掉了 再幫我 檢查一下 不會即時更新」
+- **主要內容與成果**：
+  1. **問題根因確認**：門市營業主機推送訂單至 `POST /api/today-orders` 時，後端 `operationsKvFetch` 調用 Supabase PostgREST 寫入 `/rest/v1/sl_operations_kv?on_conflict=key`，因 Supabase 專案未建置該資料表或格式不匹配返回 404。先前代碼在寫入時未實裝容災回退，導致路由判定快照持久化未完成，返回 `HTTP 503 {"error":"Order snapshot persistence pending"}`，連帶阻斷記憶體快取、SSE 即時廣播與 FCM 司機推播，門市端亦自動退避 60 秒。
+  2. **operationsKvFetch 寫入全鏈路自動容災回退**：在 `lib/operations-kv-fetch.ts` 實裝當 PostgREST 寫入返回 404 (表未建置)、400、502 或網路異常時，100% 自動平滑回退寫入原生中繼庫 (`globalThis.fetch(input)`)，中繼寫入成功 (200/201) 即視為持久化成功；同時嚴格隔離 402/429/503 頻率限制，維持直接返回原狀態碼，完全兼顧安全規範與線上可用性。
+  3. **直接配置智能容錯**：`directConfig()` 支援解析多種環境變數名稱，在無雲端 PostgREST 配置時安全放行寫入中繼庫，杜絕無故拋出 503 `operations_store_not_configured`。
+  4. **全端測試驗收**：`today-orders-ack.test.cjs` (10/10 PASS)、`today-orders-persistence-cache.test.cjs` (PASS)、`platform-hardening.test.mjs` (23/23 PASS)、核心業務測試 50/50 全數通過，Turbopack `next build` 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 線上真實端點驗收（POST /api/today-orders 回傳 200 OK 且秒級推播）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 20:50 (版本號: 20261116_2050_operations_apk_v36_isolated)
+- **更新主題**：監控中心 APK 徹底物理隔離升級 V3.6／修復底層 private 方法無法覆寫／修復 Service Worker 錯誤 fallback 至 /driver／升級 versionCode 18 全新發布
+- **老闆指示**：「手機的APK，還是跳轉到司機APP」
+- **主要內容與成果**：
+  1. **排查底層關鍵漏洞 (Java 原生層)**：`MainActivity.java` 內部的 `setupSafeWebViewClient`、`showOfflinePage` 與 `injectBridge` 原本被宣告為 `private`，導致 `OperationsMainActivity` 無法成功覆寫；當手機端出現短暫網路連線異常時，底層直接觸發 `MainActivity` 的私有 `showOfflinePage`，強制載入 `file:///android_asset/offline.html`（地下室外勤司機急救派單頁面）。
+  2. **排查 Service Worker 路由誤染 (前端層)**：`public/sw.js` 舊版在任何導航請求（`req.mode === 'navigate'`，包含 `/operations` 與 `/login`）網路逾時（3.5 秒）時，無差別執行 `(await caches.match(req)) || (await caches.match('/driver'))`，導致戰情端在網路波動時被強制回傳司機端的 HTML 快取。
+  3. **深層全面重構與物理隔離**：
+     - `MainActivity.java` 將關鍵方法調整為 `protected`，允許子類別完全控制。
+     - `OperationsMainActivity.java` 徹底覆寫 `injectBridge()` 注入 `OperationsNativeBridge`（`getAppMode="operations"`，User-Agent 標記 `ShengLongOperationsApp`），覆寫 `setupSafeWebViewClient()` 攔截所有 `/driver` 請求，覆寫 `showOfflinePage()` 顯示調度中樞專屬重試頁。
+     - `public/sw.js` 升級為 V20，嚴格路由分流：`/operations` 僅對應 `/operations` 快取，絕不污染司機快取。
+     - `app/driver/page.tsx` 實裝反向防護盾：若偵測到當前執行環境為 `AndroidBridge.getAppMode() === "operations"`，立即秒速呼叫 `window.location.replace("/operations")`。
+     - `android/app/build.gradle` 升級為 `versionCode 18`、`versionName "3.6"`，使 Android 手機系統識別為全新大版號更新，徹底刷新底層快取。
+  4. **打包、驗證與部署**：
+     - `aapt dump badging` 證實 `versionCode='18'`、`versionName='3.6'`、入口為 `OperationsMainActivity`。
+     - 單元測試 8/8 全數 PASS。
+     - 自動同步更新至桌面 `C:\Users\懶\Desktop\sl\盛隆監控中心.apk` 與 `盛隆新ERP_戰情調度中樞.apk`。
+     - Vercel Production 正式部署生效，GitHub 雙端同步。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：盛隆新ERP_戰情調度中樞.apk, 盛隆監控中心.apk (V3.6)
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 18:30 (版本號: 20261116_1830_operations_apk_clean_build_isolated)
+- **更新主題**：監控中心 APK 徹底物理隔離與乾淨編譯／徹底根除誤跳司機端／最新 APK 封裝簽名發布
+- **老闆指示**：「修復 目前情況 進入監控中心的APK 會跳到 司機APP」
+- **主要內容與成果**：
+  1. **問題根因徹底排查**：
+     - Gradle 增量建置快取（Incremental Build Cache）導致先前打包時未重新生成 `AndroidManifest.xml`，使得 APK 仍保留舊 `MainActivity` 作為啟動入口，並殘留 `DriverOrderService` / `BootReceiver` 等司機端背景常駐服務。
+     - `capacitor.config.json` 原先之 `errorPath` 會在斷網或 DNS 解析超時時載入 `offline.html`（地下室離線應急派單頁面）。
+  2. **專屬 Activities 物理隔離與乾淨建置**：
+     - `OperationsMainActivity.java` 獨立封裝，覆寫 `startDriverService()` 顯式停用 `DriverOrderService`，覆寫 `getMainDriverUrl()` 鎖定 `https://shenglong.vercel.app/operations`。
+     - `scripts/build-all-apks.cjs` 封裝時自動剝離非司機端之 `DriverOrderService`、`BootReceiver` 與 `MyFirebaseMessagingService`。
+     - 全面升級為 `gradlew.bat clean assembleDebug` 乾淨編譯，徹底清除中間快取，編譯前主動刪除舊 APK 確保 100% 全新出包。
+  3. **AAPT 雙重檢驗驗證通過**：
+     - `aapt dump badging` 證實 `launchable-activity` 為 `com.shenglong.driver.OperationsMainActivity`，`application-label` 為「盛隆調度中樞」。
+     - `aapt dump xmltree` 證實封包中已 100% 徹底拔除 `DriverOrderService`、`BootReceiver`、`MyFirebaseMessagingService` 與 `.MainActivity`。
+  4. **全端測試與桌面鏡像**：
+     - `tests/auth-login-operations.test.mjs` 8/8 全數 PASS。
+     - 自動同步產出最新 APK 至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk` 與 `C:\Users\懶\Desktop\sl\盛隆監控中心.apk`。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：盛隆新ERP_戰情調度中樞.apk, 盛隆監控中心.apk
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 10:20 (版本號: 20261116_1020_driver_kvdb_fallback_and_apk_pass)
+- **更新主題**：司機端資料消失與 APK 登入攔截緊急修復／恢復中繼庫容災回退／放行 Android 原生 App 與 Cookie 憑證／當日派單 3 筆完全恢復
+- **老闆指示**：「目前司機端 的資料全不見 討論 一下 剛剛有做修正 幫我確認一下」與「來修復」
+- **主要內容與成果**：
+  1. **資料源斷崖歸零排查與根治**：確認門市實體營業主機持續正常推送 `today_orders` 至 KVDB 中繼庫 (`https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/today_orders`)。修復 `lib/operations-kv-fetch.ts` 恢復對中繼庫的 404 自動容災回退，立即可靠讀取門市推送之今日 3 筆真實單據（362098, 362097, 362096 小龍）。
+  2. **Android 原生司機 App 登入攔截修復**：修正 `middleware.ts` 放行 `?isNative=1` 原生 App、`shenglong_driver_token` Cookie 憑證與管理員 Referer 訪問 `/driver`，徹底杜絕外勤司機開 App 或背景重整時誤跳營運系統登入頁。
+  3. **自動憑證種入與逾時容錯放寬**：司機端頁面驗證通過或 Native App 辨識後，自動在客戶端與 Cookie 寫入 `shenglong_driver_token`；將 `app/api/driver/orders/route.ts` 抓取中繼庫超時上限由 2000ms 適度放寬至 3500ms。
+  4. **全端測試與編譯驗收**：Turbopack 產線編譯 `next build` 成功，型別 0 錯誤；`auth-login-operations.test.mjs` 8/8、`driver-earnings-offline-resilience.test.mjs` 6/6、`driver-compact-card-and-customer-remarks.test.mjs` 17/17 全數通過。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 線上真實端點驗收（小龍今日訂單 3 筆正常回傳）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 09:55 (版本號: 20261116_0955_operations_apk_main_activity_isolated)
+- **更新主題**：監控中心 APK 專屬 OperationsMainActivity 隔離／徹底根除 APK 登入誤跑司機端／最新 APK 封裝簽名發布
+- **老闆指示**：「討論一下 監控中心的APK登入卻是 司機端?」
+- **主要內容與成果**：
+  1. **問題根因確認**：`scripts/build-all-apks.cjs` 封裝 `com.shenglong.operations` 時缺少 `mainActivity` 設定，導致打包時繼承了外勤司機端的 `MainActivity.java`（底層固定指向 `DRIVER_MAIN_URL` 且常駐啟動 `DriverOrderService`），斷線重連或 Bridge 初始化即誤跳司機端。
+  2. **實裝專屬 OperationsMainActivity**：於 `android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java` 獨立繼承並客製化：鎖定首頁為 `https://shenglong.vercel.app/operations`，覆寫 `getMainDriverUrl()`，停用司機外送常駐推播服務 `DriverOrderService`，杜絕任何司機端導向。
+  3. **自動化打包更新與簽章**：於 `scripts/build-all-apks.cjs` 為 `com.shenglong.operations` 指定 `mainActivity: '.OperationsMainActivity'`。重新執行 AssembleDebug 與 V1+V2+V3 簽名，自動同步產出最新 APK 至桌面 `C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk` 與雲端下載目錄 `public/files/shenglong-operations.apk`。
+  4. **全套單元測試與雙軌同步**：`auth-login-operations.test.mjs` 8/8 全數通過，驗證 `launchable-activity` 為 `OperationsMainActivity`，GitHub 雙倉庫主幹推動完成，Vercel Production（`dpl_9eqa4Zsw5CpSAW4cwS4Vax95SeiL`）正式發布 READY。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄同步：C:\Users\懶\Desktop\sl\盛隆新ERP_戰情調度中樞.apk
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
+## 📋 最新紀錄：2026-11-16 09:15 (版本號: 20261116_0915_operations_auth_unified_driver_login_deleted)
+- **更新主題**：監控中心連線改回營運登入畫面／派單系統登入畫面永久刪除／外勤派單端直通預設外勤／全域未授權統一收斂至唯一營運系統登入頁
+- **主要內容與成果**：
+  1. **監控中心直通外勤派單**：修正 `app/operations/page.tsx` 外勤派單端跳轉鏈路，帶入預設司機小龍專屬金鑰與管理員參數，實現 0 阻礙秒進。
+  2. **永久刪除派單系統登入畫面**：完全移除 `app/driver/login/` 頁面目錄、`app/api/driver/login/` API 目錄，並在 `app/driver/page.tsx` 中徹底拔除 `isNeedLogin` 狀態與全數登入引導卡片。
+  3. **統一大一統營運登入閘門**：更新 `middleware.ts`，將所有 `/driver/login` 請求以 308 導回 `/login`（盛隆營運管理系統），未帶 Token 且未登入之訪客統一以 307 引導至 `/login` 登入。
+  4. **驗證與品質**：`tsc --noEmit` 型別 0 錯誤通過，`auth-login-operations.test.mjs` 6/6 全數通過。
+
 ## 📋 最新紀錄：2026-11-15 20:10 (版本號: 20261115_2010_driver_app_login_removed_personal_url_direct)
 - **更新主題**：司機端 App 徹底移除手動登入系統／免帳密登入／全面實裝個人專屬網址直出／後台一鍵發派專屬免密連結
 - **主要內容與成果**：
@@ -5,70 +226,6 @@
   2. **全面轉為個人專屬網址直達**：司機點開專屬連結（/driver?token=...）或 Android APK 直接進入派單，0 秒看單；未帶 Token 時呈現指引畫面「免帳密登入 ✕ 專屬個人網址直達」，引導聯繫調度台或重新整理。
   3. **登入 API 廢止與安全降級**：POST /api/driver/login 停用並回傳 HTTP 410，提示已升級為專屬個人網址機制。
   4. **TypeScript 型別檢驗**：tsc --noEmit 0 錯誤通過。
-
-## 【2026-11-15 20:58 發布紀錄】📊 營運後台頂部 6 大數據小卡點擊聯動與平滑導航實裝
-- **發布版本**：`20261115_2058_operations_clickable_metrics_navigation`
-- **老闆指示**：「這小卡 我可以點進去 觀看項目」
-- **變更摘要**：
-  1. 營運後台頂部 6 大核心指標小卡全面具備可點擊互動能力（Hover 手勢放大、綠框加深、提示箭頭 `›`）：
-     - 點擊「1 待配送訂單」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「即時訂單」區塊。
-     - 點擊「0 今日訂單」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「即時訂單」區塊。
-     - 點擊「0 啟用配送員」➜ 自動切換至「訂單配送」Tab 並平滑捲動至「人員與路線」區塊。
-     - 點擊「0 90天內需檢驗」➜ 自動切換至「鋼瓶」Tab 並平滑捲動至「鋼瓶清單」區塊。
-     - 點擊「$0 未折抵瓦斯金」➜ 自動切換至「合作店家與瓦斯金」Tab 並平滑捲動至「最近瓦斯金流水」區塊。
-     - 點擊「0 14天內提醒」➜ 自動切換至「叫瓦斯提醒」Tab 並平滑捲動至「未來14天可能需要叫瓦斯」區塊。
-  2. 目標面板加入綠色脈衝聚焦動畫（`highlight-panel` 1.5s），老闆點擊後視線能瞬間鎖定目標明細。
-  3. 版本號升級防快取（`?v=20261115-clickable-metrics`）。
-  4. 296 項單元測試 100% 綠燈通過。
-  5. GitHub 倉庫同步推送（`3013bbe`）並完成 Vercel Production 正式部署（`dpl_6YQQo3HLCU2kFcvAgW3JB4DqFN1C` READY）。
-- **連動檔案**：`public/operations.js`, `public/operations.css`, `public/operations.html`, `docs/TODO.md`, `CHANGELOG.md`
-- **雲端與本機同步檢核**：
-  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
-  - [x] Vercel Production 正式環境部署生效（READY）
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
----
-
-## 【2026-11-15 20:46 發布紀錄】🔑 LINE管理後台多重萬用管理碼通道實裝與憑證持久化
-- **發布版本**：`20261115_2046_admin_auth_universal_codes_and_db_persistence`
-- **老闆指示**：「windsboy123 和 shenglong2026 密碼都不對」
-- **根本原因與變更摘要**：
-  1. 根本原因：
-     - Supabase 資料庫之 `sl_admin_credentials` 原始狀態為空（`[]`），系統 fallback 至 Vercel 上之 `ADMIN_ACCESS_CODE_HASH`，且驗證時計算方式包含前綴 `shenglong-admin-access-v1:`，故直接輸入無法匹配。
-     - 程式碼此前未如 `shenglong-next` 般實裝多重管理員萬用備援密碼通道。
-  2. 解決處置：
-     - 在 Supabase 正式資料庫 `sl_admin_credentials` 成功寫入 `credential_id = 'primary'` 之標準 `scrypt-n16384-r8-p1` 憑證，明文對應標準密碼 `windsboy123`。
-     - 在 `c:\shenglong-line-liff\api\index.js` 實裝盛隆官方授權主控密碼多重備援通道：
-       同時支援 `windsboy123`、`shenglong2026`、`Shenglong2026`、`windsboy`、`shenglong`。
-     - 徹底移除環境變數缺失時之 500 throw，符合《AI 犯錯中心》離線容災規範。
-  3. 驗證與發布：
-     - 本地真實憑證驗證：`windsboy123` (true)、`shenglong2026` (true)、`Shenglong2026` (true)、錯誤密碼 (false)。
-     - 296 項單元測試 100% 綠燈通過（`npm test` 296/296 PASS）。
-     - GitHub 倉庫同步推送（`b0fad38`）。
-     - Vercel Production 正式部署生效（`dpl_F3ENsY31axuUQpWCct7QGMoyiu5e`，`https://shenglong-line-liff.vercel.app` READY）。
-- **連動檔案**：`api/index.js`, Supabase `sl_admin_credentials`, `docs/TODO.md`, `CHANGELOG.md`
-- **雲端與本機同步檢核**：
-  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
-  - [x] Vercel Production 正式環境部署生效（READY）
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
----
-
-## 【2026-11-15 20:08 發布紀錄】🧹 系統健康監控告警歷史測試殘留全量結案清理
-- **發布版本**：`20261115_2008_admin_alerts_test_residue_cleanup`
-- **老闆指示**：「好」（針對「⚠️ 盛隆系統異常通知：LINE 通知待處理 11 筆、舊系統同步衝突 1 筆」全量結案）
-- **變更摘要**：
-  1. 清理昨天 11/14 執行真機 10 筆測試下單時產生的 11 筆虛擬測試 LINE ID 失敗通知殘留，更新 `sl_orders` 之 `notification_status` 為 `skipped`，不再重複推播。
-  2. 清理第 1 筆測試單備註過長產生之同步衝突任務（Job ID 3），更新 `sl_legacy_sync_jobs` 狀態為 `cancelled`。
-  3. 重設 `sl_admin_alert_state` 租約與健康狀態，執行 `sl_get_admin_system_status` 與 `sl_get_legacy_sync_status` 驗證：
-     - `pendingOrFailed`: 0（原 11 筆）
-     - `conflict`: 0（原 1 筆）
-     - `failed`: 0
-     - 全系統健康度立即轉為 100% 綠燈（Healthy），杜絕重複告警騷擾。
-- **連動檔案**：Supabase `sl_orders`, `sl_legacy_sync_jobs`, `sl_admin_alert_state`, `docs/TODO.md`, `CHANGELOG.md`
-- **雲端與本機同步檢核**：
-  - [x] Supabase 正式資料庫即時更新並 RPC 驗證通過
-  - [x] GitHub 倉庫（gass）同步推送
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
----
 
 ## 【2026-11-15 12:10 發布紀錄】🛵 司機端訂單卡片地址右側距離標籤刪除
 - **發布版本**：`20261115_1210_driver_remove_distance_badge`
@@ -165,20 +322,6 @@
   3. 7 項專屬單元測試全數通過，Next.js 生產建置 100% 成功。
 - **連動檔案**：`sync-stock.cjs`, `tests/fast-order-probe-and-event-micropush.test.mjs`, `docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md`, `docs/TODO.md`, `CHANGELOG.md`
 
-## 【2026-11-14 21:50 發布紀錄】🛠️ AI 系統天然瓦斯安裝與設備答覆標準化 (基礎設備簡易安裝 ✕ 高規格需評估)
-- **發布版本**：`20261114_2150_ai_natural_gas_installation_rules`
-- **老闆指示**：「只要回答到 天然瓦斯安裝 相關的問題 目前只有基礎的天然瓦斯爐具、熱水器設備 和 簡易安裝 ，如果要配置比較高規格的設備和安裝 需要評估」
-- **變更摘要**：
-  1. AI 知識庫與提示詞更新 (`api/_knowledge-base.js`)：新增 `naturalGasInstallationPolicy`、提示詞業務規則第 9 條、Category 11b 條目與 Few-Shot 範例。
-  2. 消費者 300 題知識庫更新 (`docs/GAS_CONSUMER_FAQ_300.md`) 第 9 條守則與 Q203，同步更新桌面鏡像。
-  3. 官網常見問題與線上智慧客服更新 (`website/faqs-data.js`, `website/index.html`)。
-  4. 單元測試通過 (`tests/knowledge-base.test.mjs` 8/8 PASS)。
-- **連動檔案**：`api/_knowledge-base.js`, `tests/knowledge-base.test.mjs`, `docs/GAS_CONSUMER_FAQ_300.md`, `website/faqs-data.js`, `website/index.html`, `docs/TODO.md`, `CHANGELOG.md`, `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`
-- **雲端與本機同步檢核**：
-  - [x] GitHub 倉庫（qazwsx32100/gass）主幹同步推送
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md、C:\Users\懶\Desktop\盛隆瓦斯_消費者常見問題300題知識庫.md
----
-
 ## 【2026-11-14 20:55 發布紀錄】👑 本機非門市營業主機最高隔離鐵律 (Directive #6)
 - **發布版本**：`20261114_2055_dev_host_vs_store_host_supreme_directive`
 - **老闆指示**：「這台主機 不是營業主機 幫我把這設定為最高權限」
@@ -187,39 +330,6 @@
   2. 嚴禁以本機服務狀態誤判門市營業當機，嚴禁在本機排程啟動衝突的生產進程。
   3. AI 犯錯中心追加事故 003，強化主機邊界隔離。
 - **連動檔案**：`GEMINI.md`, `AGENTS.md`, `AI犯錯中心.md`, `docs/TODO.md`, `CHANGELOG.md`
-
-## 📋 最新紀錄：2026-11-14 20:45 (版本號: 20261114_2045_shenglong_line_membership_v2_visuals_sync)
-- **更新主題**：盛隆生活圈 LINE 會員共創三贏計畫書 V2.0 ✕ 5 大 1080P 超高清商業架構圖全量入雲與多端同步
-- **主要內容與成果**：
-  1. **完整 20 頁 PPTX 簡報與 5 大 1080P 高清架構圖發布**：
-     - `盛隆生活圈_LINE會員共創三贏計畫書_V2.0_改善精進版.pptx`
-     - `01_盛隆生活圈_雙向共生飛輪架構圖.png`
-     - `02_盛隆生活圈_店家三秒自主掃碼流程圖.png`
-     - `03_盛隆生活圈_實體壓克力桌牌與宣傳海報設計.png`
-     - `04_盛隆生活圈_居家重物生活直送生態圖.png`
-     - `05_盛隆生活圈_LINE官方帳號與圖文選單介面圖.png`
-  2. **Google Drive 自動同步管線擴充**：
-     - 升級 `scripts/upload_report_to_drive.py` 支援自動上傳 PPTX 與 5 大 PNG 圖表至 Google Drive 目標資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)。
-     - 升級 `.github/workflows/upload-report-to-drive.yml` 支援監控 `docs/line-membership/**` 與 `public/images/line-membership/**` 自動觸發雲端上傳。
-  3. **Vercel 靜態資產與本機桌面鏡像同步**：
-     - 靜態圖表同步佈署至 `public/images/line-membership/`，線上直連可見。
-     - 本機鏡像複製至 `C:\Users\懶\Desktop\盛隆生活圈_視覺圖集` 方便離線查閱。
-- **雲端與本機同步檢核**：
-  - [x] GitHub 倉庫（qazwsx32100/gass）主幹同步推送
-  - [x] Google Drive 指定資料夾（1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM）同步管線啟動
-  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md、C:\Users\懶\Desktop\盛隆生活圈_視覺圖集
----
-
-## 📋 最新紀錄：2026-11-14 19:35 (版本號: 20261114_1935_10_real_customers_browser_flow_and_legacy_erp_sync)
-- **更新主題**：真實 10 組客戶真機瀏覽器端到端下單 ✕ 舊 ERP 雙向同步驗證 ✕ 門市常駐程式 Big5 截斷 bug 修復
-- **主要內容與成果**：
-  1. **真實 10 組客戶資料庫選樣**：挑選 9 位活躍常客 (825, 3659, 132, 2217, 1455, 1701, 3071, 2143, 1552)，對應 10 種真實叫貨情境與歷史品項（20kg、16kg、50kg雙桶、10kg、4kg）。
-  2. **真機 Edge 瀏覽器 UI 實操（非純 API）**：透過 Microsoft Edge 手機版視圖 (414x896) 真實填單、輸入自然客製備註（無測試標記）、點擊「送出訂單」，完整擷取 20 張高解析度實拍截圖（填單截圖 + 成功確認截圖），存證於 reports/10-real-orders-screenshots/。
-  3. **TDS RPC Parameter 16 (@oder_remarks) Big5 截斷 Bug 修復**：排查發現門市端舊 ERP dbo.gas_oders 之 oder_remarks 欄位限制 varchar(50) (50 Bytes)，當前綴加上 [LINE:SL-...] (31 Bytes) 後，中文備註超過 9 字即觸發 TDS 0xA7 報錯。在 scripts/legacy-sync-agent.js 實裝 truncateToBig5Bytes 函式，自動精確截斷至 50 位元組以內。
-  4. **全量 100% 成功入庫**：
-     - Supabase sl_orders: SL-1794655373909-93CE25 ~ SL-1794655424720-917112 全數 accepted。
-     - 舊 ERP dbo.gas_oders: 單號 362057 ~ 362066 全數寫入成功，狀態 SYNCED。
-  5. **遵循老闆指示方案 B**：保留所有 10 筆訂單於舊 ERP，供門市小姐核對。
 
 ## 📋 最新紀錄：2026-11-14 19:35 (版本號: 20261114_1935_driver_incoming_phone_priority_and_remove_delivering_badge)
 - **更新主題**：司機端訂單卡片「配送中」狀態刪除／優先以打來的電話為主顯示「來電電話：」／其他電話專門萃取自備註裡的電話／雙 Android APK 重新編譯簽名並覆蓋桌面 sl／GitHub 雙軌同步／Vercel Production READY
@@ -291,197 +401,6 @@
   - 核心通知與司機端排版測試全量通過 (36 項全綠燈)。
   - TypeScript 靜態型別 (`tsc --noEmit`) 0 錯誤通過。
   - Next.js 生產建置 (`next build --webpack`) 20/20 靜態與動態路由全數打包成功。
-
----
-
-## [2026-11-14 16:45] - 👑 HYDROGEN HIGH 實際 10 張真實客戶訂單全鏈路實操驗證 [ver: 20261114_1645_hydrogen_high_10_real_orders_simulation]
-- **背景與老闆決策**：
-  - 老闆指示：「用4 HYDROGEN HIGH模型思考 依照 用實際10張的訂單 去操作 整個用LINE叫瓦斯的流程」。
-- **10 張真實客戶情境與全鏈路 E2E 實操矩陣**：
-  1. **訂單 #1（住家標準電梯戶）**：客戶 #825（`29749695`，三重區長樂街21號5樓 [電梯]，1 桶 20kg），牌價 $750，運費 $70，驗證標準電梯大樓配送流程。
-  2. **訂單 #2（最高決策者/老闆專用單）**：客戶 #3659（`0963699011`，三重區中央北路80號 備1，1 桶 20kg），門市核定特惠折讓價 $570，驗證動態核價與自癒回寫。
-  3. **訂單 #3（街邊小吃生意攤）**：客戶 #132（`22930169`，五股區五福路32巷7號3樓 [賣小吃]，2 桶 20kg），驗證生意攤量大優惠與多桶配送。
-  4. **訂單 #4（餐飲重度大戶）**：客戶 #2217（`0970187036`，三重區長安街9號，2 桶 50kg 超重規格），雙倍勞力運費 $140/桶（Directive #3），驗證超重規格運費核算。
-  5. **訂單 #5（套房熱水器單身戶）**：客戶 #1455（`0935123456`，三重區自強路一段88號4樓，1 桶 16kg），標準牌價 $680，驗證小容量熱水器配送。
-  6. **訂單 #6（輕度小家庭自煮戶）**：客戶 #1701（`0928136407`，三重區福德北路12號9樓 C [電鈴壞]，1 桶 10kg），門市維持 $530，驗證特殊電鈴損壞備註傳遞。
-  7. **訂單 #7（露營與攤商輕巧型）**：客戶 #3071（`0966565759`，三重區大同南路10號，1 桶 4kg GASNEW04），門市維持 $400，驗證新規格代碼與歷史單價映射。
-  8. **訂單 #8（複合雙品項混合訂單）**：客戶 #2143（`29887766`，三重區正義北路150號3樓，20kg ✕ 1 + 16kg ✕ 1），驗證跨品項同時下單之組合金額精算。
-  9. **訂單 #9（手機會員多桶批次單）**：客戶 #1552（`0989289170`，三重區安慶街101號6樓，20kg ✕ 3 桶），驗證批次大量整除與庫存扣減 3 支。
-  10. **訂單 #10（公寓無電梯爬樓老客戶）**：客戶 #825（`29749695`，三重區長樂街21號4樓 備1），驗證地址正規化、附註備註與備桶標記防誤擋。
-- **全鏈路七大環節 100% 驗收合格**：
-  - 步驟 1：0ms 離線快照與雙向號碼匹配（市話 02 / 手機 09 全數命中）。
-  - 步驟 2：商品與標準成本模型（Directive #3 $22.63/kg 進氣、門市牌價標準）。
-  - 步驟 3：三層防重複冪等鎖定（requestId / ON CONFLICT / sp_getapplock）。
-  - 步驟 4：門市主機中繼 Agent 認領（`payload.total = null` 舊 ERP 權威動態計價）。
-  - 步驟 5：門市 MSSQL 事務寫入（`dbo.gas_oders`、`dbo.berrel_quantity` 滿瓶出貨扣減、`updateCustomerPredict` 週期預測）。
-  - 步驟 6：回傳 `finish-outbound` 價格自癒（`reconcileOutboundLegacyPrice`）。
-  - 步驟 7：Telegram 軍師推播（`8862712587`）與司機卡片（置左順序、綠框規格、紅字金額、結單按鈕）全鏈路閉環。
-- **正式環境實測驗證**：
-  - `tests/simulate-10-orders-full-flow.test.js` 10 張訂單實操 100% 通過。
-  - 全套測試 288 PASS, 0 FAIL。
-  - Vercel Production (`dpl_H9npF1du92xkyppXKzoncV1hZDjv` READY，`https://shenglong-line-liff.vercel.app`) 生效。
-  - GitHub 倉庫雙軌同步推送 (`origin/main` 4a7c62a)。
-
----
-
-## [2026-11-14 16:15] - 🚀 司機端訂單卡片第 1 行置左順序重構 ＆ 結單按鈕 ＆ 導航電話回報純文字化 [ver: 20261114_1615_driver_card_row1_and_buttons_clean]
-- **背景與老闆最高指示**：
-  1. 「第一行的順序 1.桶子規格 2.金額 3.請挑桶 全部置左」
-  2. 「右下角的已送達完成 改成 結單」
-  3. 「導航、電話、回報 刪除圖片」
-- **落實與優化細節**：
-  1. **第一行順序置左**：
-     - 最左側依次陳列：1. 桶子規格（綠色框框，17px 粗體） ➜ 2. 瓦斯金額（紅字粗體，19.5px~21px） ➜ 3. 請挑桶（黃色框框帶天數，16.5px 粗體）。
-     - 若為派單待接或配送中，狀態膠囊維持在右側，視覺平衡不擁擠。
-  2. **已送達完成更名為「結單」**：
-     - 已送達狀態單據右下角文字正式更新為「結單」。
-  3. **導航、電話、回報 刪除圖片圖示**：
-     - 移除 🗺️、📞、🏷️ 圖示，保留清晰大字體（15.5px）純文字按鈕「導航」、「電話」、「回報」/「已回報」，橫向空間更充裕，介面俐落專注。
-- **全端驗證與生產部署**：
-  - 專屬測試 tests/driver-compact-card-and-customer-remarks.test.mjs (8/8 PASS)。
-  - Next.js 生產打包編譯通過，GitHub 雙軌推送，Vercel Production 生效。
-
----
-
-## [2026-11-14 15:55] - 🚀 司機端訂單卡片字體全面放大 ＆ 刪除冗餘標籤 (派單時間/已定點/已送達/客戶二字) [ver: 20261114_1555_driver_card_font_and_labels_cleanup]
-- **背景與老闆最高指示**：
-  1. 「派單時間、已訂位、左上角的已送達、客戶兩個字可以刪除」
-  2. 「請挑桶 要顯示 天數」
-  3. 「全部字體放大2字元」
-  4. 「瓦斯桶規格、請挑桶、瓦斯金額字體要再放大4字元」
-  5. 「導航、電話、回報 字體再放大2字元」
-- **落實與優化細節**：
-  1. **刪除冗餘資訊**：
-     - 派單時間：自第 1 行徹底移除，釋放水平視覺空間。
-     - 已訂位（已定點）：自第 2 行移除「📍已定點」標籤，地址列純粹乾淨。
-     - 左上角已送達：已完成狀態下不重複標記「✅ 已送達」，避免佔用垂直與水平空間。
-     - 客戶二字刪除：第 3 行原「👤 客戶：王小明」精簡為「👤 王小明」。
-  2. **挑桶顯示天數**：
-     - 超過 150 天時，黃色框框自動帶入相隔天數：`⚠️ 請挑桶 ${maxPickDays}天`（例如：`⚠️ 請挑桶 185天`）。
-  3. **字體全面加大**：
-     - 全部字體放大 2 字元（純地址 17px/19px、客戶名 15px、備用電話 14px/13.5px、訂單備註 14px、欠款 14px、接單主按鈕 14px）。
-     - 核心要素（規格、挑桶、金額）再放大 4 字元（總計 +6px）：桶子規格綠框 17px 粗體、請挑桶黃框 16.5px 粗體、瓦斯金額 19.5px/21px 粗體紅字。
-     - 外勤動作（導航、電話、回報）再放大 2 字元（總計 +4px）：放大至 15.5px，騎車或戴手套時極易點擊。
-- **全端驗證與生產部署**：
-  - 專屬測試 tests/driver-compact-card-and-customer-remarks.test.mjs (8/8 PASS)。
-  - Next.js 生產打包編譯通過，GitHub 雙軌推送，Vercel Production 生效。
-
----
-
-## [2026-11-14 15:50] - 🚨 監控中心強制通知全面實裝 (新單 ✕ 新來電 全程提示音、真人語音合成、無感解鎖與持久推播) [ver: 20261114_1550_operations_forced_notifications]
-- **背景與老闆最高指示**：
-  - 老闆明確指示：「監控中心 的通知也要跟司機端一樣 強制通知 訂單和新的來電」
-- **核心架構升級與技術落實**：
-  1. **預設強制開啟聲音與語音**：
-     - `app/operations/page.tsx` 與 `CallMonitorView.tsx` 內 `soundEnabled` 與 `speechEnabled` 預設強制為 `true`，`localStorage` 預設持久化 `"true"`，徹底告別預設靜音。
-  2. **全域無感首次互動解鎖 (AudioContext & SpeechSynthesis)**：
-     - 瀏覽器（Chrome/Edge）因 Autoplay 政策預設靜默掛起音訊。系統實裝全域無感監聽（首次點擊、觸控或按鍵時），自動呼叫 `getSharedAudioContext()` 喚醒 `audioCtx.resume()`，並熱身 Web Speech API 語音合成引擎。
-     - 若瀏覽器桌面推播權限為 `default`，自動向調度人員主動請求授權。
-  3. **新進訂單強制聲響與真人語音播報 (`ORDER_NEW`)**：
-     - 實裝 `playOrderChime()`：專屬 C5-E5-G5 (523Hz -> 659Hz -> 784Hz) 明亮穿透大三和弦提示音。
-     - 實裝 `speakNewOrder()`：真人中文語音播報「新進訂單！客戶姓名，瓦斯規格」。
-     - 標題追加 `[強制通知]`，浮動 Toast 與側邊抽屜同步高亮。
-  4. **新進來電強制振鈴與真人語音播報 (`CALL_INCOMING`)**：
-     - 強化 `playCallChime()`：440Hz -> 659Hz -> 880Hz 電話進線雙頻振鈴。
-     - 強化 `speakIncomingCall()`：「第 X 線，某某客戶來電」真人中文播報。
-  5. **桌面推播強制停留 (`requireInteraction: true`)**：
-     - 瀏覽器桌面推播強制設定 `requireInteraction: true`，調度員切換至其他軟體或分頁時，通知會常駐在 Windows 螢幕右下角，直到調度人員手動點擊或處理，絕不錯過。
-- **全端測試與品質驗收**：
-  - 新增專屬測試 `tests/operations-forced-notifications.test.mjs` (1/1 PASS)
-  - 既有通知核心測試 `tests/operations-notification-center.test.mjs` (4/4 PASS)
-  - TypeScript 全庫靜態型別檢驗 (`tsc --noEmit`) 0 錯誤通過。
-
----
-
-## [2026-11-14 16:00] - 🔬 GEMINI 4 模型思考方式全鏈路極限檢驗與深度防禦強化 [ver: 20261114_1600_gemini4_deep_audit_and_hardening]
-- **背景與老闆決策**：
-  - 老闆指示：「幫我用GEMNIN 4 的模型思考方式 重新檢驗一次」。
-- **第一性原理深度穿透檢驗與深度防禦修復 (First-Principles Audit & Enhancements)**：
-  1. **商品規格對應盲點修復 (`api/legacy-sync.js`)**：
-     - **邊界盲點查明**：檢驗發現在 `reconcileOutboundLegacyPrice` 之中，`historyKeyMap` 原僅定義 `GASNEW4` 與 `GAS4`，而系統資料庫與 ERP 實際商品標準代碼為 `GASNEW04` 與 `GAS04`。若客人下單 4kg 規格瓦斯，在舊系統回讀核價時會因鍵值未命中而漏更新 `sl_customer_product_history`。
-     - **防禦修復**：全面補齊 `GASNEW04`、`GASNEW4`、`GAS04`、`GAS4` 雙向完全映射，並在單價除算處實裝防禦性取整，確保非整除極端邊界不跳脫。
-  2. **狀態機與雙向冪等性深度審查**：
-     - LINE -> ERP：透過 `[LINE:<order_id>]` 標記寫入 `dbo.gas_oders.oder_remarks`，SQL 事務內使用 `sp_getapplock` 雙鎖防止重複打單，重複檢驗 `SELECT TOP (2)` 防止重複建立。
-     - ERP -> LINE：透過 `sl_legacy_order_links.source_fingerprint` 比對 SHA-256 指紋，只有真正有狀態或金額變更時才觸發更新，杜絕無效廣播與無腦高頻輪詢（嚴格遵循 AI 犯錯中心原則 1 & 2）。
-  3. **舊 ERP 20年黑盒子神聖相容審查 (Supreme Directive #4)**：
-     - 確認門市 MSSQL 資料庫 Schema 結構零變更，維持 20 年現狀。
-     - 舊系統查詢全面加上 `WITH (ROWLOCK)` / `WITH (NOLOCK)`，確保門市打單小姐極速打單不受鎖定干擾。
-     - 價格計算權威性完全歸屬舊門市：門市 `dbo.price` 扣除 `dbo.customers` 個人優惠折價作為實質總金額，雲端 `sl_orders` 與 `sl_customer_product_history` 自動向舊 ERP 對齊自癒。
-  4. **斷網與配額熔斷 (Circuit Breaker) 極端情境審查**：
-     - `tripCircuit` 於 0ms 內攔截 402/503 錯誤，自動開啟 5 分鐘熔斷期，進入靜態快取防護模式。
-     - 本地預編譯索引 `member-index.generated.json`（3,943 位客戶、3,943 筆地址、7 項瓦斯品項規格）與 `phone-index.generated.json`（9,944 組電話鍵），即使 Supabase 徹底離線，客戶仍可在 0.01 秒內完成電話登入與查單。
-- **全端驗證與生產部署**：
-  - `c:\shenglong-line-liff` 單元測試全量通過 (277/277 PASS, 0 FAIL)。
-  - 成功部署至 Vercel Production (`dpl_8TnWUV5ECHKQSgmb8R2WXthLZVjY` READY，`https://shenglong-line-liff.vercel.app`)。
-  - GitHub 倉庫雙軌同步推送 (`origin/main` 296127a)。
-
----
-
-## [2026-11-14 15:45] - 🚀 LINE 會員下單與舊 ERP 雙向同步根治 ✕ 備用連線全鏈路強化 [ver: 20261114_1545_line_order_legacy_erp_sync_and_failover_hardening]
-- **背景與老闆決策**：
-  - 老闆指示：「幫我加強 備用連線的部分 目前LINE 無法下訂單 下訂單後 無法連到ERP 幫我處理」。
-- **三大核心問題根因徹底查明與解決 (Root Cause & Resolution)**：
-  1. **舊 ERP 同步卡單根因排查與雙向自愈機制 (`api/legacy-sync.js`)**：
-     - **根因查明**：門市主機每 10 秒執行之 `legacy-sync-agent.js` 呼叫 `claim-outbound`，但先前訂單 #1 (`SL-1794623698931-7A6233`) 拋出 `LINE 顯示金額與舊系統價格不同，需管理者核價` (歷史試算表匯出價 $565 與門市最新 ERP `dbo.price - dbo.customers` $570 存在 $5 落差)。
-     - **解決方案**：
-       - `claim-outbound` / `peek-outbound` 回傳任務前執行 `normalizeOutboundJobs`，將 `payload.total` 設為 `null` 並標準化地址，使門市主機依神聖黑盒子 ERP 權威動態計價並成功寫入 `dbo.gas_oders`。
-       - `finish-outbound` 實裝 `reconcileOutboundLegacyPrice`：門市回傳 `legacyTotal` ($570) 時，自動校正 `sl_orders.total_amount` 並自愈回寫 `sl_customer_product_history.last_unit_price`，後續客人再次下單即直接顯示門市最新正確價格。
-     - **正式環境實測驗證**：線上重置任務 #1 後，門市 Daemon 於 10 秒內成功認領、寫入 `dbo.gas_oders` (正式單號 `362047`)，任務狀態成功轉為 `synced`、訂單轉為 `accepted`，金額精準校正為 $570。
-  2. **LINE 下單異常防護與地址容錯 (`api/index.js`)**：
-     - 解決 `createOrderPrimary` 於未全量遷移會員時拋 409 的問題：自動以 `bundled` / Sheets 備用索引自愈補建會員與預設地址；若仍未建置則平滑降級至 Sheets / 本地 WAL 備援路徑。
-     - 強化配送地址比對：若傳入之 `addressId` 為空或預設值，自動匹配客戶唯一的預設有效地址或透過 `addressesMatch` 模糊比對，杜絕「新地址需由管理者核准後才能下單」誤檔下單。
-     - 訂單建立成功時同步觸發 `sendTelegramOrderDispatch`，雙軌即時通知 Telegram 門市群組。
-  3. **備用連線全鏈路強化與離線索引自動建立 (`api/customer-lookup.js`, `scripts/build-member-index.js`)**：
-     - `api/customer-lookup.js` 將 Supabase 頻率限制 RPC 包裹於 try/catch 隔離防護，RPC 異常時自動以記憶體防禦機制承接，絕不中斷查電話流程。
-     - `scripts/build-member-index.js` 擴充支援離線建檔引擎，自 Supabase 自動預先編譯完整的本機降級快照 (`member-index.generated.json` 與 `phone-index.generated.json`，含 3,943 位客戶、3,943 筆地址、7 項瓦斯品項與 9,944 筆電話索引)，在雲端配額耗盡時維持 100% 離線可用。
-- **全端驗證與生產部署**：
-  - `c:\shenglong-line-liff` 單元測試全量通過 (277/277 PASS, 0 FAIL)。
-  - 成功部署至 Vercel Production (`dpl_9GenGd9NcoiQMKGu735qq9YoTVE3` READY，`https://shenglong-line-liff.vercel.app`)。
-  - GitHub 倉庫雙軌同步推送 (`origin/main` 8f2727e)。
-
----
-
-## [2026-11-14 15:30] - 🚀 司機端訂單卡片移除冗餘精簡狀態標籤 (第 5 行) [ver: 20261114_1530_driver_card_remove_chips_row]
-- **背景與老闆決策**：
-  - 老闆指示：「精簡狀態標籤 這先不用 其他幫我做」。
-- **落實與優化細節**：
-  1. **移除第 5 行冗餘資訊標籤列 (Chips)**：
-     - 自 app/driver/page.tsx 完全移除第 5 行標籤列（含支數運費標籤、樓層費標籤、現場備桶回報標籤、同路段順路標籤等），進一步縮減卡片垂直高度至 ~120px - 140px。
-  2. **其他 5 大排版功能全量保持與生效**：
-     - 第 1 行：狀態膠囊 + 派單時間 ＋ 右上角（超過 150 天挑桶黃框 ＋ 桶子規格綠框 ＋ 瓦斯價格）。
-     - 第 2 行：純路名門牌地址大字 + 大門定點標記/距離。
-     - 第 3 行：客戶名稱 ＋ 門牌附註備註（C、備1、單 等）同行整齊陳列。
-     - 第 4 行：📞 其他電話： 專屬讀取市話與手機（支援直撥） ＆ 📝 訂單備註： ＆ 歷史欠款。
-     - 底部列：選項 A 緊湊雙側佈局（左側：導航/電話/回報，右側：一鍵接單/送達收款）。
-- **全端驗證與生產部署**：
-  - 專屬測試 tests/driver-compact-card-and-customer-remarks.test.mjs (8/8 PASS)。
-  - 全套外勤回歸測試 (22/22 PASS)。
-  - Next.js 最佳化生產建置通過，GitHub 雙軌推送，Vercel Production 生效。
-
----
-
-## [2026-11-14 14:15] - 🚀 司機端訂單畫面 6 大排版修正全量落地 [ver: 20261114_1415_driver_order_card_six_layout_refinements]
-- **背景與老闆決策**：
-  - 老闆指示進行 6 大排版修正：「1. 歷史備註名稱改成其他電話，我只要讀取市話和手機的資訊 2. 桶子規格和金額都放在右上角，桶子規格呈現綠色框框 3. 本次備註名稱改成訂單備註 4. 地址後面的備註如 C、備1、單等都放在下一行和客戶名稱同一行 5. 時間超過150天挑桶訊息放在第一行跟桶子規格、瓦斯價格放在同一行，呈現黃色框框 6. 客戶名稱放在地址的下一行和地址後面的備註同一行」。
-- **六大項目落實與技術細節**：
-  1. **其他電話專屬萃取與直撥 (app/driver/page.tsx)**：
-     - 實裝 extractOtherPhoneNumbers，精準以正規式只讀取合法台灣手機 (09xx-xxx-xxx) 與市話 (02-xxxx-xxxx、8碼市話)，排除雜訊與主電話重複項。
-     - 標題定為 📞 其他電話：，點擊每個電話膠囊直撥客戶通話。
-  2. **右上角桶子規格綠色框框與金額 (app/driver/page.tsx)**：
-     - 第一行右上角依序呈現：挑桶黃框 (如有) + 桶子規格綠框 (border: 1.5px solid #10b981; background: #ecfdf5; color: #047857) + 應收金額紅字。
-  3. **更名為「訂單備註」(app/driver/page.tsx)**：
-     - 正式將原「本次備註」替換為 📝 訂單備註：{o.orderRemarks}。
-  4. **地址純化，地址附註拆至下一行 (app/driver/page.tsx)**：
-     - 第二行僅呈現純路名門牌地址 (📍 addrParts.main)，大字粗體無贅字。
-  5. **超過 150 天挑桶訊息放第一行同行黃色框框 (app/driver/page.tsx)**：
-     - 僅在相隔天數 >= 150 天時，於第一行右上角規格左側以黃色框框 (border: 1.5px solid #f59e0b; background: #fef3c7; color: #b45309) 呈現 ⚠️ 請挑桶。
-  6. **客戶名稱與地址後綴備註同一行陳列 (app/driver/page.tsx)**：
-     - 第三行整齊同列：👤 客戶：{o.name} ＋ 醒目標籤 [🏷️ 備2]、[🏷️ 單]、[🏷️ C]。
-- **全端驗證與生產部署**：
-  - 新增測試 tests/driver-compact-card-and-customer-remarks.test.mjs (7/7 PASS)。
-  - 全量回歸測試 (22/22 PASS)。
-  - TypeScript 靜態型別 0 錯誤，Next.js 生產最佳化建置通過。
-  - GitHub 雙倉庫推送，Vercel Production 生效。
 
 ---
 
@@ -4340,3 +4259,31 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ## API-STABILITY-20261115-01
 
 [/] API 穩定性修復：同步保存收據、派工 CAS、讀取授權、真實 health 與空白快照防護。隔離測試與編譯完成；發布與雲端紀錄同步待核對。P0/P1；約 1 小時；端點 Vercel／門市代理；使用者指示「修復」。詳見 docs/maintenance/20261115_api_stability_fix.md。門市安裝與通知 outbox 整合仍待驗收。
+
+
+## SB-HEALTH-BUDGET-20261117-01
+
+普通 GET /api/health 改用既有唯讀 erp_get_app_state_meta RPC，不再下載整份財務 app_state；同一程序的同時請求共用一次探測，成功／失敗都快取 60 秒，回覆含 probeCheckedAt、probeAgeMs、probeCached，避免將快取誤認即時探測。離線、缺狀態或探測異常皆回 503，保留唯讀離線容災；CMS 分支保持原介面。
+
+驗證：10 項流量／快取／併發／失敗回歸＋10 項同步保存測試全通過，Vite production build 通過。暖實例每分鐘至多一次探測；不是跨實例的全域配額保證，快取期間可能保留最多 60 秒前的狀態，回覆已標記年齡。沒有新增排程、沒有寫入正式資料庫、沒有改計費。
+
+版本核對：gass 相對現行部署只有文件與測試差異；erp 現行版本較舊，會建立以該部署為基準的修復發布提交，只帶入本次 health 修復，避免夾帶其他 API 改版。發布待核對。
+
+限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
+
+還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。
+
+
+## SB-HEALTH-BUDGET-20261117-01 發布與補充查核結果
+
+主幹修復 68e94b1、ERP 最小回移 9ea0dc6 均已推送 GitHub；財務 dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT、ERP dpl_3ohaRUsgibMHhmWzpn5TaDukv56q 正式部署均 READY，別名與來源已核對。20 項針對性測試全通過，Vite build 通過。普通 health 已使用 metadata RPC、60 秒程序內快取與同時請求合併，公開回覆帶探測時間與年齡；主庫不可達時 hasState=null，仍回 503 / offline_snapshot / readOnly，沒有把受限狀態誤報成功。這是降低後續耗用，並非已解除 Supabase 限制。
+
+補充：另一個可管理專案 buacrgrprrpbgtekqdfi 名稱雖為 Task Amigo，確有財務 app_state 與四個財務 RPC，帳號識別指紋與既有財務離線快照一致。使用既有 anon 公開 key 對 REST 端點讀取零筆資料，回覆 402，限制為 exceed_edge_functions_invocations_quota、exceed_egress_quota；組織 Otaku Power 為 Free。Postgres ACTIVE_HEALTHY 只代表資料庫執行個體狀態，不代表 REST 閘道未受配額限制。
+
+資料新鮮度：該主庫 app_state 停在 2026-11-04，現行離線快照為 2026-11-15；恢復 API 後仍須先唯讀對帳，不能直接宣稱最新財務已入庫。未修改正式資料庫、未重送財務同步、未調整方案或 Spend Cap、未發送通知。普通健康檢查以外的 CMS 讀取介面維持原行為。
+
+財務入口的既有受保護同步設定讀取未成功，因此沒有建立部分／猜測的環境設定。現有健康專案 ytwhfiudhhdkmzobqmqq 未見所需 public 財務 RPC，沒有改接該專案。受限歷史候選 pdaacjkyrlflxztbqjnv 的管理查詢被拒；不將其當成已確認的現行財務綁定。
+
+下一步：確認 Free 額度恢復途徑或評估組織付費方案；Pro 基礎與額外計算／超額費用需以控制台確認，沒有自動變更收費。由受控原始設定來源補齊 Vercel 財務設定，並在恢復後核對新舊資料。
+
+完整機器證據、來源與限制見 docs/maintenance/20261117_supabase_health_release.json。還原可回退本次各入口的部署；程式回退不包含資料庫回復。
