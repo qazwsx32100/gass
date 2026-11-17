@@ -1,3 +1,24 @@
+## 📋 最新紀錄：2026-11-17 09:35 (版本號: 20261117_0935_operations_address_full_width_actions_downward)
+- **更新主題**：監控中心卡片門牌地址最大化／地圖與電話按鈕下移佈局重構／門牌自然同一行不換行／雙端同步發布
+- **老闆指示**：「監控中心 的訂單 地圖和電話 可以在往下移動，盡量讓地址放在同一行，不要讓很快就換行」
+- **主要內容與成果**：
+  1. **問題根因確認**：
+     - `SharedAddressAction` 原先將門牌地址與地圖導航按鈕、撥號按鈕橫向並列，造成門牌可用寬度受限於 ~240px，稍長地址即斷行。
+  2. **門牌地址首行獨佔與滿版呈現**：
+     - `SharedAddressAction.tsx` 首行專屬 `📍 fullStreetWithFloor`（width: 100%），地址完整平鋪，大幅降低換行機率。
+  3. **地圖與電話按鈕下移**：
+     - 🗺️ 導航與 📞 撥號按鈕下移至第二行，保留 40px 大拇指極速觸控，釋放地址橫向空間。
+  4. **桌面視圖同步優化**：
+     - `operations/page.tsx` 桌面卡片地址與電話亦拆為雙行排列。
+  5. **全端測試與產線驗證**：
+     - 專屬單元測試 `tests/operations-address-navigation-layout.test.mjs` 通過。
+     - TypeScript `npx tsc --noEmit` 0 錯誤，Next.js Turbopack 產線編譯成功。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板同步：C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md
+---
+
 ## 📋 最新紀錄：2026-11-17 09:30 (版本號: 20261117_0930_admin_unified_nav_and_action_inbox)
 - **更新主題**：盛隆後台一體化導航／今日待辦中心／手機底部常駐快捷列／平滑滾動與觸控熱區全面升級
 - **老闆指示**：「我想把後台的介面優化 有什麼建議？」「來吧」
