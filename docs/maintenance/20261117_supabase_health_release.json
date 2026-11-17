@@ -1,0 +1,187 @@
+{
+  "id": "SB-HEALTH-BUDGET-20261117-01",
+  "atUtc": "2026-11-17T04:58:08.580527+00:00",
+  "managedSupabaseProject": {
+    "ref": "ytwhfiudhhdkmzobqmqq",
+    "status": "ACTIVE_HEALTHY",
+    "healthAdvisories": [],
+    "requiredPublicFinanceRpcNamesFound": []
+  },
+  "historicalProjectCandidate": {
+    "ref": "pdaacjkyrlflxztbqjnv",
+    "managementRead": "permission denied",
+    "currentFinanceBindingConfirmed": false
+  },
+  "confirmedIssues": [
+    "gass Vercel environment variable list is empty; production log reports missing Supabase configuration",
+    "ERP production log reports exceed_edge_functions_invocations_quota and exceed_egress_quota"
+  ],
+  "repair": {
+    "healthProbe": "existing read-only metadata RPC",
+    "cacheSeconds": 60,
+    "scope": "per warm process; not a global quota guarantee",
+    "concurrentRequestsCoalesced": true,
+    "failureCache": true,
+    "fullFinancialSnapshotDownloadedForNormalHealth": false,
+    "testsPassed": 20,
+    "testsFailed": 0,
+    "viteBuild": "passed"
+  },
+  "databaseWrites": false,
+  "billingChanges": false,
+  "secretsDisplayed": false,
+  "sourceCommits": {
+    "gass": "68e94b1aedd85c29d4a4e12dc9f56dbbe60e9817",
+    "erp": "9ea0dc6e0beb702b50a5c41f76529e4a5cfde8a4"
+  },
+  "documentation": [
+    "https://supabase.com/docs/guides/platform/manage-your-usage/egress",
+    "https://supabase.com/docs/guides/platform/billing-faq"
+  ],
+  "remaining": [
+    "Resolve existing Free-plan quota restriction with the project owner; no billing changes have been made.",
+    "Obtain the protected original finance sync configuration through an authorized source; no partial environment configuration was written.",
+    "Reconcile the newer offline snapshot against the older primary before restoring normal live financial reads."
+  ],
+  "candidateDeployments": {
+    "gass": "dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT",
+    "erp": "dpl_3ohaRUsgibMHhmWzpn5TaDukv56q"
+  },
+  "finalFiles": {
+    "gass": {
+      "api/health.js": "fe3ef73c7d85b75760c60eed3f61e0d8a6956b1bdd44dd2b2de3fcf91ed531c9",
+      "api/_health-readiness.js": "953f8b57c283d4e4b1af04b4d508326c06114c929ec48f7ffbaccf1b269da1bf"
+    },
+    "erp": {
+      "api/health.js": "fe3ef73c7d85b75760c60eed3f61e0d8a6956b1bdd44dd2b2de3fcf91ed531c9",
+      "api/_health-readiness.js": "953f8b57c283d4e4b1af04b4d508326c06114c929ec48f7ffbaccf1b269da1bf"
+    }
+  },
+  "databaseStatePresenceWhenUnavailable": null,
+  "completedAtUtc": "2026-11-17T05:16:16.192491+00:00",
+  "deployments": {
+    "gass": {
+      "id": "dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT",
+      "state": "READY",
+      "sha": "68e94b1aedd85c29d4a4e12dc9f56dbbe60e9817"
+    },
+    "erp": {
+      "id": "dpl_3ohaRUsgibMHhmWzpn5TaDukv56q",
+      "state": "READY",
+      "sha": "9ea0dc6e0beb702b50a5c41f76529e4a5cfde8a4"
+    }
+  },
+  "postDeploymentHealth": {
+    "atUtc": "2026-11-17T05:14:27.259365+00:00",
+    "checks": [
+      {
+        "name": "gass",
+        "httpStatus": 503,
+        "body": {
+          "ok": false,
+          "database": "unreachable",
+          "status": "DEGRADED",
+          "source": "offline_snapshot",
+          "readOnly": true,
+          "reason": "database_unavailable",
+          "hasState": null,
+          "probe": "metadata",
+          "probeCached": false,
+          "probeCheckedAt": "2026-11-17T05:14:27.840Z",
+          "probeAgeMs": 0
+        }
+      },
+      {
+        "name": "erp",
+        "httpStatus": 503,
+        "body": {
+          "ok": false,
+          "database": "unreachable",
+          "status": "DEGRADED",
+          "source": "offline_snapshot",
+          "readOnly": true,
+          "reason": "database_unavailable",
+          "hasState": null,
+          "probe": "metadata",
+          "probeCached": false,
+          "probeCheckedAt": "2026-11-17T05:14:28.990Z",
+          "probeAgeMs": 0
+        }
+      }
+    ]
+  },
+  "financialProjectLocated": {
+    "ref": "buacrgrprrpbgtekqdfi",
+    "name": "Task Amigo",
+    "organization": "lzhefwvilbarbcwowstm",
+    "organizationName": "Otaku Power",
+    "plan": "free",
+    "requiredFinanceRpcFunctionsPresent": true,
+    "accountIdsFingerprintMatchesOffline": true,
+    "databaseUpdatedAt": "2026-11-04T16:53:13.090380Z",
+    "offlineUpdatedAt": "2026-11-15T13:21:22.345Z",
+    "restProbeHttpStatus": 402,
+    "restProbeRowsReturned": null,
+    "restrictionReasons": [
+      "exceed_edge_functions_invocations_quota",
+      "exceed_egress_quota"
+    ],
+    "currentVercelSecretUrlValueDirectlyVerified": false
+  },
+  "financeConfiguration": {
+    "status": "not_configured",
+    "reason": "Existing protected finance sync secret could not be obtained through the permitted tool operation. No partial credentials or environment variables were written.",
+    "candidateProjectRef": "buacrgrprrpbgtekqdfi",
+    "identityMatchesOfflineAccountFingerprint": true,
+    "databaseLastUpdatedAt": "2026-11-04T16:53:13.090380Z",
+    "offlineSnapshotUpdatedAt": "2026-11-15T13:21:22.345Z",
+    "restGatewayStatus": 402,
+    "restrictionReasons": [
+      "exceed_edge_functions_invocations_quota",
+      "exceed_egress_quota"
+    ],
+    "organizationPlan": "free",
+    "databaseWrites": false,
+    "billingChanges": false,
+    "secretValuesDisplayed": false
+  },
+  "cloudRecordStatus": "verified",
+  "cloudReadback": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1iCqdCCdhOXjimsduAW2oPlRx7W7cS7Dh",
+        "name": "ERP系統版本與修正紀錄.md",
+        "verified": true,
+        "sha256": "18ec87937a7e006d34b9bb4e19063acfc6ee8ee2ec925d2aa170aba753da4f41"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1RcZg6AidwhFoJVLLhCOGL5OU0ZgRwF35",
+        "name": "財報系統版本與修正紀錄.md",
+        "verified": true,
+        "sha256": "d788082614f12fa562c52d13aa2ed3789a5722207356fa682dddfc96f0e6b516"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "1vIxDbS2yW3zaMNx5vXwpEwUyy9tG_QH4",
+        "name": "監控中心版本與修正紀錄.md",
+        "verified": true,
+        "sha256": "cccb500156a059a8591ce702d8960d0da31c165511238277c45e4251b74090c2"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "16u8scXlK8FyYoX_oic7InWZ0sOUlsIRm",
+        "name": "雲端同步狀態.json",
+        "verified": true,
+        "sha256": "77c8b88e1b2624463605152a97ed0b03d3e05dbf366a3c564102075175edc4eb"
+      }
+    }
+  ]
+}
