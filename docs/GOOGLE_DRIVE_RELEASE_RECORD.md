@@ -1,3 +1,12 @@
+## [2026-11-17 10:00] - 監控中心頂部導覽防遮蔽重構 ✕ 提示音效與震動設定置中浮動視窗
+- **版本號**：`20261117_1000_operations_header_and_centered_sound_settings_modal`
+- **影響範圍**：`app/operations/page.tsx`
+- **主要更動**：
+  1. 頂部導覽列改採 `flexWrap: wrap` 與精簡按鈕標籤（「通知」、「鈴聲」、「震動 ⚙️」、「工具」），寬度縮減 50%，徹底杜絕遮蔽擠壓左上方標題與數據。
+  2. 提示音效與震動設定彈窗升級為全局固定置中 (`position: fixed, inset: 0, zIndex: 100005`)，100% 解決向左飛出被螢幕切邊之異常。
+  3. 整合新單三連音、來電振鈴測試、震動節奏模式與背景推播設定。
+- **發布狀態**：已驗證編譯通過，同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-17 09:45] - 監控中心連線健康度優化 (消除離峰無新單延遲誤報 ✕ 雙軌主機存活狀態機)
 - **版本號**：`20261117_0945_operations_freshness_host_alive_dual_track`
 - **影響範圍**：`app/operations/page.tsx`
