@@ -227,7 +227,20 @@ export const uploadBackupToGoogleDrive = async ({ filename, jsonText }) => {
 };
 
 // Server-only read adapter; never return this credential to callers.
+export const getSLDriveReadAuthMode = () => process.env.SL_DRIVE_SERVICE_ACCOUNT_JSON ? 'service-account' : 'legacy-oauth';
 export const getGoogleDriveReadAccessToken = async () => {
+ if(process.env.SL_DRIVE_SERVICE_ACCOUNT_JSON){
+  try{
+   const account=JSON.parse(process.env.SL_DRIVE_SERVICE_ACCOUNT_JSON.trim().replace(/^\uFEFF/,''));
+   if(account.type!=='service_account'||typeof account.client_email!=='string'||!account.client_email.endsWith('.gserviceaccount.com')||typeof account.private_key!=='string')throw new Error();
+   const now=Math.floor(Date.now()/1000);const header=base64url(JSON.stringify({alg:'RS256',typ:'JWT'}));
+   const claim=base64url(JSON.stringify({iss:account.client_email,scope:'https://www.googleapis.com/auth/drive.readonly',aud:GOOGLE_TOKEN_URL,iat:now-30,exp:now+3300}));
+   const unsigned=header+'.'+claim;const signature=crypto.createSign('RSA-SHA256').update(unsigned).sign(account.private_key.replace(/\\n/g,'\n'),'base64url');
+   const response=await fetchWithTimeout(GOOGLE_TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:unsigned+'.'+signature})},10000);
+   const data=await response.json().catch(()=>({}));if(!response.ok||typeof data.access_token!=='string')throw new Error();return data.access_token;
+  }catch{throw new Error('SL_DRIVE_SERVICE_ACCOUNT_INVALID');}
+ }
+
  if (process.env.GOOGLE_DRIVE_CLIENT_ID && process.env.GOOGLE_DRIVE_CLIENT_SECRET && process.env.GOOGLE_DRIVE_REFRESH_TOKEN) {
   const response=await fetchWithTimeout(GOOGLE_TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:String(process.env.GOOGLE_DRIVE_CLIENT_ID||'').trim(),client_secret:String(process.env.GOOGLE_DRIVE_CLIENT_SECRET||'').trim(),refresh_token:String(process.env.GOOGLE_DRIVE_REFRESH_TOKEN||'').trim(),grant_type:'refresh_token'})},10000);
   const data=await response.json().catch(()=>({}));
