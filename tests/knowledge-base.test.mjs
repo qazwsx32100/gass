@@ -269,3 +269,28 @@ test('KnowledgeBase & AI-Chat: Smell troubleshooting match and website user mask
 });
 
 
+
+test('KnowledgeBase: Mobile-first UX reply optimization & colloquial/Taiwanese query matching', () => {
+  // 1. Colloquial & Taiwanese short queries
+  const twHours = matchBestFaq('借問禮拜天敢有送瓦斯？暗時送到幾點？');
+  assert.ok(twHours && twHours.category.includes('配送'), 'Taiwanese delivery hours query should match delivery entry');
+
+  const twPrice = matchBestFaq('請問20公斤若濟錢？');
+  assert.ok(twPrice && twPrice.category.includes('價格'), 'Taiwanese price query should match price entry');
+
+  const shortOrder = matchBestFaq('家裡沒瓦斯了！');
+  assert.ok(shortOrder && shortOrder.category.includes('叫瓦斯'), 'Short urgent no-gas query should match order entry');
+
+  const shortLeak = matchBestFaq('廚房好臭是不是漏瓦斯？');
+  assert.ok(shortLeak && shortLeak.isSafetyCritical === true, 'Colloquial leak query must trigger P0 safety entry');
+  assert.ok(shortLeak.standardAnswer.includes('🚨') && shortLeak.standardAnswer.includes('1️⃣'), 'Safety reply must use 3-second visual numbered format');
+
+  const twStove = matchBestFaq('瓦斯爐點袂著沒火怎麼辦？');
+  assert.ok(twStove && twStove.category.includes('瓦斯爐'), 'Taiwanese stove query should match stove entry');
+
+  // 2. System prompt enforces mobile-first readability & Taiwanese few-shot example
+  const prompt = getOptimizedSystemPrompt('現在一桶瓦斯多少錢？', 'fast', '');
+  assert.ok(prompt.includes('結論先講'), 'System prompt must enforce answer-first rule');
+  assert.ok(prompt.includes('三行定律'), 'System prompt must enforce mobile 3-line readability rule');
+  assert.ok(prompt.includes('典範 7'), 'System prompt must include Taiwanese colloquial few-shot example');
+});
