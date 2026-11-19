@@ -1,5 +1,5 @@
-- [x] 2026-11-19 【AI 客服回覆全面優化 ✕ LINE 手機端三行呼吸感排版 ✕ 台語口語短問強化】依老闆指示「按照目前客人的問話 給我優化ai回復建議」並核准「優化」全面落地：1. 升級 `api/_knowledge-base.js` 高頻標準回覆（價格查價、叫瓦斯雙軌下單、配送時間、樓層費、付款發票、天然瓦斯基礎設備與評估、爐具／熱水器簡易排查），全面落實「結論先講、每段不超 2~3 行空行排版」；2. 漏氣緊急應變升級「🚨 3 秒保命視覺化（1️⃣2️⃣3️⃣4️⃣）」排版並補齊 `漏瓦斯`/`好臭`/`瓦斯的味道` 攔截；3. 擴充台語與極短口語關鍵字（`若濟`、`敢有送`、`點袂著`、`沒瓦斯`、`20kg多少`、`有開嗎` 等）並新增 Few-Shot 典範 7（台語親切應答）；4. 強化 System Prompt 手機端閱讀排版原則；5. 三方同步 `docs/GAS_CONSUMER_FAQ_300.md` 第 10 條與桌面鏡像；6. `tests/knowledge-base.test.mjs`（9/9）、`tests/massive-faq-300-stress.test.mjs`（5/5）與 `tests/ai-1000-questions.test.mjs`（1000 題 100% 通過）全數綠燈，推送 GitHub 主幹並正式部署 Vercel Production。
 - [ ] 2026-11-19 【未來規劃 ✕ 外勤運費改以公斤(kg)計算】依老闆指示預先記錄運費改革方向：由按支計算全面升級為以公斤計算（1. 月薪每公斤 3.5 元；2. 季獎金每公斤 0.2 元；3. 樓層費獨立加成維持）。完成全規格收益對照（20kg月薪$70+季獎金$4、50kg月薪$175+季獎金$10、16kg月薪$56+季獎金$3.2、10kg月薪$35+季獎金$2、4kg月薪$14+季獎金$0.8）、司機端APP卡片雙軌標籤呈現（運費$70 +季$4）、跑馬燈看板、業績統計彈窗三大卡片、戰情調度台公斤數統計與財務季獎金池架構規劃，並建立權威說明書 docs/DRIVER_FREIGHT_BY_KG_SPEC.md 與桌面鏡像，待老闆指示時正式啟動實裝。
+- [x] 2026-11-19 【監控中心即時通知全鏈路根治 ✕ Web Push 毫秒反向喚醒 ✕ Telegram 盛隆訂單群雙軌推播】依老闆指示「討論一下 目前監控中心 為甚麼沒有及時通知? 如果改成用telegram的模式呢 / 如何優化目前監控中心的即時通知? / 我們來做吧」完成四大底層優化：1. 根治 Serverless 冷啟動漏推新單 Bug (Snapshot Diff)：在 app/api/today-orders/route.ts 中實裝 loadPersistedOrderBaseline()，於覆寫持久化快照前先讀取上一版今日訂單 ID 作為基準，確保離峰後冷啟動進來的第一張新單 100% 被識別並觸發推播；同時支援 GET /api/today-orders?fresh=1 跨容器強制讀取最新快照 2. 打造雙軌新單即時通知引擎 (lib/operations-new-order-alert.ts)：新單進線時透過 Next.js after() 非阻塞並行發射 (1) Web Push 調度台推播 與 (2) Telegram 盛隆訂單群 (-1004402662328, @shenglong_gas_bot) 結構化 HTML 戰情卡片（含客戶、電話、地址、規格、金額、派工狀態、備註，以及「🖥️ 開啟監控中心」與「📍 地圖導航」一鍵直達按鈕），內建 6 小時去重鎖與單次 >5 筆批次摘要防洗版保護 3. 雲端推播訂閱防覆蓋加固 (lib/web-push.ts)：實裝 readCloudSubscriptions、mergeSubscriptionLists 與 refreshSubscriptionsFromCloud，在註冊/移除時先與雲端最新清單依 endpoint 合併，且雲端讀取失敗 (null) 時禁止覆寫，徹底杜絕司機端與調度台訂閱互相洗掉 4. 前端 Web Push 反向毫秒喚醒與晨間首單 0→1 防漏 (app/operations/page.tsx)：Service Worker 收到 OPERATIONS_EVENT 時觸發 sl-ops-push-refresh 事件，立即呼叫 /api/today-orders?fresh=1 秒級刷新畫面並響起三連音＋語音播報（常態維持 60 秒輪詢，0 額外配額消耗）；並以 hasInitializedOrderBaselineRef 確保早晨 0 單啟動後第 1 張新單進來必定響鈴 5. 專屬單元測試 tests/operations-realtime-notification-optimization.test.mjs 4/4 PASS，全套監控中心測試 36/36 全數 PASS 零回歸，Next.js Turbopack 產線編譯 0 錯誤通過，GitHub 雙軌與 Vercel Production 全量同步上線。
 - [x] 2026-11-17 【監控中心頂部派工區精簡優化 ✕ 徹底移除5大冗餘按鈕 ✕ 派工子分頁緊湊分段膠囊重構】依老闆指示「1.上方 路線分群、複製、csv、車隊地圖、打烊日結 全部刪除 2.今日及時派工、歷史訂單紀錄、雙軌自動對帳 優化格式，目前太占位置」徹底重構排版與釋放垂直視野：1. 徹底移除 5 大冗餘按鈕與重複橫幅：在 app/operations/page.tsx 中徹底移除「車隊大地圖」、「CSV」、「複製 Line」、「路線分群」、「打烊日結」5 個佔位按鈕，並一併移除重疊冗餘的次級橫幅「今日派工戰情 即時」（高度 ~90px），徹底消除調度台操作雜訊 2. 子分頁緊湊分段膠囊重構 (High-Density Segmented Control Pill Bar)：將原本內邊距 8px 18px、高 55px 的分散按鈕群重構為一體化緊湊分段膠囊（padding: 3px, borderRadius: 10px, background: #0f172a, border: 1px solid #1e293b），子分頁標籤（🛵 今日即時派工、📜 歷史訂單紀錄、⚖️ 雙軌自動對帳）字體優化為 12px~13px、內邊距 4px 8px / 5px 12px，選中狀態具備滑順漸層高亮 3. 串流狀態指示徽章同列整合：將「⚡ 毫秒串流 / 🔄 輪詢連線」狀態徽章無縫整合於同一分段列右側，不再額外換行佔位 4. 垂直視野釋放顯著：累計釋放超過 155px 垂直高度，調度員進站即直視派工卡片，免除多餘滾動 5. 專屬單元測試 tests/operations-compact-tabs-and-button-cleanup.test.mjs 4/4 PASS，全套監控測試 28/28 零回歸，Next.js Turbopack 產線編譯 0 錯誤通過，GitHub 雙軌與 Vercel Production 全量同步上線。
 - [x] 2026-11-17 【監控中心頂部導覽防遮蔽重構 ✕ 鈴聲震動設定置中浮動視窗】依老闆指示「監控中心 上方的鈴聲、通知的按鈕 擋到上方的資料 點擊調整鈴聲視窗會跑到左邊 並且被螢幕切掉」徹底排查並全量修復：1. 根因排查確認：(1) 頂部主列先前採用單行 nowrap/wrap 且通知、鈴聲、震動、工具等按鈕字串過長（如「震動開 (強力)」），整排按鈕寬度超過 440px，在窄螢幕或手機/平板上嚴重擠壓左側「盛隆瓦斯 ｜ 營運調度總中心」、連線狀態燈與更新時間，甚至造成重疊遮擋；(2) 原調整視窗 (showVibrationModal) 宣告於 inline-flex 震動按鈕內部，使用 position: absolute; right: 0; width: 300px，當按鈕因換行或螢幕寬度小於 300px 靠近左側時，右側對齊錨點直接導致彈窗左緣座標跌入負值（如 -120px），彈窗向左嚴重飛出並被螢幕左邊緣物理切斷 2. 頂部排版防遮蔽重構：header 採用 flexWrap: wrap 結合 rowGap: 8px 與 flex: 1 1 auto，左側標題與日期更新時間享有獨立呼吸空間；右側按鈕群全面精簡標籤（「通知」、「鈴聲」、「震動 ⚙️」、「工具」），寬度大幅縮減 50%，在各級螢幕均 100% 絕不遮擋上方任何資訊 3. 全局固定置中設定視窗：調整視窗徹底抽離為全局 fixed 懸浮視窗 (position: fixed, inset: 0, zIndex: 100005, display: flex, justify/align: center, 搭配 72% 深色模糊遮罩)，寬度 maxWidth: 380px，保證在所有手機、平板、電腦與 APK 螢幕皆完美置中、全內容可捲動且 100% 絕不被切邊 4. 功能完整升級：設定視窗內整合新進訂單三連音測試 (playOrderChime)、來電振鈴測試 (playCallChime)、語音合成開關、震動總開關、3 段節奏模式 (強力/標準/微震)、測試震動感與背景鎖屏推播 5. 撰寫專屬單元測試 tests/operations-header-sound-settings-modal.test.mjs 5/5 全數 PASS，全套測試 23/23 零回歸，Next.js Turbopack 產線編譯 0 錯誤，GitHub 雙軌與 Vercel Production 全量同步上線。
 - [x] 2026-11-17 【監控中心連線健康度與延遲誤報徹底根治】依老闆詢問「監控中心 左上角很常顯示資料庫延遲的原因」徹底排查根因並全鏈路根治：1. 根因排查確認：MonitoringFreshnessBadge 過去使用 checks.some() 同時檢核庫存、心跳與訂單，且訂單上限設為 180 秒；而門市營業主機守護進程為了保護 API 配額，在離峰或無新進電話訂單時會依據 SHA-256 指紋抑制重複上傳，導致訂單時間超過 3 分鐘即誤觸 checks.some() 亮起「🔴 資料更新延遲」，即使門市 SQL Server、庫存與心跳 100% 正常在線 2. 雙軌主機存活健康度重構 (對齊 Directive #5 即時庫存同源狀態機)：在 app/operations/page.tsx 中實裝 isHostAlive 判定：只要「主機心跳 <= 240秒」或「庫存 <= 180秒 (LIVE)」，即代表門市營業主機與 SQL Server 100% 正常運作，離峰無新單絕不誤報延遲；僅在主機心跳與庫存同時過期時才精準亮起紅燈 3. 定時器由 30 秒縮短為 15 秒，確保調度員切回分頁或解鎖螢幕後 15 秒內即刻自動校正 4. 專屬單元測試 tests/operations-freshness-logic.test.mjs 4/4 PASS，Next.js Turbopack 產線編譯 0 錯誤通過，GitHub 雙軌與 Vercel Production 全量同步上線。
@@ -2999,31 +2999,3 @@ LINE 已正式發布：dpl_GzFmvsXWQYcNfZGwKdyxX3ZTUjVn，來源 1031d26，包�
 門市監控當次有近期心跳（31 秒），整體 DEGRADED；這不是門市 Windows 服務的直接驗證。當前是雲端 Linux，尚待實際營業主機連線位址或 Codex 主機連線。授權已足夠，目前缺少的是設定來源與主機連線。
 
 驗證限制：LINE health 與建置成功不等於會員下單／通知完整流程已驗收；未操作正式訂單、未寫入資料庫、未發送通知。詳細機器可讀證據見 docs/maintenance/20261116_authorized_followup.json；程式還原可回退原 LINE 部署 dpl_ENSoWatWGfPdXnv4WAHhstLfHMSB，但那會失去本次穩定性修復，不涉及資料庫回復。
-
-
-## SB-HEALTH-BUDGET-20261117-01
-
-普通 GET /api/health 改用既有唯讀 erp_get_app_state_meta RPC，不再下載整份財務 app_state；同一程序的同時請求共用一次探測，成功／失敗都快取 60 秒，回覆含 probeCheckedAt、probeAgeMs、probeCached，避免將快取誤認即時探測。離線、缺狀態或探測異常皆回 503，保留唯讀離線容災；CMS 分支保持原介面。
-
-驗證：10 項流量／快取／併發／失敗回歸＋10 項同步保存測試全通過，Vite production build 通過。暖實例每分鐘至多一次探測；不是跨實例的全域配額保證，快取期間可能保留最多 60 秒前的狀態，回覆已標記年齡。沒有新增排程、沒有寫入正式資料庫、沒有改計費。
-
-版本核對：gass 相對現行部署只有文件與測試差異；erp 現行版本較舊，會建立以該部署為基準的修復發布提交，只帶入本次 health 修復，避免夾帶其他 API 改版。發布待核對。
-
-限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
-
-還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。
-
-
-## SB-HEALTH-BUDGET-20261117-01 發布與補充查核結果
-
-主幹修復 68e94b1、ERP 最小回移 9ea0dc6 均已推送 GitHub；財務 dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT、ERP dpl_3ohaRUsgibMHhmWzpn5TaDukv56q 正式部署均 READY，別名與來源已核對。20 項針對性測試全通過，Vite build 通過。普通 health 已使用 metadata RPC、60 秒程序內快取與同時請求合併，公開回覆帶探測時間與年齡；主庫不可達時 hasState=null，仍回 503 / offline_snapshot / readOnly，沒有把受限狀態誤報成功。這是降低後續耗用，並非已解除 Supabase 限制。
-
-補充：另一個可管理專案 buacrgrprrpbgtekqdfi 名稱雖為 Task Amigo，確有財務 app_state 與四個財務 RPC，帳號識別指紋與既有財務離線快照一致。使用既有 anon 公開 key 對 REST 端點讀取零筆資料，回覆 402，限制為 exceed_edge_functions_invocations_quota、exceed_egress_quota；組織 Otaku Power 為 Free。Postgres ACTIVE_HEALTHY 只代表資料庫執行個體狀態，不代表 REST 閘道未受配額限制。
-
-資料新鮮度：該主庫 app_state 停在 2026-11-04，現行離線快照為 2026-11-15；恢復 API 後仍須先唯讀對帳，不能直接宣稱最新財務已入庫。未修改正式資料庫、未重送財務同步、未調整方案或 Spend Cap、未發送通知。普通健康檢查以外的 CMS 讀取介面維持原行為。
-
-財務入口的既有受保護同步設定讀取未成功，因此沒有建立部分／猜測的環境設定。現有健康專案 ytwhfiudhhdkmzobqmqq 未見所需 public 財務 RPC，沒有改接該專案。受限歷史候選 pdaacjkyrlflxztbqjnv 的管理查詢被拒；不將其當成已確認的現行財務綁定。
-
-下一步：確認 Free 額度恢復途徑或評估組織付費方案；Pro 基礎與額外計算／超額費用需以控制台確認，沒有自動變更收費。由受控原始設定來源補齊 Vercel 財務設定，並在恢復後核對新舊資料。
-
-完整機器證據、來源與限制見 docs/maintenance/20261117_supabase_health_release.json。還原可回退本次各入口的部署；程式回退不包含資料庫回復。

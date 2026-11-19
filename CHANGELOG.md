@@ -1,19 +1,3 @@
-## [2026-11-19 10:25] - ✨ AI 客服回覆體驗全面優化 (結論先講 ✕ LINE 手機端三行排版 ✕ 3秒漏氣警示 ✕ 台語口語短問強化) [ver: 20261119_1025_ai_reply_mobile_ux_and_taiwanese_optimization]
-- **背景與老闆指示**：
-  - 依老闆指示「按照目前客人的問話 給我優化ai回復建議」並下達「優化」全面落地。
-- **四大核心優化落地 (Key Implementations)**：
-  1. **高頻標準回覆精煉與三行呼吸感排版 (`api/_knowledge-base.js`)**：
-     - 全面優化「價格查價、叫瓦斯雙軌下單、配送時間、樓層費、放門口、取消訂單、付款發票、爐具／熱水器排查、天然瓦斯安裝與設備」答覆，落實「結論先講、每段不超 2~3 行空行分段」，手機 3 秒掃讀重點。
-  2. **緊急漏氣 3 秒保命視覺化防線**：
-     - 升級漏氣應變為 `🚨` + `1️⃣2️⃣3️⃣4️⃣` 醒目步驟排版，並補齊 `漏瓦斯`、`好臭`、`很臭`、`瓦斯的味道` 高優先安全攔截。
-  3. **口語極短問與台語習慣強化**：
-     - 擴充 `若濟`、`若濟錢`、`敢有送`、`禮拜天`、`暗時`、`點袂著`、`沒瓦斯`、`20kg多少`、`有開嗎`、`刷卡嗎`、`街口` 等真實客群口語關鍵字。
-     - 全面升級 `FEW_SHOT_EXAMPLES` 典範 1~6 為手機端黃金格式，並新增 **典範 7（台語親切應答）**。
-     - System Prompt 增補「回覆語氣與 LINE 手機端閱讀排版原則（結論先講、三行定律、雙軌引導、語系對齊）」。
-  4. **三方同步與零回歸測試驗證**：
-     - 同步更新 `docs/GAS_CONSUMER_FAQ_300.md` 營運守則第 10 條與桌面鏡像。
-     - `tests/knowledge-base.test.mjs` 擴充台語口語與手機排版斷言，9/9 全數通過；`tests/massive-faq-300-stress.test.mjs` 5/5 通過；`tests/ai-1000-questions.test.mjs` 1,000 題 100.00% 通過。
-
 ## [2026-11-19 10:20] - 🚚 外勤運費改以「公斤 (kg)」計算規格規劃與待辦記錄 [ver: 20261119_1020_driver_freight_by_kg_specification]
 - **背景與老闆最高指示**：
   - 老闆指示：「討論一下 我之後要將運費的計算方式修改 改成用公斤來計算 有兩種計算方式 1.月薪1公斤3.5元 2.季獎金 1公斤0.2元 呈現的方式會如何呈現」以及「先幫我記錄一下 這更改方向 以公斤計算 之後會做修改」。
@@ -42,6 +26,28 @@
      - 建立權威說明書 `docs/DRIVER_FREIGHT_BY_KG_SPEC.md`。
      - 建立桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_外勤運費改以公斤計算規劃說明書.md`。
      - 更新 `docs/TODO.md`、桌面看板與 `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`。
+
+## [2026-11-19 10:40] - 🚨 監控中心即時通知全鏈路根治 (冷啟動快照差集 ✕ Web Push 毫秒反向喚醒 ✕ Telegram 盛隆訂單群雙軌推播) [ver: 20261119_1040_operations_realtime_notification_and_telegram_dual_track]
+- **背景與老闆最高指示**：
+  - 老闆指示：「討論一下 目前監控中心 為甚麼沒有及時通知? 如果改成用telegram的模式呢」、「如何優化目前監控中心的即時通知?」、「我們來做吧」。
+- **四大底層斷點與根治實裝 (Key Implementations)**：
+  1. **根治 Serverless 冷啟動漏推新單 Bug (`app/api/today-orders/route.ts`)**：
+     - 過去以記憶體變數 `isInitializedKnownOrders` 判斷新單，當離峰 5~10 分鐘後 Vercel 冷啟動新容器時，記憶體為空，導致新進訂單被當成「初始基準」直接略過不推播。
+     - 實裝 `loadPersistedOrderBaseline()`：在冷容器覆寫 `PRIMARY_KV_URL` 之前，先讀取上一版今日持久化訂單 ID 集合進行差集比對（Snapshot Diff），確保任何冷啟動進來的新單 100% 觸發推播。
+     - `GET /api/today-orders` 新增 `?fresh=1` 參數，供推播喚醒時跨容器直接拉取最新 KV 快照（含 1.5 秒節流保護）。
+  2. **雙軌新單即時通知引擎 (`lib/operations-new-order-alert.ts`)**：
+     - 採用 Next.js `after()` 背景執行，雙軌並行發送：
+       1. **Web Push 調度台通知**（`sendPushToOperations`）。
+       2. **Telegram 盛隆訂單群 (`-1004402662328`) 即時戰情卡片**（透過 `@shenglong_gas_bot` 發送 HTML 格式卡片，包含單號、客戶、電話、地址、規格、金額、派工狀態、備註，並附帶 `[ 🖥️ 開啟監控中心 ]` 與 `[ 📍 地圖導航 ]` 互動按鈕）。
+     - 內建 `claimUnnotifiedOrders` 6 小時去重鎖（防重送快照重複通知）與 `> 5` 筆批次摘要防洗版機制。
+  3. **推播訂閱防洗掉合併鎖 (`lib/web-push.ts`)**：
+     - 實裝 `readCloudSubscriptions()`、`mergeSubscriptionLists()` 與 `refreshSubscriptionsFromCloud()`。
+     - 任何裝置註冊或移除時，先與雲端最新清單依 `endpoint` 合併；若雲端讀取逾時失敗（`cloudList === null`）則禁止覆寫雲端，徹底防止調度台訂閱被司機端註冊覆蓋洗掉。
+  4. **前端 Web Push 反向毫秒喚醒 ＆ 晨間首單 `0 → 1` 響鈴修復 (`app/operations/page.tsx`)**：
+     - Service Worker 收到 `OPERATIONS_EVENT` 時派發 `sl-ops-push-refresh` 事件，前端即刻呼叫 `/api/today-orders?fresh=1` 刷新訂單並觸發 `playOrderChime()` 三連音＋語音播報（常態維持 60 秒輪詢，完全符合 AI 犯錯中心零高頻輪詢鐵律）。
+     - 新增 `hasInitializedOrderBaselineRef`，修復早晨 0 筆訂單開機時第 1 張新單進線被誤判為 `isFirstLoad` 而靜音的漏洞。
+  5. **全端測試與產線編譯驗收**：
+     - 專屬單元測試 `tests/operations-realtime-notification-optimization.test.mjs` 4/4 全數 PASS，監控中心全套 36/36 測試零回歸。
 
 ## [2026-11-17 10:25] - ✂️ 監控中心頂部派工區精簡優化 (徹底移除5大冗餘按鈕 ✕ 派工子分頁緊湊分段膠囊重構) [ver: 20261117_1025_operations_remove_redundant_buttons_and_compact_subtabs]
 - **背景與老闆最高指示**：
@@ -2987,31 +2993,3 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ## API-STABILITY-20261115-01
 
 [/] API 穩定性修復：同步保存收據、派工 CAS、讀取授權、真實 health 與空白快照防護。隔離測試與編譯完成；發布與雲端紀錄同步待核對。P0/P1；約 1 小時；端點 Vercel／門市代理；使用者指示「修復」。詳見 docs/maintenance/20261115_api_stability_fix.md。門市安裝與通知 outbox 整合仍待驗收。
-
-
-## SB-HEALTH-BUDGET-20261117-01
-
-普通 GET /api/health 改用既有唯讀 erp_get_app_state_meta RPC，不再下載整份財務 app_state；同一程序的同時請求共用一次探測，成功／失敗都快取 60 秒，回覆含 probeCheckedAt、probeAgeMs、probeCached，避免將快取誤認即時探測。離線、缺狀態或探測異常皆回 503，保留唯讀離線容災；CMS 分支保持原介面。
-
-驗證：10 項流量／快取／併發／失敗回歸＋10 項同步保存測試全通過，Vite production build 通過。暖實例每分鐘至多一次探測；不是跨實例的全域配額保證，快取期間可能保留最多 60 秒前的狀態，回覆已標記年齡。沒有新增排程、沒有寫入正式資料庫、沒有改計費。
-
-版本核對：gass 相對現行部署只有文件與測試差異；erp 現行版本較舊，會建立以該部署為基準的修復發布提交，只帶入本次 health 修復，避免夾帶其他 API 改版。發布待核對。
-
-限制：降流量不會立即解除既有 Edge Functions／egress 配額限制。財務缺少 Supabase 設定仍待正確來源；現有連接器可管理的 ytwhfiudhhdkmzobqmqq 缺少 public.erp_get_app_state、erp_sync_shenglong_finance、erp_upsert_legacy_cylinder_movements，不能直接替換。歷史專案 pdaacjkyrlflxztbqjnv 的管理查詢被拒，未證實它仍是目前財務綁定專案。缺少瀏覽器操作工具，無法在本工作區核對另一登入帳號的控制台。
-
-還原：回退對應程式提交／部署；不包含資料庫回復。原檔與前後 SHA-256 見同名 JSON。
-
-
-## SB-HEALTH-BUDGET-20261117-01 發布與補充查核結果
-
-主幹修復 68e94b1、ERP 最小回移 9ea0dc6 均已推送 GitHub；財務 dpl_Bbpd9FKWXkcWL24j3ZkxDnSH9UJT、ERP dpl_3ohaRUsgibMHhmWzpn5TaDukv56q 正式部署均 READY，別名與來源已核對。20 項針對性測試全通過，Vite build 通過。普通 health 已使用 metadata RPC、60 秒程序內快取與同時請求合併，公開回覆帶探測時間與年齡；主庫不可達時 hasState=null，仍回 503 / offline_snapshot / readOnly，沒有把受限狀態誤報成功。這是降低後續耗用，並非已解除 Supabase 限制。
-
-補充：另一個可管理專案 buacrgrprrpbgtekqdfi 名稱雖為 Task Amigo，確有財務 app_state 與四個財務 RPC，帳號識別指紋與既有財務離線快照一致。使用既有 anon 公開 key 對 REST 端點讀取零筆資料，回覆 402，限制為 exceed_edge_functions_invocations_quota、exceed_egress_quota；組織 Otaku Power 為 Free。Postgres ACTIVE_HEALTHY 只代表資料庫執行個體狀態，不代表 REST 閘道未受配額限制。
-
-資料新鮮度：該主庫 app_state 停在 2026-11-04，現行離線快照為 2026-11-15；恢復 API 後仍須先唯讀對帳，不能直接宣稱最新財務已入庫。未修改正式資料庫、未重送財務同步、未調整方案或 Spend Cap、未發送通知。普通健康檢查以外的 CMS 讀取介面維持原行為。
-
-財務入口的既有受保護同步設定讀取未成功，因此沒有建立部分／猜測的環境設定。現有健康專案 ytwhfiudhhdkmzobqmqq 未見所需 public 財務 RPC，沒有改接該專案。受限歷史候選 pdaacjkyrlflxztbqjnv 的管理查詢被拒；不將其當成已確認的現行財務綁定。
-
-下一步：確認 Free 額度恢復途徑或評估組織付費方案；Pro 基礎與額外計算／超額費用需以控制台確認，沒有自動變更收費。由受控原始設定來源補齊 Vercel 財務設定，並在恢復後核對新舊資料。
-
-完整機器證據、來源與限制見 docs/maintenance/20261117_supabase_health_release.json。還原可回退本次各入口的部署；程式回退不包含資料庫回復。
