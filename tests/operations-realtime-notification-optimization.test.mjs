@@ -29,12 +29,15 @@ test("1. [Cold-Start Snapshot Diff] today-orders route loads persisted baseline 
   assert.ok(baselineCallIdx > 0, "POST must call loadPersistedOrderBaseline() on cold start");
   assert.ok(kvWriteIdx > baselineCallIdx, "loadPersistedOrderBaseline() must run BEFORE overwriting PRIMARY_KV_URL");
 
-  // 必須收集新單並交由 scheduleOperationsNewOrderAlerts 發送
+  // 必須收集新單並交由 scheduleOperationsNewOrderAlerts 發送，且具備 findRecentFreshOrdersFallback 防門市雙寫時序覆蓋
   assert.match(routeSrc, /const\s+newOrdersForAlert:\s*TodayOrderItem\[\]\s*=\s*\[\]/);
-  assert.match(routeSrc, /scheduleOperationsNewOrderAlerts\(newOrdersForAlert\)/);
+  assert.match(routeSrc, /export\s+function\s+findRecentFreshOrdersFallback\(/);
+  assert.match(routeSrc, /scheduleOperationsNewOrderAlerts\(alertsToDispatch\)/);
 
-  // GET 支援 ?fresh=1 供推播喚醒跨容器讀取最新快照
+  // GET 消除 STALE-HIT 舊快取延遲：超過 4 秒強制 await refreshOrdersFromKV()，並支援 ?fresh=1
   assert.match(routeSrc, /searchParams\.get\("fresh"\)\s*===\s*"1"/);
+  assert.doesNotMatch(routeSrc, /refreshOrdersFromKV\(\)\.catch\(\(\)\s*=>\s*\{\}\)/);
+  assert.match(routeSrc, /"X-Turbo-Cache":\s*"FRESH-HIT"/);
 });
 
 test("2. [Dual-Track Alert Module] operations-new-order-alert supports deduplication, batch summary, Web Push, and Telegram inline keyboard", () => {
@@ -60,9 +63,10 @@ test("2. [Dual-Track Alert Module] operations-new-order-alert supports deduplica
   assert.match(alertSrc, /after\(async\s*\(\)\s*=>/);
 });
 
-test("3. [Subscription Store Hardening] web-push merges cloud subscriptions and prevents overwriting when cloud read fails", () => {
+test("3. [Subscription Store Hardening] web-push merges cloud & encrypted KV subscriptions and prevents overwriting when cloud read fails", () => {
   const webPushSrc = readRepoFile("lib/web-push.ts");
 
+  assert.match(webPushSrc, /BACKUP_KV_SUBSCRIPTIONS_URL/);
   assert.match(webPushSrc, /export\s+async\s+function\s+readCloudSubscriptions\(\)/);
   assert.match(webPushSrc, /export\s+function\s+mergeSubscriptionLists\(/);
   assert.match(webPushSrc, /async\s+function\s+refreshSubscriptionsFromCloud\(/);

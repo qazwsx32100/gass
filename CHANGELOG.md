@@ -41,6 +41,20 @@
      - 建立桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_外勤運費改以公斤計算規劃說明書.md`。
      - 更新 `docs/TODO.md`、桌面看板與 `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`。
 
+## [2026-11-19 20:50] - ⚡ 監控中心通知架構深度優化 (拔除 STALE-HIT 舊快取延遲 ✕ 防門市雙寫時序覆蓋 ✕ 加密 KV 訂閱雙重持久化) [ver: 20261119_2050_eliminate_stale_hit_and_dual_kv_push_subs]
+- **背景與老闆最高指示**：
+  - 老闆指示：「目前還是會延遲 沒有跟telegram同步 解析 通知架構」、「修改後 會對全部的系統有什麼影響 安全會受到影響嗎?」、「來吧」。
+- **三大精準根治與資安／配額防護 (Key Implementations)**：
+  1. **徹底拔除 `GET /api/today-orders` 的 `STALE-HIT` 舊快取延遲 (`app/api/today-orders/route.ts`)**：
+     - 排查發現原先在 `now - lastOrdersKVFetchTime > 4000` 時，僅在背景執行 `refreshOrdersFromKV().catch(() => {})`（未 `await`），並直接把記憶體中的舊訂單（`STALE-HIT`）先回傳給前端，導致監控中心必須等第 2 個 60 秒輪詢（長達 120 秒）才能看到新單。
+     - 現改為強制 `await refreshOrdersFromKV()` 同步取得最新快照後再回傳（`FRESH-HIT`），在不增加任何一次雲端請求的前提下，徹底消滅 60～120 秒的假快取延遲。
+  2. **防門市雙寫時序覆蓋新單兜底 (`findRecentFreshOrdersFallback`)**：
+     - 門市 `sync-stock.cjs` 在偵測到新單時，會先直接 POST 寫入 `kvdb.io/today_orders`，緊接著才 POST 呼叫 Vercel `/api/today-orders`，導致 Vercel 冷容器讀取 KV 基準時已包含該筆新單（差集為 0）。
+     - 新增 `findRecentFreshOrdersFallback()`：當差集為 0 時，自動篩選叫貨時間（`ord.time`）在最近 3 分鐘內且未完單的最新單號，交由 `scheduleOperationsNewOrderAlerts` 的 6 小時去重鎖安全發射 Web Push 敲醒監控中心。
+     - 因門市 `sync-stock.cjs` (`checkNewOrders`) 已具備 1 秒本地直推 Telegram，雲端預設專注發射 Web Push（僅在設定 `ENABLE_CLOUD_TELEGRAM_ORDER_ALERT=1` 時才由雲端補發 Telegram），杜絕同單在群組重複雙響。
+  3. **推播訂閱 `AES-256-GCM` 加密 KV 雙重持久化 (`lib/web-push.ts`)**：
+     - 新增 `BACKUP_KV_SUBSCRIPTIONS_URL` (`push_subscriptions`)，透過 `encryptPrivateKv` / `decryptPrivateKv` 加密雙寫與雙源合併讀取，確保即使外部 `api.restful-api.dev` 寫入受阻，雲端亦 100% 持久保存調度台推播憑證。
+
 ## [2026-11-19 10:40] - 🚨 監控中心即時通知全鏈路根治 (冷啟動快照差集 ✕ Web Push 毫秒反向喚醒 ✕ Telegram 盛隆訂單群雙軌推播) [ver: 20261119_1040_operations_realtime_notification_and_telegram_dual_track]
 - **背景與老闆最高指示**：
   - 老闆指示：「討論一下 目前監控中心 為甚麼沒有及時通知? 如果改成用telegram的模式呢」、「如何優化目前監控中心的即時通知?」、「我們來做吧」。

@@ -18,6 +18,15 @@
   5. 產出專屬權威規格說明書 `docs/DRIVER_FREIGHT_BY_KG_SPEC.md` 並同步鏡像至老闆桌面。
 - **發布狀態**：規格與待辦紀錄已全量同步 GitHub 主幹與桌面看板。
 
+## [2026-11-19 20:50] - 監控中心通知架構深度優化 ✕ 拔除 STALE-HIT 舊快取延遲 ✕ 防門市雙寫時序覆蓋 ✕ 加密 KV 訂閱雙重持久化
+- **版本號**：`20261119_2050_eliminate_stale_hit_and_dual_kv_push_subs`
+- **影響範圍**：`app/api/today-orders/route.ts`、`lib/operations-new-order-alert.ts`、`lib/web-push.ts`
+- **主要更動**：
+  1. 拔除 `GET /api/today-orders` 的 `STALE-HIT` 非同步舊快取陷阱，改為 `await refreshOrdersFromKV()` 同步回傳最新訂單 (`FRESH-HIT`)，消除 60～120 秒延遲且 0 額外請求。
+  2. 新增 `findRecentFreshOrdersFallback()` 解決門市 `sync-stock.cjs` 先寫 KV 再呼叫 Vercel 造成的基準覆蓋問題，確保 100% 發射 Web Push 敲醒監控中心。
+  3. `lib/web-push.ts` 新增 `AES-256-GCM` 加密 KV (`push_subscriptions`) 雙源合併備援，確保調度台推播憑證永久可靠。
+- **發布狀態**：36/36 測試全數通過，同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-19 10:40] - 監控中心即時通知全鏈路根治 ✕ Web Push 毫秒反向喚醒 ✕ Telegram 盛隆訂單群雙軌推播
 - **版本號**：`20261119_1040_operations_realtime_notification_and_telegram_dual_track`
 - **影響範圍**：`lib/operations-new-order-alert.ts`、`app/api/today-orders/route.ts`、`lib/web-push.ts`、`app/operations/page.tsx`
