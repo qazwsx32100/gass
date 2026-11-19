@@ -1,3 +1,19 @@
+## [2026-11-19 10:25] - ✨ AI 客服回覆全面優化（結論先講 ✕ LINE 手機三行排版 ✕ 3秒漏氣警示 ✕ 台語口語強化）
+- **版本號**：`20261119_1025_ai_reply_mobile_ux_and_taiwanese_optimization`
+- **影響範圍**：`api/_knowledge-base.js`, `tests/knowledge-base.test.mjs`, `docs/GAS_CONSUMER_FAQ_300.md`, `docs/TODO.md`, `CHANGELOG.md`, 桌面鏡像
+- **主要更動**：
+  1. 升級 `api/_knowledge-base.js` 高頻答覆文案為「結論先講 + 三行呼吸感空行排版」，大幅提升手機 LINE 閱讀效率與下單轉換率。
+  2. 漏氣緊急應變升級 3 秒保命視覺化排版（`🚨` + `1️⃣2️⃣3️⃣4️⃣`）並補齊 `漏瓦斯`/`好臭` 等口語觸發。
+  3. 擴充台語與極短口語關鍵字匹配（`若濟`、`敢有送`、`點袂著`、`沒瓦斯`、`20kg多少`），並新增 Few-Shot 典範 7（台語自然應答）與 System Prompt 手機排版守則。
+  4. 同步更新 `docs/GAS_CONSUMER_FAQ_300.md` 守則第 10 條與桌面鏡像。
+  5. 測試驗證：`knowledge-base.test.mjs` 9/9 PASS、`massive-faq-300-stress.test.mjs` 5/5 PASS、`ai-1000-questions.test.mjs` 1,000 題 100.00% PASS。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（qazwsx32100/gass）主幹同步推送
+  - [x] Vercel Production 正式環境部署 READY
+  - [x] 桌面鏡像同步：`盛隆瓦斯_進行中與待完成項目看板.md`、`盛隆瓦斯_消費者常見問題300題知識庫.md`
+
+---
+
 ## [2026-11-19 10:20] - 外勤運費改以「公斤 (kg)」計算規格規劃與待辦記錄
 - **版本號**：`20261119_1020_driver_freight_by_kg_specification`
 - **影響範圍**：`docs/DRIVER_FREIGHT_BY_KG_SPEC.md`, `docs/TODO.md`, `CHANGELOG.md`, 桌面鏡像
