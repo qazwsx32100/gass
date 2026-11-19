@@ -1,3 +1,12 @@
+## [2026-11-19 11:10] - 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費
+- **版本號**：`20261119_1110_pre_deduction_total_price_option_b`
+- **影響範圍**：`sync-stock.cjs`, `lib/pre-deduction-price.ts`, `app/api/today-orders/route.ts`, `app/api/driver/orders/route.ts`, `app/driver/page.tsx`
+- **主要更動**：
+  1. 門市主機 SQL (`sync-stock.cjs`) 與雲端引擎 (`lib/pre-deduction-price.ts`) 雙軌直接透過 `dbo.price` 最新牌價與 `dbo.customers` 客戶設定差價，直接產出「門市人員還沒內扣樓層費前的原始總金額（如 $820）」。
+  2. 司機端 APP (`app/driver/page.tsx`) 依老闆指示採「方式 B」：第一行直接顯示未內扣前總金額 `$820`，右下角只顯示 `運費$70`、不顯示樓層費。
+  3. 單元測試 45/45 全數通過，TypeScript 0 錯誤，同步部署 GitHub 與 Vercel Production。
+- **發布狀態**：已驗證通過並全量同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-19 10:20] - 外勤運費改以「公斤 (kg)」計算規格規劃與待辦記錄
 - **版本號**：`20261119_1020_driver_freight_by_kg_specification`
 - **影響範圍**：`docs/DRIVER_FREIGHT_BY_KG_SPEC.md`, `docs/TODO.md`, `CHANGELOG.md`, 桌面鏡像

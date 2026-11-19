@@ -102,11 +102,11 @@ test("🛡️ 司機端訂單畫面 排版順序 ＆ 結單 ＆ 按鈕移除圖�
     assert.match(pageContent, /五段式字體切換[\s\S]*?\{false && \(/);
   });
 
-  await t.test("13. 訂單金額顯示為總金額（瓦斯費＋樓層費），且訂單右下角顯示 運費$70 樓層費$30", () => {
+  await t.test("13. 依指示【方式 B】：只顯示未內扣前總金額，且訂單右下角只顯示運費$70、不顯示樓層費", () => {
     assert.match(pageContent, /totalDisplayPrice/);
-    assert.match(pageContent, /gasPrice \+ floorFee/);
+    assert.doesNotMatch(pageContent, /gasPrice \+ floorFee/);
     assert.match(pageContent, /運費\s*\$\{comm\}/);
-    assert.match(pageContent, /樓層費\s*\$\{floorFee\}/);
+    assert.doesNotMatch(pageContent, /樓層費\s*\$\{floorFee\}/);
   });
 
   await t.test("14. 依指示：[ ✅ 送達收款 ] 刪除", () => {

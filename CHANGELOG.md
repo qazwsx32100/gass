@@ -1,3 +1,17 @@
+## [2026-11-19 11:10] - 💰 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費 [ver: 20261119_1110_pre_deduction_total_price_option_b]
+- **背景與老闆最高指示**：
+  - 老闆說明門市實際操作：「比方說 瓦斯價錢 800元 樓層20元，目前呈現方式是在瓦斯價錢上面顯示820元；訂單出來時會是門市人員自行從820元內扣20元樓層費，所以最後出現在訂單畫面會是800元」、「1.內扣下來的20元 不會有任何紀錄 2.直接產出瓦斯還沒內扣前820元」，並拍板採用**「方式 B（只顯示未內扣前總金額 $820，不顯示樓層費）」**。
+- **核心技術實裝 (Key Implementations)**：
+  1. **門市主機 SQL 直接產出未內扣前總金額 (`sync-stock.cjs`)**：
+     - 在 `fetchTodayOrdersList` 與 `fetchNewOrdersSince` 中透過 `OUTER APPLY (SELECT TOP 1 * FROM dbo.price WITH (NOLOCK) ORDER BY log_id DESC) pr` 結合 `dbo.customers` 各規格差價 (`c.price_50kg` ~ `c.price_4kg`)，直接算出未內扣前總金額 `∑ 數量 × (牌價 - 客戶差價)` 作為訂單 `price` 與 `totalPrice` 傳送，並將 `tip` 與 `floorFee` 設為 `0`。
+  2. **雲端雙軌保底還原引擎 (`lib/pre-deduction-price.ts`)**：
+     - 實裝 `resolvePreDeductionTotalPrice` 並接入 `/api/today-orders` 與 `/api/driver/orders`，即使門市主機尚未重啟守護進程，雲端亦能透過 3,943 戶客戶主檔即時還原未內扣前總金額（真實訂單實測 100% 吻合：`227.22.14.5樓` 735➔785、`4.122-2.3樓` 735➔745、`10.30.3` 700➔710、`65.8.4.3` 470➔500）。
+  3. **司機端 APP 全面落實方式 B (`app/driver/page.tsx`)**：
+     - 訂單卡片第一行收款金額直接顯示未內扣前總金額（如 `$820`），徹底移除前端 `gasPrice + floorFee`。
+     - 訂單卡片右下角只顯示 `運費$70`，不顯示樓層費；頂部看板亦移除今日樓層費。
+  4. **全端測試與型別驗收**：
+     - 新增 `tests/pre-deduction-price-option-b.test.mjs` 並更新 `tests/driver-compact-card-and-customer-remarks.test.mjs`，45/45 測試全數 PASS，`npx tsc --noEmit` 0 錯誤。
+
 ## [2026-11-19 10:20] - 🚚 外勤運費改以「公斤 (kg)」計算規格規劃與待辦記錄 [ver: 20261119_1020_driver_freight_by_kg_specification]
 - **背景與老闆最高指示**：
   - 老闆指示：「討論一下 我之後要將運費的計算方式修改 改成用公斤來計算 有兩種計算方式 1.月薪1公斤3.5元 2.季獎金 1公斤0.2元 呈現的方式會如何呈現」以及「先幫我記錄一下 這更改方向 以公斤計算 之後會做修改」。
