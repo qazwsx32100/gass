@@ -1,3 +1,14 @@
+## [2026-11-19 21:40] - 司機端與全系統撥打市內電話自動補雙北區碼「02」
+- **版本號**：`20261119_2140_auto_prefix_landline_area_code_02`
+- **影響範圍**：`lib/phone-utils.ts`, `app/driver/page.tsx`, `MainActivity.java`, `SharedAddressAction.tsx`, `today-orders/page.tsx`, `driver/admin/page.tsx`, `operations/page.tsx`, `CallMonitorView.tsx`, `CustomerSearchHub.tsx`, `CustomerMapComponent.tsx`, `customer-map/page.tsx`, `app/page.tsx`
+- **主要更動**：
+  1. 依老闆指示：「撥打市內電話 不會自動增加區域號碼」，為解決司機外勤使用手機直撥 7/8 碼市話因電信業者要求區碼導致無法接通之問題。
+  2. 建立全系統統一電話處理工具庫 `lib/phone-utils.ts`：實裝 `toDialableTel(raw)`，雙北 7/8 碼市話自動補上「02」區碼（如 `2972-5559` ➔ `0229725559`、`89721158` ➔ `0289721158`）；手機號碼 (`09xx`) 絕對嚴禁補 02；已帶區碼或國際碼絕不重複疊加。
+  3. 司機端 APP (`app/driver/page.tsx`) 全面實裝：來電電話、其他電話、訂單卡片底置電話按鈕、新單即時懸浮橫幅撥號 100% 自動帶有 `02`。
+  4. Android 原生層 `MainActivity.java` 實裝 `callPhone` 雙層安全保護，Intent 撥號前自動校準。
+  5. 全端測試 55/55 PASS，TypeScript 0 錯誤，同步部署 GitHub 與 Vercel Production。
+- **發布狀態**：已驗證通過並全量同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-19 11:10] - 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費
 - **版本號**：`20261119_1110_pre_deduction_total_price_option_b`
 - **影響範圍**：`sync-stock.cjs`, `lib/pre-deduction-price.ts`, `app/api/today-orders/route.ts`, `app/api/driver/orders/route.ts`, `app/driver/page.tsx`

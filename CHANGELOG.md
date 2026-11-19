@@ -1,3 +1,28 @@
+## [2026-11-19 21:40] - 📞 司機端與全系統撥打市內電話自動補雙北區碼「02」 [ver: 20261119_2140_auto_prefix_landline_area_code_02]
+- **背景與老闆最高指示**：
+  - 老闆反映：「撥打市內電話 不會自動增加區域號碼」。
+  - 根因分析：門市 ERP 與資料庫所記錄之市內電話多為 7 碼或 8 碼（如 `2972-5559`、`89721158` 等無區碼格式）。司機外勤以手機點擊直撥電話時，行動電信網路（中華/遠傳/台哥大）強制要求加撥區域號碼，若未帶 `02` 區碼會直接被電信系統判定為空號或播放「請加撥區域號碼」導致無法接通。
+- **核心技術實裝 (Key Implementations)**：
+  1. **統一電話號碼處理工具庫 (`lib/phone-utils.ts`)**：
+     - 實裝 `toDialableTel(raw)`：雙北 7/8 碼市話自動補上「02」區碼（如 `2972-5559` ➔ `0229725559`、`89721158` ➔ `0289721158`）。
+     - 手機號碼 (`09xxxxxxxx`) 絕對嚴禁補上 02。
+     - 已帶區碼 (`02`, `03`, `04`, `0800` 等) 或國際碼 (`+886` 等) 維持原樣，絕不重複疊加 `0202...`。
+     - 支援分機 (`#`, `,`, `分機`, `轉`, `ext`) 辨識與保全。
+     - 實裝 `formatPhoneNumber(raw)` 與 `cleanDisplayTel(raw)` 確保畫面視覺與撥號規範高度一致。
+  2. **司機端 APP (`app/driver/page.tsx`) 全撥號節點覆蓋**：
+     - 卡片「📞 來電電話：」點擊直撥 `incomingPhoneDial` 自動補 `02`。
+     - 卡片「📞 其他電話：」點擊直撥 `cleanDigits` 自動補 `02`。
+     - 卡片底部主動作按鈕「電話」`dialTel` 自動補 `02`。
+     - 新單即時懸浮大橫幅「電話」`bTel` 自動補 `02`。
+  3. **Android 原生撥號層 (`MainActivity.java`) 雙層安全保底**：
+     - 原生 JavaScriptInterface `callPhone(phoneNumber)` 加入 7/8 碼自動補 `02` 防呆保護，無論 web 傳入何種格式，原生 Intent 撥號鍵盤皆 100% 帶有 `02` 區碼。
+  4. **全系統相關撥號組件同步聯動升級**：
+     - `SharedAddressAction.tsx`、`today-orders/page.tsx`、`driver/admin/page.tsx`、`operations/page.tsx`、`CallMonitorView.tsx`、`CustomerSearchHub.tsx`、`CustomerMapComponent.tsx`、`customer-map/page.tsx`、`app/page.tsx` 全面採用 `toDialableTel`。
+  5. **全端測試與型別安全驗收**：
+     - 專屬單元測試 `tests/phone-utils.test.mjs` (9/9 PASS)。
+     - 司機端訂單卡片測試 `tests/driver-compact-card-and-customer-remarks.test.mjs` (18/18 PASS)。
+     - 核心驗收測試 55/55 PASS，`npx tsc --noEmit` 0 錯誤通過。
+
 ## [2026-11-19 11:10] - 💰 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費 [ver: 20261119_1110_pre_deduction_total_price_option_b]
 - **背景與老闆最高指示**：
   - 老闆說明門市實際操作：「比方說 瓦斯價錢 800元 樓層20元，目前呈現方式是在瓦斯價錢上面顯示820元；訂單出來時會是門市人員自行從820元內扣20元樓層費，所以最後出現在訂單畫面會是800元」、「1.內扣下來的20元 不會有任何紀錄 2.直接產出瓦斯還沒內扣前820元」，並拍板採用**「方式 B（只顯示未內扣前總金額 $820，不顯示樓層費）」**。
