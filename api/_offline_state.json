@@ -42039,6 +42039,22 @@
         "createdAt": "2026-11-19T13:38:46.212Z",
         "approvedBy": "盛隆會計",
         "approvedAt": "2026-11-19 21:35:00"
+      },
+      {
+        "id": "SL-SHEET-EXP-20261118-補樓層費-30",
+        "companyId": "COMP001",
+        "date": "2026-11-18",
+        "accountCode": "6106",
+        "amount": 30,
+        "paymentStatus": "paid",
+        "status": "approved",
+        "effectiveForReport": true,
+        "remarks": "雜項支出｜補貼外勤送達龍門路42號4樓樓層費",
+        "syncSource": "google_sheet_reconcile",
+        "createdBy": "system_sheet_reconcile",
+        "createdAt": "2026-11-19T13:47:24.256Z",
+        "approvedBy": "盛隆會計",
+        "approvedAt": "2026-11-19 21:46:00"
       }
     ],
     "companies": [
@@ -121244,6 +121260,6 @@
       }
     ]
   },
-  "updated_at": "2026-11-19T13:38:46.212Z",
-  "updated_by": "Antigravity-Nov19-SheetReconcile"
+  "updated_at": "2026-11-19T13:47:24.260Z",
+  "updated_by": "Antigravity-Nov18-FloorFee-Sync"
 }
