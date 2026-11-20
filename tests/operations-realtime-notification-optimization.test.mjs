@@ -118,3 +118,24 @@ test("5. [503 Persistence Root Fix & Driver App 0ms Instant Boot] today-orders P
   assert.match(driverOrdersApiSrc, /const\s*\[\s*todayOrdersResult,\s*pendingDispatches,\s*settings,\s*allGpsRecords,\s*allRemarks,\s*lookups,?\s*\]\s*=\s*await\s+Promise\.all\(/);
 });
 
+
+test("6. [AI Engineering Department Sentinels] ai-engineering-monitor patrols all 4 notification & fast-boot sentinels and integrates with Eight Departments & UI", () => {
+  const monitorSrc = readRepoFile("lib/ai-engineering-monitor.ts");
+  const eightDeptSrc = readRepoFile("app/api/ai/eight-departments/route.ts");
+  const engInspectSrc = readRepoFile("app/api/ai/engineering/inspections/route.ts");
+  const uiSrc = readRepoFile("app/components/AiAssistantCenter.tsx");
+
+  // 4 大專屬哨兵定義與 60s 快取 + 6h Telegram 告警去重
+  assert.match(monitorSrc, /export\s+async\s+function\s+getAiEngineeringSentinelReport\(/);
+  assert.match(monitorSrc, /orderSyncChannel:/);
+  assert.match(monitorSrc, /driverFcmSentinel:/);
+  assert.match(monitorSrc, /operationsWebPushSentinel:/);
+  assert.match(monitorSrc, /fastBootLatencySentinel:/);
+  assert.match(monitorSrc, /SENTINEL_CACHE_TTL_MS\s*=\s*60_000/);
+  assert.match(monitorSrc, /export\s+async\s+function\s+notifyBossIfEngineeringSentinelDegraded\(/);
+
+  // 串接八大部門 API、工程巡檢 API 與前端 SystemEngineerLivePanel
+  assert.match(eightDeptSrc, /engineeringSentinel:\s*await\s+getAiEngineeringSentinelReport\(\)/);
+  assert.match(engInspectSrc, /getAiEngineeringSentinelReport/);
+  assert.match(uiSrc, /推播通道與雙端 0ms 開屏速度 4 大專屬哨兵/);
+});

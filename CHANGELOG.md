@@ -41,6 +41,16 @@
      - 建立桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_外勤運費改以公斤計算規劃說明書.md`。
      - 更新 `docs/TODO.md`、桌面看板與 `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`。
 
+## [2026-11-20 16:35] - 🛡️ AI 工程部門（AI 系統工程師）實裝「推播通道與雙端 0ms 開屏速度 4 大專屬哨兵」 [ver: 20261120_1635_ai_engineering_notification_and_fast_boot_sentinels]
+- **背景與老闆最高指示**：
+  - 老闆指示：「我可以請ai工程部門監控嗎?」、「好」。
+- **四大專屬哨兵與主動告警實裝 (`lib/ai-engineering-monitor.ts`)**：
+  1. **哨兵 1 — 收單與推播中繼通道 (`orderSyncChannel`)**：即時巡檢 `today_orders` 通道 `200 OK` 狀態、今日單數、反應毫秒數與雙 KV 容災回退就緒狀態。
+  2. **哨兵 2 — 司機端 App 推播憑證 (`driverFcmSentinel`)**：即時巡檢外勤司機 FCM Token 在線數與手機型號（如小龍：三星 Galaxy S23）。
+  3. **哨兵 3 — 監控中心背景推播綁定 (`operationsWebPushSentinel`)**：即時巡檢監控中心調度螢幕背景推播綁定數與加密 KV 雙備援狀態。
+  4. **哨兵 4 — 雙端 0ms 開屏與 API 反應速度 (`fastBootLatencySentinel`)**：即時監控雙端 0ms 開屏快取與後端 6 路並行引擎耗時（`< 1200ms` 綠燈）。
+  5. **零配額浪費與 Telegram 智慧告警**：內建 60 秒 `turboCache` 快取護盾（重複查詢 0 額外請求），並提供 `notifyBossIfEngineeringSentinelDegraded()`（含 6 小時去重鎖與打烊夜間靜音），同步整合至 `/api/ai/eight-departments`、`/api/ai/engineering/inspections` 與前端 `SystemEngineerLivePanel` 控制台。
+
 ## [2026-11-20 10:20] - 🚀 司機端 App 與監控中心「通知延遲 & 開屏不馬上跳資料」雙端徹底根治 [ver: 20261120_1020_fix_today_orders_503_push_block_and_0ms_instant_boot]
 - **背景與老闆最高指示**：
   - 老闆指示：「司機app 和 監控中心 的問題 1.通知會延遲 2.點開app時不會馬上跳出資料」。

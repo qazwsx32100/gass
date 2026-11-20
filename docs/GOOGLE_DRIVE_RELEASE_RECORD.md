@@ -18,6 +18,14 @@
   5. 產出專屬權威規格說明書 `docs/DRIVER_FREIGHT_BY_KG_SPEC.md` 並同步鏡像至老闆桌面。
 - **發布狀態**：規格與待辦紀錄已全量同步 GitHub 主幹與桌面看板。
 
+## [2026-11-20 16:35] - AI 工程部門（AI 系統工程師）實裝推播通道與雙端 0ms 開屏速度 4 大專屬哨兵
+- **版本號**：`20261120_1635_ai_engineering_notification_and_fast_boot_sentinels`
+- **影響範圍**：`lib/ai-engineering-monitor.ts`、`app/api/ai/eight-departments/route.ts`、`app/api/ai/engineering/inspections/route.ts`、`app/components/AiAssistantCenter.tsx`
+- **主要更動**：
+  1. 新增 `lib/ai-engineering-monitor.ts` 實裝 4 大專屬哨兵（收單與推播通道、司機端 FCM 憑證、監控中心背景推播綁定、雙端 0ms 開屏與 6 路並行 API 反應速度）。
+  2. 內建 60 秒快取護盾與 6 小時去重 Telegram 主動告警，並於 AI 系統工程師面板 (`SystemEngineerLivePanel`) 即時呈現 4 大綠燈指標。
+- **發布狀態**：測試與 TypeScript 編譯全數通過，同步 GitHub 與 Vercel Production 正式環境。
+
 ## [2026-11-20 10:20] - 司機端App與監控中心通知延遲真兇根治(POST 503修復) ✕ 雙端 0ms 開屏秒顯與 6 路並行加速
 - **版本號**：`20261120_1020_fix_today_orders_503_push_block_and_0ms_instant_boot`
 - **影響範圍**：`app/api/today-orders/route.ts`、`app/driver/page.tsx`、`app/api/driver/orders/route.ts`、`app/operations/page.tsx`、`lib/web-push.ts`
