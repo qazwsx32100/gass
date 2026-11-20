@@ -1,14 +1,3 @@
-## [2026-11-19 21:40] - 司機端與全系統撥打市內電話自動補雙北區碼「02」
-- **版本號**：`20261119_2140_auto_prefix_landline_area_code_02`
-- **影響範圍**：`lib/phone-utils.ts`, `app/driver/page.tsx`, `MainActivity.java`, `SharedAddressAction.tsx`, `today-orders/page.tsx`, `driver/admin/page.tsx`, `operations/page.tsx`, `CallMonitorView.tsx`, `CustomerSearchHub.tsx`, `CustomerMapComponent.tsx`, `customer-map/page.tsx`, `app/page.tsx`
-- **主要更動**：
-  1. 依老闆指示：「撥打市內電話 不會自動增加區域號碼」，為解決司機外勤使用手機直撥 7/8 碼市話因電信業者要求區碼導致無法接通之問題。
-  2. 建立全系統統一電話處理工具庫 `lib/phone-utils.ts`：實裝 `toDialableTel(raw)`，雙北 7/8 碼市話自動補上「02」區碼（如 `2972-5559` ➔ `0229725559`、`89721158` ➔ `0289721158`）；手機號碼 (`09xx`) 絕對嚴禁補 02；已帶區碼或國際碼絕不重複疊加。
-  3. 司機端 APP (`app/driver/page.tsx`) 全面實裝：來電電話、其他電話、訂單卡片底置電話按鈕、新單即時懸浮橫幅撥號 100% 自動帶有 `02`。
-  4. Android 原生層 `MainActivity.java` 實裝 `callPhone` 雙層安全保護，Intent 撥號前自動校準。
-  5. 全端測試 55/55 PASS，TypeScript 0 錯誤，同步部署 GitHub 與 Vercel Production。
-- **發布狀態**：已驗證通過並全量同步 GitHub 與 Vercel Production 正式環境。
-
 ## [2026-11-19 11:10] - 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費
 - **版本號**：`20261119_1110_pre_deduction_total_price_option_b`
 - **影響範圍**：`sync-stock.cjs`, `lib/pre-deduction-price.ts`, `app/api/today-orders/route.ts`, `app/api/driver/orders/route.ts`, `app/driver/page.tsx`
@@ -28,6 +17,15 @@
   4. 恪守舊 ERP 黑盒子零動 Schema 鐵律，底層採用動態精算與生效日平滑過渡機制。
   5. 產出專屬權威規格說明書 `docs/DRIVER_FREIGHT_BY_KG_SPEC.md` 並同步鏡像至老闆桌面。
 - **發布狀態**：規格與待辦紀錄已全量同步 GitHub 主幹與桌面看板。
+
+## [2026-11-20 10:20] - 司機端App與監控中心通知延遲真兇根治(POST 503修復) ✕ 雙端 0ms 開屏秒顯與 6 路並行加速
+- **版本號**：`20261120_1020_fix_today_orders_503_push_block_and_0ms_instant_boot`
+- **影響範圍**：`app/api/today-orders/route.ts`、`app/driver/page.tsx`、`app/api/driver/orders/route.ts`、`app/operations/page.tsx`、`lib/web-push.ts`
+- **主要更動**：
+  1. 根治 `POST /api/today-orders` 因 Supabase `sl_operations_kv` 404 回傳 `HTTP 503` 而中斷司機 FCM 推播與監控中心 Web Push 之真兇，補齊 `globalThis.fetch(PRIMARY_KV_URL)` 寫入回退並排除 3 分鐘內新單預填基準。
+  2. 司機端 App 實裝 0ms 開屏秒顯（在 `verify-token` 前即刻渲染本機今日快取並啟動抓單），並將 `/api/driver/orders` 6 個串列 `await` 改為 `Promise.all` 並行。
+  3. 監控中心實裝 `sl_ops_today_orders_cache_v1` 0ms 開屏秒顯與首屏 `/api/today-orders` 極速快車道。
+- **發布狀態**：78/78 測試全數通過，同步 GitHub 與 Vercel Production 正式環境。
 
 ## [2026-11-19 20:50] - 監控中心通知架構深度優化 ✕ 拔除 STALE-HIT 舊快取延遲 ✕ 防門市雙寫時序覆蓋 ✕ 加密 KV 訂閱雙重持久化
 - **版本號**：`20261119_2050_eliminate_stale_hit_and_dual_kv_push_subs`

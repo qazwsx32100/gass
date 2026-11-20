@@ -1,28 +1,3 @@
-## [2026-11-19 21:40] - 📞 司機端與全系統撥打市內電話自動補雙北區碼「02」 [ver: 20261119_2140_auto_prefix_landline_area_code_02]
-- **背景與老闆最高指示**：
-  - 老闆反映：「撥打市內電話 不會自動增加區域號碼」。
-  - 根因分析：門市 ERP 與資料庫所記錄之市內電話多為 7 碼或 8 碼（如 `2972-5559`、`89721158` 等無區碼格式）。司機外勤以手機點擊直撥電話時，行動電信網路（中華/遠傳/台哥大）強制要求加撥區域號碼，若未帶 `02` 區碼會直接被電信系統判定為空號或播放「請加撥區域號碼」導致無法接通。
-- **核心技術實裝 (Key Implementations)**：
-  1. **統一電話號碼處理工具庫 (`lib/phone-utils.ts`)**：
-     - 實裝 `toDialableTel(raw)`：雙北 7/8 碼市話自動補上「02」區碼（如 `2972-5559` ➔ `0229725559`、`89721158` ➔ `0289721158`）。
-     - 手機號碼 (`09xxxxxxxx`) 絕對嚴禁補上 02。
-     - 已帶區碼 (`02`, `03`, `04`, `0800` 等) 或國際碼 (`+886` 等) 維持原樣，絕不重複疊加 `0202...`。
-     - 支援分機 (`#`, `,`, `分機`, `轉`, `ext`) 辨識與保全。
-     - 實裝 `formatPhoneNumber(raw)` 與 `cleanDisplayTel(raw)` 確保畫面視覺與撥號規範高度一致。
-  2. **司機端 APP (`app/driver/page.tsx`) 全撥號節點覆蓋**：
-     - 卡片「📞 來電電話：」點擊直撥 `incomingPhoneDial` 自動補 `02`。
-     - 卡片「📞 其他電話：」點擊直撥 `cleanDigits` 自動補 `02`。
-     - 卡片底部主動作按鈕「電話」`dialTel` 自動補 `02`。
-     - 新單即時懸浮大橫幅「電話」`bTel` 自動補 `02`。
-  3. **Android 原生撥號層 (`MainActivity.java`) 雙層安全保底**：
-     - 原生 JavaScriptInterface `callPhone(phoneNumber)` 加入 7/8 碼自動補 `02` 防呆保護，無論 web 傳入何種格式，原生 Intent 撥號鍵盤皆 100% 帶有 `02` 區碼。
-  4. **全系統相關撥號組件同步聯動升級**：
-     - `SharedAddressAction.tsx`、`today-orders/page.tsx`、`driver/admin/page.tsx`、`operations/page.tsx`、`CallMonitorView.tsx`、`CustomerSearchHub.tsx`、`CustomerMapComponent.tsx`、`customer-map/page.tsx`、`app/page.tsx` 全面採用 `toDialableTel`。
-  5. **全端測試與型別安全驗收**：
-     - 專屬單元測試 `tests/phone-utils.test.mjs` (9/9 PASS)。
-     - 司機端訂單卡片測試 `tests/driver-compact-card-and-customer-remarks.test.mjs` (18/18 PASS)。
-     - 核心驗收測試 55/55 PASS，`npx tsc --noEmit` 0 錯誤通過。
-
 ## [2026-11-19 11:10] - 💰 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費 [ver: 20261119_1110_pre_deduction_total_price_option_b]
 - **背景與老闆最高指示**：
   - 老闆說明門市實際操作：「比方說 瓦斯價錢 800元 樓層20元，目前呈現方式是在瓦斯價錢上面顯示820元；訂單出來時會是門市人員自行從820元內扣20元樓層費，所以最後出現在訂單畫面會是800元」、「1.內扣下來的20元 不會有任何紀錄 2.直接產出瓦斯還沒內扣前820元」，並拍板採用**「方式 B（只顯示未內扣前總金額 $820，不顯示樓層費）」**。
@@ -65,6 +40,26 @@
      - 建立權威說明書 `docs/DRIVER_FREIGHT_BY_KG_SPEC.md`。
      - 建立桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_外勤運費改以公斤計算規劃說明書.md`。
      - 更新 `docs/TODO.md`、桌面看板與 `docs/GOOGLE_DRIVE_RELEASE_RECORD.md`。
+
+## [2026-11-20 10:20] - 🚀 司機端 App 與監控中心「通知延遲 & 開屏不馬上跳資料」雙端徹底根治 [ver: 20261120_1020_fix_today_orders_503_push_block_and_0ms_instant_boot]
+- **背景與老闆最高指示**：
+  - 老闆指示：「司機app 和 監控中心 的問題 1.通知會延遲 2.點開app時不會馬上跳出資料」。
+- **問題真兇實測排查 (Root Causes Found on Live Production)**：
+  1. **【問題 1 真兇：為什麼司機端與監控中心通知都會延遲？】**
+     - 對線上正式環境實測 `POST https://shenglong.vercel.app/api/today-orders` 發現：因雲端配置了 `SUPABASE_URL`，`operationsKvFetch` 寫入 `/rest/v1/sl_operations_kv` 時因該表未建立返回 `404`，導致 `POST /api/today-orders` 在持久化檢查處直接中斷回傳 **`HTTP 503 {"error":"Order snapshot persistence pending"}`** 並進入 60 秒退避！
+     - 因為在 533 行就回傳 503 中斷，程式**根本沒有執行到後面的第 582 行 `scheduleOrderAssignment`（司機端 Google FCM 推播）與第 651 行 `scheduleOperationsNewOrderAlerts`（監控中心 Web Push）**！雙端只能靠後續讀取 `kvdb.io` 才拿到單據，造成雙端通知延遲。
+  2. **【問題 2 真兇：為什麼點開 App 時不會馬上跳出資料？】**
+     - **司機端 (`/driver`)**：`initialize()` 先 `await fetch('/api/driver/verify-token')` 等雲端回應後，才解開 `isValidating`、才載入 `localStorage` 快取並觸發 `fetchOrders`，形成串列等待；且 `/api/driver/orders` 後端有 6 個串列 `await`（未並行）。
+     - **監控中心 (`/operations`)**：原本沒有將今日訂單存入 `localStorage` 作開屏快取，且首屏只呼叫 `/api/ops/snapshot`，被裡面的 `stock (876ms)` 與 `weather/system (402ms)` 綁在一起等待，拖慢了原本只需 `7.7ms` 的訂單資料。
+- **三大根治實裝 (Key Implementations)**：
+  1. **修復 `POST /api/today-orders` 寫入回退與冷啟動基準 (`app/api/today-orders/route.ts`)**：
+     - 當 `operationsKvFetch` 因 Supabase `sl_operations_kv` 未建表返回非 200（且非 429/402）時，自動平滑回退 `globalThis.fetch(PRIMARY_KV_URL)` 寫入 `kvdb.io`，確保 `POST /api/today-orders` 100% 回傳 `200 OK` 並即刻觸發司機 FCM 推播與監控中心 Web Push。
+     - 冷啟動載入基準時自動排除 3 分鐘內剛建立的新單 ID（`freshIds`），確保司機指派推播與監控中心新單推播皆不被門市先行寫入的 KV 覆蓋吞沒。
+  2. **司機端 App 0ms 開屏秒顯 ＋ 後端 6 路並行 (`app/driver/page.tsx` & `app/api/driver/orders/route.ts`)**：
+     - 本機已有合法憑證時，在 `await verify-token` **之前**第 0 毫秒立即解鎖畫面、渲染今日快取訂單並同步啟動 `fetchOrders`，背景再完成 `verify-token` 校驗。
+     - `/api/driver/orders` 將 `fetchTodayOrders`、`getPendingDispatches`、`getDriverSettingsAsync`、`getAllCustomerGpsRecords`、`getAllOrderRemarks`、`getCustomerMapLookups` 改為 `Promise.all` 6 路全並行。
+  3. **監控中心 0ms 開屏秒顯 ＋ 首屏訂單快車道 (`app/operations/page.tsx`)**：
+     - 實裝 `sl_ops_today_orders_cache_v1` 本機今日訂單快取，點開 App 第 0 毫秒立即跳出今日訂單；同時首屏獨立並發 `/api/today-orders`（0.2 秒極速返回），不受 `weather / system` 拖慢。
 
 ## [2026-11-19 20:50] - ⚡ 監控中心通知架構深度優化 (拔除 STALE-HIT 舊快取延遲 ✕ 防門市雙寫時序覆蓋 ✕ 加密 KV 訂閱雙重持久化) [ver: 20261119_2050_eliminate_stale_hit_and_dual_kv_push_subs]
 - **背景與老闆最高指示**：

@@ -92,6 +92,29 @@ test("4. [Reverse Wake-Up & Morning First Order 0->1] operations page refreshes 
   assert.match(opsSrc, /hasInitializedOrderBaselineRef/);
   assert.match(opsSrc, /const\s+isFirstLoad\s*=\s*!hasInitializedOrderBaselineRef\.current\s*&&\s*knownOrderIdsRef\.current\.size\s*===\s*0/);
 
+  // 0ms 開屏秒顯快取 (sl_ops_today_orders_cache_v1)
+  assert.match(opsSrc, /sl_ops_today_orders_cache_v1/);
+
   // 嚴守 AI 犯錯中心鐵律：常態輪詢間隔維持 60000ms (60 秒)
   assert.match(opsSrc, /fetchAllData\(false\);\s*\},\s*60000\)/);
 });
+
+test("5. [503 Persistence Root Fix & Driver App 0ms Instant Boot] today-orders POST falls back to PRIMARY_KV_URL and driver app boots cache-first in 0ms", () => {
+  const routeSrc = readRepoFile("app/api/today-orders/route.ts");
+  const driverPageSrc = readRepoFile("app/driver/page.tsx");
+  const driverOrdersApiSrc = readRepoFile("app/api/driver/orders/route.ts");
+
+  // POST /api/today-orders 具備 globalThis.fetch(PRIMARY_KV_URL) 容災回退，根除 503 Order snapshot persistence pending 阻斷司機與監控推播
+  assert.match(routeSrc, /globalThis\.fetch\(PRIMARY_KV_URL/);
+  // 冷啟動基準排除 3 分鐘內新單 ID，確保 scheduleOrderAssignment (司機 FCM) 與 scheduleOperationsNewOrderAlerts 皆不被吞沒
+  assert.match(routeSrc, /const\s+freshIds\s*=\s*new\s+Set\(findRecentFreshOrdersFallback\(payload\.orders\)/);
+
+  // 司機端 App 0ms 開屏秒顯：在 await fetch('/api/driver/verify-token') 之前即解鎖 isValidating 並載入今日快取
+  const fastBootIdx = driverPageSrc.indexOf("const fastName = (localName || driverParam");
+  const verifyFetchIdx = driverPageSrc.indexOf("await fetch(`/api/driver/verify-token?");
+  assert.ok(fastBootIdx > 0 && verifyFetchIdx > fastBootIdx, "Driver app must hydrate local cache at 0ms BEFORE awaiting verify-token");
+
+  // /api/driver/orders 採用 6 路 Promise.all 並行讀取，消除串列 await 瀑布
+  assert.match(driverOrdersApiSrc, /const\s*\[\s*todayOrdersResult,\s*pendingDispatches,\s*settings,\s*allGpsRecords,\s*allRemarks,\s*lookups,?\s*\]\s*=\s*await\s+Promise\.all\(/);
+});
+
