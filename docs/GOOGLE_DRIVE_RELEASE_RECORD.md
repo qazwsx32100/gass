@@ -1,3 +1,13 @@
+## [2026-11-21 11:15] - 盛隆八大 AI 部門權威架構與召喚手冊 GitHub 化 ✕ 跨倉雙軌同步與自然語言一鍵召喚
+- **版本號**：`20261121_1115_ai_eight_departments_github_playbook_and_skill`
+- **影響範圍**：`docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`、`.agents/skills/shenglong-ai-departments/SKILL.md`、`GEMINI.md`、`docs/TODO.md`、`CHANGELOG.md`、桌面鏡像
+- **主要更動**：
+  1. 完成盛隆八大 AI 部門（執行秘書、營運總監、系統工程師、財務主管、客服主管、業務主管、行銷總監、行政主管）架構規格全面 GitHub 化，發布權威手冊 `docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`。
+  2. 建立專屬 Workspace Skill `.agents/skills/shenglong-ai-departments/SKILL.md`，支援「召喚AI部門」、「召喚AI工程部門」等自然語言關鍵字一鍵秒級召喚。
+  3. 雙倉 (`c:\shenglong-next` 與 `c:\Gass`) 依 GEMINI.md 最高執行指令 SOP 同步，並覆蓋鏡像至桌面《盛隆瓦斯_八大AI部門架構與召喚操作手冊.md》。
+  4. 雙倉 GEMINI.md 註冊最高執行指令第 7 條「盛隆八大 AI 部門權威架構與一鍵召喚規範」，納入 L1/L2/L3 三級安全護欄（L3 強制 Telegram 8862712587 唯一 SuperAdmin 授權）、舊 ERP 黑盒子零更動 (Directive #4) 與本機隔離 (Directive #6)。
+- **發布狀態**：測試通過，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-19 11:10] - 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費
 - **版本號**：`20261119_1110_pre_deduction_total_price_option_b`
 - **影響範圍**：`sync-stock.cjs`, `lib/pre-deduction-price.ts`, `app/api/today-orders/route.ts`, `app/api/driver/orders/route.ts`, `app/driver/page.tsx`

@@ -1,3 +1,36 @@
+## [2026-11-21 11:15] - 🤖 盛隆八大 AI 部門權威架構與召喚手冊 GitHub 化 ✕ 跨倉雙軌同步與自然語言一鍵召喚 [ver: 20261121_1115_ai_eight_departments_github_playbook_and_skill]
+- **背景與老闆最高指示**：
+  - 老闆指示：「之前有想要請你幫忙做ai部門github化，我們來確認進度」、「好~ 幫我處理」、「繼續 完成ai部門」。
+- **核心架構落地與權威手冊發布 (`docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`)**：
+  1. **八大 AI 職能角色與架構定位**：
+     - `executive_secretary`（AI 執行秘書）：跨部門指揮調度中樞、晨會戰情報告、多部門任務裁決。
+     - `operations_director`（AI 營運總監）：即時庫存平衡、司機派單瓶頸警報、夜間瓦斯荒主動預警。
+     - `system_engineer`（AI 系統工程師）：全系統巡檢、API 響應監控、雙向同步守護、推播與開屏速度 4 大哨兵。
+     - `finance_officer`（AI 財務主管）：權威毛利核算（進價 $22.63/kg、運費 $70/$140）、未結欠款稽核、異常利潤主動預警。
+     - `customer_service`（AI 客服主管）：LINE 客服品質分析、申訴意圖識別、高急迫工單直通 Telegram 告警。
+     - `sales_manager`（AI 業務主管）：餐飲大戶用量異常監控、商用價格毛利守護、合約到期預警。
+     - `marketing_director`（AI 行銷總監）：90/180 天沉睡客戶精準召回、檔期促銷試算、行銷 ROI 追蹤。
+     - `admin_manager`（AI 行政主管）：鋼瓶檢驗到期預警（30年8檢）、外送車輛保養保險、法規合規監控。
+  2. **三級安全護欄（L1 / L2 / L3 Guardrails）**：
+     - **L1 唯讀分析（Read-Only）**：巡檢監控、報表查詢、數據診斷（0 授權門檻，自動放行）。
+     - **L2 建議與草稿（Draft/Suggestion）**：行銷促銷方案、排班建議、客戶召回清單（需人工確認後執行）。
+     - **L3 敏感高危變更（High-Risk Mutation）**：牌價調整、退款扣款、帳號權限變更、系統核心配置（**強制要求老闆 Telegram ID `8862712587` 唯一 SuperAdmin 授權**）。
+  3. **三大跨部門自動化連動機制**：
+     - 庫存警報 ➔ 營運總監調度 ➔ 執行秘書推播 ➔ 老闆 Telegram。
+     - 沉睡客戶召回 ➔ 行銷總監名單 ➔ 財務利潤試算 ➔ 業務覆核。
+     - 夜間瓦斯荒警報 ➔ 營運總監分析 ➔ 系統工程健康檢驗 ➔ 戰情室廣播。
+  4. **四項即時推播與開屏速度專屬哨兵整合**：
+     - 收單通道哨兵 (`orderSyncChannel`)、司機 FCM 哨兵 (`driverFcmSentinel`)、監控中心 Web Push 哨兵 (`operationsWebPushSentinel`)、雙端 0ms 快開延遲哨兵 (`fastBootLatencySentinel`)。
+- **專屬 Workspace 召喚 Skill 實裝 (`.agents/skills/shenglong-ai-departments/SKILL.md`)**：
+  - 支援自然語言關鍵字召喚：`召喚AI部門`、`AI部門架構`、`召喚AI工程部門`、`召喚AI財務主管`、`召喚AI營運總監`、`召喚AI客服主管`、`召喚AI行政主管`、`召喚AI行銷總監`、`召喚AI業務主管`、`召喚AI執行秘書`。
+- **雙倉同步與桌面鏡像**：
+  - 手冊與 Skill 同步至 `c:\shenglong-next` 與 `c:\Gass`。
+  - 桌面鏡像同步生成：`C:\Users\懶\Desktop\盛隆瓦斯_八大AI部門架構與召喚操作手冊.md`。
+- **最高執行指令正式註冊 (`GEMINI.md`)**：
+  - 雙倉同步更新至 `### 7. 🤖 盛隆八大 AI 部門權威架構與一鍵召喚規範`。
+- **全套單元與整合測試**：
+  - 測試全數 PASS，TypeScript 0 錯誤，GitHub 雙軌與 Vercel Production 正式上線。
+
 ## [2026-11-19 11:10] - 💰 訂單金額直接產出「瓦斯未內扣前總金額 (如 $820)」 ✕ 方式 B 不顯示樓層費 [ver: 20261119_1110_pre_deduction_total_price_option_b]
 - **背景與老闆最高指示**：
   - 老闆說明門市實際操作：「比方說 瓦斯價錢 800元 樓層20元，目前呈現方式是在瓦斯價錢上面顯示820元；訂單出來時會是門市人員自行從820元內扣20元樓層費，所以最後出現在訂單畫面會是800元」、「1.內扣下來的20元 不會有任何紀錄 2.直接產出瓦斯還沒內扣前820元」，並拍板採用**「方式 B（只顯示未內扣前總金額 $820，不顯示樓層費）」**。

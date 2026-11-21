@@ -98,7 +98,34 @@
      - 本機負責代碼開發、單元測試、編譯 APK、推送 GitHub、部署 Vercel 生產環境與產生維護文件。
      - 正式資料之雙向同步與 ERP 讀寫，神聖屬於門市現場營業主機之職責。
 
-### 7. 📝 待增加 (Dynamic Expansion Reserved)
+### 7. 🤖 盛隆八大 AI 部門權威架構與一鍵召喚規範 (Eight AI Departments Standard)
+* **核心鐵律**：全系統 AI 協同作業、自動化治理、八大 AI 專家決策矩陣與權限分級，必須絕對嚴格遵循權威手冊：[`docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`](docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md)。
+* **專屬召喚指令與關鍵字**：
+  1. 自然語言關鍵字：`召喚AI部門`、`AI部門架構`、`召喚AI工程部門`、`召喚AI財務主管`、`召喚AI營運總監`、`召喚AI客服主管`、`召喚AI行政主管`、`召喚AI行銷總監`、`召喚AI業務主管`、`召喚AI執行秘書`
+  2. Workspace Skill：`shenglong-ai-departments`
+  3. 權威架構手冊：`docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`
+  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_八大AI部門架構與召喚操作手冊.md`
+* **四大核心防護與運作原則**：
+  1. **八大 AI 專家分工**：
+     - `executive_secretary`（執行秘書）：跨部門指揮調度、優先級裁決、日常待辦彙整。
+     - `operations_director`（營運總監）：即時庫存平衡、司機派單調度、夜間瓦斯荒警報。
+     - `system_engineer`（系統工程師）：全系統健康巡檢、API 響應監控、雙向同步守護。
+     - `finance_officer`（財務主管）：毛利成本核算（進價 $22.63/kg、運費 $70/$140）、未結帳款對帳、異常利潤稽核。
+     - `customer_service`（客服主管）：LINE 客服品質覆盤、客戶申訴調解、高急迫工單升級。
+     - `sales_manager`（業務主管）：餐飲大戶用量異常監控、商用價格毛利守護、合約到期預警。
+     - `marketing_director`（行銷總監）：沉睡客戶召回（90/180天）、檔期促銷試算、ROI 追蹤。
+     - `admin_manager`（行政主管）：鋼瓶檢驗到期預警（30年8檢）、車輛保養保險、法規合規監控。
+  2. **三級安全護欄（Guardrails）**：
+     - `L1 唯讀分析（Read-Only）`：日常巡檢、數據分析、異常診斷（自動放行）。
+     - `L2 建議與草稿（Draft/Suggestion）`：促銷方案、調度建議、客戶召回名單（需確認後發布）。
+     - `L3 敏感高危變更（High-Risk Mutation）`：價格更動、退款扣款、權限變更、系統設定（**強制要求老闆 Telegram ID `8862712587` 唯一 SuperAdmin 授權**）。
+  3. **黑盒子與本機隔離雙重鐵律連動**：
+     - AI 部門嚴禁向舊門市 SQL Server 執行任何 DDL 結構變更（遵從 Directive #4）。
+     - 系統工程 AI 巡檢門市同步狀態時，必須精準區分雲端與門市端點，嚴禁因本機進程停止誤判門市當機（遵從 Directive #6）。
+  4. **防高頻輪詢與防灌爆（AI 犯錯中心防線）**：
+     - 任何定時或背景監控間隔強制 $\ge 60$ 秒，全域配置 60 秒 TurboCache，嚴禁無變動全量重送。
+
+### 8. 📝 待增加 (Dynamic Expansion Reserved)
 * 預留擴充槽位，後續若老闆下達新最高執行指令，隨時依序增補並嚴格落實。
 
 ---
