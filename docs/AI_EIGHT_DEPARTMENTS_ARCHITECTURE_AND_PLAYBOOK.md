@@ -127,3 +127,42 @@ flowchart TD
 - **第二階：官方最低售價底線（含合理利潤，低於此價 🟡 黃燈警示）**：
   - **住家最低售價**：4kg **$350** ｜ 10kg **$500** ｜ 16kg **$700** ｜ 20kg **$800**
   - **商家最低售價**：4kg **$300** ｜ 10kg **$420** ｜ 16kg **$540** ｜ 20kg **$590** ｜ 50kg **$1,625**
+
+
+---
+
+## 陸、 八大 AI 部門五大進階優化與深度模組 (Advanced Optimizations V2.0)
+
+依據老闆 2026-11-22 指示「都來」，全面完成五大方向落地：
+
+### 1. 方向 A：老闆 Telegram 雙向深度互動 ✕ L3 審批一鍵核准按鈕
+- **Telegram Inline Keyboard 一鍵審批**：
+  - 當 AI 發起 L3 敏感動作（如改價、大戶專案、發票開立）時，推播訊息直接掛載 `[ ✅ 核准執行 (Approve) ]` 與 `[ ❌ 駁回申請 (Reject) ]` 雙按鈕。
+  - 老闆於手機 Telegram 點擊按鈕，由 `/api/telegram/advisor` 或 `advisor-bot.cjs` 接收 `apr_approve:${id}` 或 `apr_reject:${id}`，0 秒即時更新 `boss_approvals_state_v1` 並回覆確認卡片。
+- **AI 秘書自然語言智慧直答**：
+  - 老闆在 Telegram 私聊輸入任何營運問句（如「查今天各司機跑單數」、「巡檢推播與連線」、「查倒賠單」），自動經由 `parseAndDispatchSecretaryCommand()` 分派專責 AI，直接查詢線上最新數據並以 Markdown 卡片秒回！
+
+### 2. 方向 B：三大跨部門主動閉環管線 (`lib/ai-cross-department-pipeline.ts` ✕ `/api/ai/pipelines`)
+1. **90 天呆瓶壓瓶召回閉環 (`DORMANT_CYLINDER_RECOVERY`)**：
+   - 行銷 AI 篩選 90 天以上未叫客群 ➔ 行政 AI 核實大門地址與電話 ➔ 財務 AI 依官方購入成本 $1,550/支 與年折舊 $147.67 精算沉澱資金 ➔ 秘書 AI 生成個人化關懷文案並推播外勤順路收瓶工單。
+2. **門市訂單倒賠保本底線主動防禦閉環 (`BELOW_COST_MARGIN_DEFENSE`)**：
+   - 財務 AI 依據 Directive #3 保本底線（住家 $556 / 商家 $529）即時審計今日每一筆訂單 ➔ 發現低於底線時標記 `CRITICAL_BELOW_COST` ➔ 業務 AI 覆核合約量 ➔ 秘書 AI 彙整於每日戰報，0 破壞性干擾打單。
+3. **即時庫存告急與夜間斷氣主動預警閉環 (`STOCK_DEPLETION_EMERGENCY`)**：
+   - 營運 AI 監控實瓶水位（20kg < 30 桶黃燈預警、< 15 桶紅燈告急）➔ 系統工程 AI 驗證連線心跳 ➔ 秘書 AI 自動算出建議進氣補桶量並推播老闆 Telegram。
+
+### 3. 方向 C：八大部門專屬模組深度落地 (`lib/ai-specialist-deep-modules.ts`)
+1. **AI 業務主管 (`/api/ai/sales/anomalies`)**：
+   - 監控餐飲與商業大戶叫氣週期，未叫天數達常態 2.2 倍以上時自動觸發「用量斷崖預警」，識別 `POSSIBLE_COMPETITOR_POACHING`（疑似競業搶單）並產出實地拜訪對策。
+2. **AI 行政主管 (`/api/ai/admin/geocode-audit`)**：
+   - 全量審計客戶主檔中「大門 GPS 座標完整率」與「門牌標準化清洗率」，自動列出活躍但缺經緯度之客戶名單供外勤送達時一鍵補點打卡。
+3. **AI 客服主管 (`/api/ai/customer-service/audit`)**：
+   - 審計近 7 天 LINE 官方帳號對話，瓦斯味、漏氣、熱水器點不著關鍵字 100% 觸發 P0 安全阻斷（0 漏報），並提煉對話盲區產出候選問答。
+
+### 4. 方向 D：戰情調度台 AI 順路併單建議與殘氣折抵防呆
+1. **調度台順路併單標籤 (`Route Coalescing`)**：
+   - 營運 AI 自動比對未派單與現役司機（小龍）配送中單據的路名與座標，同路段或 500 公尺內自動於卡片上方亮起綠色膠囊：`💡 順路併單建議：與【小龍】車上 #XXXX 同在「路名」(相距 ~380m)，併單估計可省 12 分鐘外送趟次！`
+2. **空瓶退殘氣折抵防呆計算器 (`calculateResidualGasRefund`)**：
+   - 嚴格恪守 Directive #3 官方瓦斯批發進價 **$22.63 / kg**，輸入殘氣公斤數自動精算折抵金額，杜絕人工心算誤差。
+
+### 5. 方向 E：LINE 客服自學習題庫反哺機制 (`/api/ai/customer-service/candidate-faqs`)
+- 自動從低信心對話中提煉新進問題草稿（如鋼瓶陽台防雨防鏽、廢棄爐具回收規範），由客服主管整理並提供老闆一鍵審批，依 SOP 同步匯入官方消費者常見問題 300 題知識庫！

@@ -1,3 +1,30 @@
+## [2026-11-22 10:00] - 🤖 盛隆八大 AI 部門五大進階優化全面落地 ✕ Telegram L3 一鍵審批 ✕ 三大閉環管線 ✕ 順路併單與題庫反哺 [ver: 20261122_1000_ai_eight_departments_advanced_optimizations_v2]
+- **背景與老闆最高指示**：
+  - 老闆指示：「接下來要如何優化ai部門 討論一下」、「都來」、「繼續」。
+  - 完整落地五大前瞻優化方向，貫徹 Directive #1 全系統連動防護、Directive #2 測試先行、Directive #3 權威成本與保本底線、Directive #4 舊 ERP 黑盒子零更動、Directive #6 本機開發端與門市隔離鐵律。
+- **五大維度深度實裝**：
+  1. **方向 A：老闆 Telegram 雙向深度互動 ✕ L3 審批一鍵核准/駁回按鈕 (`advisor-bot.cjs` & `app/api/telegram/advisor/route.ts`)**：
+     - 老闆專屬 Telegram (ID: `8862712587`) 收到 L3 審批時，直接附帶內嵌按鈕 `[ ✅ 核准執行 ]` 與 `[ ❌ 駁回拒絕 ]`。
+     - 點擊時以 Telegram Inline Callback 觸發 `apr_approve:<approvalId>` 或 `apr_reject:<approvalId>`，即時修改審批狀態機並無痕編輯 TG 訊息更新結果。
+     - AI 執行秘書整合自然語言智慧問答（`parseAndDispatchSecretaryCommand`），秒級回覆營運、庫存、財務、工程巡檢等跨部門指令。
+  2. **方向 B：三大跨部門主動閉環管線實裝 (`lib/ai-cross-department-pipeline.ts` & `app/api/ai/pipelines/route.ts`)**：
+     - **閉環 1：90 天呆瓶壓瓶精準召回管線**（行銷 ➔ 業務 ➔ 行政 ➔ 財務）：自動關聯 3,943 戶客戶主檔、計算壓瓶總數與押金餘額、審計門牌座標、試算召回每桶可賺回分攤成本 $33 元，產出召回清單與話術。
+     - **閉環 2：門市訂單保本底線主動防禦管線**（財務 ➔ 營運 ➔ 秘書 ➔ 老闆）：嚴格依據 Directive #3（住家保本底線 $556、生意攤 $529），即時攔截低於保本線之倒賠訂單，高危險單自動呈報老闆 Telegram L3 審批。
+     - **閉環 3：庫存急缺與夜間斷氣主動預警管線**（營運 ➔ 工程 ➔ 秘書）：即時檢核 50kg/20kg/16kg 安全庫存水位（預警門檻 10/15/8 桶），連線異常退避檢核，預防夜間瓦斯荒。
+  3. **方向 C：八大部門專屬模組深度落地 (`lib/ai-specialist-deep-modules.ts` & 專屬 API 端點)**：
+     - **業務 AI**：餐飲大戶用量斷崖異常預警（`/api/ai/sales/anomalies`），精準捕捉叫貨週期暴增 $\ge 2.2$ 倍之流失/挖角風險。
+     - **行政 AI**：客戶座標與門牌完整率品質審計（`/api/ai/admin/geocode-audit`），依據 10 級門牌正規化規則檢驗經緯度與門牌標準度。
+     - **客服 AI**：LINE AI 安全稽核與漏氣 0 延遲避險（`/api/ai/customer-service/audit`），嚴格檢驗 24 小時漏氣攔截率為 100%。
+  4. **方向 D：戰情調度台 AI 順路併單建議與殘氣折抵防呆 (`app/api/today-orders/route.ts` & `app/components/SharedOrderCard.tsx`)**：
+     - 自動比對未完單之同路段與相近號碼（200 公尺生活圈），產出 `💡 建議併單：同在中正北路 (相距約 80 公尺)` 提示，於調度台以翡翠綠專屬膠囊高亮呈現。
+     - 空瓶退殘氣折抵計算器（`calculateResidualGasRefund`）防呆，強制以 Directive #3 進氣成本價 $22.63/kg 核算，杜絕溢折。
+  5. **方向 E：LINE AI 客服自學習題庫反哺機制 (`app/api/ai/customer-service/candidate-faqs/route.ts`)**：
+     - 自動自每日未命中高頻問答中提煉問答對，產出候選 FAQ 草稿，提供調度台與客服主管一鍵審核入庫至官方 300 題知識庫。
+- **測試驗證與發布**：
+  - 專屬整合測試 `tests/ai-eight-departments-advanced-optimizations.test.mjs` 8/8 全數通過。
+  - 全套既有測試零回歸，TypeScript `tsc --noEmit` 0 錯誤。
+  - 雙倉（`shenglong-next` 與 `Gass`）GitHub 全量推送與 Vercel Production 正式上線。
+
 ## [2026-11-21 11:15] - 🤖 盛隆八大 AI 部門權威架構與召喚手冊 GitHub 化 ✕ 跨倉雙軌同步與自然語言一鍵召喚 [ver: 20261121_1115_ai_eight_departments_github_playbook_and_skill]
 - **背景與老闆最高指示**：
   - 老闆指示：「之前有想要請你幫忙做ai部門github化，我們來確認進度」、「好~ 幫我處理」、「繼續 完成ai部門」。

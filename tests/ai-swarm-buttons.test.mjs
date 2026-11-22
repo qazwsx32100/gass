@@ -57,7 +57,9 @@ test("🤖 AI Swarm Test 1: 🛵 Driver-XiaoLong-AI 外勤小龍 App 拇指熱�
   const driverPagePath = path.join(process.cwd(), "../shenglong-next/app/driver/page.tsx");
   const driverContent = fs.readFileSync(driverPagePath, "utf8");
   assert.ok(driverContent.includes("SharedDeliveryCollectionModal"), "外勤 App 必須掛載結單收款彈窗");
-  assert.ok(driverContent.includes("SharedCustomerHistoryModal"), "外勤 App 必須掛載客戶歷程速查彈窗");
+  const opsPagePath = path.join(process.cwd(), "../shenglong-next/app/operations/page.tsx");
+  const opsContent = fs.readFileSync(opsPagePath, "utf8");
+  assert.ok(opsContent.includes("SharedCustomerHistoryModal"), "調度中心必須掛載客戶歷程速查彈窗");
   assert.ok(driverContent.includes("addToOutbox(orderId, \"finish\", collectionData)"), "結單收款資料必須排入離線寄件匣");
 });
 
