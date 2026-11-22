@@ -27,6 +27,15 @@
   4. 【跨日快照嚴格隔離與真實經過秒數換算】：`lib/call-center.ts` 與 `app/operations/page.tsx` 嚴格校驗 `businessDate === todayStr` 並加計 `snapshotAgeSec`，徹底阻擋跨日殘留快照（如 `2026/11/20` `#503326`）。
 - **發布狀態**：52/52 測試 PASS，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 同步上線。
 
+## [2026-11-22 12:30] - ChatGPT 專屬自訂 GPT「八大 AI 戰情總裁特助」建置與全鏈路 Actions 串接
+- **版本號**：`20261122_1230_chatgpt_custom_gpt_actions_suite`
+- **影響範圍**：`app/api/ai/chatgpt/summary/route.ts`、`public/openapi-shenglong-ai.json`、`docs/CHATGPT_CUSTOM_GPT_SETUP_GUIDE.md`、`tests/chatgpt-summary-action.test.mjs`、桌面鏡像
+- **主要更動**：
+  1. 打造專屬端點 `/api/ai/chatgpt/summary`，整合即時在庫實瓶、庫存急缺預警、4 大哨兵、成本底線與語音播報文本。
+  2. 發布 `public/openapi-shenglong-ai.json` OpenAPI 3.1.0 規格供 ChatGPT Actions 一鍵匯入。
+  3. 產出專屬操作手冊與提示詞並鏡像至桌面《盛隆瓦斯_ChatGPT自訂GPT設定與操作手冊.md》。
+- **發布狀態**：測試通過，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 12:15] - Telegram Advisor Bot 與全系統戰情室全面升級八大 AI (消滅舊版七大殘留文字)
 - **版本號**：`20261122_1215_telegram_bot_eight_ai_full_upgrade`
 - **影響範圍**：`advisor-bot.cjs`、`app/api/telegram/advisor/route.ts`、`lib/seven-ai-dryrun-engine.ts`、`lib/seven-ai-autopilot-scheduler.ts`、`app/components/AiAdvisorDrawer.tsx`、`app/components/ModernWarRoomView.tsx`、`app/operations/page.tsx`、Telegram Bot API

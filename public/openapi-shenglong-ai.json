@@ -1,0 +1,201 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "盛隆瓦斯八大 AI 戰情指揮中樞 API",
+    "description": "提供 ChatGPT 專屬調用盛隆瓦斯即時在庫實瓶、八大部門健康度、三大跨部門自動化閉環、銷售斷崖異常與官方標準成本利潤核算。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://shenglong.vercel.app",
+      "description": "盛隆雲端正式生產環境 (Vercel Production)"
+    }
+  ],
+  "paths": {
+    "/api/ai/chatgpt/summary": {
+      "get": {
+        "operationId": "getShengLongSummary",
+        "summary": "取得盛隆即時營運語音摘要、在庫實瓶、哨兵健康與成本底線",
+        "description": "專為 ChatGPT 打造的極速總覽端點，整合今日各規格在庫實瓶（50kg/20kg/16kg/10kg/4kg）、工程推播哨兵、官方成本標準與即時語音播報文本。",
+        "responses": {
+          "200": {
+            "description": "成功取得盛隆即時摘要",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShengLongSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gas-stock": {
+      "get": {
+        "operationId": "getRealtimeGasStock",
+        "summary": "取得全規格即時在庫實瓶詳細數據與當日進出紀錄",
+        "description": "即時調閱門市 50kg, 20kg, 16kg, 10kg, 4kg 在店實瓶數量、今日出貨累計、進貨入庫累計、空瓶回收與連線健康度（LIVE/SNAPSHOT）。",
+        "responses": {
+          "200": {
+            "description": "成功取得即時庫存數據",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GasStockResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/eight-departments": {
+      "get": {
+        "operationId": "getEightDepartmentsOverview",
+        "summary": "取得八大 AI 部門架構狀態、遙測指標與三級護欄",
+        "description": "查詢執行秘書、營運總監、系統工程師、財務主管、客服主管、業務主管、行銷總監、行政主管的職責、L1/L2/L3 護欄與線上遙測。",
+        "responses": {
+          "200": {
+            "description": "成功取得八大部門概況",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/pipelines": {
+      "get": {
+        "operationId": "getCrossDepartmentPipelines",
+        "summary": "觸發並審計三大跨部門主動閉環管線",
+        "description": "執行 90 天呆瓶壓瓶召回閉環、門市訂單保本底線（住家 $556、商業 $529）防衛閉環、庫存急缺預警閉環。",
+        "responses": {
+          "200": {
+            "description": "成功執行三大管線審計",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/sales/anomalies": {
+      "get": {
+        "operationId": "getSalesAnomaliesReport",
+        "summary": "業務 AI：餐飲大戶用量斷崖異常與競業防拔管預警",
+        "description": "自動過濾叫貨週期暴增 >= 2.2 倍之高風險流失大戶，產出預警與業務護盤對策。",
+        "responses": {
+          "200": {
+            "description": "成功取得業務大戶異常報告",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/admin/geocode-audit": {
+      "get": {
+        "operationId": "getAdminGeocodeAudit",
+        "summary": "行政 AI：客戶大門 GPS 座標與 10 級門牌標準化品質審計",
+        "description": "審計客戶資料庫經緯度座標具備率與門牌規範化完整度，揪出無座標或簡寫地址。",
+        "responses": {
+          "200": {
+            "description": "成功取得座標門牌審計報告",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ai/customer-service/audit": {
+      "get": {
+        "operationId": "getCustomerServiceAudit",
+        "summary": "客服 AI：LINE 官方帳號漏氣 0 延遲安全稽核與題庫反哺草稿",
+        "description": "審計 24 小時漏氣攔截率與候選 FAQ 草稿，確保安全防線 100% 觸發。",
+        "responses": {
+          "200": {
+            "description": "成功取得客服安全稽核報告",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ShengLongSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "businessDate": { "type": "string" },
+          "voiceSummary": { "type": "string" },
+          "stock": {
+            "type": "object",
+            "properties": {
+              "qty50": { "type": "number" },
+              "qty20": { "type": "number" },
+              "qty16": { "type": "number" },
+              "qty10": { "type": "number" },
+              "qty4": { "type": "number" },
+              "status": { "type": "string" }
+            }
+          },
+          "masterCosting": {
+            "type": "object",
+            "properties": {
+              "wholesaleGasCostPerKg": { "type": "number" },
+              "freightStandardOrder": { "type": "number" },
+              "freightHeavy50kg": { "type": "number" },
+              "residentialBreakevenFloor20kg": { "type": "number" },
+              "commercialBreakevenFloor20kg": { "type": "number" }
+            }
+          }
+        }
+      },
+      "GasStockResponse": {
+        "type": "object",
+        "properties": {
+          "businessDate": { "type": "string" },
+          "qty50": { "type": "number" },
+          "qty20": { "type": "number" },
+          "qty16": { "type": "number" },
+          "qty10": { "type": "number" },
+          "qty4": { "type": "number" },
+          "isLive": { "type": "boolean" },
+          "connectionHealth": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "badgeLabel": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

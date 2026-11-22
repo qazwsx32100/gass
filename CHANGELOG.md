@@ -59,6 +59,19 @@
 - **測試驗證與發布**：
   - 新增專屬測試 `tests/call-monitor-no-stale-repeat.test.mjs` 5/5 PASS，全套來電、強制通知與平台加固測試 52/52 全數 PASS，TypeScript 0 錯誤。
 
+## [2026-11-22 12:30] - 🤖 ChatGPT 專屬自訂 GPT「八大 AI 戰情總裁特助」建置與全鏈路 Actions 串接 [ver: 20261122_1230_chatgpt_custom_gpt_actions_suite]
+- **背景與老闆最高指示**：
+  - 老闆指示：「如過在 chatgpt上叫喚ai部門 可以嗎」、「來」。
+- **核心實裝與交付清單**：
+  1. **ChatGPT 專屬極速整合 API 端點 (`app/api/ai/chatgpt/summary/route.ts`)**：
+     - 提供專屬 GET 端點，整合今日在店實瓶（50kg/20kg/16kg/10kg/4kg）、庫存連線健康度、4 大推播哨兵、Directive #3 官方成本與保本底線（進氣 $22.63、住家 $556、商業 $529），並生成適合 ChatGPT Advanced Voice 口語播放之 `voiceSummary`。
+  2. **OpenAPI 3.1.0 官方規格發布 (`public/openapi-shenglong-ai.json`)**：
+     - 規格收錄 7 大安全唯讀端點（`getShengLongSummary`、`getRealtimeGasStock`、`getEightDepartmentsOverview`、`getCrossDepartmentPipelines`、`getSalesAnomaliesReport`、`getAdminGeocodeAudit`、`getCustomerServiceAudit`）。
+  3. **完整建置手冊與桌面鏡像 (`docs/CHATGPT_CUSTOM_GPT_SETUP_GUIDE.md`)**：
+     - 提供完整設定教學、System Prompt 指令、Actions OpenAPI JSON 與 `Only me` 私有隔離安全規範，並同步鏡像至老闆桌面《盛隆瓦斯_ChatGPT自訂GPT設定與操作手冊.md》。
+  4. **全端測試與驗證**：
+     - 新增 `tests/chatgpt-summary-action.test.mjs` 2/2 PASS，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 全量同步上線。
+
 ## [2026-11-22 12:15] - 🤖 Telegram Advisor Bot 與全系統戰情室全面升級八大 AI (消滅舊版七大殘留文字) [ver: 20261122_1215_telegram_bot_eight_ai_full_upgrade]
 - **背景與老闆最高指示**：
   - 老闆通報：「teltgram 對話視窗 輸入 @shenglong_gas_bot 會出現7大ai 我們現在是八大ai」。
