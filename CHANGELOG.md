@@ -1,3 +1,22 @@
+## [2026-11-22 10:35] - 🚨 監控中心背景主動跳出訊息全鏈路根治：APK 原生 FCM 背景推播打通 ✕ 後端 Web Push + FCM 雙軌並行 ✕ 修復月結/欠款新單漏推 Bug [ver: 20261122_1035_operations_background_fcm_and_monthly_order_push]
+- **背景與老闆最高指示**：
+  - 老闆通報並指示：「目前監控中心 不會主動跳出訊息 1.要開啟app才會跳出訊息」、「監控中心背景主動跳出訊息：打通監控中心 APK 原生 FCM 背景推播＋後端雙軌推播＋修復月結/欠款新單被跳過不推播的 Bug。幫我修復 並且 檢驗」。
+- **四大根本真兇與一次到位根治實裝**：
+  1. **打通監控中心 Android APK (`com.shenglong.operations`) 原生 FCM 背景推播 (`OperationsMainActivity.java` & `MyFirebaseMessagingService.java` & `scripts/build-all-apks.cjs`)**：
+     - 修復 `OperationsMainActivity.java` 先前將 `tryRegisterFcm()` 覆寫為空函式的問題：現主動呼叫 `FirebaseMessaging.getInstance().getToken()`，並在原生層直接透過 `registerOperationsFcmTokenToCloud()` 背景直連雲端 `/api/operations/push-subscribe` 與 `/api/driver/fcm-token` 自動綁定 `"監控中心"` 角色，同時於 `OperationsNativeBridge` 暴露 `getFcmToken()` 供前端 WebView 0ms 雙重綁定。
+     - 升級 `MyFirebaseMessagingService.java`：當收到推播點擊時，依 `getPackageName().contains("operations")` 自動導向 `OperationsMainActivity.class`（100% 鎖定 `/operations`，絕不誤跳司機端 `MainActivity`），並在背景收到推播時自動點亮黑屏 15 秒 (`wakeUpScreen`)、彈出 `PRIORITY_MAX` 懸浮橫幅、觸發強震與真人語音朗讀 (`OrderVoiceSpeaker`)。
+     - 升級 `scripts/build-all-apks.cjs`：為 `com.shenglong.operations` 啟用 `supportsFcm = true`（保留 `MyFirebaseMessagingService` 與 `google-services.json`，同時繼續剝離司機專用 `DriverOrderService` 與 `BootReceiver`），並重新執行 `clean assembleDebug` 與 V1+V2+V3 簽章，同步發布至 `public/files/shenglong-operations.apk` 及桌面 `sl` 目錄（《盛隆新ERP_戰情調度中樞.apk》、《盛隆監控中心.apk》）。
+  2. **後端雙軌並行推播：`sendPushToOperations` 同步發射 Web Push 與 Google FCM HTTP v1 (`lib/web-push.ts` & `lib/fcm-token.ts` & `app/api/operations/push-subscribe/route.ts`)**：
+     - 於 `lib/fcm-token.ts` 新增 `getFcmTokensForOperations()`（附 30 秒跨容器雲端同步），專門收集 `"監控中心"`、`"調度員"`、`"operations"`、`"admin"` 角色之 FCM Token，並在 `getFcmTokensForDriver("全部")` 中排除監控中心角色，確保司機端與調度台推播 100% 雙向隔離。
+     - 升級 `sendPushToOperations()`：除了發送 Web Push 給電腦/平板瀏覽器外，同步並行呼叫 `sendFcmHttpV1Batch(opsFcmTokens, ...)`，即使監控中心手機 APK 未開啟、退在背景或黑屏鎖屏，亦由 Google Play Services 系統底層零延遲喚醒跳出訊息。
+  3. **修復月結 (`M`) / 欠款 (`O`) / 預收 (`Y`) 新單在冷啟動時被跳過不推播的 Bug (`app/api/today-orders/route.ts`)**：
+     - 門市舊 ERP 建立月結客戶或欠款客戶的新訂單時，建立當下 `ord.payed` 即為 `'M'` 或 `'O'`。先前 `findRecentFreshOrdersFallback()` 因判斷 `ordPayed === "M" || "O" || "Y"` 而直接 `continue` 跳過，導致門市 `sync-stock.cjs` 先寫 KV 再呼叫 `POST /api/today-orders` 時，月結與欠款新單被誤判為歷史完單而不發推播。
+     - 現修正 `findRecentFreshOrdersFallback()` 與冷啟動迴圈：只要外勤尚未在 App 點擊完單 (`driverStatus !== "finished"` 且 `!isDelivered`) 且進單時間 `ord.time` 在最近 3 分鐘內，無論 `payed` 為現金、月結 (`M`) 或欠款 (`O`)，一律 100% 觸發推播（由 6 小時去重鎖防重）。
+  4. **Service Worker (`public/sw.js`) 視窗聚焦精準判定**：
+     - `isActivelyVisible` 升級為同時檢驗 `c.visibilityState === 'visible' && c.focused === true`，確保瀏覽器分頁被其他視窗蓋住或失焦時，100% 強制彈出作業系統橫幅通知。
+- **測試驗證與發布**：
+  - 新增專屬測試 `tests/operations-background-fcm-and-monthly-alert.test.mjs` 4/4 PASS，全套推播、APK 隔離與監控中心測試 44/44 全數 PASS，APK 重新封裝簽章完成，雙倉 GitHub 與 Vercel Production 全量同步上線。
+
 ## [2026-11-22 10:25] - 🎯 監控中心三大核心體驗一次到位根治：全量歷史訂單三方融合 ✕ 來電防重播持久化 ✕ 機車導航門牌級精準直達 [ver: 20261122_1025_operations_history_calls_navigation_trinity_fix]
 - **背景與老闆最高指示**：
   - 老闆指示：「訂單歷史紀錄：從客戶第一筆到最新一筆全量顯示、雙重歸戶防漏單、三方資料源（歷史庫 + 雲端 + 今日新單）即時融合。來電紀錄重複跳出舊客：阻斷後端 60 秒無限重播、前端已讀/已關持久化存入 localStorage、同電話多客號開單自動銷案、清除 11/20 殘留跨日快照。監控中心導航精準度：拔除估算座標干擾改用標準門牌直達、修復 Big5 &# 編碼腰斬、補齊行政區/路名錯字/段號轉換與客號門牌反補。一起做」。

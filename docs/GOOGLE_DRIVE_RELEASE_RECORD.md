@@ -1,3 +1,13 @@
+## [2026-11-22 10:35] - 監控中心背景主動跳出訊息全鏈路根治：APK 原生 FCM 背景推播打通 ✕ 後端 Web Push + FCM 雙軌並行 ✕ 修復月結/欠款新單漏推 Bug
+- **版本號**：`20261122_1035_operations_background_fcm_and_monthly_order_push`
+- **影響範圍**：`android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java`、`android/app/src/main/java/com/shenglong/driver/MyFirebaseMessagingService.java`、`scripts/build-all-apks.cjs`、`lib/fcm-token.ts`、`lib/web-push.ts`、`lib/operations-new-order-alert.ts`、`app/api/today-orders/route.ts`、`app/api/operations/push-subscribe/route.ts`、`app/api/driver/fcm-token/route.ts`、`app/operations/page.tsx`、`public/sw.js`、`public/files/shenglong-operations.apk`、`tests/operations-background-fcm-and-monthly-alert.test.mjs`
+- **主要更動**：
+  1. 【監控中心 APK 原生 FCM 背景推播打通】：`OperationsMainActivity` 啟用 `tryRegisterFcm()` 原生直連雲端自動綁定「監控中心」FCM Token；`MyFirebaseMessagingService` 依 `packageName` 將通知點擊精準導向 `OperationsMainActivity`；重新乾淨編譯簽章《盛隆新ERP_戰情調度中樞.apk》與《盛隆監控中心.apk》。
+  2. 【後端 Web Push + Google FCM HTTP v1 雙軌並行】：`sendPushToOperations` 同步並行發射 Web Push 與 Google FCM HTTP v1 原生高優先級推播 (`PRIORITY_MAX` + 點亮黑屏 + 語音朗讀)，並與外勤司機端 100% 物理隔離。
+  3. 【修復月結(M)/欠款(O)新單漏推 Bug】：`findRecentFreshOrdersFallback` 與冷啟動檢核不再因 `payed` 為 `M/O/Y` 而跳過 3 分鐘內剛建立且未完單 (`driverStatus !== 'finished'`) 之新單。
+  4. 【Service Worker 失焦背景強制彈窗】：`public/sw.js` 要求 `c.focused === true` 才視為前台注視，失焦或切換視窗時 100% 強制彈出系統通知橫幅。
+- **發布狀態**：44/44 測試 PASS，APK 封裝簽章與桌面 `sl` 鏡像同步完成，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 10:25] - 監控中心三大核心體驗一次到位根治：全量歷史訂單三方融合 ✕ 來電防重播持久化 ✕ 機車導航門牌級精準直達
 - **版本號**：`20261122_1025_operations_history_calls_navigation_trinity_fix`
 - **影響範圍**：`lib/navigation-address.ts`、`lib/mobile-order-parser.ts`、`lib/cloud-customer-gateway.ts`、`public/data/customer-orders-2026.json`、`app/api/customer-history/route.ts`、`app/api/operations/order-history/route.ts`、`app/components/NavigationButton.tsx`、`app/components/SharedAddressAction.tsx`、`app/components/SharedOrderCard.tsx`、`app/components/CustomerMapComponent.tsx`、`app/components/SharedCustomerHistoryModal.tsx`、`app/components/CustomerSearchHub.tsx`、`tests/operations-history-and-navigation-precision.test.mjs`
