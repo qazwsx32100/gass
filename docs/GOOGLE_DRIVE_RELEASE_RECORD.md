@@ -1,3 +1,13 @@
+## [2026-11-22 10:10] - 監控中心來電紀錄重複跳出舊客 4 大根治修正 ✕ 45秒新鮮度門檻 ✕ 24h推播去重 ✕ 跨日快照隔離 ✕ 同電話多客號開單自動銷案
+- **版本號**：`20261122_1010_call_monitor_no_stale_repeat_fix`
+- **影響範圍**：`app/api/call-monitor/route.ts`、`lib/caller-watcher.ts`、`sync-stock.cjs`、`lib/call-center.ts`、`app/operations/page.tsx`、`tests/call-monitor-no-stale-repeat.test.mjs`、`tests/call-monitor-realtime-notification.test.mjs`
+- **主要更動**：
+  1. 【後端 45 秒新鮮進線門檻與 24 小時推播去重】：`POST /api/call-monitor` 僅針對今日 (`callDate === todayStr`)、進線 `elapsedSec <= 45` 秒且未結案之來電觸發 SSE 與 Web Push，去重鎖升級為 24 小時 (`86400000` ms)，杜絕 60 秒心跳重播舊來電。
+  2. 【前端已讀/已關閉 localStorage 跨重整持久化】：`app/operations/page.tsx` 將 `dismissedCallIds` 與 `notifiedCallIds` 綁定今日日期持久化存入 `localStorage` (`sl_ops_dismissed_calls_v1` / `sl_ops_notified_calls_v1`) 並同步至 Ref。
+  3. 【同電話多客號自動核銷已開單 (`ORDERED`)】：升級 `sync-stock.cjs` 與 `call-monitor/route.ts` SQL，支援同電話所有關聯 `customer_id` 開單自動銷案，並防範空電話誤配。
+  4. 【跨日快照嚴格隔離與真實經過秒數換算】：`lib/call-center.ts` 與 `app/operations/page.tsx` 嚴格校驗 `businessDate === todayStr` 並加計 `snapshotAgeSec`，徹底阻擋跨日殘留快照（如 `2026/11/20` `#503326`）。
+- **發布狀態**：52/52 測試 PASS，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 同步上線。
+
 ## [2026-11-22 10:00] - 盛隆八大 AI 部門五大進階優化全面落地 ✕ Telegram L3 一鍵審批 ✕ 三大閉環管線 ✕ 順路併單與題庫反哺
 - **版本號**：`20261122_1000_ai_eight_departments_advanced_optimizations_v2`
 - **影響範圍**：`lib/ai-cross-department-pipeline.ts`、`lib/ai-specialist-deep-modules.ts`、`lib/boss-approvals-hub.ts`、`advisor-bot.cjs`、`app/api/telegram/advisor/route.ts`、`app/api/today-orders/route.ts`、`app/components/SharedOrderCard.tsx`、`app/components/AiAssistantCenter.tsx`、`app/api/ai/eight-departments/route.ts`、`app/api/ai/pipelines/route.ts`、`app/api/ai/sales/anomalies/route.ts`、`app/api/ai/admin/geocode-audit/route.ts`、`app/api/ai/customer-service/audit/route.ts`、`app/api/ai/customer-service/candidate-faqs/route.ts`、`tests/ai-eight-departments-advanced-optimizations.test.mjs`

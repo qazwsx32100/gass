@@ -1,3 +1,20 @@
+## [2026-11-22 10:10] - 📞 監控中心來電紀錄重複跳出舊客 4 大根治修正 ✕ 45秒新鮮度門檻 ✕ 24h推播去重 ✕ 跨日快照隔離 ✕ 同電話多客號開單自動銷案 [ver: 20261122_1010_call_monitor_no_stale_repeat_fix]
+- **背景與老闆最高指示**：
+  - 老闆通報並指示：「監控中心 目前來電紀錄會一直跳出之前來店的客人 幫我檢查一下狀況」、「處理」。
+  - 經全鏈路排查揪出 4 大真兇：(1) 後端 `POST /api/call-monitor` 每 60 秒保底心跳未檢查 `elapsedSec <= 45` 與 `callDate === todayStr`，且去重鎖僅 60 秒，導致每 60 秒重播舊來電；(2) 前端 `app/operations/page.tsx` 之 `dismissedCallIds` 與 `notifiedCallIdsRef` 僅存於 React 記憶體且 `elapsedSec < 600` 視窗過寬，重整或切分頁即重新跳出；(3) 一號多戶或手動打單時 SQL `OUTER APPLY` 僅比對 `TOP 1 customer_id` 導致已開單卻未銷案；(4) `lib/call-center.ts` 回退讀取 `kvdb.io/call_monitor` 時未過濾跨日殘留快照（如 `2026/11/20` 之 `#503326 2.128.7樓[電梯]`）。
+- **4 點一次到位根治實裝**：
+  1. **嚴格限制即時來電彈窗與推播僅限真正剛進線來電 (`app/api/call-monitor/route.ts` & `lib/caller-watcher.ts`)**：
+     - `POST /api/call-monitor` 之 SSE 廣播與 Web Push 僅針對「今日 (`callDate === todayStr`)、剛進線 `elapsedSec <= 45` 秒內、尚未結案、且 24 小時內未推播過 (`turboCache` TTL 由 `60000` 升級為 `86400000` ms)」的新進線觸發，並補齊 `globalThis.fetch(PRIMARY_KV_URL)` 寫入回退確保中繼快照即時刷新。
+     - `lib/caller-watcher.ts` 同步限制 `BETWEEN 0 AND 45` 秒且 `NOT EXISTS` 已開單紀錄。
+  2. **前端 `dismissedCallIds` 與 `notifiedCallIds` 綁定今日日期持久化存入 `localStorage` (`app/operations/page.tsx`)**：
+     - 實裝 `sl_ops_dismissed_calls_v1` 與 `sl_ops_notified_calls_v1` 持久化快取（綁定台灣今日日期 `YYYY/MM/DD`），並以 `dismissedCallIdsRef` 與 `markCallDismissedPersist` / `markCallNotifiedPersist` 同步更新，重整網頁、切換分頁或手機喚醒絕不再重複跳出已關閉或已播報過的客人。
+  3. **強化「已開單 (`ORDERED`)」自動銷案 SQL 比對支援同電話所有關聯客號 (`sync-stock.cjs` & `app/api/call-monitor/route.ts`)**：
+     - 升級 `fetchCallTraceRows`、`checkStalledCalls` 與 `queryLiveDb` 之 `dbo.gas_oders` 核銷條件：除 `TOP 1 customer_id` 與 `caller_phone` 外，只要當日 `oder_time >= call_time` 之有效訂單屬於任何電話或備註包含該來電號碼之客戶 (`EXISTS (SELECT 1 FROM dbo.customers mc WITH (NOLOCK) ...)`)，一律自動核銷為 `ORDERED`（已開單），並加上 `LEN(RTRIM(ISNULL(w.phone_no, ''))) >= 6` 防空號誤配。
+  4. **跨日快照嚴格隔離與真實經過秒數換算 (`lib/call-center.ts` & `app/operations/page.tsx`)**：
+     - 嚴格校驗 `businessDate === todayStr` 與 `callDate === todayStr`，並加計 `snapshotAgeSec = Math.floor((Date.now() - Date.parse(updatedAt)) / 1000)` 算出真實經過秒數 `realElapsedSec`，徹底阻擋 `2026/11/20` 等跨日歷史快照混入今日待處理或觸發彈窗。
+- **測試驗證與發布**：
+  - 新增專屬測試 `tests/call-monitor-no-stale-repeat.test.mjs` 5/5 PASS，全套來電、強制通知與平台加固測試 52/52 全數 PASS，TypeScript 0 錯誤。
+
 ## [2026-11-22 10:00] - 🤖 盛隆八大 AI 部門五大進階優化全面落地 ✕ Telegram L3 一鍵審批 ✕ 三大閉環管線 ✕ 順路併單與題庫反哺 [ver: 20261122_1000_ai_eight_departments_advanced_optimizations_v2]
 - **背景與老闆最高指示**：
   - 老闆指示：「接下來要如何優化ai部門 討論一下」、「都來」、「繼續」。
