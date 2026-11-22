@@ -1,3 +1,28 @@
+## [2026-11-22 10:25] - 🎯 監控中心三大核心體驗一次到位根治：全量歷史訂單三方融合 ✕ 來電防重播持久化 ✕ 機車導航門牌級精準直達 [ver: 20261122_1025_operations_history_calls_navigation_trinity_fix]
+- **背景與老闆最高指示**：
+  - 老闆指示：「訂單歷史紀錄：從客戶第一筆到最新一筆全量顯示、雙重歸戶防漏單、三方資料源（歷史庫 + 雲端 + 今日新單）即時融合。來電紀錄重複跳出舊客：阻斷後端 60 秒無限重播、前端已讀/已關持久化存入 localStorage、同電話多客號開單自動銷案、清除 11/20 殘留跨日快照。監控中心導航精準度：拔除估算座標干擾改用標準門牌直達、修復 Big5 &# 編碼腰斬、補齊行政區/路名錯字/段號轉換與客號門牌反補。一起做」。
+- **一、訂單歷史紀錄全量顯示與雙重歸戶三方融合 (`lib/cloud-customer-gateway.ts` & `app/api/customer-history/route.ts` & `app/api/operations/order-history/route.ts` & `public/data/customer-orders-2026.json`)**：
+  1. **雙重歸戶防漏單（找回 62+ 戶因 Big5 編碼差異或雙生客號漏失之活躍客戶歷史）**：
+     - 重建 `public/data/customer-orders-2026.json`（索引客戶由 1,181 戶擴增至 **1,350 戶**，總單據由 8,953 筆擴增至 **10,484 筆**），並在 `lib/cloud-customer-gateway.ts` 實裝 `findRelatedCustomerIds(customerId)`，自動將同名或「同代號＋同電話末 7 碼」之雙生客號（如 `#807` 與 `#1729` `85.1樓`、`#1157` 與 `#3841` `128.13.3`）雙向歸戶合併。
+  2. **三方資料源（歷年歷史庫 + 近期司機歷史/種子庫 + 今日即時新單）即時融合與解除 100 筆上限**：
+     - `fetchCloudCustomerOrders` 預設上限由 100 筆提升至 **5,000 筆**（無上限全展開）。
+     - 實裝 `mergeRealtimeAndHistoryPoolOrders`，強制融合「歷年歷史庫 (2023~2026)」、「近期司機歷史 (`driver_history_v1` / `orders-last-known.json`)」與「今日即時新單 (`today_orders`)」，修復過去歷史庫有資料時就跳過今日與近期新單的斷層。
+  3. **前端「第一筆 ➔ 最新一筆」全歷程統計與正倒序一鍵切換 (`SharedCustomerHistoryModal.tsx` & `CustomerSearchHub.tsx`)**：
+     - 標示客戶「🌱 第一筆叫貨日 ➔ ⏰ 最新一筆叫貨日」與累計總筆數，並新增 `🔽 排序：最新 ➔ 第一筆` / `🔼 排序：第一筆 ➔ 最新` 一鍵切換按鈕。
+- **二、來電紀錄防重複跳出舊客 4 大根治 (`app/api/call-monitor/route.ts` & `lib/caller-watcher.ts` & `lib/call-center.ts` & `sync-stock.cjs` & `app/operations/page.tsx`)**：
+  1. 後端 `POST /api/call-monitor` 僅針對「今日 (`callDate === todayStr`)、剛進線 `elapsedSec <= 45` 秒、未結案、且 24 小時內未推播過 (`86,400,000` ms 去重鎖)」之來電廣播 SSE 與 Web Push。
+  2. 前端 `dismissedCallIds` 與 `notifiedCallIds` 綁定今日日期持久化存入 `localStorage` (`sl_ops_dismissed_calls_v1` / `sl_ops_notified_calls_v1`)。
+  3. `sync-stock.cjs` 與 `call-monitor/route.ts` 核銷 SQL 支援同電話所有關聯客號 (`EXISTS (SELECT 1 FROM dbo.customers mc WITH (NOLOCK) ...)`) 自動標記 `ORDERED`。
+  4. 嚴格隔離跨日快照並清除 `kvdb.io/call_monitor` 上殘留之 `2026/11/20` 快照。
+- **三、監控中心機車導航門牌級精準直達 5 大根治 (`lib/navigation-address.ts` & `lib/mobile-order-parser.ts` & `SharedOrderCard.tsx` & `CustomerMapComponent.tsx`)**：
+  1. **拔除粗略估算座標 (`o.lat / o.lng`) 干擾**：`SharedOrderCard` 與 `CustomerMapComponent` 僅在外勤實地釘選之 `customGps` 存在時才走座標，一般訂單一律以清洗後之標準門牌地址直達。
+  2. **修復 Big5 `&#` HTML Entity 編碼腰斬 Bug**：實裝 `decodeHtmlEntitiesForAddress`，將 `&#21495;` 轉為 `號`、`&#21326;` 轉為 `華`，不再因 `/&#\d+;.*$/` 把後半段門牌整串切掉。
+  3. **補齊行政區與錯別字校正**：自動校正 `籚洲`/`芦洲` ➔ `蘆洲`，支援新北市「市/鄉/鎮/區」（如 `淡水鎮` ➔ `新北市淡水區`）與台北市省略「區」字寫法（如 `台北市大同民權西路` ➔ `台北市大同區民權西路`）。
+  4. **阿拉伯數字段號轉國字**：自動將 `1段~9段` 轉為 Google Maps 標準 `一段~九段`，`15-2號` / `15號-2` 統一轉為 `15之2號`。
+  5. **客號／戶名門牌自動反補 (`enrichDoorplateFromCustomerName`)**：當地址僅有路/段/巷/弄而無「號」時（如 `仁愛街421巷` + 客名 `421.15.3樓[熱炒]`、或 `重新路2段` + 客名 `2.128.7樓[電梯]`），自動反補為 `新北市三重區仁愛街421巷15號`、`新北市三重區重新路二段128號`。
+- **測試驗證與發布**：
+  - 全套單元與整合測試 **54/54 全數 PASS**，TypeScript `tsc --noEmit` **0 錯誤**，雙倉 GitHub 與 Vercel Production 全量同步上線。
+
 ## [2026-11-22 10:10] - 📞 監控中心來電紀錄重複跳出舊客 4 大根治修正 ✕ 45秒新鮮度門檻 ✕ 24h推播去重 ✕ 跨日快照隔離 ✕ 同電話多客號開單自動銷案 [ver: 20261122_1010_call_monitor_no_stale_repeat_fix]
 - **背景與老闆最高指示**：
   - 老闆通報並指示：「監控中心 目前來電紀錄會一直跳出之前來店的客人 幫我檢查一下狀況」、「處理」。

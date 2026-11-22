@@ -1,3 +1,12 @@
+## [2026-11-22 10:25] - 監控中心三大核心體驗一次到位根治：全量歷史訂單三方融合 ✕ 來電防重播持久化 ✕ 機車導航門牌級精準直達
+- **版本號**：`20261122_1025_operations_history_calls_navigation_trinity_fix`
+- **影響範圍**：`lib/navigation-address.ts`、`lib/mobile-order-parser.ts`、`lib/cloud-customer-gateway.ts`、`public/data/customer-orders-2026.json`、`app/api/customer-history/route.ts`、`app/api/operations/order-history/route.ts`、`app/components/NavigationButton.tsx`、`app/components/SharedAddressAction.tsx`、`app/components/SharedOrderCard.tsx`、`app/components/CustomerMapComponent.tsx`、`app/components/SharedCustomerHistoryModal.tsx`、`app/components/CustomerSearchHub.tsx`、`tests/operations-history-and-navigation-precision.test.mjs`
+- **主要更動**：
+  1. 【訂單歷史紀錄全量顯示與三方融合】：重建 2026 完整客戶歷史索引（擴增至 1,350 戶 / 10,484 筆），實裝 `findRelatedCustomerIds` 同名/同客號電話雙重歸戶防漏單與 `mergeRealtimeAndHistoryPoolOrders` 三方資料源（歷史庫 + 近期司機庫 + 今日新單）即時融合，解除 100 筆限制提升至 5,000 筆全展開，前端新增「第一筆 ➔ 最新一筆」統計與正倒序切換。
+  2. 【來電紀錄防重複跳出舊客】：後端 45 秒新鮮進線門檻與 24 小時推播去重、前端 `localStorage` 今日已讀/已關持久化、同電話多客號開單自動銷案、跨日快照嚴格隔離。
+  3. 【監控中心導航門牌級精準直達】：拔除粗略估算座標 (`o.lat/o.lng`) 干擾、修復 Big5 `&#` 實體腰斬門牌 Bug、校正 `籚洲➔蘆洲` 等錯字與行政區（含鎮/北市簡寫）、`1段~9段` 自動轉國字 `一段~九段`、實裝 `enrichDoorplateFromCustomerName` 客號門牌自動反補。
+- **發布狀態**：54/54 測試 PASS，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 同步上線。
+
 ## [2026-11-22 10:10] - 監控中心來電紀錄重複跳出舊客 4 大根治修正 ✕ 45秒新鮮度門檻 ✕ 24h推播去重 ✕ 跨日快照隔離 ✕ 同電話多客號開單自動銷案
 - **版本號**：`20261122_1010_call_monitor_no_stale_repeat_fix`
 - **影響範圍**：`app/api/call-monitor/route.ts`、`lib/caller-watcher.ts`、`sync-stock.cjs`、`lib/call-center.ts`、`app/operations/page.tsx`、`tests/call-monitor-no-stale-repeat.test.mjs`、`tests/call-monitor-realtime-notification.test.mjs`
