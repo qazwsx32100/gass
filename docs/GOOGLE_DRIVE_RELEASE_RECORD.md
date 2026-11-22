@@ -1,3 +1,12 @@
+## [2026-11-22 12:40] - Google Drive SL 全歷史資料集 (2007~2026 共 237,416 筆訂單 / 3,765 戶) 全量整合與 Gzip 極速索引上線
+- **版本號**：`20261122_1240_sl_full_history_237k_orders_integration`
+- **影響範圍**：`scripts/build-customer-orders-index.cjs`、`lib/cloud-customer-gateway.ts`、`public/data/customer-orders-full.json.gz`、`public/data/customer-orders-2026.json`、`data/cloud-customer-cache.json`、`tests/operations-history-and-navigation-precision.test.mjs`
+- **主要更動**：
+  1. 【Google Drive SL 三大檔案全量拉取】：直連盛隆 Google 雲端資料夾 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`) 拉取 `SL.zip`、`SL_orders.csv` (237,425 筆)、`SL_customers.csv` (4,037 戶) 與 `SL_money.csv` (9,247 筆)。
+  2. 【19 年全歷史 (2007/12/19 ~ 2026/11/21) Gzip 索引編譯】：將全部 237,416 筆有效歷史訂單（涵蓋 3,765 戶曾叫貨客戶）編譯為 `public/data/customer-orders-full.json.gz`（僅 2.93 MB），並補入 22 戶 11 月新進客戶、同步校正 3,943 戶最新叫貨日與定價欠款。
+  3. 【雲端與本地 0ms 解壓直讀】：`lib/cloud-customer-gateway.ts` 優先載入 `customer-orders-full.json.gz` 並結合三方資料源（19年全歷史庫 + 近期司機庫 + 今日即時新單）即時融合，真正實現「從客戶 2007 年第一筆到今日最新一筆」全量無遺漏顯示。
+- **發布狀態**：21/21 測試 PASS，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 10:35] - 監控中心背景主動跳出訊息全鏈路根治：APK 原生 FCM 背景推播打通 ✕ 後端 Web Push + FCM 雙軌並行 ✕ 修復月結/欠款新單漏推 Bug
 - **版本號**：`20261122_1035_operations_background_fcm_and_monthly_order_push`
 - **影響範圍**：`android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java`、`android/app/src/main/java/com/shenglong/driver/MyFirebaseMessagingService.java`、`scripts/build-all-apks.cjs`、`lib/fcm-token.ts`、`lib/web-push.ts`、`lib/operations-new-order-alert.ts`、`app/api/today-orders/route.ts`、`app/api/operations/push-subscribe/route.ts`、`app/api/driver/fcm-token/route.ts`、`app/operations/page.tsx`、`public/sw.js`、`public/files/shenglong-operations.apk`、`tests/operations-background-fcm-and-monthly-alert.test.mjs`

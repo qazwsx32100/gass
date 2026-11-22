@@ -1,3 +1,15 @@
+## [2026-11-22 12:40] - 📜 Google Drive SL 全歷史資料集 (2007/12/19 ~ 2026/11/21 共 237,416 筆訂單) 全量串接與 Gzip 索引上線 [ver: 20261122_1240_sl_full_history_237k_orders_integration]
+- **背景與老闆指示**：
+  - 老闆指示：「還是要讀取 SL 檔案」，確保監控中心歷史訂單能直接串接 Google Drive 每日打烊匯出之 `SL_orders.csv`、`SL_customers.csv`、`SL_money.csv`（`SL.zip`），讓所有老客戶從 2007 年第一筆到今日最新一筆 100% 完整呈現。
+- **核心實裝**：
+  1. **拉取 Google Drive `SL` 最新全量資料集 (`1YT7yfMfVmiVic_vaIWf94Ei14wMa3FYM`)**：
+     - 成功拉取 `SL.zip` (`1sFLi4VT4lxgyjmVYC_82J44MeWuObWNI`) 內含 `SL_orders.csv` (237,425 列 / 43.39 MB，涵蓋 `2007/12/19` 首筆 `#120000` 至 `2026/11/21` `#362330`)、`SL_customers.csv` (4,037 戶) 與 `SL_money.csv` (9,247 筆流水)。
+  2. **19 年全歷史 Gzip 極速索引 (`public/data/customer-orders-full.json.gz`)**：
+     - 升級 `scripts/build-customer-orders-index.cjs`，將 3,765 戶曾叫貨客戶之 **237,416 筆有效訂單** 壓縮為 `public/data/customer-orders-full.json.gz`（體積僅 **2.93 MB**），並同步校正 3,943 戶客戶主檔、補入 22 戶 11 月新進客戶。
+     - 升級 `lib/cloud-customer-gateway.ts` (`loadTuplesFromFile` & `ensureLocalHistoricalOrdersLoaded`) 支援 `.json.gz` 毫秒級記憶體解壓快取，與近期司機歷史及今日新單三方即時融合。
+- **驗證與部署**：
+  - 監控中心四大主題單元測試 21/21 全數 PASS（例如客戶 `#807` 可直接從 `2008/01/14` 第一筆查到 `2026/11/22` 最新一筆），雙倉 GitHub 與 Vercel Production 同步上線。
+
 ## [2026-11-22 10:35] - 🚨 監控中心背景主動跳出訊息全鏈路根治：APK 原生 FCM 背景推播打通 ✕ 後端 Web Push + FCM 雙軌並行 ✕ 修復月結/欠款新單漏推 Bug [ver: 20261122_1035_operations_background_fcm_and_monthly_order_push]
 - **背景與老闆最高指示**：
   - 老闆通報並指示：「目前監控中心 不會主動跳出訊息 1.要開啟app才會跳出訊息」、「監控中心背景主動跳出訊息：打通監控中心 APK 原生 FCM 背景推播＋後端雙軌推播＋修復月結/欠款新單被跳過不推播的 Bug。幫我修復 並且 檢驗」。
