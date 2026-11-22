@@ -59,6 +59,23 @@
 - **測試驗證與發布**：
   - 新增專屬測試 `tests/call-monitor-no-stale-repeat.test.mjs` 5/5 PASS，全套來電、強制通知與平台加固測試 52/52 全數 PASS，TypeScript 0 錯誤。
 
+## [2026-11-22 12:15] - 🤖 Telegram Advisor Bot 與全系統戰情室全面升級八大 AI (消滅舊版七大殘留文字) [ver: 20261122_1215_telegram_bot_eight_ai_full_upgrade]
+- **背景與老闆最高指示**：
+  - 老闆通報：「teltgram 對話視窗 輸入 @shenglong_gas_bot 會出現7大ai 我們現在是八大ai」。
+- **核心升級與排查落實**：
+  1. **Telegram 官方 Bot API 註冊更新**：
+     - 調用 `setMyDescription` 設定官方簡介：「👑 盛隆瓦斯 24H 商業軍師特助與八大 AI 聯合指揮中樞（唯一 SuperAdmin: 老闆 8862712587 專屬）」。
+     - 調用 `setMyShortDescription` 設定短簡介：「盛隆瓦斯八大 AI 戰情指揮中樞」。
+     - 調用 `setMyCommands` 設定官方指令集（`/start` 👑 開啟八大 AI、`/report` 📊 今日戰報、`/stock` 📦 實瓶庫存、`/dryrun` 🚀 八大 AI 全真聯動演練、`/help` 💡 八大 AI 操作指南）。
+  2. **Telegram Advisor 鍵盤與訊息全量升級 (`app/api/telegram/advisor/route.ts` & `advisor-bot.cjs`)**：
+     - 常駐鍵盤按鈕自 `🚀 七大AI全真聯動試跑 (Dry-Run)` 升級為 `🚀 八大AI全真聯動試跑 (Dry-Run)`。
+     - 歡迎訊息與即時戰報抬頭統一為 `👑 【盛隆總裁戰情室｜八大 AI 聯合指揮中樞】` 與 `📊 ───【盛隆八大 AI ｜ 今日即時營運戰報】─── 📊`。
+  3. **沙盒演練總報告補齊第 8 位 AI (`lib/seven-ai-dryrun-engine.ts`)**：
+     - 網頁與 Telegram 沙盒報告新增 `💻 8. 軟體工程 AI（全系統哨兵與 APK 安全防線）`，涵蓋推播哨兵、離職人員 APK 遠端停權與自毀防線。
+  4. **調度前端視覺與抽屜全面升級 (`AiAdvisorDrawer.tsx`, `ModernWarRoomView.tsx`, `operations/page.tsx`)**：
+     - 抽屜歡迎詞與分工矩陣全面升級為「盛隆八大 AI 聯合指揮副駕」與「八大專任 AI 即時營運建議」。
+- **發布狀態**：測試通過，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 10:00] - 🤖 盛隆八大 AI 部門五大進階優化全面落地 ✕ Telegram L3 一鍵審批 ✕ 三大閉環管線 ✕ 順路併單與題庫反哺 [ver: 20261122_1000_ai_eight_departments_advanced_optimizations_v2]
 - **背景與老闆最高指示**：
   - 老闆指示：「接下來要如何優化ai部門 討論一下」、「都來」、「繼續」。

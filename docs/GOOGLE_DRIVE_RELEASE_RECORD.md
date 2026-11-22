@@ -27,6 +27,15 @@
   4. 【跨日快照嚴格隔離與真實經過秒數換算】：`lib/call-center.ts` 與 `app/operations/page.tsx` 嚴格校驗 `businessDate === todayStr` 並加計 `snapshotAgeSec`，徹底阻擋跨日殘留快照（如 `2026/11/20` `#503326`）。
 - **發布狀態**：52/52 測試 PASS，TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 同步上線。
 
+## [2026-11-22 12:15] - Telegram Advisor Bot 與全系統戰情室全面升級八大 AI (消滅舊版七大殘留文字)
+- **版本號**：`20261122_1215_telegram_bot_eight_ai_full_upgrade`
+- **影響範圍**：`advisor-bot.cjs`、`app/api/telegram/advisor/route.ts`、`lib/seven-ai-dryrun-engine.ts`、`lib/seven-ai-autopilot-scheduler.ts`、`app/components/AiAdvisorDrawer.tsx`、`app/components/ModernWarRoomView.tsx`、`app/operations/page.tsx`、Telegram Bot API
+- **主要更動**：
+  1. Telegram Bot API 調用 `setMyDescription`、`setMyShortDescription` 與 `setMyCommands`，在對話視窗、名片與指令提示中全面切換為「八大 AI 戰情指揮中樞」。
+  2. 常駐按鈕與回覆訊息統一升級為【🚀 八大AI全真聯動試跑 (Dry-Run)】與「盛隆八大 AI 戰情室」。
+  3. 沙盒演練報告補齊第 8 位「💻 軟體工程 AI」推播哨兵與離職 APK 防線。
+- **發布狀態**：測試通過，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 10:00] - 盛隆八大 AI 部門五大進階優化全面落地 ✕ Telegram L3 一鍵審批 ✕ 三大閉環管線 ✕ 順路併單與題庫反哺
 - **版本號**：`20261122_1000_ai_eight_departments_advanced_optimizations_v2`
 - **影響範圍**：`lib/ai-cross-department-pipeline.ts`、`lib/ai-specialist-deep-modules.ts`、`lib/boss-approvals-hub.ts`、`advisor-bot.cjs`、`app/api/telegram/advisor/route.ts`、`app/api/today-orders/route.ts`、`app/components/SharedOrderCard.tsx`、`app/components/AiAssistantCenter.tsx`、`app/api/ai/eight-departments/route.ts`、`app/api/ai/pipelines/route.ts`、`app/api/ai/sales/anomalies/route.ts`、`app/api/ai/admin/geocode-audit/route.ts`、`app/api/ai/customer-service/audit/route.ts`、`app/api/ai/customer-service/candidate-faqs/route.ts`、`tests/ai-eight-departments-advanced-optimizations.test.mjs`
