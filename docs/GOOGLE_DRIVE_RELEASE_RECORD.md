@@ -1,3 +1,12 @@
+## [2026-11-23 08:15] - 監控中心即時跳出訊息通知全鏈路修復 ✕ Web Push 0ms 極速通道 ✕ 來電新單雙軌秒級響鈴
+- **版本號**：`20261123_0815_operations_realtime_call_and_order_instant_popup`
+- **影響範圍**：`app/api/call-monitor/route.ts`、`public/sw.js`、`lib/web-push.ts`、`app/operations/page.tsx`、`tests/operations-realtime-call-and-order-popup.test.mjs`
+- **主要更動**：
+  1. 【根治來電進線未被 Web Push 喚醒問題】：`POST /api/call-monitor` 推播主動夾帶 `call: activeCall` 完整進線物件；`public/sw.js` (CACHE_NAME v23) 接收後直接轉發至前景分頁；前端 `app/operations/page.tsx` 之 `onPushRefresh` 實裝「0ms 來電極速通道」，接收即刻原地彈出來電開單視窗 (`setActiveIncomingCall`)、播放振鈴 (`playCallChime`) 與語音播報 (`speakIncomingCall`)，徹底消滅過去僅抓訂單而遺漏來電的斷流。
+  2. 【訂單與來電雙軌並行拉取與視窗切換主動檢測】：`onPushRefresh` 改以 `Promise.allSettled` 並行拉取 `/api/today-orders?fresh=1` 與 `/api/call-monitor`，不再單軌等待；新增 `window.addEventListener("focus")` 監聽，調度員從其他分頁切回時 0 秒主動補查最新來電與訂單。
+  3. 【測試與安全】：建立 `tests/operations-realtime-call-and-order-popup.test.mjs` 專屬測試全數 PASS，全套測試零回歸，Next.js 完整編譯通過。
+- **發布狀態**：測試通過，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-22 12:40] - Google Drive SL 全歷史資料集 (2007~2026 共 237,416 筆訂單 / 3,765 戶) 全量整合與 Gzip 極速索引上線
 - **版本號**：`20261122_1240_sl_full_history_237k_orders_integration`
 - **影響範圍**：`scripts/build-customer-orders-index.cjs`、`lib/cloud-customer-gateway.ts`、`public/data/customer-orders-full.json.gz`、`public/data/customer-orders-2026.json`、`data/cloud-customer-cache.json`、`tests/operations-history-and-navigation-precision.test.mjs`
