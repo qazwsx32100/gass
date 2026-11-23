@@ -1,3 +1,22 @@
+## [2026-11-23 22:55] - 🤖 LINE AI 客服正式端同步升級 ✕ 營業時間外下單引導明天營業時間 ✕ 每日檢視 PGRST205 與 Rich Menu 400 修復
+- **版本號**：`20261123_2255_line_ai_sync_after_hours_and_cron_fixes`
+- **背景與老闆指示**：
+  - 查核近 7 日雲端正式環境日誌發現雙倉未同步、`line-ai-daily-review` 每小時 `PGRST205` 及 `retry-notifications` Rich Menu `400` 警告；老闆下達指令：「**幫我處理 並且修正 在營業時間外下訂單 要回復營業時間，請於明天營業時間下訂單**」。
+- **四大核心落地成果**：
+  1. **營業時間外下單統一回覆「明天營業時間再下訂單」（雙倉 + 官網全同步）**：
+     - `shenglong-line-liff`（`api/line-webhook.js`、`api/_knowledge-base.js`）：覆蓋所有一般叫瓦斯意圖、半夜急送規則、付款詢問與常客「照舊來一桶」一鍵覆單流程，非營業時間（21:00～隔天 08:00）一律回覆營業時間 `08:00–21:00（盡量在 20:30 前下單）` 並請於明天營業時間再下訂單，絕不誤派單。
+     - `gass`（`api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`、`website/faqs-data.js`、`website/index.html`、桌面鏡像）：同步移除舊版半夜預約話術，全數對齊最新規範。
+  2. **最新口徑全量同步進正式 LINE 機器人（`shenglong-line-liff`）**：
+     - 統一營業時間標示為 `08:00–21:00（盡量在 20:30 前下單）`。
+     - 新增高優先 `install_natural_gas_equipment` 規則與 `aiPrompt` 規範：明確告知目前只有「基礎的天然瓦斯爐具、熱水器設備和簡易安裝」，高規格設備與安裝「需要評估」（致電 `02-2972-5559`），並精準區隔天然氣改桶裝噴嘴與外縣市供氣範圍問題。
+     - 同步導入 LINE 手機端「結論先講、三行呼吸感排版」與台語口語關鍵字（`若濟`、`敢有送`、`禮拜天`、`暗時`）。
+  3. **消除雲端排程錯誤與警告雜訊**：
+     - `api/_line-ai-daily-review.js` & `api/line-ai-daily-review.js`：遇 Supabase `PGRST205` 優雅降級為 `schema_not_provisioned`（HTTP 200 單行 warn），終結每小時 503 報錯風暴，待補建表後自動恢復每日檢視推播。
+     - `api/index.js` & `api/_line-rich-menu.js`：容忍 `sl_line_menu_config` 缺少 `version` 欄位之舊表結構，徹底消除每 10 分鐘 `LINE rich menu bootstrap failed (400)` 警告。
+  4. **全量單元測試與雙倉部署驗收**：
+     - `shenglong-line-liff`：**306/306 項測試 100% 通過**；`gass`：AI／FAQ 300／1,000 題實測 **20/20 100% 通過**。
+     - 雙倉同步推送 GitHub `origin/main` 並部署 Vercel Production READY。
+
 ## [2026-11-23 08:15] - 監控中心即時跳出訊息通知全鏈路修復 ✕ Web Push 0ms 極速通道 ✕ 來電新單雙軌秒級響鈴
 - **版本號**：`20261123_0815_operations_realtime_call_and_order_instant_popup`
 - **影響範圍**：`app/api/call-monitor/route.ts`、`public/sw.js`、`lib/web-push.ts`、`app/operations/page.tsx`、`tests/operations-realtime-call-and-order-popup.test.mjs`

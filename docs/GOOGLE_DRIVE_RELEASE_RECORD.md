@@ -1,3 +1,18 @@
+## [2026-11-23 22:55] - 🤖 LINE AI 客服正式端同步升級 ✕ 營業時間外下單引導明天營業時間 ✕ 每日檢視 PGRST205 與 Rich Menu 400 修復
+- **版本號**：`20261123_2255_line_ai_sync_after_hours_and_cron_fixes`
+- **影響範圍**：`shenglong-line-liff`（`api/line-webhook.js`, `api/_knowledge-base.js`, `api/_line-ai-daily-review.js`, `api/line-ai-daily-review.js`, `api/index.js`, `api/_line-rich-menu.js`, `tests/*.test.js`）與 `gass`（`api/_knowledge-base.js`, `tests/knowledge-base.test.mjs`, `docs/GAS_CONSUMER_FAQ_300.md`, `website/faqs-data.js`, `website/index.html`, `docs/TODO.md`, `CHANGELOG.md`, 桌面鏡像）
+- **主要更動**：
+  1. 雙倉與官網全面修正營業時間外（21:00～隔天 08:00）下單回覆：明確告知營業時間 `08:00–21:00（盡量在 20:30 前下單）` 並請客人於明天營業時間再下訂單（含常客「照舊來一桶」覆單防線）。
+  2. 將營業時間標準格式、天然瓦斯基礎設備簡易安裝／高規格需評估口徑、手機端三行排版與台語口語支援全量同步進正式接客之 `shenglong-line-liff`。
+  3. 修復 `/api/line-ai-daily-review` `PGRST205` 每小時 503 報錯與 `/api/retry-notifications` Rich Menu `400` 警告。
+  4. 測試通過：`shenglong-line-liff` 306/306 PASS、`gass` 20/20 PASS（1,000 題 100% 通過），雙倉推送 GitHub 並完成 Vercel Production 正式部署。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 雙倉（`qazwsx32100/shenglong-line-liff`、`qazwsx32100/gass`）主幹同步推送
+  - [x] Vercel Production 雙站台正式部署 READY
+  - [x] 桌面鏡像同步：`盛隆瓦斯_進行中與待完成項目看板.md`、`盛隆瓦斯_消費者常見問題300題知識庫.md`
+
+---
+
 ## [2026-11-23 08:15] - 監控中心即時跳出訊息通知全鏈路修復 ✕ Web Push 0ms 極速通道 ✕ 來電新單雙軌秒級響鈴
 - **版本號**：`20261123_0815_operations_realtime_call_and_order_instant_popup`
 - **影響範圍**：`app/api/call-monitor/route.ts`、`public/sw.js`、`lib/web-push.ts`、`app/operations/page.tsx`、`tests/operations-realtime-call-and-order-popup.test.mjs`

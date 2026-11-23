@@ -293,4 +293,11 @@ test('KnowledgeBase: Mobile-first UX reply optimization & colloquial/Taiwanese q
   assert.ok(prompt.includes('結論先講'), 'System prompt must enforce answer-first rule');
   assert.ok(prompt.includes('三行定律'), 'System prompt must enforce mobile 3-line readability rule');
   assert.ok(prompt.includes('典範 7'), 'System prompt must include Taiwanese colloquial few-shot example');
+
+  // 3. After-hours ordering rule: reply business hours and ask customer to order tomorrow during business hours
+  assert.ok(SHENGLONG_STORE_RULES.orderCutoffNotice.includes('明天營業時間'), 'Store rule must direct after-hours orders to tomorrow business hours');
+  assert.ok(prompt.includes('請客人於明天營業時間再下訂單'), 'System prompt must enforce after-hours tomorrow ordering rule');
+  const midnightMatch = matchBestFaq('半夜沒瓦斯可以下單嗎？');
+  assert.ok(midnightMatch && midnightMatch.standardAnswer.includes('08:00–21:00（盡量在 20:30 前下單）'));
+  assert.ok(midnightMatch.standardAnswer.includes('明天營業時間再下訂單'));
 });
