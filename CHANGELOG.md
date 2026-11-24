@@ -1,3 +1,9 @@
+
+## [Unreleased] - 2026-11-24
+### 桌面 AI 資產目錄架構升級 (Desktop Asset Organization)
+- **統一資產目錄**：建立 `C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集`，比照 179 與 TaskAmigo 規格，劃分 6 大子目錄 (01_戰情架構與手冊、02_知識庫與客服、03_系統入口與控制台、04_資料庫與明細數據、05_影音與視覺資產、06_歷史報告與企劃)。
+- **29 筆資產完整歸檔**：移入 28 筆盛隆文件、代碼、媒體資產，TaskAmigo 測試截圖移至其專屬規格全集；桌面其餘 48 筆個人文件與 `sl` APK 目錄 100% 零異動。
+- **代碼庫備份與雙軌同步**：SQL 建庫腳本、控制台 BAT、2026 訂單 CSV 備份至倉庫 `sql/`, `scripts/`, `data/`；更新 `sync-todo.cjs`, `sync-todo-board.mjs`, `generate_2026_full_order_history.cjs`, `GEMINI.md` 與單元測試。
 ## [2026-11-24 09:15] - 監控中心通知系統全面升級 ✕ 對齊司機端關閉螢幕、關閉App保活秒收通知 ✕ OperationsStandbyService 前台常駐守護 ✕ 電池最佳化白名單 [ver: 20261124_0915_operations_keepalive_background_notification_upgrade]
 - **背景與老闆指示**：
   - 依老闆最高指示「監控中心 的 通知系統再幫我處理一下 我要跟 司機端的app一樣 關閉螢幕、關閉app可以收到通知」全面升級 Android APK 原生底層保活與背景通知架構：

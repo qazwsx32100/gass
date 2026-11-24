@@ -4513,3 +4513,11 @@ unSqlStatement 與 etchTodayOrdersList 補齊 	askkill /F /T /PID 樹狀釋放�
 ## API-STABILITY-20261115-01
 
 [/] API 穩定性修復：同步保存收據、派工 CAS、讀取授權、真實 health 與空白快照防護。隔離測試與編譯完成；發布與雲端紀錄同步待核對。P0/P1；約 1 小時；端點 Vercel／門市代理；使用者指示「修復」。詳見 docs/maintenance/20261115_api_stability_fix.md。門市安裝與通知 outbox 整合仍待驗收。
+
+### 2026-11-24: 桌面 AI 產出資產全面歸檔與規範化 (盛隆瓦斯正式系統規格資產全集)
+- **決策者**：老闆 (Telegram ID: `8862712587`, 唯一 SuperAdmin)
+- **工作摘要**：
+  1. 建立 `C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集` 及其 6 大子目錄，完整歸納 28 筆盛隆系統資產與 1 筆 TaskAmigo 測試截圖。
+  2. 桌面根目錄恢復 100% 清爽（僅保留三大專案規格全集、個人商業資料與 `sl` APK 目錄）。
+  3. 會員建庫 SQL、控制台 BAT、歷史訂單 CSV 安全備份進 `C:\Gass` 與 `C:\shenglong-next` 倉庫。
+  4. 校準全系統 TODO 鏡像與題庫同步腳本，測試全數 100% 通過。

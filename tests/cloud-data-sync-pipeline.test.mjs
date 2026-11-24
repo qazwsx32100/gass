@@ -75,7 +75,11 @@ test("⚡ 雲端資料同步鏈路與進程熔斷全面驗證 (Cloud Sync & Circ
   });
 
   await t.test("4. 桌面一鍵修復腳本與控制台選項 100% 部署就緒", () => {
-    const desktopRepairBat = path.resolve("C:/Users/懶/Desktop/一鍵啟動門市SQL資料庫與同步.bat");
+    const desktopRepairBatCandidates = [
+      path.resolve("C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/一鍵啟動門市SQL資料庫與同步.bat"),
+      path.resolve("C:/Users/懶/Desktop/一鍵啟動門市SQL資料庫與同步.bat"),
+    ];
+    const desktopRepairBat = desktopRepairBatCandidates.find((p) => fs.existsSync(p)) || desktopRepairBatCandidates[0];
     assert.ok(fs.existsSync(desktopRepairBat), "桌面一鍵啟動門市SQL資料庫與同步.bat 必須存在");
     const repairContent = fs.readFileSync(desktopRepairBat, "utf8");
 
@@ -83,7 +87,11 @@ test("⚡ 雲端資料同步鏈路與進程熔斷全面驗證 (Cloud Sync & Circ
     assert.ok(repairContent.includes("SQLBrowser"), "修復腳本必須啟動 SQLBrowser 服務");
     assert.ok(repairContent.includes("sc.exe failure"), "修復腳本必須配置崩潰自癒重啟策略");
 
-    const consoleBat = path.resolve("C:/Users/懶/Desktop/盛隆瓦斯_訂單自動入單系統控制台.bat");
+    const consoleBatCandidates = [
+      path.resolve("C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_訂單自動入單系統控制台.bat"),
+      path.resolve("C:/Users/懶/Desktop/盛隆瓦斯_訂單自動入單系統控制台.bat"),
+    ];
+    const consoleBat = consoleBatCandidates.find((p) => fs.existsSync(p)) || consoleBatCandidates[0];
     assert.ok(fs.existsSync(consoleBat), "控制台批次檔必須存在");
     const consoleContent = fs.readFileSync(consoleBat, "utf8");
     assert.ok(consoleContent.includes("一鍵啟動門市SQL資料庫與同步.bat"), "控制台必須包含 SQL 修復快捷調用");

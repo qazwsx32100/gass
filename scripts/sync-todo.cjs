@@ -43,7 +43,11 @@ content = content.replace(/最後更新時間：[^\n]+/, '最後更新時間：2
 fs.writeFileSync(todoPath, content, 'utf8');
 
 // Copy to desktop mirror
-const desktopPath = 'C:\\Users\\懶\\Desktop\\盛隆瓦斯_進行中與待完成項目看板.md';
+const desktopTargetDir = 'C:\\Users\\懶\\Desktop\\盛隆瓦斯_正式系統規格資產全集\\01_戰情架構與手冊';
+if (!fs.existsSync(desktopTargetDir)) {
+  fs.mkdirSync(desktopTargetDir, { recursive: true });
+}
+const desktopPath = path.join(desktopTargetDir, '盛隆瓦斯_進行中與待完成項目看板.md');
 try {
   fs.writeFileSync(desktopPath, content, 'utf8');
   console.log('✅ Synchronized to desktop mirror:', desktopPath);

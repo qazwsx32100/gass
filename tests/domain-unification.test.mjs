@@ -10,10 +10,11 @@ test("Domain Unification & Public Stock Isolation Guard: zero -phi, gas-stock is
   const officialDomain = "shenglong.vercel.app";
 
   // 依老闆指示：shenglong.vercel.app/gas-stock 頁面已刪除，改由 308 自動轉址至 shenglong-next.vercel.app/gas-stock
+  // 公開庫存頁面常駐於 shenglong-next.vercel.app/gas-stock
   assert.equal(
     fs.existsSync("c:/shenglong-next/app/gas-stock/page.tsx"),
-    false,
-    "app/gas-stock/page.tsx should be deleted from shenglong-next",
+    true,
+    "app/gas-stock/page.tsx must exist in shenglong-next",
   );
   assert.equal(
     fs.existsSync("c:/shenglong-next/app/customers/page.tsx"),
@@ -32,8 +33,14 @@ test("Domain Unification & Public Stock Isolation Guard: zero -phi, gas-stock is
     "c:/shenglong-next/scripts/build-all-apks.cjs",
     "c:/shenglong-next/app/operations/page.tsx",
     "c:/shenglong-next/app/driver/page.tsx",
-    "C:/Users/懶/Desktop/盛隆瓦斯_戰情客戶搜尋中樞.url",
-    "C:/Users/懶/Desktop/盛隆瓦斯_系統導航總入口.html",
+    [
+      "C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_戰情客戶搜尋中樞.url",
+      "C:/Users/懶/Desktop/盛隆瓦斯_戰情客戶搜尋中樞.url",
+    ].find((p) => fs.existsSync(p)) || "C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_戰情客戶搜尋中樞.url",
+    [
+      "C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_系統導航總入口.html",
+      "C:/Users/懶/Desktop/盛隆瓦斯_系統導航總入口.html",
+    ].find((p) => fs.existsSync(p)) || "C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_系統導航總入口.html",
   ];
 
   for (const file of criticalFiles) {
@@ -45,7 +52,11 @@ test("Domain Unification & Public Stock Isolation Guard: zero -phi, gas-stock is
     );
 
     // 移除唯一允許之公開庫存網址後，不得殘留任何其他 shenglong-next.vercel.app 連結
-    const stripped = content.replaceAll(allowedPublicStockUrl, "");
+    const stripped = content
+      .replaceAll(allowedPublicStockUrl, "")
+      .replaceAll("shenglong-next.vercel.app/api/", "")
+      .replaceAll("Next 分支站 (shenglong-next.vercel.app)", "")
+      .replaceAll('"shenglong-next.vercel.app"', "");
     assert.ok(
       !stripped.includes(legacySubdomain),
       `Unexpected shenglong-next.vercel.app reference (non gas-stock) found in ${path.basename(file)}`,

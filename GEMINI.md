@@ -78,7 +78,7 @@
   1. 自然語言關鍵字：`即時庫存架構`、`庫存連線問題`、`召喚即時庫存說明`、`庫存架構診斷`、`查即時庫存`
   2. Workspace Skill：`shenglong-realtime-stock`
   3. 權威文件：`docs/REALTIME_STOCK_ARCHITECTURE_AND_TROUBLESHOOTING.md`
-  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`
+  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集\01_戰情架構與手冊\盛隆瓦斯_即時庫存架構與連線診斷說明書.md`
 * **四大核心防護原則**：
   1. **資料源神聖計算**：由 `query.sql` 透過 `dbo.stock` 減去 `dbo.gas_oders` 動態精算，強制使用 `WITH (NOLOCK)`，絕不佔用表級鎖干擾門市打單。
   2. **雙守護進程**：本地端由 `supervisor-sync.cjs` (Port 48999) 守護 `sync-stock.cjs` (Port 48998)，具備單例鎖定與孤兒進程清理。
@@ -104,7 +104,7 @@
   1. 自然語言關鍵字：`召喚AI部門`、`AI部門架構`、`召喚AI工程部門`、`召喚AI財務主管`、`召喚AI營運總監`、`召喚AI客服主管`、`召喚AI行政主管`、`召喚AI行銷總監`、`召喚AI業務主管`、`召喚AI執行秘書`
   2. Workspace Skill：`shenglong-ai-departments`
   3. 權威架構手冊：`docs/AI_EIGHT_DEPARTMENTS_ARCHITECTURE_AND_PLAYBOOK.md`
-  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_八大AI部門架構與召喚操作手冊.md`
+  4. 桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集\01_戰情架構與手冊\盛隆瓦斯_八大AI部門架構與召喚操作手冊.md`
 * **四大核心防護與運作原則**：
   1. **八大 AI 專家分工**：
      - `executive_secretary`（執行秘書）：跨部門指揮調度、優先級裁決、日常待辦彙整。
@@ -134,12 +134,12 @@
 
 ### 1. 📌 全局任務看板與待完成清單同步 (TODO Board)
 * 啟動任務時：立即在 `docs/TODO.md` 登記為待辦或進行中。
-* 完成任務時：打勾移入已驗收完成，並覆蓋複製至桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_進行中與待完成項目看板.md`。
+* 完成任務時：打勾移入已驗收完成，並覆蓋複製至桌面鏡像：`C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集\01_戰情架構與手冊\盛隆瓦斯_進行中與待完成項目看板.md`。
 
 ### 2. 📚 知識庫與題庫全聯動同步鐵律 (Knowledge Base Full Sync Rule)
 * 修改網頁、LINE AI 客服或題庫時，必須強制三方同步：
   1. `docs/GAS_CONSUMER_FAQ_300.md`
-  2. `C:\Users\懶\Desktop\盛隆瓦斯_消費者常見問題300題知識庫.md`
+  2. `C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集\02_知識庫與客服\盛隆瓦斯_消費者常見問題300題知識庫.md`
   3. `api/_knowledge-base.js`
   4. 執行 `node --test tests/knowledge-base.test.mjs`。
 
