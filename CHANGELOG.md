@@ -1,3 +1,14 @@
+## [2026-11-24 08:50] - 🔍 LINE AI 問答全面複檢 ✕ 4 大實測盲點徹底根治 [ver: 20261124_0850_line_ai_qa_recheck_and_fixes]
+- **背景與老闆指示**：
+  - 依老闆指示「再次檢驗一下line ai的問答」，實地檢視隔夜雲端日誌並執行 28 組真實顧客問答矩陣端到端驗證，抓出並一次根治 4 個實戰細節：
+- **四大修正落地**：
+  1. **非營業時間「怎麼叫瓦斯」補齊休息與明天營業時間提醒**（`shenglong-line-liff/api/_knowledge-base.js`）：非營業時間命中 `order_how`/`existing_member_welcome` 時同步附上 `08:00–21:00（盡量在 20:30 前下單）` 與「請於明天營業時間再下訂單」，並隱藏下單按鈕。
+  2. **打火機測漏安全優先權修正**（`shenglong-line-liff/api/line-webhook.js`）：將 `dangerousOperationReply` 提前於一般 `safetyReasonReply`（維持重度漏氣 119 疏散最高優先，並排除「瓦斯漏氣不能點火」誤判），確保「可以用打火機照管線看有沒有漏氣嗎」100% 直接嚴正禁止明火並指導肥皂水測漏。
+  3. **徹底根治 `line-ai-daily-review` 隔夜 `PGRST205`**：查明實際缺表為 `sl_line_ai_turns`／`sl_admin_recipients`，補齊兩者之缺表優雅降級與 `ADMIN_LINE_USER_IDS` 回退，終結每小時錯誤。
+  4. **止血 Rich Menu `400` 重複警告**：於 `_line-rich-menu.js` 與 `api/index.js` 加入安全 `step`/`detail` 診斷與 6 小時退避冷卻。
+- **品質驗收**：
+  - 28/28 真實問答矩陣全通；`shenglong-line-liff` **309/309 PASS**；`gass` 知識庫 **9/9 PASS**。
+
 ## [2026-11-23 22:55] - 🤖 LINE AI 客服正式端同步升級 ✕ 營業時間外下單引導明天營業時間 ✕ 每日檢視 PGRST205 與 Rich Menu 400 修復
 - **版本號**：`20261123_2255_line_ai_sync_after_hours_and_cron_fixes`
 - **背景與老闆指示**：

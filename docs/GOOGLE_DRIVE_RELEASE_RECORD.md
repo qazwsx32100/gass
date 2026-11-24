@@ -1,3 +1,19 @@
+## [2026-11-24 08:50] - 🔍 LINE AI 問答全面複檢 ✕ 4 大實測盲點徹底根治
+- **版本號**：`20261124_0850_line_ai_qa_recheck_and_fixes`
+- **影響範圍**：`shenglong-line-liff`（`api/line-webhook.js`, `api/_knowledge-base.js`, `api/_line-ai-daily-review.js`, `api/_line-rich-menu.js`, `api/index.js`, `tests/knowledge-base.test.js`, `tests/line-ai-memory-review.test.js`）與 `gass` 維護紀錄
+- **主要更動**：
+  1. 非營業時間「怎麼叫瓦斯」同步附上 `08:00–21:00（盡量在 20:30 前下單）` 與「請於明天營業時間再下訂單」提醒。
+  2. 修正打火機測漏之安全攔截順序，確保 100% 嚴正阻斷明火並指導肥皂水測漏（重度漏氣 119 疏散維持第一優先）。
+  3. 徹底根治 `line-ai-daily-review` 針對 `sl_line_ai_turns`/`sl_admin_recipients` 缺表之 `PGRST205` 每小時報錯。
+  4. 為 Rich Menu `400` 補上安全 `step`/`detail` 診斷與 6 小時退避冷卻。
+  5. 驗證通過：28/28 真實問答矩陣全通、`shenglong-line-liff` **309/309 PASS**、`gass` **9/9 PASS**。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 雙倉主幹同步推送
+  - [x] Vercel Production 正式部署 READY
+  - [x] 桌面看板鏡像同步：`盛隆瓦斯_進行中與待完成項目看板.md`
+
+---
+
 ## [2026-11-23 22:55] - 🤖 LINE AI 客服正式端同步升級 ✕ 營業時間外下單引導明天營業時間 ✕ 每日檢視 PGRST205 與 Rich Menu 400 修復
 - **版本號**：`20261123_2255_line_ai_sync_after_hours_and_cron_fixes`
 - **影響範圍**：`shenglong-line-liff`（`api/line-webhook.js`, `api/_knowledge-base.js`, `api/_line-ai-daily-review.js`, `api/line-ai-daily-review.js`, `api/index.js`, `api/_line-rich-menu.js`, `tests/*.test.js`）與 `gass`（`api/_knowledge-base.js`, `tests/knowledge-base.test.mjs`, `docs/GAS_CONSUMER_FAQ_300.md`, `website/faqs-data.js`, `website/index.html`, `docs/TODO.md`, `CHANGELOG.md`, 桌面鏡像）
