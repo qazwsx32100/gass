@@ -1,3 +1,25 @@
+## 📋 最新紀錄：2026-11-24 16:55 (版本號: 20261124_1655_line_after_hours_gas_exchange_video)
+- **更新主題**：LINE 營業時間外叫瓦斯自動推播《盛隆安全換桶 2D 動畫教學影片》／台灣 C 型護圈與調整器實心咬合動畫／LINE 原生影片串流上線
+- **老闆指示**：「如果客人在營業時間外叫瓦斯，我們是能夠傳送給他更換瓦斯的影片嗎？」「幫我產出影片」「做成動畫」「修正鋼瓶握把遮擋問題後繼續上線」
+- **主要內容與成果**：
+  1. **盛隆專屬 2D 全動態安全換桶動畫影片 (`public/assets/gas-exchange-guide.mp4` + `gas-exchange-preview.jpg`)**：
+     - 規格：`720 × 1280` 直式 HD、`25 fps`、片長 `92.8 秒`、大小僅 `5.55 MB`（H.264＋AAC＋`faststart`），搭配台灣國語女聲旁白與高對比繁體中文大字幕。
+     - 精準呈現台灣瓦斯桶 C 型護圈側面敞開視角、爐具熄火、舊桶開關順時針關緊、R280 調整器反牙往右旋鬆拆下、黑色橡皮墊圈檢查、對準備用滿桶閥口、反牙往左緊密鎖合、開氣＋黃色海綿肥皂水測漏，以及盛隆三支門市專線（`02-2972-5559`、`02-2972-2149`、`02-2975-4635`）與 119 四步驟提醒。
+  2. **LINE 官方帳號自動發送機制 (`api/line-webhook.js` / `api/_knowledge-base.js`)**：
+     - **營業時間外（21:00–08:00）叫瓦斯**：無論是一般文字叫瓦斯、半夜沒瓦斯詢問、或常客「照舊／跟上次一樣」覆單，皆同步回傳「明日配送＋備用桶引導文字」與 **LINE 原生 `video` 影片訊息**，客人在聊天室即可點開播放。
+     - **主動詢問換桶教學**：平時客人詢問「怎麼換瓦斯桶／自己換瓦斯／教我換備用桶」亦自動附帶該支教學動畫；營業中一般叫瓦斯則絕不誤傳干擾。
+     - `quickReply` 自動轉移至最後一則訊息，100% 符合 LINE Messaging API 規範。
+  3. **Vercel 跨網域媒體串流優化 (`vercel.json`)**：
+     - 新增 `/assets/(.*)` 專屬標頭 `Cross-Origin-Resource-Policy: cross-origin` 與長效 CDN 快取，確保 iOS/Android LINE App 播放零阻擋。
+  4. **全量測試與雲端上線**：
+     - 新增專屬測試 `tests/after-hours-exchange-video.test.js`，全套 **317 / 317 PASS**（0 失敗、0 回歸）。
+     - GitHub 雙軌主幹推送、Vercel Production 正式環境部署 READY 並實測 MP4 / JPG HTTP 200 可串流。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板與動畫影片備份同步完成
+---
+
 ## 📋 最新紀錄：2026-11-24 09:15 (版本號: 20261124_0915_operations_keepalive_background_notification_upgrade)
 - **更新主題**：監控中心通知系統全面升級 ✕ 對齊司機端關閉螢幕、關閉App保活秒收通知 ✕ OperationsStandbyService 前台常駐守護 ✕ 電池最佳化白名單
 - **老闆指示**：「監控中心 的 通知系統再幫我處理一下 我要跟 司機端的app一樣 關閉螢幕、關閉app可以收到通知」
