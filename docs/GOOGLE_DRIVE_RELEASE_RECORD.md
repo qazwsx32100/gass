@@ -1,3 +1,36 @@
+## 📋 最新紀錄：2026-11-24 09:15 (版本號: 20261124_0915_operations_keepalive_background_notification_upgrade)
+- **更新主題**：監控中心通知系統全面升級 ✕ 對齊司機端關閉螢幕、關閉App保活秒收通知 ✕ OperationsStandbyService 前台常駐守護 ✕ 電池最佳化白名單
+- **老闆指示**：「監控中心 的 通知系統再幫我處理一下 我要跟 司機端的app一樣 關閉螢幕、關閉app可以收到通知」
+- **主要內容與成果**：
+  1. **打造專屬前台常駐守護服務 (`OperationsStandbyService.java`)**：
+     - 配置 `FOREGROUND_SERVICE_DATA_SYNC`、`stopWithTask="false"` 與 `START_STICKY`，常駐建立高優先級通知頻道「盛隆戰情調度中樞待命守護」。
+     - 透過 `ensureBackgroundLocksHeld` 獲取 CPU `PARTIAL_WAKE_LOCK` ("shenglong:ops_bg_cpu_lock") 與低耗 `WifiLock` ("shenglong:ops_bg_wifi_lock")，徹底阻斷 Android Doze 深度休眠斷網。
+     - 覆寫 `onTaskRemoved` 於使用者上滑關閉 App 時由 `AlarmManager` 於 1000ms 內發送廣播喚醒。
+  2. **實裝專屬開機與重生廣播接收器 (`OperationsBootReceiver.java`)**：
+     - 監聽 `BOOT_COMPLETED`、`QUICKBOOT_POWERON`、`MY_PACKAGE_REPLACED` 與 `ACTION_RESTART_SERVICE`，開機或進程被殺時 0ms 秒級重生守護進程。
+  3. **升級 `OperationsMainActivity.java`**：
+     - 啟動與恢復時雙重確保 `OperationsStandbyService` 運作。
+     - 實裝 `checkAndPromptBatteryOptimization()` 主動請求 `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` 電池最佳化白名單。
+     - 原生視窗配置 `FLAG_KEEP_SCREEN_ON`、`FLAG_SHOW_WHEN_LOCKED`、`FLAG_TURN_SCREEN_ON` 與 `FLAG_DISMISS_KEYGUARD`，保證黑屏/閉屏/鎖屏時喚醒亮屏。
+     - `OperationsNativeBridge` 暴露電池最佳化狀態與重啟服務接口。
+  4. **強化 `MyFirebaseMessagingService.java`**：
+     - 針對 `com.shenglong.operations` 實裝 `tryAcquireOperationsLock` 8 秒防重去重鎖。
+     - 支援來電 (`callId`) 與訂單 (`orderId`) 雙軌推播，配置 `setFullScreenIntent`、`setBypassDnd(true)`、警報鈴聲與 TTS 語音朗讀。
+     - 點擊鎖定 `OperationsMainActivity.class`。
+  5. **構建腳本雙端物理隔離 (`scripts/build-all-apks.cjs`)**：
+     - 監控中心保留 `OperationsStandbyService` / `OperationsBootReceiver` / `MyFirebaseMessagingService`。
+     - 司機端保留 `DriverOrderService` / `BootReceiver`，雙端架構各自獨立且 100% 互不干擾。
+  6. **重新編譯簽章發布**：
+     - 以 `gradlew assembleDebug` 乾淨編譯與 V1+V2+V3 簽章發布。
+     - APK 鏡像更新至桌面 `sl` 目錄之《盛隆新ERP_戰情調度中樞.apk》與《盛隆監控中心.apk》。
+     - 全套 29/29 專屬測試通過，Next.js 完整編譯通過，GitHub 雙軌與 Vercel Production (`dpl_8aJHV1ZRpwoUhJWKHztT4ojWp6Cs`) 全量部署生效。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄 APK 更新完成（《盛隆新ERP_戰情調度中樞.apk》、《盛隆監控中心.apk》）
+  - [x] 桌面看板鏡像同步完成
+---
+
 ## 📋 最新紀錄：2026-11-24 09:05 (版本號: 20261124_0905_website_phone_to_2149)
 - **更新主題**：官網門市電話全面更新為 02-2972-2149 並徹底刪除 02-2972-5559
 - **老闆指示**：「將網頁 的電話改成 02-2972-2149 刪除 02-2972-5559」
