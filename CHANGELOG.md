@@ -1,3 +1,24 @@
+## [2026-11-24 09:05] - 📞 官網門市電話全面更新為 02-2972-2149 ✕ 徹底刪除 02-2972-5559 [ver: 20261124_0905_website_phone_to_2149]
+- **背景與老闆指示**：
+  - 依老闆指示「將網頁 的電話改成 02-2972-2149 刪除 02-2972-5559」，全面盤點並完成全鏈路電話號碼校正與舊號刪除：
+- **核心成果**：
+  1. **官網首頁全量更新 (`website/index.html`)**：
+     - 首頁全數 47 處門市專線全面更新為 `02-2972-2149`。
+     - 包含頂部 SEO Meta 描述、結構化資料 Schema (telephone: `+886-2-2972-2149`)、頂部緊急排查列、頁首電話按鈕 (`tel:+886229722149`)、手機懸浮電話按鈕、常見問題答詢區及頁尾聯絡資訊。
+     - `02-2972-5559` 出現次數徹底歸零（0 筆殘留）。
+  2. **官網 FAQ 題庫與後台 (`website/faqs-data.js`、`website/admin.html`、`website/api/cms.js`、`website/sitemap.xml`)**：
+     - FAQ 答詢 21 處電話全量切換為 `02-2972-2149`。
+     - 網站後台預設門市電話與 SiteMap 圖文資訊同步切換為 `02-2972-2149`。
+  3. **雙倉鏡像與 public 目錄全量同步 (`shenglong-next/public/website/*`)**：
+     - `public/website/index.html`、`public/website/admin.html`、`public/website/faqs-data.js`、`public/faqs-data.js` 全數 62 處同步更新，徹底清除 `5559`。
+  4. **知識庫與題庫全鏈路三方同步 (`api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`、桌面鏡像)**：
+     - `SHENGLONG_STORE_RULES.phone` 代表號全面鎖定 `02-2972-2149`，自所有問答文本中徹底剔除 `02-2972-5559`。
+     - 桌面鏡像《盛隆瓦斯_消費者常見問題300題知識庫.md》同步更新。
+  5. **測試與驗證**：
+     - `tests/knowledge-base.test.mjs`：9/9 PASS。
+     - `tests/web-and-api-security.test.mjs`：10/10 PASS。
+     - 官網部署至 Vercel Production，GitHub 雙軌主幹同步。
+
 ## [2026-11-24 08:50] - 🔍 LINE AI 問答全面複檢 ✕ 4 大實測盲點徹底根治 [ver: 20261124_0850_line_ai_qa_recheck_and_fixes]
 - **背景與老闆指示**：
   - 依老闆指示「再次檢驗一下line ai的問答」，實地檢視隔夜雲端日誌並執行 28 組真實顧客問答矩陣端到端驗證，抓出並一次根治 4 個實戰細節：
