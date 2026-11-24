@@ -1,3 +1,26 @@
+## 📋 最新紀錄：2026-11-24 08:55 (版本號: 20261124_0855_line_three_store_phones)
+- **更新主題**：LINE 操作介面、Webhook 回覆、QuickReply 與官方知識庫全面升級三支門市專線
+- **老闆指示**：「幫我在line 的操作中的電話 改成 三支電話 02-2972-5559、02-2972-2149、02-2975-4635」
+- **主要內容與成果**：
+  1. **LINE LIFF 前端操作畫面 (`public/index.html` / `public/styles.css` / `public/app.js`)**：
+     - 全數 6 大聯絡區塊（待核對人工協助、多筆重複電話提示、會員核對疑問、新會員未建檔提示、新朋友專屬指引撥號區、首次訂購專線卡）均升級為三支電話一鍵直撥（`tel:0229725559`、`tel:0229722149`、`tel:0229754635`）。
+     - 新增 `.store-phone-links` 與 `.guide-call-sub-grid` 手機響應式排版，所有撥號按鈕觸控高度皆 `>= 44px`。
+     - `app.js` 異常與留電提示文案同步改為三支電話。
+  2. **LINE Webhook 與推播訊息 (`api/line-webhook.js` / `api/index.js`)**：
+     - 訂單確認 Flex 卡片「聯絡客服」、會員／地址審核未通過 LINE 通知、照片上傳回覆、新客留電回覆、AI 系統提示詞與所有固定話術全面升級為 `02-2972-5559、02-2972-2149、02-2975-4635`。
+     - LINE QuickReply 快速回覆按鈕同步升級為 3 顆獨立直撥按鈕（`📞 02-2972-5559`、`📞 02-2972-2149`、`📞 02-2975-4635`）。
+  3. **知識庫三方聯動同步（SOP #2 完整落實）**：
+     - 同步更新 `shenglong-line-liff/api/_knowledge-base.js`（查詢門市電話附帶三支直撥按鈕）、`c:/Gass/api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md` 與桌面鏡像《盛隆瓦斯_消費者常見問題300題知識庫.md》。
+     - 防幻覺檢測白名單同步納入 `02-2972-2149` 與 `02-2975-4635`。
+  4. **全量測試與上線驗證**：
+     - 新增 `tests/store-three-phones.test.js`，`shenglong-line-liff` 全套 **312 / 312 PASS**，`gass` `tests/knowledge-base.test.mjs` **9 / 9 PASS**。
+     - 同步推送 GitHub 雙倉庫並部署 Vercel Production 生效。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面看板與 300 題知識庫鏡像同步完成
+---
+
 ## [2026-11-24 08:50] - 🔍 LINE AI 問答全面複檢 ✕ 4 大實測盲點徹底根治
 - **版本號**：`20261124_0850_line_ai_qa_recheck_and_fixes`
 - **影響範圍**：`shenglong-line-liff`（`api/line-webhook.js`, `api/_knowledge-base.js`, `api/_line-ai-daily-review.js`, `api/_line-rich-menu.js`, `api/index.js`, `tests/knowledge-base.test.js`, `tests/line-ai-memory-review.test.js`）與 `gass` 維護紀錄

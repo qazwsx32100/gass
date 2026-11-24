@@ -9,8 +9,8 @@ import {
 } from '../api/_knowledge-base.js';
 
 test('KnowledgeBase: Store rules metadata integrity', () => {
-  assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-2149、02-2972-2149、02-2975-4635');
-  assert.deepEqual(SHENGLONG_STORE_RULES.phones, ['02-2972-2149', '02-2972-2149', '02-2975-4635']);
+  assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-5559、02-2972-2149、02-2975-4635');
+  assert.deepEqual(SHENGLONG_STORE_RULES.phones, ['02-2972-5559', '02-2972-2149', '02-2975-4635']);
   assert.ok(SHENGLONG_STORE_RULES.businessHours.includes('08:00–21:00（盡量在 20:30 前下單）'));
   assert.ok(SHENGLONG_STORE_RULES.paymentMethod.includes('現金'));
   assert.ok(SHENGLONG_STORE_RULES.emergencyLeakSteps.length >= 4);
