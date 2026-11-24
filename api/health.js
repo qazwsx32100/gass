@@ -131,7 +131,8 @@ export default async function handler(req, res) {
   try {
     const probe = await getDatabaseReadiness();
     if (!probe.ready) res.setHeader('Retry-After', '60');
-    return sendJson(res, probe.ready ? 200 : 503, {
+    const isInternalAdmin = verifyInternalHealthAuth(req);
+    const payload = {
       ok: probe.ready,
       service: 'gass-erp-api',
       database: probe.reachable ? 'reachable' : 'unreachable',
@@ -146,7 +147,16 @@ export default async function handler(req, res) {
       probeCached: probe.cached,
       timestamp: new Date().toISOString(),
       latencyMs: Date.now() - startedAt
-    });
+    };
+
+    if (isInternalAdmin && !probe.ready) {
+      payload.errorMessage = probe.reason || 'Database probe degraded';
+      payload.hasSupabaseUrl = Boolean(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+      payload.hasSyncSecret = Boolean(process.env.ERP_SYNC_SECRET);
+      payload.hasSecretKey = Boolean(process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY);
+    }
+
+    return sendJson(res, probe.ready ? 200 : 503, payload);
   } catch (error) {
     console.error('health check failed', error);
     await captureServerException(error, {

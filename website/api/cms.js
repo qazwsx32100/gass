@@ -55,7 +55,7 @@ let cmsState = {
     statusText: '今日正常熱情配送中',
     dailyHours: '08:00 – 21:00',
     orderCutoff: '20:30',
-    phone: '02-2972-5559',
+    phone: '02-2972-2149',
     notice: '國定假日、春節、中秋照常配送不打烊'
   },
   announcement: {

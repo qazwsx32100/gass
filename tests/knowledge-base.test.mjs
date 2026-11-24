@@ -9,7 +9,8 @@ import {
 } from '../api/_knowledge-base.js';
 
 test('KnowledgeBase: Store rules metadata integrity', () => {
-  assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-5559');
+  assert.equal(SHENGLONG_STORE_RULES.phone, '02-2972-2149、02-2972-2149、02-2975-4635');
+  assert.deepEqual(SHENGLONG_STORE_RULES.phones, ['02-2972-2149', '02-2972-2149', '02-2975-4635']);
   assert.ok(SHENGLONG_STORE_RULES.businessHours.includes('08:00–21:00（盡量在 20:30 前下單）'));
   assert.ok(SHENGLONG_STORE_RULES.paymentMethod.includes('現金'));
   assert.ok(SHENGLONG_STORE_RULES.emergencyLeakSteps.length >= 4);
@@ -81,7 +82,7 @@ test('KnowledgeBase: matchBestFaq accurately matches relevant queries', () => {
 test('KnowledgeBase: getOptimizedSystemPrompt generates comprehensive prompt', () => {
   // Test regular inquiry
   const prompt = getOptimizedSystemPrompt('可以幫忙搬上4樓嗎？');
-  assert.ok(prompt.includes('02-2972-5559'));
+  assert.ok(prompt.includes('02-2972-2149'));
   assert.ok(prompt.includes('盛隆瓦斯行'));
   assert.ok(prompt.includes('現金'));
   assert.ok(prompt.includes('樓層'));
@@ -207,7 +208,7 @@ test('KnowledgeBase & AI-Chat: Dynamic prompt injection and line entity extracti
   const leakPrompt = getOptimizedSystemPrompt(leakQuery, 'expert', '');
   assert.ok(leakPrompt.includes('盛隆緊急安全提醒'), 'Gas leak query must contain emergency safety alert');
   assert.ok(leakPrompt.includes('關閉鋼瓶角閥'), 'Must include valve closure SOP');
-  assert.ok(leakPrompt.includes('02-2972-5559'), 'Must include store contact phone');
+  assert.ok(leakPrompt.includes('02-2972-2149'), 'Must include store contact phone');
 
   // 2.1 測試營業時間提示詞標示格式
   const hoursPrompt = getOptimizedSystemPrompt('請問營業時間到幾點？', 'fast', '');
