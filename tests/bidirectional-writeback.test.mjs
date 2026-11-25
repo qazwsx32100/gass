@@ -234,25 +234,19 @@ test("Boss Acceptance Upgrades: Mobile War Room, Unified Stock URL, Telegram Clo
     );
   });
 
-  await t.test("2. Stock API sync and public links point to https://shenglong-next.vercel.app/gas-stock while removing shenglong.vercel.app/gas-stock", () => {
+  await t.test("2. Stock API sync and public links point to https://shenglong.vercel.app/gas-stock", () => {
     const syncSrc = fs.readFileSync("c:/shenglong-next/sync-stock.cjs", "utf8").replace(/\r\n/g, "\n");
     assert.ok(
       syncSrc.includes('const VERCEL_SYNC_URLS = [\n  "https://shenglong.vercel.app/api/gas-stock",\n];'),
       "sync-stock.cjs VERCEL_SYNC_URLS must transmit to shenglong.vercel.app/api/gas-stock"
     );
     assert.ok(
-      syncSrc.includes('const PUBLIC_STOCK_URL = "https://shenglong-next.vercel.app/gas-stock";'),
-      "PUBLIC_STOCK_URL must be https://shenglong-next.vercel.app/gas-stock"
+      syncSrc.includes('const PUBLIC_STOCK_URL = "https://shenglong.vercel.app/gas-stock";'),
+      "PUBLIC_STOCK_URL must be https://shenglong.vercel.app/gas-stock"
     );
-
     assert.ok(
-      !fs.existsSync("c:/shenglong-next/app/gas-stock/page.tsx"),
-      "shenglong.vercel.app/gas-stock page.tsx must be deleted"
-    );
-    const nextCfgSrc = fs.readFileSync("c:/shenglong-next/next.config.ts", "utf8");
-    assert.ok(
-      nextCfgSrc.includes('destination: "https://shenglong-next.vercel.app/gas-stock"'),
-      "next.config.ts must 308-redirect /gas-stock to https://shenglong-next.vercel.app/gas-stock"
+      fs.existsSync("c:/shenglong-next/app/gas-stock/page.tsx"),
+      "shenglong.vercel.app/gas-stock page.tsx must exist"
     );
   });
 
