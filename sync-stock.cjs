@@ -360,7 +360,6 @@ function runSqlStatement(sqlQuery) {
 
 const VERCEL_SYNC_URLS = [
   "https://shenglong.vercel.app/api/gas-stock",
-  "https://shenglong-next.vercel.app/api/gas-stock",
 ];
 const VERCEL_SYNC_URL = VERCEL_SYNC_URLS[0];
 const PRIMARY_KV_STOCK_URL = "https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/stock";
@@ -368,19 +367,16 @@ const PRIMARY_KV_ORDERS_URL = "https://kvdb.io/XwdpBD41akmYGtk8ReuBTE/today_orde
 
 const VERCEL_STATUS_URLS = [
   "https://shenglong.vercel.app/api/system-status",
-  "https://shenglong-next.vercel.app/api/system-status",
 ];
 const VERCEL_STATUS_URL = VERCEL_STATUS_URLS[0];
 
 const VERCEL_ORDERS_URLS = [
   "https://shenglong.vercel.app/api/today-orders",
-  "https://shenglong-next.vercel.app/api/today-orders",
 ];
 const VERCEL_ORDERS_URL = VERCEL_ORDERS_URLS[0];
 
 const VERCEL_CALL_MONITOR_URLS = [
   "https://shenglong.vercel.app/api/call-monitor",
-  "https://shenglong-next.vercel.app/api/call-monitor",
 ];
 const VERCEL_CALL_MONITOR_URL = VERCEL_CALL_MONITOR_URLS[0];
 
@@ -388,7 +384,6 @@ const LOCAL_CALL_MONITOR_URL = "http://127.0.0.1:3000/api/call-monitor";
 const REMOTE_CMD_URL = "https://shenglong.vercel.app/api/remote-command";
 const VERCEL_DISPATCH_QUEUE_URLS = [
   "https://shenglong.vercel.app/api/driver/orders/dispatch-queue",
-  "https://shenglong-next.vercel.app/api/driver/orders/dispatch-queue",
 ];
 const VERCEL_DISPATCH_QUEUE_URL = VERCEL_DISPATCH_QUEUE_URLS[0];
 
@@ -4557,7 +4552,6 @@ async function verifyStockChecksumLoop() {
   const localSig = `${lastKnownStock.qty50},${lastKnownStock.qty20},${lastKnownStock.qty16},${lastKnownStock.qty10},${lastKnownStock.qty4}`;
   const targets = [
     { name: "主力正式站 (shenglong.vercel.app)", url: "https://shenglong.vercel.app/api/gas-stock" },
-    { name: "Next 分支站 (shenglong-next.vercel.app)", url: "https://shenglong-next.vercel.app/api/gas-stock" }
   ];
 
   let hasMismatch = false;
@@ -10544,10 +10538,6 @@ async function pushStockToCloud(force = false) {
     const vercelPushPromises = shouldPushVercelStock
       ? VERCEL_SYNC_URLS.map((url) => {
           const reqHeaders = { ...headers };
-          if (url.includes("shenglong-next.vercel.app")) {
-            reqHeaders.Authorization = "Bearer shenglong_sync_secret_key_2026_super_secure_key_32chars";
-            reqHeaders["x-shenglong-sync-secret"] = "shenglong_sync_secret_key_2026_super_secure_key_32chars";
-          }
           return fetchFn(url, {
             method: "POST",
             headers: reqHeaders,
