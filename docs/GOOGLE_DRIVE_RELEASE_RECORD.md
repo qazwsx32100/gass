@@ -1,3 +1,13 @@
+## 📋 最新紀錄：2026-11-26 10:25 (版本號: 20261126_1025_hose_920_921_and_richmenu_db_fix)
+- **更新主題**：920 / 921（CNS 9620 / CNS 9621）瓦斯軟管問答正式寫入 LINE AI 與三方知識庫 ✕ 徹底根治 Rich Menu `step: "db"` 400 警告 ✕ 零個資 LINE Webhook 診斷日誌
+- **老闆指示**：「把剛討論的 920 / 921（CNS 9620 / 9621）瓦斯管 問答正式寫進 LINE AI 與知識庫 幫我做」「順手清掉上述 step: "db" 的 Rich Menu 警告」「幫我檢驗一下 有一位趴趴熊的會員 密官方line」
+- **主要內容與成果**：
+  1. **920 / 921 瓦斯軟管專業問答上線**：於 `shenglong-line-liff/api/_knowledge-base.js`、`gass/api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`（同步桌面鏡像）與 `website/faqs-data.js` 完整收錄 CNS 9620（家用低壓密閉管）與 CNS 9621（中高壓透氣微孔管，嚴禁直用於一般室內家用低壓爐具）差別、白鐵螺牙管束規範、1～2 年更換提醒與三支門市專線，並驗證不誤觸 921 地震、0920 手機與 920 號門牌。
+  2. **根治 Rich Menu `step: "db"` 400 警告**：修補 `api/_line-rich-menu.js` 與 `api/index.js` 在舊表 `sl_line_menu_config` 缺少 `version` 欄位時寫入仍帶入 `version: 2` 導致 400 的漏洞，改為 `select: '*'` 檢測與自動無 `version` 寫入降級，徹底終結排程警告。
+  3. **Webhook 零個資診斷遙測與進線查核**：完成近 10 日雲端日誌稽核，並補上零個資 `LINE webhook event handled` 路由與模式診斷日誌。
+- **驗證與部署**：`gass` 14/14 PASS、`shenglong-line-liff` 專屬測試全數 PASS，雙倉 GitHub 主幹推送並部署 Vercel Production 生效。
+---
+
 ## 📋 最新紀錄：2026-11-24 22:28 (版本號: 20261124_2228_gas_exchange_video_cw_ccw_fix)
 - **更新主題**：換桶 2D 動畫步驟 2／4 調整器 3D 旋轉方向與正面圖解精準修正（順時針鬆開 ⟳／逆時針轉緊 ⟲）
 - **老闆指正**：「調整器 順時針是鬆開 逆時針是轉緊 圖像的標示錯了」

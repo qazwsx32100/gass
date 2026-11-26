@@ -301,4 +301,20 @@ test('KnowledgeBase: Mobile-first UX reply optimization & colloquial/Taiwanese q
   const midnightMatch = matchBestFaq('半夜沒瓦斯可以下單嗎？');
   assert.ok(midnightMatch && midnightMatch.standardAnswer.includes('08:00–21:00（盡量在 20:30 前下單）'));
   assert.ok(midnightMatch.standardAnswer.includes('明天營業時間再下訂單'));
+
+  // 4. 920 / 921 (CNS 9620 / CNS 9621) gas hose specification & pinhole safety distinction
+  const hose920921 = matchBestFaq('請問920和921的管差在哪？');
+  assert.ok(hose920921, 'Should match 920/921 gas hose FAQ');
+  assert.ok(hose920921.category.includes('920 / 921'));
+  assert.ok(hose920921.standardAnswer.includes('CNS 9620'));
+  assert.ok(hose920921.standardAnswer.includes('CNS 9621'));
+  assert.ok(hose920921.standardAnswer.includes('透氣微孔'));
+  assert.ok(hose920921.standardAnswer.includes('不可直接當一般室內家用低壓管'));
+  assert.ok(hose920921.standardAnswer.includes('02-2972-5559、02-2972-2149、02-2975-4635'));
+
+  const hose921Indoor = matchBestFaq('921管可以用在室內家用瓦斯爐嗎？');
+  assert.ok(hose921Indoor && hose921Indoor.category.includes('920 / 921'));
+
+  const quake921 = matchBestFaq('921地震的時候瓦斯要怎麼關？');
+  assert.ok(!quake921 || !quake921.category.includes('920 / 921'), '921 earthquake must not match 920/921 hose entry');
 });

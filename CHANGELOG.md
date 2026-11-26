@@ -1,4 +1,12 @@
 
+## [2026-11-26 10:25] - 920 / 921（CNS 9620 / 9621）瓦斯軟管知識庫上線 ✕ 根治 Rich Menu step:"db" 400 警告 ✕ Webhook 零個資診斷遙測 [ver: 20261126_1025_hose_920_921_and_richmenu_db_fix]
+- **老闆指示**：將 920 / 921（CNS 9620 / 9621）瓦斯管問答正式寫進 LINE AI 與知識庫、徹底清除 `LINE rich menu bootstrap failed (kind: 400, step: "db")` 警告，並檢驗「趴趴熊」會員密官方 LINE 狀況。
+- **主要更動**：
+  1. **920 / 921（CNS 9620 / 9621）瓦斯軟管三方同步**：更新 `shenglong-line-liff/api/_knowledge-base.js`、`gass/api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`（同步桌面鏡像）與 `website/faqs-data.js`，清楚區分 920 家用低壓密閉管與 921 中／高壓透氣微孔管安全分界，防誤觸 921 地震／0920 電話／920 號門牌，並附上三支門市專線。
+  2. **根治 Rich Menu `step: "db"` 400 警告**：修正 `api/_line-rich-menu.js` 與 `api/index.js` 寫入舊版 `sl_line_menu_config`（無 `version` 欄位）時仍傳送 `version: 2` 的 Bug，改用 `select: '*'` 避免試探性 400 報錯並於寫入時自動降級相容舊表結構。
+  3. **LINE Webhook 零個資診斷日誌**：於 `api/line-webhook.js` 記錄無個資 `eventType / msgType / route / mode`，方便即時判別真人模式靜默（`human_silent`）或非文字訊息（`ignored_non_text`）。
+- **驗證狀態**：`shenglong-line-liff` 專屬與核心測試 27/27 PASS，`gass` 知識庫與 FAQ 300 壓測 14/14 PASS。
+
 ## [Unreleased] - 2026-11-24
 ### 桌面 AI 資產目錄架構升級 (Desktop Asset Organization)
 - **統一資產目錄**：建立 `C:\Users\懶\Desktop\盛隆瓦斯_正式系統規格資產全集`，比照 179 與 TaskAmigo 規格，劃分 6 大子目錄 (01_戰情架構與手冊、02_知識庫與客服、03_系統入口與控制台、04_資料庫與明細數據、05_影音與視覺資產、06_歷史報告與企劃)。
