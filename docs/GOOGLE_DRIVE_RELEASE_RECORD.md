@@ -1,3 +1,19 @@
+## 📋 最新紀錄：2026-11-26 10:36 (版本號: 20261126_1036_gas_exchange_video_dual_trigger_refinement)
+- **更新主題**：換桶 2D 動畫教學影片精準雙情境觸發收斂（「客人說如何換瓦斯」＋「非營業時間按下立即下訂單」時跑出來）
+- **老闆指示**：「只要客人說如何換瓦斯 或是 非營業時間 按下立即下訂單 時跑出來」
+- **主要內容與成果**：
+  1. **情境 A — 客人說「如何換瓦斯」時自動跑出動畫影片（`api/_knowledge-base.js` / `api/line-webhook.js`）**：
+     - 擴充 `cylinder_how_to_change` 與 `isGasExchangeTutorialRequest` 正則（完整支援「如何換瓦斯」、「怎麼換瓦斯」、「怎麼換瓦斯桶」、「自己換瓦斯」、「教我換備用桶」、「換瓦斯教學」等口語），無論營業中或休息時段皆精準回傳 4 步驟文字＋LINE 原生換桶 2D 動畫影片（並自動省略重複的靜態 Flex 圖卡）。
+     - 收斂聊天室觸發條件：一般非營業時間文字詢問（如「我要叫瓦斯」、「今天能送嗎」、「跟上次一樣」）不再亂彈大檔案影片，改以乾淨文字回覆營業時間 `08:00–21:00` 並提示可輸入「如何換瓦斯」觀看教學。
+  2. **情境 B — 非營業時間（`21:00～隔天 08:00`）按下「立即下訂單／立即叫瓦斯」時自動跑出來（`public/index.html` / `public/styles.css` / `public/app.js` / `vercel.json`）**：
+     - 於 LIFF 前端實裝台灣時區 `isTaipeiBusinessHours` 判定、`#after-hours-video-modal`（非營業時間提醒 ✕ `<video>` 安全換桶動畫教學播放器彈窗）與 `#after-hours-order-banner` 頂部醒目橫幅。
+     - 當客人在非營業時間從 LINE 圖文選單點選「立即叫瓦斯／立即下訂單」開啟 LIFF、切換至立即叫瓦斯分頁、或按下 `#order-form`「送出訂單」按鈕時，立即彈出該支安全換桶動畫教學視窗（關閉自動暫停影片；營業時間內 100% 隱藏零干擾）；同時相容聊天室文字型「立即下訂單」選單按鈕。
+     - 雙層 CSP（`public/index.html` 與 `vercel.json`）補齊 `media-src 'self' https:;`，確保 LINE WebView 原生流暢播放。
+- **驗證與部署**：
+  - `shenglong-line-liff` 全套測試 **320 / 320 PASS**（0 失敗、0 回歸）；`gass` 知識庫測試 **9 / 9 PASS**。
+  - GitHub 雙倉主幹（`origin/main`）同步推送（`shenglong-line-liff` commit `afdd2c6`），Vercel Production 正式環境實測 `HEALTHY` 且新彈窗與 MP4 皆 HTTP 200 生效。
+---
+
 ## 📋 最新紀錄：2026-11-26 10:25 (版本號: 20261126_1025_hose_920_921_and_richmenu_db_fix)
 - **更新主題**：920 / 921（CNS 9620 / CNS 9621）瓦斯軟管問答正式寫入 LINE AI 與三方知識庫 ✕ 徹底根治 Rich Menu `step: "db"` 400 警告 ✕ 零個資 LINE Webhook 診斷日誌
 - **老闆指示**：「把剛討論的 920 / 921（CNS 9620 / 9621）瓦斯管 問答正式寫進 LINE AI 與知識庫 幫我做」「順手清掉上述 step: "db" 的 Rich Menu 警告」「幫我檢驗一下 有一位趴趴熊的會員 密官方line」

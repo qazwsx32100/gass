@@ -1,4 +1,11 @@
 
+## [2026-11-26 10:36] - 換桶 2D 動畫教學影片精準雙情境觸發收斂（「客人說如何換瓦斯」＋「非營業時間按下立即下訂單」時跑出來） [ver: 20261126_1036_gas_exchange_video_dual_trigger_refinement]
+- **老闆指示**：「只要客人說如何換瓦斯 或是 非營業時間 按下立即下訂單 時跑出來」
+- **主要更動**：
+  1. **情境 A（LINE 聊天室詢問「如何換瓦斯」）**：升級 `shenglong-line-liff/api/_knowledge-base.js` (`cylinder_how_to_change`) 與 `api/line-webhook.js` (`isGasExchangeTutorialRequest`、`shouldAttachGasExchangeVideo`)，完整涵蓋「如何換瓦斯／怎麼換瓦斯／自己換瓦斯／教我換備用桶／換瓦斯教學」，自動回傳步驟文字＋LINE 原生換桶動畫影片；收斂一般非營業時間文字對話不再亂彈影片。
+  2. **情境 B（非營業時間 `21:00–08:00` 按下「立即下訂單／立即叫瓦斯」）**：於 LIFF 前端 (`public/index.html`、`public/styles.css`、`public/app.js`、`vercel.json`) 新增 `isTaipeiBusinessHours`、`#after-hours-video-modal` 動畫彈窗與 `#after-hours-order-banner` 橫幅，於非營業時間開啟立即叫瓦斯、切換分頁或點擊送出訂單時即刻彈出換桶動畫視窗，並放行 CSP `media-src 'self' https:;`。
+- **驗證狀態**：`shenglong-line-liff` 全套 320/320 PASS，`gass` 知識庫 9/9 PASS，GitHub 雙倉與 Vercel Production 全量同步生效。
+
 ## [2026-11-26 10:25] - 920 / 921（CNS 9620 / 9621）瓦斯軟管知識庫上線 ✕ 根治 Rich Menu step:"db" 400 警告 ✕ Webhook 零個資診斷遙測 [ver: 20261126_1025_hose_920_921_and_richmenu_db_fix]
 - **老闆指示**：將 920 / 921（CNS 9620 / 9621）瓦斯管問答正式寫進 LINE AI 與知識庫、徹底清除 `LINE rich menu bootstrap failed (kind: 400, step: "db")` 警告，並檢驗「趴趴熊」會員密官方 LINE 狀況。
 - **主要更動**：
