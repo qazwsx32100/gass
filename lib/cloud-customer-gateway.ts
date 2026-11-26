@@ -457,36 +457,51 @@ export async function ensureCloudCustomerDirectoryLoaded(
 
   inflightDirectoryPromise = (async () => {
     try {
-      const endpoint =
-        `${cfg.url}/rest/v1/cloud_customers` +
-        `?select=id,code,name,tel,phone_clean,address,clean_address,point_address,city,district,customer_type,preferred_spec,balance,last_order_date,days_diff,lat,lng,notes,p50,p20,p16,p10,p4,active` +
-        `&active=is.true&order=id.asc&limit=5000`;
-      const res = await globalThis.fetch(endpoint, {
-        method: "GET",
-        headers: {
-          ...cfg.headers,
-          Accept: "application/json",
-          Range: "0-4999",
-        },
-        cache: "no-store",
-        signal: AbortSignal.timeout(3500),
-      });
+      const PAGE_SIZE = 1000;
+      const MAX_PAGES = 10;
+      const allRows: Record<string, any>[] = [];
 
-      if (res.status === 402 || res.status === 401 || res.status === 403 || res.status >= 500) {
-        supabaseCircuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
-        return getCloudCustomerDirectory();
-      }
-      if (!res.ok) {
-        return getCloudCustomerDirectory();
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const offset = page * PAGE_SIZE;
+        const endpoint =
+          `${cfg.url}/rest/v1/cloud_customers` +
+          `?select=id,code,name,tel,phone_clean,address,clean_address,point_address,city,district,customer_type,preferred_spec,balance,last_order_date,days_diff,lat,lng,notes,p50,p20,p16,p10,p4,active` +
+          `&active=is.true&order=id.asc&limit=${PAGE_SIZE}&offset=${offset}`;
+        const res = await globalThis.fetch(endpoint, {
+          method: "GET",
+          headers: {
+            ...cfg.headers,
+            Accept: "application/json",
+            Range: `${offset}-${offset + PAGE_SIZE - 1}`,
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(4000),
+        });
+
+        if (res.status === 402 || res.status === 401 || res.status === 403 || res.status >= 500) {
+          supabaseCircuitOpenUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+          return getCloudCustomerDirectory();
+        }
+        if (!res.ok) {
+          break;
+        }
+
+        const pageRows = await res.json();
+        if (!Array.isArray(pageRows) || pageRows.length === 0) {
+          break;
+        }
+        allRows.push(...pageRows);
+        if (pageRows.length < PAGE_SIZE) {
+          break;
+        }
       }
 
-      const rows = await res.json();
-      if (Array.isArray(rows) && rows.length > 0) {
-        const mapped = rows
+      if (allRows.length > 0) {
+        const mapped = allRows
           .map((r) => mapSupabaseCustomerRow(r))
           .filter((c) => c.id > 0 && c.name.length > 0);
         if (mapped.length > 0) {
-          // 🛡️ 防 1000 筆截斷並完整保留本地預計算之叫貨頻率、桶帳與實際單價（且不破壞原始 p50~p4 差價欄位）
+          // 🛡️ 全量分頁合併 + 保留本地預計算叫貨頻率、桶帳與實際成交單價（不破壞原始 p50~p4 差價欄位）
           const baseline = loadBaselineDirectory();
           const mergedMap = new Map<number, CloudCustomerRecord>();
           for (const c of baseline) {
@@ -1063,4 +1078,52 @@ export function getGatewayMeta() {
     cachedCustomerOrdersCount: memoryOrdersByCustomer.size,
     isHealthy: dir.length > 0,
   };
+}
+
+/**
+ * 將今日即時新單 (today_orders) 動態疊加至客戶名冊，讓今日剛叫貨客戶即時顯示今日日期與 daysDiff = 0
+ */
+export function overlayTodayOrdersOntoDirectory<T extends { id: number; code?: string; name?: string; tel?: string; phone?: string; lastOrder?: string | null; daysDiff?: number; orderCount?: number; recentYearCount?: number }>(
+  directory: T[],
+  todayOrders: any[],
+  businessDate?: string,
+): T[] {
+  if (!Array.isArray(directory) || directory.length === 0 || !Array.isArray(todayOrders) || todayOrders.length === 0) {
+    return directory;
+  }
+  const normDate = String(businessDate || "").trim().replace(/-/g, "/");
+  const nowTaipei = new Date(Date.now() + 8 * 3600 * 1000);
+  const fallbackToday = `${nowTaipei.getUTCFullYear()}/${String(nowTaipei.getUTCMonth() + 1).padStart(2, "0")}/${String(nowTaipei.getUTCDate()).padStart(2, "0")}`;
+  const effectiveDate = normDate.length >= 8 ? normDate : fallbackToday;
+
+  const matchedIds = new Set<number>();
+  const matchedNames = new Set<string>();
+  const matchedPhones7 = new Set<string>();
+  for (const o of todayOrders) {
+    if (!o || typeof o !== "object") continue;
+    const cid = Number(o.customerId || o.customer_id) || 0;
+    if (cid > 0) matchedIds.add(cid);
+    const nm = String(o.name || o.customerName || "").trim().toLowerCase();
+    if (nm) matchedNames.add(nm);
+    const ph = normalizePhone(o.tel || o.phone || "");
+    if (ph.length >= 7) matchedPhones7.add(ph.slice(-7));
+  }
+
+  return directory.map((c) => {
+    const cName = String(c.name || "").trim().toLowerCase();
+    const cPh = normalizePhone(c.tel || c.phone || "");
+    const cPh7 = cPh.length >= 7 ? cPh.slice(-7) : "";
+    const hit =
+      matchedIds.has(c.id) ||
+      (cName.length > 0 && matchedNames.has(cName)) ||
+      (cPh7.length === 7 && matchedPhones7.has(cPh7));
+    if (!hit) return c;
+    const curLast = String(c.lastOrder || "").replace(/-/g, "/");
+    if (curLast >= effectiveDate) return c;
+    return {
+      ...c,
+      lastOrder: effectiveDate,
+      daysDiff: 0,
+    };
+  });
 }

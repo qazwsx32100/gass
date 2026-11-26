@@ -1,3 +1,12 @@
+## [2026-11-26 23:25] - 客戶搜尋三大雲端同步強化：Supabase 自動分頁 ✕ 今日即時新單融合 ✕ Google Drive SL.zip 每日全自動同步
+- **版本號**：`20261126_2325_customer_cloud_sync_pagination_realtime_and_daily_sl`
+- **影響範圍**：`lib/cloud-customer-gateway.ts`、`lib/realtime-orders-cache.ts`、`app/api/customer-history/route.ts`、`app/api/customers/directory/route.ts`、`scripts/sync-sl-from-gdrive.cjs`、`.github/workflows/sync-sl-customers-daily.yml`、`tests/customer-cloud-sync-and-realtime.test.mjs`
+- **主要更動**：
+  1. 【Supabase 自動分頁拉取】：突破 PostgREST 單次 1,000 筆上限（每批 1,000 筆自動分頁，保留 10 分鐘快取與 5 分鐘 402 熔斷降級）。
+  2. 【獨立搜尋站冷啟動即時融合今日新單】：新增 `lib/realtime-orders-cache.ts`（60 秒節流鎖），讓 `/api/customer-history` 與 `/api/customers/directory` 即使冷啟動也能即時融合今日新單並更新今日叫貨日。
+  3. 【Google Drive `SL.zip` 每日全自動排程同步】：建置指紋防重引擎 `scripts/sync-sl-from-gdrive.cjs` 與每日 21:45 / 06:30 GitHub Actions 工作流 `sync-sl-customers-daily.yml`，無變動跳過、有變動自動重建全歷史壓縮索引與同步 Supabase。
+- **發布狀態**：全套測試 PASS，雙倉 GitHub 與 Vercel Production 正式部署生效。
+
 ## 📋 最新紀錄：2026-11-26 16:25 (版本號: 20261126_1625_customer_search_v12_active_ranking_and_layout_a)
 - **更新主題**：客戶搜尋系統全面升級（方案 A 整頁展開結構＋常叫活躍熟客優先排序＋12 格主檔單價卡與 12 欄標準表格，獨立搜尋站與戰情室同步生效）
 - **老闆指示**：「1.參考一下 我們做的google表單當資料庫的客戶搜尋 2.前面列出的客戶 我要常叫的客戶排在前面 / 版面A方案 UI設計跟目前的一樣」
@@ -106,6 +115,28 @@
   - [x] GitHub 倉庫（shenglong-line-liff / gass）雙端主幹同步推送
   - [x] Vercel Production 正式環境部署生效（READY）
   - [x] 桌面看板與動畫影片備份同步完成
+---
+
+## 📋 最新紀錄：2026-11-26 23:25 (版本號: 20261126_2325_operations_dual_engine_background_poll_and_single_pop_lock_v37)
+- **更新主題**：監控中心關閉螢幕、關閉App雙引擎主動推播與原生背景探測 (v3.7) ✕ 100%單次通知防重鎖
+- **老闆指示**：「監控中心 目前還是要開著aPP才會跳出通知 / 可以 但是通知只要跳出一次就好 我們來做吧」
+- **主要內容與成果**：
+  1. **移植司機端最成功之原生 Java 背景主動探測引擎 (`OperationsStandbyService.java`)**：
+     - 不依賴 WebView 是否開啟，由 Android 前台常駐服務每 3 秒以專屬唯讀憑證 (`OPERATIONS_STANDBY_TOKEN_SHA256`) 背景探測 `/api/today-orders` 與 `/api/call-monitor`。
+     - 當螢幕關閉或 App 被滑掉關閉時，由原生層直接點亮螢幕 (`wakeUpScreen`)、彈出最高優先級通知橫幅 (`FullScreenIntent`)、播放警報鈴聲與真人 TTS 語音朗讀。
+  2. **100% 單次通知防重鎖 (`SharedPreferences "shenglong_ops_notified"` + `setOnlyAlertOnce(true)`)**：
+     - 實裝跨通道持久化去重鎖 (`isEventNotified` / `markEventNotified` / `tryAcquireOperationsLock`) 與首次啟動靜默基準保護 (`orders_seeded_date` / `calls_seeded_date`)。
+     - 透過 `OperationsNativeBridge` (`isOrderNotified` / `markOrderNotified` / `isCallNotified` / `markCallNotified`) 與前端 WebView 雙向同步，並於 APK 內自動註銷重複的 WebView Web Push 訂閱，確保無論是雲端 FCM、原生背景探測或前台 WebView，每一張新單與每一通來電 100% 只跳出一次通知。
+  3. **修復雲端 FCM 喚醒封包與雙軌 Token 庫 (`lib/fcm-v1.ts` & `lib/web-push.ts` & `lib/fcm-token.ts` & `app/api/call-monitor/route.ts`)**：
+     - `sendPushToOperations` 啟用 `dataOnly: true` 高優先級純 Data 喚醒封包，確保 App 關閉時 100% 觸發 `MyFirebaseMessagingService.onMessageReceived` 且不產生系統重複通知。
+     - `fcm-token` 升級雙軌雲端 KV 備援持久化 (`BACKUP_KV_FCM_TOKENS_URL`)；`call-monitor` 補齊 `after()` 保活。
+  4. **重新編譯簽章發布 (v3.7 / versionCode 19)**：
+     - 以 `gradlew assembleDebug` 乾淨編譯與 V1+V2+V3 簽章發布，APK 鏡像更新至桌面 `sl` 目錄之《盛隆新ERP_戰情調度中樞.apk》與《盛隆監控中心.apk》；全套 30/30 專屬測試通過。
+- **雲端與本機同步檢核**：
+  - [x] GitHub 倉庫（shenglong-next / gass）雙端主幹同步推送
+  - [x] Vercel Production 正式環境部署生效（READY）
+  - [x] 桌面 sl 目錄 APK 更新完成（《盛隆新ERP_戰情調度中樞.apk》、《盛隆監控中心.apk》）
+  - [x] 桌面看板鏡像同步完成
 ---
 
 ## 📋 最新紀錄：2026-11-24 09:15 (版本號: 20261124_0915_operations_keepalive_background_notification_upgrade)
