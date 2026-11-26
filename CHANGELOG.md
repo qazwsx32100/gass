@@ -14,6 +14,13 @@
   3. `gass` 三方同步：更新 `api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`（同步桌面鏡像）與 `tests/knowledge-base.test.mjs`。
 - **測試狀態**：`shenglong-line-liff` 323/323 PASS、`gass` 14/14 PASS。
 
+## [2026-11-26 17:28] - 全新產出 6 大客戶端有聲配樂 2D 教學動畫全集（共 7 大動畫矩陣）✕ LINE 智慧客服與 LIFF 安全中心／新客專區全鏈路串接 [ver: 20261126_1728_six_customer_animations_full_suite]
+- **老闆指示**：「目前我們還可以做什麼動畫給客人? / 都幫我做 謝謝」
+- **主要更動**：
+  1. **6 大新有聲配樂 2D 動畫上線**（`public/assets/*.mp4` & `*-preview.jpg`，同步桌面 `05_影音與視覺資產`）：換 1 號大電池點火自救（`battery-ignite-guide`）、新客拍藍紫檢驗牌（`new-customer-card-guide`）、紅黃火調風門變藍火（`flame-damper-guide`）、聞到瓦斯味禁關推離四步驟（`gas-leak-emergency-guide`）、長輩防假安檢瓦斯詐騙（`anti-scam-guide`）、雙瓶自動切替器不斷氣（`auto-changeover-guide`）。
+  2. **LINE Webhook 與 LIFF 全面串接**：`api/line-webhook.js` 依客戶詢問意圖精準附帶對應原生影片並修正 `ignitionTroubleKind` 紅黃火誤攔截；`public/index.html` 與 `public/app.js` 新增安全中心「7 大有聲動畫館」與新會員檢驗牌動畫卡。
+- **驗證狀態**：`shenglong-line-liff` 全套 327/327 PASS，GitHub 雙倉與 Vercel Production 全量部署生效。
+
 ## [2026-11-26 10:36] - 換桶 2D 動畫教學影片精準雙情境觸發收斂（「客人說如何換瓦斯」＋「非營業時間按下立即下訂單」時跑出來） [ver: 20261126_1036_gas_exchange_video_dual_trigger_refinement]
 - **老闆指示**：「只要客人說如何換瓦斯 或是 非營業時間 按下立即下訂單 時跑出來」
 - **主要更動**：
