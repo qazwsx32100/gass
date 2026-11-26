@@ -1,3 +1,15 @@
+## [2026-11-27 00:20] - 客戶搜尋改顯示 ERP 總金額（牌價 − 客戶設定差價）✕ 與 SL 檔全欄位零誤差對齊
+- **版本號**：`20261127_0020_customer_erp_total_price_and_sl_alignment`
+- **老闆指示**：「我想要顯示 總金額，比對ERP上的總金額 不是歷史金額 / 總金額要顯示客戶資料上」
+- **影響範圍**：`lib/cloud-customer-gateway.ts`、`app/api/customers/directory/route.ts`、`app/api/customer-history/route.ts`、`app/components/CustomerSearchHub.tsx`、`scripts/build-customer-orders-index.cjs`、`public/data/cloud-customer-cache.json`、`data/cloud-customer-cache.json`、`tests/customer-search-v12-active-ranking-and-layout.test.mjs`、`tests/customer-cloud-sync-and-realtime.test.mjs`
+- **主要更動**：
+  1. 【ERP 總金額】客戶主檔卡 5 格「最近單價」改為「50/20/16/10/4kg 總金額」＝ ERP 最新牌價（50kg $1,620 / 20kg $755 / 16kg $695 / 10kg $370 / 4kg $340，以 SL_orders 2026/11 反推驗證）− 客戶設定差價，並標示（折$X／加$X）；客戶清單列亦顯示 ERP 總金額膠囊。實例：#2598 20kg $925（歷史內扣後 $855）、#2172 20kg $970、#3448 16kg $805、#707 4kg $410。
+  2. 【SL 檔零誤差】重建快照完整同步 SL_customers.csv 之負數/歸零差價（p20 49 戶、p16 43 戶等）、客戶類別（3,956 戶）、備註＋系統備忘（103 戶）。
+  3. 【防舊雲端蓋新檔】Supabase 資料非嚴格較新時，不得以 0 欠款／舊差價／舊類別覆蓋 SL 基準（修復 #144 欠款 $55,710 被顯示 $0）。
+  4. 【大戶完整歷史】/api/customer-history 上限 5,000 → 20,000（#2024 歐家莊 5,561 筆完整顯示）。
+- **舊 ERP 影響**：零更動（僅讀取 SL 匯出檔，無 SQL DDL/寫入）；`lib/pre-deduction-price.ts` 共用 p50~p4 差價，現改為與 SL 檔一致，司機端金額同步更精準。
+- **驗證**：shenglong-next 46/46 PASS、TypeScript 0 錯誤；gass 20/20 PASS。
+
 ## [2026-11-26 23:25] - 客戶搜尋三大雲端同步強化：Supabase 自動分頁 ✕ 今日即時新單融合 ✕ Google Drive SL.zip 每日全自動同步
 - **版本號**：`20261126_2325_customer_cloud_sync_pagination_realtime_and_daily_sl`
 - **影響範圍**：`lib/cloud-customer-gateway.ts`、`lib/realtime-orders-cache.ts`、`app/api/customer-history/route.ts`、`app/api/customers/directory/route.ts`、`scripts/sync-sl-from-gdrive.cjs`、`.github/workflows/sync-sl-customers-daily.yml`、`tests/customer-cloud-sync-and-realtime.test.mjs`

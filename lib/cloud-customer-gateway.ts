@@ -525,19 +525,24 @@ export async function ensureCloudCustomerDirectoryLoaded(
             const base = mergedMap.get(c.id);
             const normCloudLast = c.lastOrder ? c.lastOrder.replace(/-/g, "/") : null;
             const normBaseLast = base?.lastOrder ? base.lastOrder.replace(/-/g, "/") : null;
+            const isCloudStrictlyNewer = !base || (normCloudLast !== null && (!normBaseLast || normCloudLast > normBaseLast));
             const bestLastOrder =
-              normCloudLast && (!normBaseLast || normCloudLast > normBaseLast)
+              isCloudStrictlyNewer && normCloudLast
                 ? normCloudLast
                 : normBaseLast || normCloudLast;
             mergedMap.set(c.id, {
               ...base,
               ...c,
               code: c.code || base?.code || extractCustomerCode(c.name),
-              p50: c.p50 || base?.p50,
-              p20: c.p20 || base?.p20,
-              p16: c.p16 || base?.p16,
-              p10: c.p10 || base?.p10,
-              p4: c.p4 || base?.p4,
+              // 🛡️ 若本地 SL_customers.csv 基準較新或同日，嚴禁被較舊的 Supabase 0 欠款、舊差價、舊類別或空白備註覆蓋
+              type: isCloudStrictlyNewer ? (c.type || base?.type || "一般客戶") : (base?.type || c.type || "一般客戶"),
+              note: isCloudStrictlyNewer ? (c.note || base?.note || "") : (base?.note || c.note || ""),
+              balance: isCloudStrictlyNewer ? (c.balance ?? base?.balance ?? 0) : (base?.balance ?? c.balance ?? 0),
+              p50: isCloudStrictlyNewer ? (c.p50 ?? base?.p50 ?? 0) : (base?.p50 ?? c.p50 ?? 0),
+              p20: isCloudStrictlyNewer ? (c.p20 ?? base?.p20 ?? 0) : (base?.p20 ?? c.p20 ?? 0),
+              p16: isCloudStrictlyNewer ? (c.p16 ?? base?.p16 ?? 0) : (base?.p16 ?? c.p16 ?? 0),
+              p10: isCloudStrictlyNewer ? (c.p10 ?? base?.p10 ?? 0) : (base?.p10 ?? c.p10 ?? 0),
+              p4: isCloudStrictlyNewer ? (c.p4 ?? base?.p4 ?? 0) : (base?.p4 ?? c.p4 ?? 0),
               orderCount: c.orderCount ?? base?.orderCount ?? 0,
               recentYearCount: c.recentYearCount ?? base?.recentYearCount ?? 0,
               borrowCylinders: c.borrowCylinders ?? base?.borrowCylinders ?? 0,
@@ -1140,4 +1145,39 @@ export function overlayTodayOrdersOntoDirectory<T extends { id: number; code?: s
       daysDiff: 0,
     };
   });
+}
+
+
+/**
+ * 盛隆舊 ERP 最新牌價基準 (dbo.price)
+ * 客戶各規格「ERP 總金額」公式：最新牌價 (dbo.price.price_*) - 客戶設定差價 (dbo.customers.price_*)
+ * （未內扣樓層費前之真實 ERP 應收總金額，例如 47.2樓 p20=-60 => 755-(-60)=815；1.44.5 p20=-170 => 755-(-170)=925）
+ */
+export const ERP_BOARD_PRICES = {
+  p50: 1620,
+  p20: 755,
+  p16: 695,
+  p10: 370,
+  p4: 340,
+} as const;
+
+export function computeErpCustomerTotalPrices(cust?: {
+  p50?: number | null;
+  p20?: number | null;
+  p16?: number | null;
+  p10?: number | null;
+  p4?: number | null;
+} | null) {
+  const d50 = Number(cust?.p50) || 0;
+  const d20 = Number(cust?.p20) || 0;
+  const d16 = Number(cust?.p16) || 0;
+  const d10 = Number(cust?.p10) || 0;
+  const d4 = Number(cust?.p4) || 0;
+  return {
+    erpP50: ERP_BOARD_PRICES.p50 - d50,
+    erpP20: ERP_BOARD_PRICES.p20 - d20,
+    erpP16: ERP_BOARD_PRICES.p16 - d16,
+    erpP10: ERP_BOARD_PRICES.p10 - d10,
+    erpP4: ERP_BOARD_PRICES.p4 - d4,
+  };
 }
