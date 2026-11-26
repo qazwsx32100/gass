@@ -1,4 +1,12 @@
 
+## [2026-11-26 11:50] - LINE AI 詢價方案 A 升級 ✕ 多規格路名承接 ✕ 五大報價要素引導 ✕ 非營業時間轉專員與三支專線標註營業時間 [ver: 20261126_1150_option_a_quote_and_after_hours_handoff]
+- **老闆指示**：採用方案 A 優化詢價回覆；非營業時間按下「轉專員」須說明會在營業時間回覆；提供三支專線一律標註營業時間；引導客人提供詳細地址（含樓層、有無電梯）、有無鋼瓶（若有確認檢驗日期與出廠日期），詳細報價請專員回覆。
+- **主要更動**：
+  1. `shenglong-line-liff/api/_knowledge-base.js`：新增多規格解析（`extractMentionedSpecs`）與路名承接（`extractMentionedRoad`）、詢價五大要素標準引導（`QUOTE_INFO_GUIDE`）、`轉專員` 與三支直撥按鈕，以及全域三支電話必帶營業時間保護。
+  2. `shenglong-line-liff/api/line-webhook.js`：修正 `isOrderIntent` 排除價格／費用／報價；實裝非營業時間按下「轉專員」明確告知於營業時間回覆；同步強化 `aiPrompt` 與各電話回覆之營業時間標示。
+  3. `gass` 三方同步：更新 `api/_knowledge-base.js`、`docs/GAS_CONSUMER_FAQ_300.md`（同步桌面鏡像）與 `tests/knowledge-base.test.mjs`。
+- **測試狀態**：`shenglong-line-liff` 323/323 PASS、`gass` 14/14 PASS。
+
 ## [2026-11-26 10:36] - 換桶 2D 動畫教學影片精準雙情境觸發收斂（「客人說如何換瓦斯」＋「非營業時間按下立即下訂單」時跑出來） [ver: 20261126_1036_gas_exchange_video_dual_trigger_refinement]
 - **老闆指示**：「只要客人說如何換瓦斯 或是 非營業時間 按下立即下訂單 時跑出來」
 - **主要更動**：

@@ -317,4 +317,16 @@ test('KnowledgeBase: Mobile-first UX reply optimization & colloquial/Taiwanese q
 
   const quake921 = matchBestFaq('921地震的時候瓦斯要怎麼關？');
   assert.ok(!quake921 || !quake921.category.includes('920 / 921'), '921 earthquake must not match 920/921 hose entry');
+
+  // 5. Option A quote inquiry guidance & phone business hours rule
+  const quoteMatch = matchBestFaq('想詢問10公斤和16公斤的費用多少錢？');
+  assert.ok(quoteMatch && quoteMatch.category.includes('價格'));
+  assert.ok(quoteMatch.standardAnswer.includes('詳細地址（含樓層、有無電梯）'));
+  assert.ok(quoteMatch.standardAnswer.includes('有無鋼瓶'));
+  assert.ok(quoteMatch.standardAnswer.includes('檢驗日期與出廠日期'));
+  assert.ok(quoteMatch.standardAnswer.includes('詳細報價會請專員為您回覆'));
+  assert.ok(quoteMatch.standardAnswer.includes('08:00–21:00（盡量在 20:30 前下單）'));
+  const quotePrompt = getOptimizedSystemPrompt('想詢問 指送河邊北街 10kg及16kg的費用', 'fast', '');
+  assert.ok(quotePrompt.includes('詳細報價會請專員回覆'));
+  assert.ok(quotePrompt.includes('非營業時間按下「轉專員」'));
 });
