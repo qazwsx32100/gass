@@ -8,28 +8,31 @@ test("Domain Unification & Public Stock Guard: zero -phi, gas-stock unified to s
   const legacySubdomain = ["shenglong-next", "vercel", "app"].join(".");
   const officialDomain = "shenglong.vercel.app";
 
+  const nextRoot = fs.existsSync("d:/test/shenglong-next") ? "d:/test/shenglong-next" : "c:/shenglong-next";
+  const gassRoot = fs.existsSync("d:/test/gass") ? "d:/test/gass" : "c:/Gass";
+
   assert.equal(
-    fs.existsSync("c:/shenglong-next/app/gas-stock/page.tsx"),
+    fs.existsSync(`${nextRoot}/app/gas-stock/page.tsx`),
     true,
     "app/gas-stock/page.tsx must exist in shenglong-next",
   );
   assert.equal(
-    fs.existsSync("c:/shenglong-next/app/customers/page.tsx"),
+    fs.existsSync(`${nextRoot}/app/customers/page.tsx`),
     true,
     "Standalone open customer search page app/customers/page.tsx must exist",
   );
 
   const criticalFiles = [
-    "c:/Gass/api/line-webhook.js",
-    "c:/Gass/api/telegram-webhook.js",
-    "c:/Gass/api/_telegram.js",
-    "c:/shenglong-next/sync-stock.cjs",
-    "c:/shenglong-next/advisor-bot.cjs",
-    "c:/shenglong-next/heartbeat-emitter.cjs",
-    "c:/shenglong-next/remote-access-reporter.cjs",
-    "c:/shenglong-next/scripts/build-all-apks.cjs",
-    "c:/shenglong-next/app/operations/page.tsx",
-    "c:/shenglong-next/app/driver/page.tsx",
+    `${gassRoot}/api/line-webhook.js`,
+    `${gassRoot}/api/telegram-webhook.js`,
+    `${gassRoot}/api/_telegram.js`,
+    `${nextRoot}/sync-stock.cjs`,
+    `${nextRoot}/advisor-bot.cjs`,
+    `${nextRoot}/heartbeat-emitter.cjs`,
+    `${nextRoot}/remote-access-reporter.cjs`,
+    `${nextRoot}/scripts/build-all-apks.cjs`,
+    `${nextRoot}/app/operations/page.tsx`,
+    `${nextRoot}/app/driver/page.tsx`,
     [
       "C:/Users/懶/Desktop/盛隆瓦斯_正式系統規格資產全集/03_系統入口與控制台/盛隆瓦斯_戰情客戶搜尋中樞.url",
       "C:/Users/懶/Desktop/盛隆瓦斯_戰情客戶搜尋中樞.url",
