@@ -1,4 +1,4 @@
-import { getSupabase } from './_auth.js';
+import { getLineSupabase, getLineSupabaseSource } from './_auth.js';
 import { isGoogleDriveBackupConfigured, uploadPrivateFileToGoogleDrive } from './_google-drive.js';
 
 // 本地內存快取（供無 DB 或本地開發時應急查詢最近 50 筆）
@@ -22,9 +22,9 @@ export async function archiveAndPruneOldLogs(supabaseClient = null, options = {}
   let supabase = supabaseClient;
   if (!supabase) {
     try {
-      supabase = getSupabase(10000);
+      supabase = getLineSupabase(10000);
     } catch (err) {
-      return { ok: false, error: `Supabase 初始化失敗: ${err.message}`, archivedCount: 0, prunedCount: 0 };
+      return { ok: false, error: `LINE Supabase 初始化失敗: ${err.message}`, archivedCount: 0, prunedCount: 0 };
     }
   }
 
@@ -180,9 +180,9 @@ export async function recordLineAiChat({
     localMemoryLogs.pop();
   }
 
-  // 2. 寫入 Supabase 資料表
+  // 2. 寫入 LINE 專屬 Supabase 資料表 (優先 shenglonggas@gmail.com 官方專案)
   try {
-    const supabase = getSupabase(4000);
+    const supabase = getLineSupabase(4000);
     // 優先使用 RPC，若無則降級為 direct insert
     const { error: rpcErr } = await supabase.rpc('erp_record_line_ai_log', {
       p_line_user_id: logItem.line_user_id,
@@ -231,7 +231,7 @@ export async function fetchLineAiLogs({
   const safeOffset = Math.max(0, Number(offset) || 0);
 
   try {
-    const supabase = getSupabase(5000);
+    const supabase = getLineSupabase(5000);
     let query = supabase
       .from('line_ai_logs')
       .select('id, line_user_id, user_name, user_message, ai_reply, account_name, provider, model, tokens, latency_ms, is_order_intent, status, created_at', { count: 'exact' });
@@ -260,6 +260,7 @@ export async function fetchLineAiLogs({
       return {
         ok: true,
         source: 'supabase',
+        supabaseTarget: getLineSupabaseSource(),
         total: count ?? data.length,
         limit: safeLimit,
         offset: safeOffset,

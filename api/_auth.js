@@ -42,6 +42,48 @@ export const getSupabase = (timeoutMs = 12000) => {
   });
 };
 
+// 👑 [LINE-SUPABASE-ISOLATION-20261126]
+// LINE 專用 Supabase 連線（優先指向 shenglonggas@gmail.com 官方專案 xyfglvwvirqopbkqirew），
+// 與財報主庫 SUPABASE_URL / VITE_SUPABASE_URL 完全隔離；未設定時平滑回退既有連線，絕不中斷營運。
+export const getLineSupabaseConfig = () => {
+  const lineUrl = String(process.env.LINE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+  const lineKey = String(
+    process.env.LINE_SUPABASE_SECRET_KEY ||
+    process.env.LINE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.LINE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+  if (lineUrl && lineKey) {
+    return { url: lineUrl, key: lineKey, source: 'line_supabase' };
+  }
+  const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+  const key = String(
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+  if (!url || !key) return null;
+  return { url, key, source: 'fallback_default_supabase' };
+};
+
+export const getLineSupabaseSource = () => getLineSupabaseConfig()?.source || 'unconfigured';
+
+export const getLineSupabase = (timeoutMs = 12000) => {
+  const cfg = getLineSupabaseConfig();
+  if (!cfg) {
+    throw new Error('LINE Supabase environment variables are missing.');
+  }
+  return createClient(cfg.url, cfg.key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, options) => fetchWithTimeout(input, options, timeoutMs)
+    }
+  });
+};
+
 export const signToken = (payload) => {
   const body = {
     ...payload,

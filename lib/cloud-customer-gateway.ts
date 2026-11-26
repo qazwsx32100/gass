@@ -89,6 +89,20 @@ const memoryOrdersByCustomer = new Map<
 >();
 
 function resolveSupabaseConfig(): { url: string; headers: Record<string, string> } | null {
+  // 👑 優先連向盛隆官方 LINE / 客戶專屬 Supabase (LINE_SUPABASE_URL)，與財報主庫完全隔離
+  const lineUrl = String(process.env.LINE_SUPABASE_URL || "").trim().replace(/\/$/, "");
+  const lineKey = String(
+    process.env.LINE_SUPABASE_SECRET_KEY ||
+      process.env.LINE_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.LINE_SUPABASE_ANON_KEY ||
+      "",
+  ).trim();
+  if (lineUrl && lineKey) {
+    const headers: Record<string, string> = { apikey: lineKey };
+    if (!lineKey.startsWith("sb_secret_")) headers.Authorization = `Bearer ${lineKey}`;
+    return { url: lineUrl, headers };
+  }
+
   const url = String(
     process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   )
