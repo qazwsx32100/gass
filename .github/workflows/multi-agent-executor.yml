@@ -1,0 +1,165 @@
+name: Multi-Agent Sandbox Executor (Open PR Only)
+
+on:
+  repository_dispatch:
+    types: [multi_agent_task]
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: 'Task ID (TASK-YYYYMMDD-<id>)'
+        required: true
+        default: 'TASK-20261127-SANDBOX'
+      objective_title:
+        description: 'Sandbox task objective title'
+        required: true
+        default: '沙盒閉環驗收演練（自動開 PR 與測試閘門）'
+      risk_level:
+        description: 'Risk level (L1 / L2 / L3)'
+        required: true
+        default: 'L1'
+        type: choice
+        options:
+          - L1
+          - L2
+          - L3
+
+concurrency:
+  group: multi-agent-exec-${{ github.event.client_payload.taskId || github.event.inputs.task_id || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  execute-sandbox-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SHENGLONG_ENV: sandbox
+      LEGACY_ERP_WRITE_ENABLED: "false"
+      SUPERADMIN_TELEGRAM_ID: "8862712587"
+
+    steps:
+      - name: Check out base repository (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Normalize & validate task payload
+        id: payload
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_JSON: ${{ toJson(github.event.client_payload) }}
+          INPUT_TASK_ID: ${{ github.event.inputs.task_id }}
+          INPUT_TITLE: ${{ github.event.inputs.objective_title }}
+          INPUT_RISK: ${{ github.event.inputs.risk_level }}
+        run: |
+          node <<'EOF'
+          const fs = require('node:fs');
+          let payload;
+          if (process.env.EVENT_NAME === 'repository_dispatch') {
+            payload = JSON.parse(process.env.DISPATCH_JSON || '{}');
+          } else {
+            const taskId = process.env.INPUT_TASK_ID || 'TASK-20261127-SANDBOX';
+            const slug = taskId.toLowerCase().replace(/[^a-z0-9._-]/g, '-');
+            payload = {
+              schemaVersion: '1.0.0',
+              taskId,
+              idempotencyKey: `manual:${taskId}`,
+              featureBranch: `ai-agent/${slug}`,
+              baseBranch: 'main',
+              allowedPaths: ['docs/agent-runs/', 'tests/'],
+              effectiveRiskLevel: process.env.INPUT_RISK || 'L1',
+              requiresBossApproval: (process.env.INPUT_RISK || 'L1') !== 'L1',
+              superAdminId: '8862712587',
+              requiredGuards: [
+                'node --test tests/dev-agent-phase1.test.mjs tests/dev-agent-phase2.test.mjs tests/multi-agent-blueprint.test.mjs',
+                'npx oxlint api/_dev-agent-protocol.js api/dev-agent-dispatch.js scripts/dev-agent-executor.mjs'
+              ],
+              objectiveTitle: process.env.INPUT_TITLE || '沙盒閉環驗收演練',
+              affectedSystems: ['multi_agent_dev_pipeline'],
+              planStepCount: 3,
+            };
+          }
+
+          if (!payload.featureBranch || !/^ai-agent\/[a-z0-9][a-z0-9._/-]{2,64}$/.test(payload.featureBranch)) {
+            console.error('❌ Forbidden or invalid featureBranch:', payload.featureBranch);
+            process.exit(1);
+          }
+          if (payload.featureBranch === 'main' || payload.featureBranch === 'master') {
+            console.error('❌ Direct main/master branch execution is strictly forbidden');
+            process.exit(1);
+          }
+
+          fs.writeFileSync('/tmp/task-payload.json', JSON.stringify(payload, null, 2), 'utf8');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `task_id=${payload.taskId}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `feature_branch=${payload.featureBranch}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `objective_title=${payload.objectiveTitle}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `risk_level=${payload.effectiveRiskLevel}\n`);
+          EOF
+
+      - name: Create isolated ai-agent feature branch
+        run: |
+          BRANCH="${{ steps.payload.outputs.feature_branch }}"
+          git checkout -B "$BRANCH"
+
+      - name: Generate auditable task dossier & PR description
+        run: |
+          TASK_ID="${{ steps.payload.outputs.task_id }}"
+          node scripts/dev-agent-executor.mjs \
+            --prepare-run \
+            --payload-file /tmp/task-payload.json \
+            --dossier-out "docs/agent-runs/${TASK_ID}.md" \
+            --pr-body-out /tmp/pr-body.md
+
+      - name: Run mandatory automated tests & linter (Zero Regressions Gate)
+        run: |
+          node --test \
+            tests/dev-agent-phase1.test.mjs \
+            tests/dev-agent-phase2.test.mjs \
+            tests/multi-agent-blueprint.test.mjs \
+            tests/web-and-api-security.test.mjs \
+            tests/trigger-github-workflow.test.mjs \
+            tests/knowledge-base.test.mjs
+          npx oxlint api/_dev-agent-protocol.js api/dev-agent-dispatch.js scripts/dev-agent-executor.mjs
+
+      - name: Commit isolated changes & run PR Policy Diff Gate
+        run: |
+          BRANCH="${{ steps.payload.outputs.feature_branch }}"
+          TASK_ID="${{ steps.payload.outputs.task_id }}"
+          git config user.name "ShengLong Multi-Agent Bot"
+          git config user.email "shenglong-bot@users.noreply.github.com"
+          git add "docs/agent-runs/${TASK_ID}.md"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(ai-agent): sandbox run dossier for ${TASK_ID}"
+          fi
+          node scripts/dev-agent-executor.mjs --check-diff --base-ref origin/main
+          git push -u origin "$BRANCH"
+
+      - name: Open Pull Request (Never Auto-Merge)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="${{ steps.payload.outputs.feature_branch }}"
+          TASK_ID="${{ steps.payload.outputs.task_id }}"
+          TITLE="[${{ steps.payload.outputs.risk_level }}] ${TASK_ID}: ${{ steps.payload.outputs.objective_title }}"
+          EXISTING_PR="$(gh pr list --head "$BRANCH" --base main --json url --jq '.[0].url')"
+          if [ -n "$EXISTING_PR" ]; then
+            echo "✅ PR already exists: $EXISTING_PR"
+            gh pr edit "$BRANCH" --body-file /tmp/pr-body.md
+          else
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
+          fi

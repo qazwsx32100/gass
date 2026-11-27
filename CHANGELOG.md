@@ -1,3 +1,12 @@
+## [2026-11-27 19:12] - 多代理 AI 協同開發第二階段實作（Devcontainer 沙盒 ✕ MCP 最小權限範本 ✕ GitHub Actions 自動開 PR 執行器與 PR Gate）
+- **版本號**：`20261127_1912_multi_agent_dev_phase2_sandbox_and_pr_workflows`
+- **影響範圍**：`.devcontainer/devcontainer.json`、`docs/mcp-sandbox-config.example.json`、`scripts/dev-agent-executor.mjs`、`.github/workflows/multi-agent-executor.yml`、`.github/workflows/multi-agent-pr-gate.yml`、`tests/dev-agent-phase2.test.mjs`、`docs/MULTI_AGENT_AI_COLLABORATIVE_DEV_BLUEPRINT.md`、`docs/TODO.md`、`docs/GOOGLE_DRIVE_RELEASE_RECORD.md`
+- **主要更動**：
+  1. 建立 Node 22 隔離沙盒 `.devcontainer/devcontainer.json`（注入 `SHENGLONG_ENV=sandbox`、`LEGACY_ERP_WRITE_ENABLED=false`）與四大 MCP 最小權限範本 `docs/mcp-sandbox-config.example.json`。
+  2. 建立 `scripts/dev-agent-executor.mjs`（工單驗證、審計檔案產出、PR 摘要產出與 PR Diff 靜態政策掃描：阻斷舊 ERP DDL、明碼密鑰、司機定位輪詢與權限彈窗）。
+  3. 建立 `.github/workflows/multi-agent-executor.yml`（接收 `repository_dispatch` / 手動觸發 → 隔離 `ai-agent/*` 分支跑測試並開 PR，嚴禁自動合併或直推 `main`）與 `.github/workflows/multi-agent-pr-gate.yml`（PR 強制 Zero Regressions 閘門）。
+- **驗證**：`dev-agent-phase1` + `dev-agent-phase2` + `multi-agent-blueprint` + `legacy-erp-immutability` + `web-and-api-security` + `trigger-github-workflow` + `knowledge-base` 共 57/57 PASS、`oxlint` 0 錯誤，藍圖升級 `v1.2.0` 並同步桌面鏡像與 GitHub `origin/main`。
+
 ## [2026-11-27 18:06] - 多代理 AI 協同開發第一階段 MVP 實作（JSON v1.0 Schema ✕ Policy Gate ✕ `/api/dev-agent-dispatch` 橋樑端點）
 - **版本號**：`20261127_1806_multi_agent_dev_phase1_mvp`
 - **影響範圍**：`schemas/multi-agent-task.v1.schema.json`、`api/_dev-agent-protocol.js`、`api/dev-agent-dispatch.js`、`tests/dev-agent-phase1.test.mjs`、`docs/MULTI_AGENT_AI_COLLABORATIVE_DEV_BLUEPRINT.md`、`docs/TODO.md`、`docs/GOOGLE_DRIVE_RELEASE_RECORD.md`

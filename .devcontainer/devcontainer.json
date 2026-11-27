@@ -1,0 +1,26 @@
+{
+  "name": "ShengLong Multi-Agent Dev Sandbox",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm ci && node --test tests/dev-agent-phase1.test.mjs tests/multi-agent-blueprint.test.mjs",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "files.eol": "\n",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "oxc.oxc-vscode",
+        "github.vscode-pull-request-github",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "remoteEnv": {
+    "SHENGLONG_ENV": "sandbox",
+    "LEGACY_ERP_WRITE_ENABLED": "false",
+    "DEV_AGENT_GITHUB_DISPATCH_ENABLED": "false",
+    "SUPERADMIN_TELEGRAM_ID": "8862712587"
+  },
+  "remoteUser": "node"
+}

@@ -1,6 +1,6 @@
 # 🤖 盛隆瓦斯 多代理 AI 協同開發技術藍圖與執行計畫書 (Multi-Agent Collaborative Dev Blueprint)
 
-> **文件版本**：`v1.1.0`（2026-11-27 第一階段 MVP 實作落地與測試全綠）  
+> **文件版本**：`v1.2.0`（2026-11-27 第二階段 IDE 沙盒／MCP 最小權限／GitHub Actions 自動開 PR 與 PR Gate 實作完成）  
 > **最高決策者**：老闆（Telegram ID: `8862712587`，唯一 SuperAdmin）  
 > **適用範圍**：盛隆現代化多倉開發管線（`gass`、`shenglong-next`、`shenglong-line-liff`）  
 > **檔案位置**：
@@ -360,11 +360,11 @@ CREATE TABLE IF NOT EXISTS public.ai_dev_runs (
 - [x] **交付物 1.3**：撰寫完整單元測試 `tests/dev-agent-phase1.test.mjs`（覆蓋合法工單、dryRun、偽造簽章 401、重放攻擊 401、舊 ERP DDL 403、直推 main 403、<60s 輪詢 403、明碼密鑰 403、L3 自動升格、冪等防重、429 限流、503 Fail-Closed 與 GitHub Dispatch 模擬）。
 - [x] **階段驗收標準**：正向、異常與惡意測試全數通過（50/50 PASS 含資安與舊 ERP 黑盒子稽核），既有系統零回歸。
 
-### 階段二：IDE / Codespaces 與 MCP 執行環境建構（預估 2–3 週）
-- [ ] **交付物 2.1**：建立 `.devcontainer/devcontainer.json` 與標準化 MCP 權限範本（`docs/mcp-sandbox-config.example.json`）。
-- [ ] **交付物 2.2**：建立 GitHub Actions 工作流 `.github/workflows/multi-agent-executor.yml` 接收 `repository_dispatch` 並在隔離分支執行改碼與測試。
-- [ ] **交付物 2.3**：設定 GitHub Branch Protection（鎖定 `main` 必須通過 PR + CI 測試 + Code Owner 核准）。
-- [ ] **階段驗收標準**：發送一筆 `L1` 沙盒工單（例如自動補寫一項工具函式單元測試），能自動建立分支、通過測試並開立結構完整之 PR。
+### 階段二：IDE / Codespaces 與 MCP 執行環境建構（✅ 2026-11-27 程式碼與工作流落地）
+- [x] **交付物 2.1**：建立 `.devcontainer/devcontainer.json`（Node 22 沙盒、`SHENGLONG_ENV=sandbox`、`LEGACY_ERP_WRITE_ENABLED=false`）與標準化 MCP 最小權限範本（`docs/mcp-sandbox-config.example.json`，零明碼密鑰）。
+- [x] **交付物 2.2**：建立沙盒執行器 `scripts/dev-agent-executor.mjs`、GitHub Actions 執行工作流 `.github/workflows/multi-agent-executor.yml`（接收 `repository_dispatch: multi_agent_task` 或手動 `workflow_dispatch`，強制建立 `ai-agent/*` 隔離分支、產出稽核紀錄、跑全套測試後自動開 PR 且絕不自動合併）與 PR 閘門工作流 `.github/workflows/multi-agent-pr-gate.yml`（Policy Diff 掃描 + Lint + 單元測試 + Build）。
+- [ ] **交付物 2.3**：於 GitHub 儲存庫設定 Branch Protection（首筆 PR 跑完 `Multi-Agent PR Zero-Regressions Gate` 後，在 GitHub Settings 勾選 `main` 必過該狀態檢查與 Code Owner 核准）。
+- [x] **階段驗收標準（自動化測試）**：新增 `tests/dev-agent-phase2.test.mjs` 驗證 Devcontainer、MCP 最小權限、工作流防線、Diff 政策掃描與 CLI 端到端執行，全套測試 100% PASS。
 
 ### 階段三：自動化閉環整合與實戰演練（預估 1–2 週）
 - [ ] **交付物 3.1**：於 Supabase 建立 `ai_dev_tasks` / `ai_dev_runs` 稽核表並實裝離線容災降級。

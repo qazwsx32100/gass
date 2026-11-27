@@ -1,0 +1,60 @@
+name: Multi-Agent PR Zero-Regressions Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  policy-and-test-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SHENGLONG_ENV: sandbox
+      LEGACY_ERP_WRITE_ENABLED: "false"
+
+    steps:
+      - name: Check out PR head with history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Policy-as-Code PR Diff Scan (ERP Black-Box / Secrets / Zero-Notify)
+        run: |
+          git fetch origin main
+          node scripts/dev-agent-executor.mjs --check-diff --base-ref origin/main
+
+      - name: Lint Phase 1 & Phase 2 modules
+        run: |
+          npx oxlint \
+            api/_dev-agent-protocol.js \
+            api/dev-agent-dispatch.js \
+            scripts/dev-agent-executor.mjs \
+            tests/dev-agent-phase1.test.mjs \
+            tests/dev-agent-phase2.test.mjs \
+            tests/multi-agent-blueprint.test.mjs
+
+      - name: Run core automated test suite
+        run: |
+          node --test \
+            tests/dev-agent-phase1.test.mjs \
+            tests/dev-agent-phase2.test.mjs \
+            tests/multi-agent-blueprint.test.mjs \
+            tests/web-and-api-security.test.mjs \
+            tests/trigger-github-workflow.test.mjs \
+            tests/knowledge-base.test.mjs
+
+      - name: Verify production frontend build
+        run: npm run build

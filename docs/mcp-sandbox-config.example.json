@@ -1,0 +1,66 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-config.json",
+  "name": "ShengLong Multi-Agent Least-Privilege MCP Sandbox Config (Example)",
+  "policy": {
+    "superAdminTelegramId": "8862712587",
+    "environment": "sandbox",
+    "legacyErpWriteEnabled": false,
+    "allowDirectMainPush": false,
+    "minPollingIntervalSeconds": 60,
+    "notes": "複製為本機 .vscode/mcp.json 或 Codespaces 使用；所有密鑰僅能透過環境變數注入，嚴禁寫入明碼。"
+  },
+  "mcpServers": {
+    "github-sandbox": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_SANDBOX_PAT}"
+      },
+      "shenglongGuard": {
+        "allowlist": [
+          "get_file_contents",
+          "create_branch",
+          "push_files_to_ai_agent_branch",
+          "create_pull_request",
+          "create_issue_comment"
+        ],
+        "denylist": [
+          "push_to_main",
+          "force_push",
+          "delete_protected_branch",
+          "merge_l2_l3_pr_without_boss_approval"
+        ]
+      }
+    },
+    "filesystem-workspace": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "shenglongGuard": {
+        "allowlist": ["read_file", "edit_file", "list_directory", "search_files"],
+        "denylist": ["read_outside_workspace", "modify_legacy_erp_binaries"]
+      }
+    },
+    "supabase-staging-readonly": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase", "--read-only"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${env:SUPABASE_STAGING_READONLY_TOKEN}"
+      },
+      "shenglongGuard": {
+        "allowlist": ["list_tables", "inspect_schema", "query_ai_dev_tasks"],
+        "denylist": ["execute_prod_ddl", "drop_table", "truncate_table", "export_customer_pii"]
+      }
+    },
+    "vercel-preview-readonly": {
+      "command": "npx",
+      "args": ["-y", "@vercel/mcp-adapter"],
+      "env": {
+        "VERCEL_TOKEN": "${env:VERCEL_PREVIEW_READ_TOKEN}"
+      },
+      "shenglongGuard": {
+        "allowlist": ["get_deployment_status", "get_preview_url", "read_build_logs"],
+        "denylist": ["promote_production_without_merge", "read_production_secrets"]
+      }
+    }
+  }
+}
