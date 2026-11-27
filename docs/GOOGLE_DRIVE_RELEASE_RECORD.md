@@ -15,6 +15,14 @@
   3. **驗證與上線**：新增 `tests/human-tone-learner.test.js`，`shenglong-line-liff` 327/327 PASS、`gass` 14/14 PASS，雙倉推送 GitHub 並正式部署 Vercel Production。
 ---
 
+## [2026-11-27 11:10] - 清除雲端 #3937 偏離 GPS 紀錄 ✕ 封裝簽章新版導航 APK v3.8 (versionCode 20) 至桌面 sl
+- **版本號**：`20261127_1110_clear_drifted_gps_and_build_nav_apks_v38`
+- **老闆指示**：「幫我處理」（清除雲端 #3937 偏離座標 + 封裝新版 APK 至桌面 `sl` 目錄）
+- **主要更動**：
+  1. 清除雲端 `customGps` 偏離紀錄 `cgps_1794741741261_myq48`（`#3937 三重區中正南路126號`），雙重驗證正式 API 與雲端 KV 皆為 `count: 0`，恢復門牌導航。
+  2. `android/app/build.gradle` 升版至 `versionCode 20` (`v3.8`)，乾淨編譯並以 V1+V2+V3 簽章發布至 `public/files/` 與桌面 `sl` 目錄（`盛隆外送_小龍專用.apk`、`外出app.apk`、`盛隆監控中心.apk`、`盛隆新ERP_戰情調度中樞.apk`）。
+- **驗證**：`apksigner verify` 3/3 PASS、`guard:zero-notify` PASS、導航防誤判測試 7/7 PASS，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-27 10:30] - 導航系統三大類誤判全面根治：地址清洗與客號反補零誤判 ✕ 司機自動存 GPS 5 重防線 ✕ Android 兩輪機車模式對齊
 - **版本號**：`20261127_1030_navigation_misjudgment_full_fix`
 - **老闆指示**：「更正導航系統 會誤判」（確認全部 3 大類一起修正）
