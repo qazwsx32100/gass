@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/SHENGLONG_AI_SYSTEM_MASTER_ARCHITECTURE.md'
       - 'docs/GOOGLE_DRIVE_RELEASE_RECORD.md'
+      - 'docs/MULTI_AGENT_AI_COLLABORATIVE_DEV_BLUEPRINT.md'
       - 'docs/LINE_ORDER_INGEST_STAGE2_REPORT.md'
       - 'docs/line-membership/**'
       - 'public/images/line-membership/**'

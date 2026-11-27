@@ -80,6 +80,7 @@ def main():
     html_file = root_dir / "public" / "reports" / "stage2.html"
     arch_file = root_dir / "docs" / "SHENGLONG_AI_SYSTEM_MASTER_ARCHITECTURE.md"
     release_file = root_dir / "docs" / "GOOGLE_DRIVE_RELEASE_RECORD.md"
+    multi_agent_blueprint_file = root_dir / "docs" / "MULTI_AGENT_AI_COLLABORATIVE_DEV_BLUEPRINT.md"
 
     try:
         drive = get_drive_service()
@@ -156,6 +157,17 @@ def main():
             )
             print(f"✅ 盛隆生活圈視覺圖上傳成功 ({img_path.name}): {res_img.get('webViewLink')}")
             results.append(res_img)
+
+    # 6. 上傳多代理 AI 協同開發技術藍圖與執行計畫書
+    if multi_agent_blueprint_file.exists():
+        res_blueprint = upload_file(
+            drive,
+            multi_agent_blueprint_file,
+            "text/markdown",
+            "盛隆瓦斯_多代理AI協同開發技術藍圖與執行計畫書.md"
+        )
+        print(f"✅ 多代理 AI 協同開發技術藍圖上傳成功: {res_blueprint.get('webViewLink')}")
+        results.append(res_blueprint)
 
     print("\n==========================================")
     print("🎉 報告已成功同步至 Google Drive 指定資料夾！")
