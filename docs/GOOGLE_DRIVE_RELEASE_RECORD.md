@@ -1,3 +1,13 @@
+## [2026-11-27 10:30] - 導航系統三大類誤判全面根治：地址清洗與客號反補零誤判 ✕ 司機自動存 GPS 5 重防線 ✕ Android 兩輪機車模式對齊
+- **版本號**：`20261127_1030_navigation_misjudgment_full_fix`
+- **老闆指示**：「更正導航系統 會誤判」（確認全部 3 大類一起修正）
+- **影響範圍**：`shenglong-next/lib/navigation-address.ts`、`lib/customer-gps.ts`、`app/api/customer/gps/route.ts`、`app/driver/page.tsx`、`app/driver/admin/page.tsx`、`app/operations/page.tsx`、`app/components/OperationsOrderHistoryView.tsx`、`app/components/SmartDriverDispatchModal.tsx`、`lib/operations-new-order-alert.ts`、`telegram-ai.cjs`、`MainActivity.java`、`OperationsMainActivity.java`、`gass/lib/navigation-address.ts`、`gass/api/_navigation-address.js`、`gass/api/_telegram.js`
+- **主要更動**：
+  1. 【地址清洗與客號反補零誤判】：修復北市路名誤插「區」字（`台北市中山北路`）、北市省寫區名誤冠三重（`萬華/北投/內湖`）、門牌點號與誤打「樓」字（`42.號`、`14.巷`、`10.11號`、`61-7.1號`、`229樓5樓`、`142樓`），以及客號反補誤將「號.樓」判成「巷.號」（`91.1`/`101.6`/`142.1`）與攤商巷口誤造門牌；全庫 3,965 戶零結構性誤判。
+  2. 【司機自動存 GPS 5 重防線與客戶 GPS 防錯配】：前後端實裝 `shouldAutoLearnDoorGps`（台灣範圍、精度 <= 25m、90 秒新鮮度、龍濱路 19 號 60m 防回店誤存禁區、參考點 250m 防偏離），`driver_auto` 絕不覆寫人工設定；`findCustomerGps` 加入門牌衝突防線；`parseGpsCoordinateInput` 優先抓取 Google Maps 實際圖釘 `!3d!4d`。
+  3. 【Android 原生與全後端對齊】：`MainActivity.java`、`OperationsMainActivity.java` 升級台灣兩輪機車導航模式（`&mode=l` / `travelmode=two_wheeler`）並移除舊版 HTML 實體腰斬正則；Telegram 推播與批次順路導航全面同步。
+- **驗證**：`shenglong-next` 38/38 PASS、`gass` 10/10 PASS、`guard:zero-notify` PASS、TypeScript 0 錯誤、`next build` 通過，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-27 10:20] - 客戶搜尋修正跨路誤併舊單 ✕ 完整接入 SL_money 收付款與欠款沖銷流水
 - **版本號**：`20261127_1020_customer_strict_twin_merge_and_sl_money_ledger`
 - **老闆指示**：「沒處理的兩件事：#1 多出 4 筆舊單、SL_money.csv 裡的收付款流水還沒接進客戶搜尋，幫我修正」

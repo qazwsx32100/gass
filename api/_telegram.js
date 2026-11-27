@@ -1,5 +1,6 @@
 import { fetchWithTimeout } from './_fetch.js';
 import { createCustomerHistorySignature } from './_customer-history.js';
+import { getGoogleNavigationUrl } from './_navigation-address.js';
 
 /**
  * 取得 Telegram 環境設定
@@ -132,7 +133,7 @@ export const sendOrderNotification = async (orderPayload) => {
   if (orderPayload.address) {
     navRow.push({
       text: '🗺️ 地圖導航',
-      url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(orderPayload.address)}`
+      url: getGoogleNavigationUrl(orderPayload.address) || `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(orderPayload.address)}&travelmode=two_wheeler`
     });
   }
   navRow.push({
