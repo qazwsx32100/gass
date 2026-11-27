@@ -1,3 +1,11 @@
+## [2026-11-27 11:08] - 客戶搜尋獨立站分頁標題定名「盛隆 客戶搜尋」✕ 詳情欠款狀態對齊 ERP 真實帳面欠款
+- **版本號**：`20261127_1108_customer_search_title_metadata_and_exact_erp_balance`
+- **影響範圍**：`app/customers/layout.tsx`、`app/customer-history/layout.tsx`、`app/components/CustomerSearchHub.tsx`、`tests/customer-search-v12-active-ranking-and-layout.test.mjs`
+- **主要更動**：
+  1. 【瀏覽器分頁標題對齊】：新增 `app/customers/layout.tsx` 與 `app/customer-history/layout.tsx`，設定 Next.js Server Metadata `title: "盛隆 客戶搜尋"`，讓獨立搜尋站（`https://shenglong-customers.vercel.app/`）瀏覽器分頁標籤直接顯示「盛隆 客戶搜尋」。
+  2. 【詳情頁欠款對齊 ERP 真實帳面欠款】：`CustomerSearchHub.tsx` 之 `totalDebtAmount` 直接讀取 ERP 客戶主檔 `balance`（移除舊的 `Math.max(sumFromOrders, custBalance)`），杜絕已透過 `SL_money` 沖銷之舊欠款／月結單被重複加總（例如 `#144` 詳情狀態列與清單一致精準顯示 `$55,710`）。
+- **驗證**：48/48 測試 PASS，GitHub 與 Vercel Production 正式部署並經真實瀏覽器實測確認。
+
 
 ## [2026-11-27 10:40] - LINE AI「親切在地門市小姐風」雙層升級 ✕ 真人回覆語氣自動學習引擎 [ver: 20261127_1040_local_friendly_clerk_and_auto_tone_learner]
 - **老闆指示**：以「親切在地門市小姐風」為主，並實作自動化學習真人回覆語氣。
