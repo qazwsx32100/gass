@@ -89,20 +89,6 @@ const memoryOrdersByCustomer = new Map<
 >();
 
 function resolveSupabaseConfig(): { url: string; headers: Record<string, string> } | null {
-  // 👑 優先連向盛隆官方 LINE / 客戶專屬 Supabase (LINE_SUPABASE_URL)，與財報主庫完全隔離
-  const lineUrl = String(process.env.LINE_SUPABASE_URL || "").trim().replace(/\/$/, "");
-  const lineKey = String(
-    process.env.LINE_SUPABASE_SECRET_KEY ||
-      process.env.LINE_SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.LINE_SUPABASE_ANON_KEY ||
-      "",
-  ).trim();
-  if (lineUrl && lineKey) {
-    const headers: Record<string, string> = { apikey: lineKey };
-    if (!lineKey.startsWith("sb_secret_")) headers.Authorization = `Bearer ${lineKey}`;
-    return { url: lineUrl, headers };
-  }
-
   const url = String(
     process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   )
@@ -761,8 +747,33 @@ function decodeSimpleEntities(str: string): string {
     .replace(/&#x([0-9a-fA-F]+);?/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 }
 
+function extractStreetDoorplateKey(rawAddr?: string): string {
+  if (!rawAddr) return "";
+  let s = decodeSimpleEntities(rawAddr)
+    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/\s+/g, "")
+    .replace(/臺/g, "台")
+    .replace(/新北市|台北市|台北縣/g, "")
+    .replace(/一段/g, "1段")
+    .replace(/二段/g, "2段")
+    .replace(/三段/g, "3段")
+    .replace(/四段/g, "4段")
+    .replace(/五段/g, "5段")
+    .replace(/六段/g, "6段")
+    .replace(/七段/g, "7段")
+    .replace(/八段/g, "8段")
+    .replace(/九段/g, "9段")
+    .replace(/之(?=[0-9])/g, "-");
+  // 取至「號」為止的精準路名＋門牌，忽略樓層與附註（例：三重區長元街85號1.2樓 -> 三重區長元街85號）
+  const m = s.match(/^(.+?\d+(?:-\d+)?號)/);
+  if (m) return m[1].toLowerCase();
+  return s.toLowerCase();
+}
+
 /**
- * 找出同一客戶在名冊中的所有關聯客號 ID（雙重歸戶防漏單：同名、或同代號+同電話末7碼）
+ * 找出同一客戶在名冊中的所有關聯客號 ID（嚴謹雙重歸戶防漏單兼防跨路誤併）：
+ * 條件 A（電話核實）：同名稱或同代號，且雙方均有電話且末 7 碼相同（例：#807 ↔ #1729、#1157 ↔ #3841）
+ * 條件 B（同門牌核實）：同名稱，且標準化路名＋門牌完全相同（例：#121 ↔ #2101），絕不再因純同名誤併不同路的陌生客戶（例：#1 龍濱路47號 vs #1229 仁和街47號）
  */
 export function findRelatedCustomerIds(customerId: number): number[] {
   const cleanId = Math.trunc(Number(customerId) || 0);
@@ -775,20 +786,31 @@ export function findRelatedCustomerIds(customerId: number): number[] {
   const targetCode = (target.code || extractCustomerCode(target.name)).trim().toLowerCase();
   const targetPhone = normalizePhone(target.tel || target.phoneClean);
   const targetPhone7 = targetPhone.length >= 7 ? targetPhone.slice(-7) : "";
+  const targetAddrKey = extractStreetDoorplateKey(target.cleanAddress || target.addr);
 
   const ids = new Set<number>([cleanId]);
   for (const c of directory) {
     if (c.id === cleanId) continue;
     const cName = decodeSimpleEntities(c.name).trim().toLowerCase();
-    if (targetName && cName === targetName) {
-      ids.add(c.id);
-      continue;
-    }
     const cCode = (c.code || extractCustomerCode(c.name)).trim().toLowerCase();
     const cPhone = normalizePhone(c.tel || c.phoneClean);
     const cPhone7 = cPhone.length >= 7 ? cPhone.slice(-7) : "";
-    if (targetCode && cCode === targetCode && targetPhone7 && cPhone7 === targetPhone7) {
+    const sameName = Boolean(targetName && cName === targetName);
+    const sameCode = Boolean(targetCode && cCode === targetCode);
+    const samePhone = Boolean(targetPhone7 && cPhone7 === targetPhone7);
+
+    // 條件 A：同名或同代號，且電話末 7 碼完全一致
+    if ((sameName || sameCode) && samePhone) {
       ids.add(c.id);
+      continue;
+    }
+
+    // 條件 B：完全同名，且路名＋門牌一致（避免不同路名之同名異戶被誤併）
+    if (sameName && targetAddrKey) {
+      const cAddrKey = extractStreetDoorplateKey(c.cleanAddress || c.addr);
+      if (cAddrKey && cAddrKey === targetAddrKey) {
+        ids.add(c.id);
+      }
     }
   }
   return Array.from(ids);
@@ -1081,6 +1103,7 @@ export function resetCloudGatewayStateForTests() {
   gatewaySource = "BOOTSTRAP_JSON";
   memoryOrdersByCustomer.clear();
   localHistoricalOrdersIndex = null;
+  localMoneyLogsIndex = null;
 }
 
 /**
@@ -1180,4 +1203,106 @@ export function computeErpCustomerTotalPrices(cust?: {
     erpP10: ERP_BOARD_PRICES.p10 - d10,
     erpP4: ERP_BOARD_PRICES.p4 - d4,
   };
+}
+
+
+export interface CloudCustomerMoneyLog {
+  serialNo: number;
+  customerId: number;
+  date: string;
+  time: string;
+  status: string;
+  amount: number;
+  prevBalance: number;
+  afterBalance: number;
+  operator: string;
+  orderRef: string;
+  category: string;
+}
+
+let localMoneyLogsIndex: Map<number, CloudCustomerMoneyLog[]> | null = null;
+
+/**
+ * 讀取 SL_money.csv 編譯後之收付款與欠款沖銷流水壓縮檔 (0ms 記憶體快取)
+ */
+export function ensureLocalMoneyLogsLoaded(): Map<number, CloudCustomerMoneyLog[]> {
+  if (localMoneyLogsIndex) return localMoneyLogsIndex;
+  localMoneyLogsIndex = new Map();
+
+  const candidatePaths = [
+    join(process.cwd(), "public", "data", "customer-money-full.json.gz"),
+    join(process.cwd(), "data", "customer-money-full.json.gz"),
+    join(process.cwd(), "..", "shenglong-next", "public", "data", "customer-money-full.json.gz"),
+    "C:\\shenglong-next\\public\\data\\customer-money-full.json.gz",
+  ];
+
+  for (const p of candidatePaths) {
+    try {
+      if (!existsSync(p)) continue;
+      const rawText = gunzipSync(readFileSync(p)).toString("utf8");
+      const parsed = JSON.parse(rawText);
+      if (parsed && typeof parsed === "object") {
+        for (const [cidStr, list] of Object.entries(parsed)) {
+          const cid = Number(cidStr) || 0;
+          if (cid <= 0 || !Array.isArray(list)) continue;
+          const mapped: CloudCustomerMoneyLog[] = [];
+          for (const t of list) {
+            if (!Array.isArray(t) || t.length < 6) continue;
+            mapped.push({
+              date: String(t[0] || ""),
+              time: String(t[1] || ""),
+              status: String(t[2] || "帳務異動"),
+              amount: Number(t[3]) || 0,
+              prevBalance: Number(t[4]) || 0,
+              afterBalance: Number(t[5]) || 0,
+              operator: String(t[6] || ""),
+              orderRef: String(t[7] || ""),
+              category: String(t[8] || "一般"),
+              serialNo: Number(t[9]) || 0,
+              customerId: cid,
+            });
+          }
+          if (mapped.length > 0) {
+            localMoneyLogsIndex.set(cid, mapped);
+          }
+        }
+        break;
+      }
+    } catch {
+      // try next path
+    }
+  }
+  return localMoneyLogsIndex;
+}
+
+/**
+ * 取得指定客戶之收付款與欠款沖銷流水 (涵蓋經驗證之關聯分身客號，依日期時間倒序去重)
+ */
+export function getLocalMoneyLogsForCustomer(customerId: number): CloudCustomerMoneyLog[] {
+  const cleanId = Math.trunc(Number(customerId) || 0);
+  if (cleanId <= 0) return [];
+  const index = ensureLocalMoneyLogsLoaded();
+  const relatedIds = findRelatedCustomerIds(cleanId);
+  if (relatedIds.length <= 1) {
+    return index.get(cleanId) || [];
+  }
+  const seen = new Set<string>();
+  const merged: CloudCustomerMoneyLog[] = [];
+  for (const rid of relatedIds) {
+    const list = index.get(rid) || [];
+    for (const item of list) {
+      const key = item.serialNo > 0 ? String(item.serialNo) : `${item.date}_${item.time}_${item.amount}_${item.status}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(item);
+      }
+    }
+  }
+  merged.sort((a, b) => {
+    const da = `${a.date} ${a.time}`;
+    const db = `${b.date} ${b.time}`;
+    if (db !== da) return db.localeCompare(da);
+    return b.serialNo - a.serialNo;
+  });
+  return merged;
 }

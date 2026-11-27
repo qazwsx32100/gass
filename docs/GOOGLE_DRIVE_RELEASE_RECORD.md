@@ -1,3 +1,13 @@
+## [2026-11-27 10:20] - 客戶搜尋修正跨路誤併舊單 ✕ 完整接入 SL_money 收付款與欠款沖銷流水
+- **版本號**：`20261127_1020_customer_strict_twin_merge_and_sl_money_ledger`
+- **老闆指示**：「沒處理的兩件事：#1 多出 4 筆舊單、SL_money.csv 裡的收付款流水還沒接進客戶搜尋，幫我修正」
+- **影響範圍**：`lib/cloud-customer-gateway.ts`、`app/api/customer-history/route.ts`、`app/components/CustomerSearchHub.tsx`、`scripts/build-customer-orders-index.cjs`、`public/data/customer-money-full.json.gz`、`data/customer-money-full.json.gz`、`next.config.ts`、`.github/workflows/sync-sl-customers-daily.yml`、`tests/customer-search-v12-active-ranking-and-layout.test.mjs`
+- **主要更動**：
+  1. 【嚴謹雙重歸戶防跨路誤併 (`findRelatedCustomerIds`)】：移除純同名即合併之寬鬆條件，改為僅在「（同名或同代號）且雙方電話末 7 碼相符」或「完全同名且標準化路名＋門牌完全一致」時才歸戶；徹底清除全庫 116 組不同路名同名異戶誤併（例：`#1 龍濱路47號2樓` 不再誤併 `#1229 仁和街47號2樓`，歷史筆數精準還原為 `163` 筆對齊 `SL_orders.csv`），同時完整保留真分身歸戶（`#807 ↔ #1729`、`#1157 ↔ #3841`）。
+  2. 【SL_money 收付款與欠款沖銷流水全鏈路接入】：`scripts/build-customer-orders-index.cjs` 編譯 `SL_money.csv` 全部 456 戶／9,243 筆（2007~2026/11/21）收付款與沖銷流水為高壓縮檔 `customer-money-full.json.gz`（僅 161.1 KB），納入 `next.config.ts` Vercel 追蹤打包與每日 `SL.zip` 自動同步工作流；`/api/customer-history` 回傳 `moneyLogs`，前端 `CustomerSearchHub.tsx` 於「💰 欠款／流水」與「📑 全部展開」分頁完整呈現收付款類型（收款還帳／新增欠款）、交易金額、異動前欠款 ➔ 結存欠款、經辦人員、對應單號與帳別（支援手機免橫拉卡片與電腦標準表）。
+- **舊 ERP 影響**：零更動（僅讀取 SL 匯出檔，無 SQL DDL/寫入）。
+- **驗證**：`shenglong-next` 47/47 PASS、`gass` 20/20 PASS、TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-27 00:20] - 客戶搜尋改顯示 ERP 總金額（牌價 − 客戶設定差價）✕ 與 SL 檔全欄位零誤差對齊
 - **版本號**：`20261127_0020_customer_erp_total_price_and_sl_alignment`
 - **老闆指示**：「我想要顯示 總金額，比對ERP上的總金額 不是歷史金額 / 總金額要顯示客戶資料上」
