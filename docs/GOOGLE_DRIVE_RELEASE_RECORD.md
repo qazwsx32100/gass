@@ -40,6 +40,15 @@
   3. **驗證與上線**：新增 `tests/human-tone-learner.test.js`，`shenglong-line-liff` 327/327 PASS、`gass` 14/14 PASS，雙倉推送 GitHub 並正式部署 Vercel Production。
 ---
 
+## [2026-11-27 14:15] - 盛隆 × Google 導航深度結合 ✕ 根治小巷子定位偏移（Place ID / 街景 / 短網址展開 / 門牌衛星微調 / Geocoding v4 出入口）
+- **版本號**：`20261127_1415_google_navigation_deep_integration_alley_fix`
+- **老闆指示**：「會遇到的問題 如果是小巷子 定位會偏移 / 跟GOOGLE導航做深度的結合」
+- **主要更動**：
+  1. 拔除司機端 API (`app/api/driver/orders/route.ts`) 將粗略圖資偽裝成 `customGps` 蓋掉 Google 真實門牌的小巷偏移元兇，獨立為 `referenceGps`。
+  2. 全面啟用 Google Maps 深度參數（`dir_action=navigate`＋`destination_place_id`＋`travelmode=two_wheeler`）、Google 360° 街景核對（含 Android 原生 `openStreetView`）、`maps.app.goo.gl` 分享短網址自動展開 (`/api/customer/gps/resolve-link`) 與 Google Geocoding v4 `SearchDestinations` 巷弄出入口整合。
+  3. 升級 `CustomerGpsModal` 內建國土測繪中心台灣門牌圖／衛星航照圖互動點選大門口路面，並串接至「盛隆 客戶搜尋」與司機端單次高精度「📍 標記大門／🎯 重標大門」＋進巷指引顯示。
+- **驗證**：`shenglong-next` 43/43 PASS、`gass` 10/10 PASS、`guard:zero-notify` PASS、TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 正式上線。
+
 ## [2026-11-27 11:10] - 清除雲端 #3937 偏離 GPS 紀錄 ✕ 封裝簽章新版導航 APK v3.8 (versionCode 20) 至桌面 sl
 - **版本號**：`20261127_1110_clear_drifted_gps_and_build_nav_apks_v38`
 - **老闆指示**：「幫我處理」（清除雲端 #3937 偏離座標 + 封裝新版 APK 至桌面 `sl` 目錄）

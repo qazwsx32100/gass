@@ -116,5 +116,5 @@ export function formatAddressForNavigation(rawAddr) {
 export function getGoogleNavigationUrl(rawAddr, mode = "two_wheeler") {
   const cleanAddr = formatAddressForNavigation(rawAddr);
   if (!cleanAddr) return "";
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr)}&travelmode=${mode}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr)}&travelmode=${mode}&dir_action=navigate`;
 }

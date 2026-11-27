@@ -311,13 +311,14 @@ export interface NavigationOptions {
   travelmode?: "two_wheeler" | "driving" | "bicycling" | "walking";
   placeId?: string;
   customerName?: string | null;
+  directNavigate?: boolean;
 }
 
 /**
- * 產生 Google 導航專用 URL
- * 🛵 預設升級為 two_wheeler (兩輪機車導航模式)：
+ * 產生 Google 導航專用 URL（深度結合 Google Maps 官方協議）
+ * 🛵 預設升級為 two_wheeler (兩輪機車導航模式) + dir_action=navigate (一鍵直接開始導航)：
  * 徹底解決開車模式因汽車無法進入雙北狹窄死巷而在巷口 60 公尺外提早結束導航的痛點！
- * 🛡️ 僅當提供外勤實地釘選之精確大門座標 (customGps) 或 Google Place ID 時才使用座標，
+ * 🛡️ 僅當提供外勤實地釘選或後台確認之精確大門座標 (customGps) 或 Google Place ID 時才使用座標，
  *     一般訂單與客戶圖資一律使用清洗後之標準門牌地址直達，杜絕粗略估算座標導致偏航！
  */
 export function getGoogleNavigationUrl(
@@ -326,8 +327,9 @@ export function getGoogleNavigationUrl(
   options?: NavigationOptions
 ): string {
   const mode = options?.travelmode || "two_wheeler";
+  const dirAction = options?.directNavigate === false ? "" : "&dir_action=navigate";
 
-  // 1. 若有外勤實地釘選之精確大門經緯度座標，100% 座標直達
+  // 1. 若有外勤實地釘選之精確大門經緯度座標，100% 座標直達（搭配 Place ID 更鎖定建築節點）
   if (
     coords &&
     typeof coords.lat === "number" &&
@@ -337,7 +339,7 @@ export function getGoogleNavigationUrl(
     coords.lat !== 0 &&
     coords.lng !== 0
   ) {
-    let url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=${mode}`;
+    let url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=${mode}${dirAction}`;
     if (options?.placeId) {
       url += `&destination_place_id=${encodeURIComponent(options.placeId)}`;
     }
@@ -347,13 +349,120 @@ export function getGoogleNavigationUrl(
   // 2. 若無座標但有 Google Place ID
   if (options?.placeId) {
     const cleanAddr = formatAddressForNavigation(rawAddr, options?.customerName);
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr || "目的地")}&destination_place_id=${encodeURIComponent(options.placeId)}&travelmode=${mode}`;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr || "目的地")}&destination_place_id=${encodeURIComponent(options.placeId)}&travelmode=${mode}${dirAction}`;
   }
 
   // 3. 標準門牌地址直達 (已解碼 HTML Entity、校正錯字與段號、反補客號門牌、截斷樓層與補齊行政區)
   const cleanAddr = formatAddressForNavigation(rawAddr, options?.customerName);
   if (!cleanAddr) return "";
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr)}&travelmode=${mode}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanAddr)}&travelmode=${mode}${dirAction}`;
+}
+
+/**
+ * 👁️ 產生 Google 360° 街景直達連結（小巷子核對大門鐵門與巷口轉彎點專用）
+ */
+export function getGoogleStreetViewUrl(
+  rawAddr?: string | null,
+  coords?: { lat: number; lng: number } | null,
+  options?: { customerName?: string | null }
+): string {
+  if (
+    coords &&
+    typeof coords.lat === "number" &&
+    typeof coords.lng === "number" &&
+    Number.isFinite(coords.lat) &&
+    Number.isFinite(coords.lng) &&
+    coords.lat !== 0 &&
+    coords.lng !== 0
+  ) {
+    return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${coords.lat},${coords.lng}`;
+  }
+  const cleanAddr = formatAddressForNavigation(rawAddr, options?.customerName);
+  if (!cleanAddr) return "";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddr)}`;
+}
+
+/**
+ * 📍 產生 Google 地圖標記檢視連結（方便門市／師傅在 Google Maps 裡點選精準小巷位置後按分享貼回）
+ */
+export function getGoogleMapsPinUrl(
+  rawAddr?: string | null,
+  coords?: { lat: number; lng: number } | null,
+  options?: { placeId?: string; customerName?: string | null }
+): string {
+  const placeParam = options?.placeId ? `&query_place_id=${encodeURIComponent(options.placeId)}` : "";
+  if (
+    coords &&
+    typeof coords.lat === "number" &&
+    typeof coords.lng === "number" &&
+    Number.isFinite(coords.lat) &&
+    Number.isFinite(coords.lng) &&
+    coords.lat !== 0 &&
+    coords.lng !== 0
+  ) {
+    return `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}${placeParam}`;
+  }
+  const cleanAddr = formatAddressForNavigation(rawAddr, options?.customerName);
+  if (!cleanAddr) return "";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAddr)}${placeParam}`;
+}
+
+export interface AlleyNavigationRisk {
+  isAlley: boolean;
+  riskLevel: "high" | "medium" | "low";
+  label: string;
+  reason: string;
+}
+
+/**
+ * 🧭 小巷子導航偏移風險自動偵測
+ * 台灣老城區「巷＋弄」、「之X號」或無門牌路口容易遭 Google 門牌內插偏移，優先引導鎖定大門座標
+ */
+export function analyzeAlleyNavigationRisk(
+  rawAddr?: string | null,
+  hasLockedCustomGps = false
+): AlleyNavigationRisk {
+  const clean = formatAddressForNavigation(rawAddr || "");
+  const hasLane = /\d+\s*弄/.test(clean);
+  const hasAlley = /\d+\s*巷/.test(clean);
+  const hasSubDoor = /\d+\s*之\s*\d+\s*號/.test(clean);
+  const missingDoorNo = Boolean(clean) && !/\d+(?:之\d+)?號/.test(clean);
+  const isAlley = hasLane || hasAlley || missingDoorNo;
+
+  if (hasLockedCustomGps) {
+    return {
+      isAlley,
+      riskLevel: "low",
+      label: "🎯 Google 大門已鎖定",
+      reason: "已綁定實地確認之大門座標，兩輪機車導航直達門口",
+    };
+  }
+  if (hasLane || missingDoorNo || (hasAlley && hasSubDoor)) {
+    return {
+      isAlley: true,
+      riskLevel: "high",
+      label: "⚠️ 深巷易偏（建議鎖定大門）",
+      reason: hasLane
+        ? "含「巷／弄」多層分支，Google 門牌內插較易偏移，建議用 Google 標記或現場鎖定大門"
+        : missingDoorNo
+          ? "地址無明確門牌號，建議鎖定實地座標避免導偏"
+          : "小巷支號門牌容易導至主號或巷口，建議鎖定實際大門",
+    };
+  }
+  if (hasAlley) {
+    return {
+      isAlley: true,
+      riskLevel: "medium",
+      label: "📍 巷內門牌（可鎖定大門）",
+      reason: "巷弄門牌若發現 Google 導到巷口或屋後，可一鍵鎖定門口路面座標",
+    };
+  }
+  return {
+    isAlley: false,
+    riskLevel: "low",
+    label: "✓ 主幹道門牌",
+    reason: "主幹道標準門牌定位穩定",
+  };
 }
 
 /** 盛隆瓦斯行門市基準座標（新北市三重區龍濱路 19 號） */

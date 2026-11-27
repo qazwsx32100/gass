@@ -44,6 +44,17 @@
   2. 擴大 `api/line-webhook.js` 的 `naturalKbReply` 真人潤飾白名單（22 項日常規則，含多輪脈絡承接＋數字與詢價五要素安全護欄），新增授權管理員 LINE「`學語氣：…`／`看語氣`」指令。
   3. `api/index.js` 後台審核專員說明自動背景擷取語氣樣本，並新增 `admin-tone-samples` API；`api/_knowledge-base.js` 與 `gass/api/_knowledge-base.js` 同步升級親切在地門市小姐口吻。
 - **測試狀態**：`shenglong-line-liff` 327/327 PASS、`gass` 14/14 PASS。
+## [2026-11-27 14:15] - 盛隆 × Google 導航深度結合 ✕ 根治小巷子定位偏移（Place ID / 街景 / 短網址展開 / 門牌衛星微調 / Geocoding v4 出入口）
+- **版本號**：`20261127_1415_google_navigation_deep_integration_alley_fix`
+- **老闆指示**：「會遇到的問題 如果是小巷子 定位會偏移 / 跟GOOGLE導航做深度的結合」
+- **影響範圍**：`shenglong-next/app/api/driver/orders/route.ts`、`lib/navigation-address.ts`、`lib/customer-gps.ts`、`lib/google-maps-service.ts`、`app/api/customer/gps/route.ts`、`app/api/customer/gps/resolve-link/route.ts`、`app/api/customer/geocode/route.ts`、`app/api/customers/directory/route.ts`、`app/api/today-orders/route.ts`、`app/components/CustomerGpsModal.tsx`、`app/components/CustomerSearchHub.tsx`、`app/driver/page.tsx`、`MainActivity.java`、`OperationsMainActivity.java`、`tests/google-navigation-deep-integration.test.mjs`、`gass/lib/navigation-address.ts`、`gass/api/_navigation-address.js`
+- **主要更動**：
+  1. 【根治小巷子偏移元兇 (`app/api/driver/orders/route.ts`)】：拔除司機端把粗略估算座標偽裝成 `customGps`（`"盛隆標準門牌GPS"`）與子字串模糊比對的舊邏輯，將粗略圖資獨立放於 `referenceGps`（僅供順路排序與偏離校驗），確保未鎖定小巷子直接走 Google 真實門牌導航並恢復「📍 標記大門」按鈕。
+  2. 【Google 導航深度協議＋街景核對】：全面啟用 `dir_action=navigate`＋`destination_place_id`＋`travelmode=two_wheeler`；新增 Google 360° 街景直達 (`getGoogleStreetViewUrl` 與 Android 原生 `openStreetView`) 與小巷子偏移風險偵測 (`analyzeAlleyNavigationRisk`)。
+  3. 【Google 分享短網址展開＋Geocoding v4 出入口】：新增 `/api/customer/gps/resolve-link`（白名單防 SSRF）自動展開 `maps.app.goo.gl` 萃取 `!3d!4d` 實際圖釘與 `Place ID`；升級 `geocodeAddressWithGoogle` 優先呼叫 Google Geocoding v4 `SearchDestinations` 取得建築／小巷真正馬路出入口 `navigationPoints`。
+  4. 【台灣門牌圖＋衛星圖大門微調＋司機現場高精度直抓】：升級 `CustomerGpsModal` 內建國土測繪中心門牌電子圖／衛星航照圖互動點選大門口路面、Google 找點／街景核對／機車試導航與進巷指引快選，並串接至「盛隆 客戶搜尋」；司機端「📍 標記大門／🎯 重標大門」改為手動點擊單次高精度直抓（`<= 25m`，嚴守零通知鐵律）並同步呈現進巷指引與街景鍵。
+- **驗證**：`shenglong-next` 43/43 PASS、`gass` 10/10 PASS、`guard:zero-notify` PASS、TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 同步上線。
+
 ## [2026-11-27 11:10] - 清除雲端 #3937 偏離 GPS 紀錄 ✕ 封裝簽章新版導航 APK v3.8 (versionCode 20) 至桌面 sl
 - **版本號**：`20261127_1110_clear_drifted_gps_and_build_nav_apks_v38`
 - **老闆指示**：「幫我處理」（清除雲端 #3937 偏離座標 + 封裝新版 APK 至桌面 `sl` 目錄）
