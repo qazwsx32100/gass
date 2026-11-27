@@ -1,3 +1,8 @@
+## [2026-11-27 11:45] - 地址樓層歸位「客戶名稱 ➔ 地址含樓層 ➔ 備註」（原排版不動）✕ 雙端推播直入重點刪除指派說明 ✕ 來電 25 秒重入智慧歸併 (APK v3.9)
+- **版本號**：`20261127_1145_address_floor_order_direct_push_and_25s_call_dedupe_v39`
+- **主要更動**：雙倉同步 `lib/mobile-order-parser.js`，修正地址樓層緊跟門牌後、備註置於最後（原排版不動）；監控中心與司機端推播通知刪除系統指派說明、按「客戶名稱 ➔ 地址含樓層 ➔ 備註+規格 價格」直入重點；來電 25 秒重入智慧歸併為 1 筆並加裝 120 秒同電話冷卻鎖；新版 APK v3.9 封裝發布至桌面 `sl`。
+- **驗證**：42/42 測試 PASS、TypeScript 0 錯誤，雙倉 GitHub 與 Vercel Production 正式部署生效。
+
 ## [2026-11-27 11:08] - 客戶搜尋獨立站分頁標題定名「盛隆 客戶搜尋」✕ 詳情欠款狀態對齊 ERP 真實帳面欠款
 - **版本號**：`20261127_1108_customer_search_title_metadata_and_exact_erp_balance`
 - **影響範圍**：`app/customers/layout.tsx`、`app/customer-history/layout.tsx`、`app/components/CustomerSearchHub.tsx`、`tests/customer-search-v12-active-ranking-and-layout.test.mjs`
