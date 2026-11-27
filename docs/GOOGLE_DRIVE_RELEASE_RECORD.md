@@ -1,3 +1,11 @@
+## [2026-11-27 14:16] - AI 軍師升級 Gemini 4（neon ➔ hydrogen ➔ 3.5-flash-lite）✕ Vercel Production 啟用 GEMINI_API_KEY ✕ 全倉清除明碼 TG Token
+- **版本號**：`20261127_1416_advisor_gemini_4_upgrade_and_token_cleanup`
+- **主要更動**：
+  1. `app/api/ai/advisor/route.ts` 升級 Gemini 4 優先路由（`ADVISOR_GEMINI_MODEL` ➔ `gemini-4-neon` ➔ `gemini-4-hydrogen` ➔ `gemini-3.5-flash-lite`），逾時放寬至 15 秒並實裝 5 分鐘 429 額度冷卻護盾。
+  2. 安全配置 `GEMINI_API_KEY` 至 Vercel Production 環境變數，線上正式環境軍師即刻啟用 Gemini 4 真實策略對談。
+  3. 徹底清除 `advisor-bot.cjs`、`scripts/Generate-Daily-Executive-Report.cjs`、`scripts/Generate-Weekly-Executive-Report.cjs` 內所有殘留舊明碼 Telegram Bot Token，全面改讀環境變數。
+- **驗證**：單元測試 6/6 PASS、線上 `POST /api/ai/advisor` 實測回傳真實 Gemini 4 模型推理結果，雙倉 GitHub 與 Vercel Production 正式生效。
+
 ## [2026-11-27 13:55] - 八大 AI 部門 ✕ AI 軍師方案 A 全量根治（10 項資安、離職防線、閉環精度、哨兵通道與真資料升級）
 - **版本號**：`20261127_1355_ai_departments_and_advisor_plan_a_hardening`
 - **老闆指示**：「方案a 但是要先檢驗 因為我有做大更動」
