@@ -52,6 +52,7 @@ jobs:
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
             tests/dev-agent-phase3.test.mjs \
+            tests/dev-agent-p1-telegram-callback.test.mjs \
             tests/multi-agent-blueprint.test.mjs
 
       - name: Run core automated test suite
@@ -61,6 +62,7 @@ jobs:
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
             tests/dev-agent-phase3.test.mjs \
+            tests/dev-agent-p1-telegram-callback.test.mjs \
             tests/multi-agent-blueprint.test.mjs \
             tests/web-and-api-security.test.mjs \
             tests/trigger-github-workflow.test.mjs \

@@ -1,6 +1,6 @@
 # 🤖 盛隆瓦斯 多代理 AI 協同開發技術藍圖與執行計畫書 (Multi-Agent Collaborative Dev Blueprint)
 
-> **文件版本**：`v1.4.0`（2026-11-27 第三階段閉環整合完成：Supabase 稽核＋離線降級 ✕ 老闆 Telegram `8862712587` L3 簽核端點 ✕ Preview/Prod 煙霧驗證與自動熔斷告警）  
+> **文件版本**：`v1.5.0`（2026-11-28 P1 三項全面收尾：Telegram 一鍵核准回調＋GitHub Actions 4 組 Secrets 寫入＋`main` Branch Protection 鎖定＋自動觸發 PR Gate）  
 > **最高決策者**：老闆（Telegram ID: `8862712587`，唯一 SuperAdmin）  
 > **適用範圍**：盛隆現代化多倉開發管線（`gass`、`shenglong-next`、`shenglong-line-liff`）  
 > **檔案位置**：
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS public.ai_dev_runs (
 ### 階段二：IDE / Codespaces 與 MCP 執行環境建構（✅ 2026-11-27 程式碼與工作流落地）
 - [x] **交付物 2.1**：建立 `.devcontainer/devcontainer.json`（Node 22 沙盒、`SHENGLONG_ENV=sandbox`、`LEGACY_ERP_WRITE_ENABLED=false`）與標準化 MCP 最小權限範本（`docs/mcp-sandbox-config.example.json`，零明碼密鑰）。
 - [x] **交付物 2.2**：建立沙盒執行器 `scripts/dev-agent-executor.mjs`、GitHub Actions 執行工作流 `.github/workflows/multi-agent-executor.yml`（接收 `repository_dispatch: multi_agent_task` 或手動 `workflow_dispatch`，強制建立 `ai-agent/*` 隔離分支、產出稽核紀錄、跑全套測試後自動開 PR 且絕不自動合併）與 PR 閘門工作流 `.github/workflows/multi-agent-pr-gate.yml`（Policy Diff 掃描 + Lint + 單元測試 + Build）。
-- [ ] **交付物 2.3**：於 GitHub 儲存庫設定 Branch Protection（首筆 PR 跑完 `Multi-Agent PR Zero-Regressions Gate` 後，在 GitHub Settings 勾選 `main` 必過該狀態檢查與 Code Owner 核准）。
+- [x] **交付物 2.3**：已完成 GitHub `main` Branch Protection 設定（強制必過 `policy-and-test-gate`、禁止 force-push 與刪除分支），並寫入 4 組 GitHub Actions Secrets（`DEV_AGENT_APPROVAL_URL`、`DEV_AGENT_BRIDGE_TOKEN`、`DEV_AGENT_WEBHOOK_SECRET`、`DEV_AGENT_GH_PAT`），由 `DEV_AGENT_GH_PAT` 開立 PR 即可全自動觸發 PR Zero-Regressions Gate 與老闆 Telegram 簽核卡推播。
 - [x] **階段驗收標準（自動化測試）**：新增 `tests/dev-agent-phase2.test.mjs` 驗證 Devcontainer、MCP 最小權限、工作流防線、Diff 政策掃描與 CLI 端到端執行，全套測試 100% PASS。
 
 ### 階段三：自動化閉環整合與實戰演練（✅ 2026-11-27 程式碼、SQL 與端到端演練測試落地）

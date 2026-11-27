@@ -16,6 +16,8 @@ import {
 import { fetchWithTimeout } from './_fetch.js';
 import handleCustomerHistory from './_customer-history.js';
 import { fetchLineAiLogs } from './_line-ai-logger.js';
+import { handleDevAgentTelegramCallback } from './_dev-agent-audit.js';
+import devAgentApprovalHandler from './dev-agent-approval.js';
 
 /**
  * 回應 Telegram Callback Query (消除使用者端按鈕轉圈狀態)
@@ -210,6 +212,24 @@ export default async function handler(req, res) {
       const updatedText = `${originalText}\n\n✅ *【異常已排除】*\n👤 *處理人*：@${user}（${taipeiTime()}）\n狀態：管理員已確認並手動結案`;
       await editTelegramMessage(chatId, messageId, updatedText, { replyMarkup: null });
       return sendJson(res, 200, { ok: true, action: 'error_resolved' });
+    }
+
+    // G. 多代理 AI 協同開發 L3 一鍵核准／駁回（唯一授權：老闆 8862712587）
+    if (data.startsWith('dev_approve:') || data.startsWith('dev_reject:')) {
+      const devResult = await handleDevAgentTelegramCallback({
+        cb,
+        token,
+        chatId,
+        fromId,
+        messageId,
+        originalText,
+        approvalHandler: devAgentApprovalHandler,
+        answerCallbackFn: answerCallbackQuery,
+        editMessageFn: editTelegramMessage,
+      });
+      if (devResult.handled) {
+        return sendJson(res, devResult.httpStatus, devResult.body);
+      }
     }
 
     // F. 清除快取

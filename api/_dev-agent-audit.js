@@ -15,6 +15,7 @@ import {
   SUPERADMIN_TELEGRAM_ID,
   TASK_STATES,
   canTransitionTaskState,
+  signDevAgentRequest,
 } from './_dev-agent-protocol.js';
 
 const CIRCUIT_COOLDOWN_MS = 5 * 60 * 1000; // 5 分鐘熔斷冷卻
@@ -351,4 +352,167 @@ export async function sendRollbackCircuitAlert(
   } catch (err) {
     return { sent: false, reason: `TELEGRAM_ERROR_${err.message}`, text };
   }
+}
+
+/**
+ * 解析 Telegram 按鈕回調字串 (dev_approve:<taskId>:<prNumber> 或 dev_reject:<taskId>:<prNumber>)
+ */
+export function parseDevAgentCallbackData(data) {
+  const raw = String(data || '').trim();
+  const match = raw.match(/^(dev_approve|dev_reject):([A-Za-z0-9_-]+)(?::([0-9]+))?$/);
+  if (!match) return null;
+  return {
+    action: match[1] === 'dev_approve' ? 'approve' : 'reject',
+    taskId: match[2],
+    prNumber: match[3] ? Number(match[3]) : null,
+  };
+}
+
+/**
+ * 處理老闆在 Telegram 點擊「✅ 核准並合併 main / 🛑 駁回退回」之完整閉環回調
+ * 嚴格驗證 fromId === 8862712587，絕不放行群組內其他成員誤點
+ */
+export async function handleDevAgentTelegramCallback({
+  cb,
+  token,
+  chatId,
+  fromId,
+  messageId,
+  originalText = '',
+  repository = 'qazwsx32100/gass',
+  env = process.env,
+  approvalHandler,
+  answerCallbackFn,
+  editMessageFn,
+  now = () => Date.now(),
+}) {
+  const parsed = parseDevAgentCallbackData(cb?.data);
+  if (!parsed) return { handled: false };
+
+  // 嚴格鎖定唯一 SuperAdmin (老闆 8862712587)
+  if (String(fromId) !== SUPERADMIN_TELEGRAM_ID) {
+    if (typeof answerCallbackFn === 'function') {
+      await answerCallbackFn(
+        token,
+        cb.id,
+        `🚫 權限不足：僅限老闆 (${SUPERADMIN_TELEGRAM_ID}) 可執行核准或駁回`,
+        true
+      );
+    }
+    return {
+      handled: true,
+      httpStatus: 403,
+      body: { ok: false, code: 'SUPERADMIN_ONLY', error: 'Only SuperAdmin 8862712587 may approve or reject' },
+    };
+  }
+
+  if (typeof answerCallbackFn === 'function') {
+    await answerCallbackFn(
+      token,
+      cb.id,
+      parsed.action === 'approve'
+        ? `⏳ 正在核准任務 ${parsed.taskId}...`
+        : `⏳ 正在駁回任務 ${parsed.taskId}...`,
+      false
+    );
+  }
+
+  // 透過 HMAC-SHA256 內部直呼 /api/dev-agent-approval
+  const payloadObj = {
+    action: parsed.action,
+    taskId: parsed.taskId,
+    repository,
+    prNumber: parsed.prNumber || undefined,
+    approverId: SUPERADMIN_TELEGRAM_ID,
+    reason: parsed.action === 'reject' ? '老闆於 Telegram 點擊駁回退回' : undefined,
+  };
+  const rawBody = JSON.stringify(payloadObj);
+  const bridgeToken = env.DEV_AGENT_BRIDGE_TOKEN || '';
+  const webhookSecret = env.DEV_AGENT_WEBHOOK_SECRET || '';
+  const timestamp = Math.floor(now() / 1000);
+  const signature = webhookSecret
+    ? signDevAgentRequest({ secret: webhookSecret, timestamp, rawBody })
+    : '';
+
+  const mockRes = {
+    statusCode: 200,
+    headers: {},
+    body: null,
+    status(c) {
+      this.statusCode = c;
+      return this;
+    },
+    setHeader(k, v) {
+      this.headers[k.toLowerCase()] = v;
+      return this;
+    },
+    end(raw) {
+      this.body = raw ? JSON.parse(raw) : null;
+      return this;
+    },
+  };
+
+  await approvalHandler(
+    {
+      method: 'POST',
+      rawBody,
+      body: payloadObj,
+      headers: {
+        'content-type': 'application/json',
+        authorization: bridgeToken ? `Bearer ${bridgeToken}` : '',
+        'x-agent-timestamp': String(timestamp),
+        'x-agent-signature-256': signature,
+      },
+      socket: { remoteAddress: '127.0.0.1' },
+    },
+    mockRes
+  );
+
+  const taipeiNow = new Date(now()).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+  const ok = mockRes.statusCode >= 200 && mockRes.statusCode < 300 && Boolean(mockRes.body?.ok);
+
+  // 保留 PR / Preview URL 按鈕，移除已執行之核准／駁回按鈕
+  const cleanedKeyboard = cb?.message?.reply_markup?.inline_keyboard
+    ? {
+        inline_keyboard: cb.message.reply_markup.inline_keyboard
+          .map((row) =>
+            row.filter(
+              (btn) =>
+                !btn.callback_data?.startsWith('dev_approve:') &&
+                !btn.callback_data?.startsWith('dev_reject:')
+            )
+          )
+          .filter((row) => row.length > 0),
+      }
+    : null;
+
+  let statusBanner;
+  if (ok && parsed.action === 'approve') {
+    const mergedText = mockRes.body?.mergeResult?.merged
+      ? `已自動 Squash Merge PR #${parsed.prNumber}（SHA: \`${String(mockRes.body.mergeResult.sha || '').slice(0, 7)}\`）`
+      : '已記錄老闆核准狀態（目前自動合併開關為關閉，可於 GitHub 手動點 Merge）';
+    statusBanner = `✅ *【老闆已核准】*（${taipeiNow}）\n• 任務：\`${parsed.taskId}\`\n• 結果：${mergedText}`;
+  } else if (ok && parsed.action === 'reject') {
+    statusBanner = `🛑 *【老闆已駁回退回】*（${taipeiNow}）\n• 任務：\`${parsed.taskId}\`\n• 狀態：\`${TASK_STATES.REJECTED}\``;
+  } else {
+    statusBanner = `⚠️ *【簽核執行異常】*（${taipeiNow}）\n• HTTP ${mockRes.statusCode}：${mockRes.body?.error || '未知錯誤'}`;
+  }
+
+  if (typeof editMessageFn === 'function' && chatId && messageId) {
+    await editMessageFn(chatId, messageId, `${originalText}\n\n${statusBanner}`, {
+      replyMarkup: ok ? (cleanedKeyboard?.inline_keyboard?.length ? cleanedKeyboard : null) : cb?.message?.reply_markup || null,
+    });
+  }
+
+  return {
+    handled: true,
+    httpStatus: ok ? 200 : mockRes.statusCode,
+    body: {
+      ok,
+      action: `telegram_dev_${parsed.action}`,
+      taskId: parsed.taskId,
+      prNumber: parsed.prNumber,
+      approvalResponse: mockRes.body,
+    },
+  };
 }
