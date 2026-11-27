@@ -1,6 +1,6 @@
 # 🤖 盛隆瓦斯 多代理 AI 協同開發技術藍圖與執行計畫書 (Multi-Agent Collaborative Dev Blueprint)
 
-> **文件版本**：`v1.2.0`（2026-11-27 第二階段 IDE 沙盒／MCP 最小權限／GitHub Actions 自動開 PR 與 PR Gate 實作完成）  
+> **文件版本**：`v1.3.0`（2026-11-27 正式建置第一層「AI 協作中心」並全鏈路串接執行橋樑 `/api/dev-agent-hub` ➔ `/api/dev-agent-dispatch`）  
 > **最高決策者**：老闆（Telegram ID: `8862712587`，唯一 SuperAdmin）  
 > **適用範圍**：盛隆現代化多倉開發管線（`gass`、`shenglong-next`、`shenglong-line-liff`）  
 > **檔案位置**：
@@ -354,11 +354,12 @@ CREATE TABLE IF NOT EXISTS public.ai_dev_runs (
 
 ## 柒、三階段實施路線圖與驗收檢核表
 
-### 階段一：協作中心與指令標準化（✅ 2026-11-27 MVP 實作完成）
+### 階段一：協作中心與指令標準化（✅ 2026-11-27 全鏈路實作並串接完成）
+- [x] **交付物 1.0（AI 協作中心）**：建立第一層多模型協作引擎 `api/_dev-agent-hub.js`、線上 API 端點 `api/dev-agent-hub.js`（`/api/dev-agent-hub`）與命令列工具 `scripts/dev-agent-hub-cli.mjs`，支援 **Gemini 4、ChatGPT (OpenAI)、Grok (xAI)、Meta AI (Llama)** 與離線確定性沙盒備援，採固定輪次三角色交叉審查（Architect ➔ Implementer ➔ Auditor），自動產出 JSON v1.0 工單並以 HMAC-SHA256 簽章直連 `/api/dev-agent-dispatch`。
 - [x] **交付物 1.1**：在倉庫建立 `schemas/multi-agent-task.v1.schema.json` 與驗證模組 `api/_dev-agent-protocol.js`（含 Schema 驗證器、HMAC-SHA256 驗簽、Policy-as-Code 守門員、狀態機與 24h 冪等快取）。
 - [x] **交付物 1.2**：實作 Webhook 中繼端點 `api/dev-agent-dispatch.js`（四重防護：限流 20/10m + Bearer/HMAC 或 Admin Session + Schema + Policy Gate + 冪等鎖，預設安全沙盒佇列與 `dryRun`，可透過環境變數啟用 GitHub `repository_dispatch`）。
-- [x] **交付物 1.3**：撰寫完整單元測試 `tests/dev-agent-phase1.test.mjs`（覆蓋合法工單、dryRun、偽造簽章 401、重放攻擊 401、舊 ERP DDL 403、直推 main 403、<60s 輪詢 403、明碼密鑰 403、L3 自動升格、冪等防重、429 限流、503 Fail-Closed 與 GitHub Dispatch 模擬）。
-- [x] **階段驗收標準**：正向、異常與惡意測試全數通過（50/50 PASS 含資安與舊 ERP 黑盒子稽核），既有系統零回歸。
+- [x] **交付物 1.3**：撰寫完整單元測試 `tests/dev-agent-hub.test.mjs` 與 `tests/dev-agent-phase1.test.mjs`（覆蓋多模型交叉討論、429 優雅降級、惡意舊 ERP/GPS 請求硬攔截、Hub ➔ HMAC ➔ Bridge ➔ GitHub Dispatch 全鏈路與 CLI 實測）。
+- [x] **階段驗收標準**：正向、異常與惡意測試全數通過（64/64 PASS 含資安與舊 ERP 黑盒子稽核），既有系統零回歸。
 
 ### 階段二：IDE / Codespaces 與 MCP 執行環境建構（✅ 2026-11-27 程式碼與工作流落地）
 - [x] **交付物 2.1**：建立 `.devcontainer/devcontainer.json`（Node 22 沙盒、`SHENGLONG_ENV=sandbox`、`LEGACY_ERP_WRITE_ENABLED=false`）與標準化 MCP 最小權限範本（`docs/mcp-sandbox-config.example.json`，零明碼密鑰）。

@@ -126,13 +126,14 @@ jobs:
       - name: Run mandatory automated tests & linter (Zero Regressions Gate)
         run: |
           node --test \
+            tests/dev-agent-hub.test.mjs \
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
             tests/multi-agent-blueprint.test.mjs \
             tests/web-and-api-security.test.mjs \
             tests/trigger-github-workflow.test.mjs \
             tests/knowledge-base.test.mjs
-          npx oxlint api/_dev-agent-protocol.js api/dev-agent-dispatch.js scripts/dev-agent-executor.mjs
+          npx oxlint api/_dev-agent-protocol.js api/dev-agent-dispatch.js api/_dev-agent-hub.js api/dev-agent-hub.js scripts/dev-agent-executor.mjs scripts/dev-agent-hub-cli.mjs
 
       - name: Commit isolated changes & run PR Policy Diff Gate
         run: |

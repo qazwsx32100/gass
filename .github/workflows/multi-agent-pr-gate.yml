@@ -41,7 +41,11 @@ jobs:
           npx oxlint \
             api/_dev-agent-protocol.js \
             api/dev-agent-dispatch.js \
+            api/_dev-agent-hub.js \
+            api/dev-agent-hub.js \
             scripts/dev-agent-executor.mjs \
+            scripts/dev-agent-hub-cli.mjs \
+            tests/dev-agent-hub.test.mjs \
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
             tests/multi-agent-blueprint.test.mjs
@@ -49,6 +53,7 @@ jobs:
       - name: Run core automated test suite
         run: |
           node --test \
+            tests/dev-agent-hub.test.mjs \
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
             tests/multi-agent-blueprint.test.mjs \
