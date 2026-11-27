@@ -1,3 +1,12 @@
+## [2026-11-27 12:10] - 司機 APP 上方設定與導覽列安全區避讓 ✕ 根治 Android 15/16 手機時間／電源狀態列遮擋
+- **版本號**：`20261127_1210_driver_top_safe_area_status_bar_fix`
+- **影響範圍**：`lib/driver-safe-area.ts`、`app/driver/page.tsx`、`android/app/src/main/java/com/shenglong/driver/MainActivity.java`、`android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java`、`tests/driver-safe-area-status-bar.test.mjs`
+- **主要更動**：
+  1. 解決 Android 15/16 (`targetSdk 36`) 強制 Edge-to-Edge 造成司機 APP 頂部設定導覽列（更新派單／清新強光模式／鈴聲設定）被手機時間、電源與挖孔鏡頭遮擋問題。
+  2. 雲端即時生效：建立 `lib/driver-safe-area.ts` 並接入 `app/driver/page.tsx` 頂部導覽列、固定懸浮橫幅與四大設定彈窗，既有已安裝 APK 免重裝重開即可立即避開狀態列（44px + 8px 內距 = 52px）；iOS PWA 維持 `env(safe-area-inset-top)`。
+  3. 原生層根治：`MainActivity.java` 與 `OperationsMainActivity.java` 套用系統級 `WindowInsetsCompat (systemBars | displayCutout | ime)` 並透過 `hasNativeStatusBarInset()` 協調網頁層自動歸零、杜絕雙重留白。
+- **驗證與發布**：62/62 測試 PASS、`guard:zero-notify` PASS、TypeScript 0 錯誤、Android Java 編譯通過，雙倉 GitHub 與 Vercel Production 正式部署生效。
+
 ## [2026-11-27 11:45] - 地址樓層歸位「客戶名稱 ➔ 地址含樓層 ➔ 備註」（原排版不動）✕ 雙端推播直入重點刪除指派說明 ✕ 來電 25 秒重入智慧歸併 (APK v3.9)
 - **版本號**：`20261127_1145_address_floor_order_direct_push_and_25s_call_dedupe_v39`
 - **主要更動**：雙倉同步 `lib/mobile-order-parser.js`，修正地址樓層緊跟門牌後、備註置於最後（原排版不動）；監控中心與司機端推播通知刪除系統指派說明、按「客戶名稱 ➔ 地址含樓層 ➔ 備註+規格 價格」直入重點；來電 25 秒重入智慧歸併為 1 筆並加裝 120 秒同電話冷卻鎖；新版 APK v3.9 封裝發布至桌面 `sl`。

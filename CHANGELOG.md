@@ -1,3 +1,17 @@
+## [2026-11-27 12:10] - 📱 司機 APP 上方設定與導覽列安全區避讓 ✕ 根治 Android 15/16 手機時間／電源狀態列遮擋 [ver: 20261127_1210_driver_top_safe_area_status_bar_fix]
+- **背景與老闆回報**：
+  - 老闆反映：「司機APP上方的設定 會被手機上方的時間電源 等 遮擋」。
+  - 根因：Android 15/16 (`targetSdkVersion = 36`) 強制啟用 Edge-to-Edge，WebView 直接繪製在手機上方時間、Wi-Fi、電量與挖孔鏡頭下方，且 Chromium WebView 經常回傳 `env(safe-area-inset-top) = 0px`，導致頂部設定導覽列被遮擋。
+- **核心技術實裝**：
+  1. **雙層安全區運算模組 (`lib/driver-safe-area.ts`)**：
+     - 既有已安裝 APK（無須立即重裝）由雲端立即生效 `max(env(safe-area-inset-top, 0px), 44px)`（加上內距共 52px），完整避開所有主流手機狀態列與挖孔鏡頭。
+     - 新版原生 APK 已在底層套用系統 `WindowInsets` 時自動回傳 `0px`，杜絕雙重留白；iOS PWA 維持 `env(safe-area-inset-top, 0px)` 精準避開動態島。
+  2. **司機端 APP (`app/driver/page.tsx`) 全面避讓**：
+     - 頂部固定導覽列（更新派單／清新強光模式／鈴聲設定）、下拉更新提示器、鈴聲播放中關閉橫幅、新派單懸浮大橫幅，以及四大設定／回報／運費／推播彈窗全面套用安全區避讓。
+  3. **Android 原生層 (`MainActivity.java`、`OperationsMainActivity.java`) 系統級 Insets**：
+     - 新增 `applySystemBarSafeInsets()` 透過 `ViewCompat.setOnApplyWindowInsetsListener` 套用 `systemBars | displayCutout | ime` 安全內距並固定高對比狀態列 (`#0f172a` 白色圖示)，並透過 `AndroidBridge.hasNativeStatusBarInset()` 通知網頁層避免重複留白。
+- **驗證與發布**：62/62 測試 PASS、`guard:zero-notify` PASS、TypeScript 0 錯誤、Android Java 編譯通過，雙倉推送 GitHub 並部署 Vercel Production。
+
 ## [2026-11-27 11:45] - 地址樓層歸位「客戶名稱 ➔ 地址含樓層 ➔ 備註」（原排版不動）✕ 雙端推播直入重點刪除指派說明 ✕ 來電 25 秒重入智慧歸併 (APK v3.9)
 - **版本號**：`20261127_1145_address_floor_order_direct_push_and_25s_call_dedupe_v39`
 - **主要更動**：雙倉同步 `lib/mobile-order-parser.js`（與 `shenglong-next` 共用），修正樓層不落入備註最後且保持原排版；監控中心與司機端推播刪除系統指派說明直入重點；來電 25 秒重入自動歸併為 1 筆並防重推；新版 APK v3.9 發布至桌面 `sl`。
