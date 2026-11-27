@@ -151,16 +151,38 @@ jobs:
           git push -u origin "$BRANCH"
 
       - name: Open Pull Request (Never Auto-Merge)
+        id: pr
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="${{ steps.payload.outputs.feature_branch }}"
           TASK_ID="${{ steps.payload.outputs.task_id }}"
           TITLE="[${{ steps.payload.outputs.risk_level }}] ${TASK_ID}: ${{ steps.payload.outputs.objective_title }}"
-          EXISTING_PR="$(gh pr list --head "$BRANCH" --base main --json url --jq '.[0].url')"
-          if [ -n "$EXISTING_PR" ]; then
-            echo "✅ PR already exists: $EXISTING_PR"
+          EXISTING_PR="$(gh pr list --head "$BRANCH" --base main --json number,url --jq '.[0]')"
+          if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
+            PR_URL="$(echo "$EXISTING_PR" | jq -r '.url')"
+            PR_NUM="$(echo "$EXISTING_PR" | jq -r '.number')"
+            echo "✅ PR already exists: $PR_URL"
             gh pr edit "$BRANCH" --body-file /tmp/pr-body.md
           else
-            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
+            PR_URL="$(gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md)"
+            PR_NUM="$(gh pr view "$BRANCH" --json number --jq '.number')"
           fi
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Boss (8862712587) via Closed-Loop Approval Gateway (Optional)
+        env:
+          DEV_AGENT_APPROVAL_URL: ${{ secrets.DEV_AGENT_APPROVAL_URL }}
+          DEV_AGENT_BRIDGE_TOKEN: ${{ secrets.DEV_AGENT_BRIDGE_TOKEN }}
+          DEV_AGENT_WEBHOOK_SECRET: ${{ secrets.DEV_AGENT_WEBHOOK_SECRET }}
+        run: |
+          node scripts/dev-agent-smoke-and-notify.mjs \
+            --notify-boss \
+            --task-id "${{ steps.payload.outputs.task_id }}" \
+            --repo "${{ github.repository }}" \
+            --branch "${{ steps.payload.outputs.feature_branch }}" \
+            --risk-level "${{ steps.payload.outputs.risk_level }}" \
+            --title "${{ steps.payload.outputs.objective_title }}" \
+            --pr-number "${{ steps.pr.outputs.pr_number }}" \
+            --pr-url "${{ steps.pr.outputs.pr_url }}"

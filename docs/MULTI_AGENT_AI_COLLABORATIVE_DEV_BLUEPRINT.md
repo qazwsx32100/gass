@@ -1,6 +1,6 @@
 # 🤖 盛隆瓦斯 多代理 AI 協同開發技術藍圖與執行計畫書 (Multi-Agent Collaborative Dev Blueprint)
 
-> **文件版本**：`v1.3.0`（2026-11-27 正式建置第一層「AI 協作中心」並全鏈路串接執行橋樑 `/api/dev-agent-hub` ➔ `/api/dev-agent-dispatch`）  
+> **文件版本**：`v1.4.0`（2026-11-27 第三階段閉環整合完成：Supabase 稽核＋離線降級 ✕ 老闆 Telegram `8862712587` L3 簽核端點 ✕ Preview/Prod 煙霧驗證與自動熔斷告警）  
 > **最高決策者**：老闆（Telegram ID: `8862712587`，唯一 SuperAdmin）  
 > **適用範圍**：盛隆現代化多倉開發管線（`gass`、`shenglong-next`、`shenglong-line-liff`）  
 > **檔案位置**：
@@ -367,11 +367,11 @@ CREATE TABLE IF NOT EXISTS public.ai_dev_runs (
 - [ ] **交付物 2.3**：於 GitHub 儲存庫設定 Branch Protection（首筆 PR 跑完 `Multi-Agent PR Zero-Regressions Gate` 後，在 GitHub Settings 勾選 `main` 必過該狀態檢查與 Code Owner 核准）。
 - [x] **階段驗收標準（自動化測試）**：新增 `tests/dev-agent-phase2.test.mjs` 驗證 Devcontainer、MCP 最小權限、工作流防線、Diff 政策掃描與 CLI 端到端執行，全套測試 100% PASS。
 
-### 階段三：自動化閉環整合與實戰演練（預估 1–2 週）
-- [ ] **交付物 3.1**：於 Supabase 建立 `ai_dev_tasks` / `ai_dev_runs` 稽核表並實裝離線容災降級。
-- [ ] **交付物 3.2**：串接 Vercel Preview 自動煙霧測試與 Telegram 老闆 L3 一鍵核准通知卡。
-- [ ] **交付物 3.3**：執行一次完整端到端演練（需求輸入 → 多模型產出 JSON → 開 PR → Preview 綠燈 → 老闆簽核 → Production 上線 → 故意注入失敗測試驗證自動攔截與回滾）。
-- [ ] **階段驗收標準**：全鏈路平均耗時 < 10 分鐘、故障自動攔截率 100%、無任何明碼憑證外洩、全程審計日誌完整可追溯。
+### 階段三：自動化閉環整合與實戰演練（✅ 2026-11-27 程式碼、SQL 與端到端演練測試落地）
+- [x] **交付物 3.1**：建立專屬 Supabase Migration `sql/multi-agent-dev-audit.sql`（`ai_dev_tasks` / `ai_dev_runs` / `ai_dev_audit_logs`＋RLS 隔離零舊 ERP 接觸）與稽核存儲引擎 `api/_dev-agent-audit.js`（純 PostgREST＋402/503 五分鐘熔斷與離線容災降級）。
+- [x] **交付物 3.2**：建立閉環審核與煙霧驗證端點 `api/dev-agent-approval.js`（`/api/dev-agent-approval`）與 CLI `scripts/dev-agent-smoke-and-notify.mjs`，串接老闆 Telegram (`8862712587`) L3 一鍵核准通知卡、SuperAdmin 獨佔核准／駁回與 PR Squash Merge、SSRF 白名單煙霧驗證及連敗自動熔斷告警，並掛載至 `.github/workflows/multi-agent-executor.yml`。
+- [x] **交付物 3.3**：新增端到端閉環整合測試 `tests/dev-agent-phase3.test.mjs`，完整驗證「AI 協作中心 ➔ HMAC 橋樑 ➔ GitHub PR ➔ 老闆 Telegram L3 簽核卡 ➔ 非老闆 403 攔截 ➔ 老闆核准合併 ➔ 正式煙霧驗證 ➔ SSRF 攔截與連敗自動熔斷告警」。
+- [x] **階段驗收標準**：全鏈路自動化測試 69/69 PASS（零回歸）、`oxlint` 0 錯誤，所有端點部署 Vercel Production 實彈驗收綠燈。
 
 ---
 

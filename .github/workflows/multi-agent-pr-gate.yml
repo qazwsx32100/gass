@@ -43,11 +43,15 @@ jobs:
             api/dev-agent-dispatch.js \
             api/_dev-agent-hub.js \
             api/dev-agent-hub.js \
+            api/_dev-agent-audit.js \
+            api/dev-agent-approval.js \
             scripts/dev-agent-executor.mjs \
             scripts/dev-agent-hub-cli.mjs \
+            scripts/dev-agent-smoke-and-notify.mjs \
             tests/dev-agent-hub.test.mjs \
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
+            tests/dev-agent-phase3.test.mjs \
             tests/multi-agent-blueprint.test.mjs
 
       - name: Run core automated test suite
@@ -56,6 +60,7 @@ jobs:
             tests/dev-agent-hub.test.mjs \
             tests/dev-agent-phase1.test.mjs \
             tests/dev-agent-phase2.test.mjs \
+            tests/dev-agent-phase3.test.mjs \
             tests/multi-agent-blueprint.test.mjs \
             tests/web-and-api-security.test.mjs \
             tests/trigger-github-workflow.test.mjs \
