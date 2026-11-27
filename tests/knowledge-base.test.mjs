@@ -329,4 +329,5 @@ test('KnowledgeBase: Mobile-first UX reply optimization & colloquial/Taiwanese q
   const quotePrompt = getOptimizedSystemPrompt('想詢問 指送河邊北街 10kg及16kg的費用', 'fast', '');
   assert.ok(quotePrompt.includes('詳細報價會請專員回覆'));
   assert.ok(quotePrompt.includes('非營業時間按下「轉專員」'));
+  assert.ok(quotePrompt.includes('親切在地門市小姐風'));
 });

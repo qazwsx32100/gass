@@ -1,3 +1,11 @@
+
+## [2026-11-27 10:40] - LINE AI「親切在地門市小姐風」雙層升級 ✕ 真人回覆語氣自動學習引擎 [ver: 20261127_1040_local_friendly_clerk_and_auto_tone_learner]
+- **老闆指示**：以「親切在地門市小姐風」為主，並實作自動化學習真人回覆語氣。
+- **主要更動**：
+  1. 新增 `shenglong-line-liff/api/_human-tone-learner.js`：去個資脫敏（保留三支門市專線）、動態語氣特徵萃取、`sl_system_status` 持久化＋5 分鐘快取。
+  2. 擴大 `api/line-webhook.js` 的 `naturalKbReply` 真人潤飾白名單（22 項日常規則，含多輪脈絡承接＋數字與詢價五要素安全護欄），新增授權管理員 LINE「`學語氣：…`／`看語氣`」指令。
+  3. `api/index.js` 後台審核專員說明自動背景擷取語氣樣本，並新增 `admin-tone-samples` API；`api/_knowledge-base.js` 與 `gass/api/_knowledge-base.js` 同步升級親切在地門市小姐口吻。
+- **測試狀態**：`shenglong-line-liff` 327/327 PASS、`gass` 14/14 PASS。
 ## [2026-11-27 10:30] - 導航系統三大類誤判全面根治：地址清洗與客號反補零誤判 ✕ 司機自動存 GPS 5 重防線 ✕ Android 兩輪機車模式對齊
 - **版本號**：`20261127_1030_navigation_misjudgment_full_fix`
 - **老闆指示**：「更正導航系統 會誤判」（確認全部 3 大類一起修正）
