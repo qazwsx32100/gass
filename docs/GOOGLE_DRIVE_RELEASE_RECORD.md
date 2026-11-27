@@ -1,3 +1,14 @@
+## [2026-11-27 13:55] - 八大 AI 部門 ✕ AI 軍師方案 A 全量根治（10 項資安、離職防線、閉環精度、哨兵通道與真資料升級）
+- **版本號**：`20261127_1355_ai_departments_and_advisor_plan_a_hardening`
+- **老闆指示**：「方案a 但是要先檢驗 因為我有做大更動」
+- **影響範圍**：`lib/internal-api-auth.ts`、`lib/ai-cross-department-pipeline.ts`、`lib/ai-engineering-monitor.ts`、`lib/line-ai-turns-fetcher.ts`、`lib/seven-ai-matrix.ts`、`lib/seven-ai-dryrun-engine.ts`、`lib/seven-ai-autopilot-scheduler.ts`、`app/api/ai/advisor/route.ts`、`app/api/ai/eight-departments/route.ts`、`app/api/ai/pipelines/route.ts`、`app/api/ai/sales/anomalies/route.ts`、`app/api/ai/admin/geocode-audit/route.ts`、`app/api/ai/customer-service/audit/route.ts`、`app/api/ai/customer-service/candidate-faqs/route.ts`、`app/api/ai/news/route.ts`、`app/api/ai/chatgpt/summary/route.ts`、`app/api/telegram/advisor/route.ts`、`tests/ai-departments-and-advisor-hardening.test.mjs`
+- **主要更動**：
+  1. 【資安與鑑權補齊】：全數敏感 AI 與軍師 API 統一加入 `authorizeAdminOrInternalRequest`（支援登入 Session 與 `CHATGPT_BI_TOKEN`），全面移除明碼 Telegram Bot Token；`POST /api/telegram/advisor` 實裝 `x-telegram-bot-api-secret-token` 驗證。
+  2. 【永久排除離職司機游柏林】：軍師、Telegram Bot、沙盒演練與四班領航全面只推薦現役外勤（小龍），派單回呼強制驗證 `isDriverResigned`。
+  3. 【三大閉環與工程哨兵校準】：90 天呆瓶管線排除 `daysDiff >= 9999` 並修正假電話 `02-2988-1234` 為 `02-2972-2149`；保本底線改分規格精算（4kg/10kg/16kg/20kg/50kg）；庫存緊急預警對齊門市門檻且不對充沛 20kg 誤報紅色警戒；工程哨兵改走 `operationsKvFetch` 並核驗營業日期。
+  4. 【LLM、真資料與測試修復】：軍師雲端跳過 `127.0.0.1:3333` 並改用 `gemini-2.5-flash`；軍師與 TG Bot 客戶庫接軌 3,965 戶 `cloud-customer-gateway`；客服 AI 稽核串接真實 LINE 對話表並標示 `dataSource`；修復 `Gass` 2 項失敗測試。
+- **驗證**：`shenglong-next` 53/53 PASS、`gass` 28/28 PASS、`guard:zero-notify` PASS、`next build` 通過，雙倉推送 GitHub 並部署 Vercel Production 生效。
+
 ## [2026-11-27 12:10] - 司機 APP 上方設定與導覽列安全區避讓 ✕ 根治 Android 15/16 手機時間／電源狀態列遮擋
 - **版本號**：`20261127_1210_driver_top_safe_area_status_bar_fix`
 - **影響範圍**：`lib/driver-safe-area.ts`、`app/driver/page.tsx`、`android/app/src/main/java/com/shenglong/driver/MainActivity.java`、`android/app/src/main/java/com/shenglong/driver/OperationsMainActivity.java`、`tests/driver-safe-area-status-bar.test.mjs`

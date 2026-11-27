@@ -142,7 +142,7 @@ test("🤖 AI Swarm Test 4: 👑 Boss-SuperAdmin-AI 老闆審批按鈕、403 權
   assert.ok(dumpingPrice < floorCost, "傾銷價格低於保本底線，系統應發出防護預警");
 });
 
-test("🤖 AI Swarm Test 5: 🤖 AI-Matrix-Seven-Advisors 七大特助抽屜 3 段切換與 8 大免打字快捷晶片", () => {
+test("🤖 AI Swarm Test 5: 🤖 AI-Matrix-Eight-Advisors 八大特助抽屜 3 段切換與 8 大免打字快捷晶片", () => {
   const drawerPath = path.join(process.cwd(), "../shenglong-next/app/components/AiAdvisorDrawer.tsx");
   assert.ok(fs.existsSync(drawerPath), "AiAdvisorDrawer.tsx 必須存在");
 
@@ -156,7 +156,7 @@ test("🤖 AI Swarm Test 5: 🤖 AI-Matrix-Seven-Advisors 七大特助抽屜 3 �
 
   // 2. 8 大免打字快捷晶片
   const chipsExpected = [
-    "七大AI全真試跑",
+    "八大AI全真試跑",
     "今日戰報",
     "智能派單建議",
     "實瓶庫存與叫車",
@@ -169,8 +169,8 @@ test("🤖 AI Swarm Test 5: 🤖 AI-Matrix-Seven-Advisors 七大特助抽屜 3 �
     assert.ok(drawerContent.includes(chip), `快捷晶片清單必須包含【${chip}】`);
   });
 
-  // 3. 7 大特助角色切換標籤
-  const agentsExpected = ["secretary", "operations", "cs", "marketing", "sales", "finance", "admin"];
+  // 3. 8 大特助角色切換標籤
+  const agentsExpected = ["secretary", "operations", "cs", "marketing", "sales", "finance", "admin", "engineer"];
   agentsExpected.forEach((ag) => {
     assert.ok(drawerContent.includes(`id: "${ag}"`), `特助切換必須包含角色 ${ag}`);
   });
