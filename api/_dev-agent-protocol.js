@@ -656,6 +656,7 @@ export function createIdempotencyStore({
 
 /**
  * 組裝給 GitHub repository_dispatch 的純淨標準化封包
+ * 注意：GitHub REST API 硬性規定 client_payload 頂層屬性不得超過 10 個（本協議鎖定 8 個頂層欄位）
  */
 export function buildGithubDispatchPayload(task, policyResult) {
   return {
@@ -666,14 +667,16 @@ export function buildGithubDispatchPayload(task, policyResult) {
       idempotencyKey: task.idempotencyKey,
       featureBranch: task.target.featureBranch,
       baseBranch: task.target.baseBranch,
-      allowedPaths: task.target.allowedPaths,
       effectiveRiskLevel: policyResult.effectiveRiskLevel,
-      requiresBossApproval: policyResult.requiresBossApproval,
-      superAdminId: policyResult.superAdminId,
-      requiredGuards: policyResult.requiredGuards,
       objectiveTitle: task.objective.title,
-      affectedSystems: task.impactAnalysis.affectedSystems,
-      planStepCount: task.planSteps.length,
+      meta: {
+        allowedPaths: task.target.allowedPaths,
+        requiresBossApproval: policyResult.requiresBossApproval,
+        superAdminId: policyResult.superAdminId,
+        requiredGuards: policyResult.requiredGuards,
+        affectedSystems: task.impactAnalysis.affectedSystems,
+        planStepCount: task.planSteps.length,
+      },
     },
   };
 }

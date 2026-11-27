@@ -48,14 +48,24 @@ const SECRET_PATTERNS = Object.freeze([
   { code: 'SECRET_TELEGRAM_BOT_TOKEN', pattern: /\b[0-9]{8,12}:[A-Za-z0-9_-]{30,}\b/ },
 ]);
 
+function normalizeDispatchPayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const meta = payload.meta && typeof payload.meta === 'object' ? payload.meta : {};
+  return {
+    ...meta,
+    ...payload,
+  };
+}
+
 /**
  * 驗證來自 repository_dispatch / workflow_dispatch 的工單參數
  */
-export function validateDispatchClientPayload(payload) {
+export function validateDispatchClientPayload(rawPayload) {
   const errors = [];
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  if (!rawPayload || typeof rawPayload !== 'object' || Array.isArray(rawPayload)) {
     return { valid: false, errors: ['client_payload must be a JSON object'] };
   }
+  const payload = normalizeDispatchPayload(rawPayload);
 
   if (payload.schemaVersion !== '1.0.0') {
     errors.push('schemaVersion must be "1.0.0"');
@@ -179,7 +189,8 @@ export function scanDiffForPolicyViolations(diffText, { maxChangedFiles = 50 } =
 /**
  * 產出沙盒任務執行紀錄 (docs/agent-runs/<taskId>.md)
  */
-export function renderTaskRunDossier(payload, meta = {}) {
+export function renderTaskRunDossier(rawPayload, meta = {}) {
+  const payload = normalizeDispatchPayload(rawPayload);
   const executedAt = meta.executedAt || new Date().toISOString();
   const runId = meta.githubRunId || 'local-sandbox';
   const guards = Array.isArray(payload.requiredGuards) && payload.requiredGuards.length > 0
@@ -212,7 +223,8 @@ export function renderTaskRunDossier(payload, meta = {}) {
 /**
  * 產出標準化 Pull Request 審查內文
  */
-export function renderPrBody(payload, meta = {}) {
+export function renderPrBody(rawPayload, meta = {}) {
+  const payload = normalizeDispatchPayload(rawPayload);
   const guards = Array.isArray(payload.requiredGuards) && payload.requiredGuards.length > 0
     ? payload.requiredGuards
     : ['npm test', 'npm run lint'];

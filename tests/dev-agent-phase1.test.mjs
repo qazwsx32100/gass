@@ -398,6 +398,10 @@ describe('Phase 1: /api/dev-agent-dispatch Webhook Gateway Handler', () => {
     assert.equal(capturedUrl, 'https://api.github.com/repos/qazwsx32100/gass/dispatches');
     assert.equal(capturedBody.event_type, 'multi_agent_task');
     assert.equal(capturedBody.client_payload.taskId, task.taskId);
+    assert.ok(
+      Object.keys(capturedBody.client_payload).length <= 10,
+      'GitHub repository_dispatch client_payload must have <= 10 top-level properties'
+    );
 
     // Resend same idempotencyKey -> must NOT call GitHub API a second time
     const res2 = makeRes();

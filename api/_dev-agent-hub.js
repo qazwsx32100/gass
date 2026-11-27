@@ -136,30 +136,43 @@ export async function invokeProviderJson({
 
   try {
     if (provider.id === 'gemini') {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(provider.model)}:generateContent?key=${encodeURIComponent(provider.apiKey)}`;
-      const res = await fetchFn(
-        url,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: 'application/json',
-            },
-          }),
-        },
-        timeoutMs
-      );
-      if (res.status < 200 || res.status >= 300) {
-        return { ok: false, reason: `GEMINI_HTTP_${res.status}` };
+      const candidateModels = [...new Set([provider.model, 'gemini-3.5-flash-lite'])];
+      let lastReason = 'GEMINI_UNAVAILABLE';
+
+      for (const candidateModel of candidateModels) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidateModel)}:generateContent?key=${encodeURIComponent(provider.apiKey)}`;
+        const res = await fetchFn(
+          url,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: 'application/json',
+              },
+            }),
+          },
+          timeoutMs
+        );
+        if (res.status === 429 || res.status === 503) {
+          lastReason = `GEMINI_HTTP_${res.status}`;
+          continue;
+        }
+        if (res.status < 200 || res.status >= 300) {
+          return { ok: false, reason: `GEMINI_HTTP_${res.status}` };
+        }
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const parsed = extractJsonObject(text);
+        if (parsed) {
+          return { ok: true, data: parsed, model: `${provider.id}:${candidateModel}` };
+        }
+        lastReason = 'GEMINI_INVALID_JSON';
       }
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = extractJsonObject(text);
-      return parsed ? { ok: true, data: parsed, model: `${provider.id}:${provider.model}` } : { ok: false, reason: 'GEMINI_INVALID_JSON' };
+      return { ok: false, reason: lastReason };
     }
 
     // OpenAI / Grok / Meta AI (OpenAI Chat Completions 相容介面)
