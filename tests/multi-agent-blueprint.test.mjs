@@ -51,6 +51,10 @@ test("Embedded JSON v1.0 task payload parses cleanly and obeys ShengLong safety 
 });
 
 test("Desktop mirror matches repository blueprint when running on dev host", (t) => {
+  if (process.platform !== "win32") {
+    t.skip("Desktop mirror check applies only on Windows dev host");
+    return;
+  }
   const desktopDir = path.dirname(DESKTOP_MIRROR_PATH);
   if (!fs.existsSync(desktopDir)) {
     t.skip("Desktop mirror directory not present in non-dev/CI environment");
