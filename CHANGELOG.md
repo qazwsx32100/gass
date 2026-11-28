@@ -1,3 +1,13 @@
+## [2026-11-28 14:58] - 監控中心鈴聲可 100% 關閉 ✕ 徹底根治強制開啟最大聲音 (APK v3.10)
+- **版本號**：`20261128_1458_operations_sound_mute_and_no_max_volume_v310`
+- **老闆指示**：「監控中心的 鈴聲無法關閉 以及會強制開啟最大聲音 幫我修復」
+- **影響範圍**：`android/app/src/main/java/com/shenglong/driver/SoundPolicy.java`、`OperationsMainActivity.java`、`OperationsStandbyService.java`、`MyFirebaseMessagingService.java`、`OrderVoiceSpeaker.java`、`android/app/build.gradle` (`versionCode 22`, `versionName "3.10"`)、`app/operations/page.tsx`、`public/sw.js`、`public/files/shenglong-operations.apk`、`tests/operations-sound-mute-and-no-max-volume.test.mjs`
+- **主要更動**：
+  1. **絕不強制拉滿手機音量**：`SoundPolicy.isOperationsApp()` 精準隔離監控中心 (`com.shenglong.operations`)，`shouldBoostVolume()` 對監控中心無條件回傳 `false`，啟動時清除舊版 `auto_boost_volume` 快取，並移除 `OperationsStandbyService` 與監控中心 FCM 之 `safeBoostVolume` 呼叫，完整保留司機端既有行為。
+  2. **100% 可關閉鈴聲（雙頻道＋即時中斷）**：新增監控中心原生靜音通知頻道 `shenglong_ops_alert_silent_v1`（`setSound(null, null)`＋`setSilent(true)`），有聲頻道升級為 `shenglong_ops_alert_v9`（改用一般通知音流 `USAGE_NOTIFICATION`、`setBypassDnd(false)`，不再強制走鬧鐘音流或穿透免打擾）。
+  3. **前後端＋原生＋SW 全鏈路靜音同步**：`OperationsNativeBridge` 新增 `setSoundEnabled`／`stopAlertSound`／`setVibrationEnabled` 等接口（`.commit()` 即時寫入並中止進行中鈴聲與 TTS）；`app/operations/page.tsx` 改以 `soundEnabledRef` 徹底消除閉包過期，靜音立即停止 Web Speech 與 AudioContext 並同步 `public/sw.js`（`silent: true`）。
+- **驗證與發布**：13/13 測試 PASS、`guard-zero-notification.cjs` PASS、`tsc --noEmit` 0 錯誤、Gradle 乾淨編譯與 V1+V2+V3 簽章 `shenglong-operations.apk` (5.87 MB, SHA-256: `DFE0163DDC20C2CAA57C9AB1C7E5AAEB5A35004F93F7F58882E97A8E168D3BB6`) 並鏡像至桌面 `sl`（`盛隆監控中心.apk`、`盛隆新ERP_戰情調度中樞.apk`），雙倉 GitHub 與 Vercel Production 同步上線。
+
 ## [2026-11-28 00:04] - 多代理 AI 協同開發 P1 三項全面收尾（Telegram 一鍵核准回調 ✕ GitHub 4 組 Secrets ✕ `main` Branch Protection）
 - **版本號**：`20261128_0004_multi_agent_p1_telegram_callback_secrets_and_branch_protection`
 - **影響範圍**：`api/_dev-agent-audit.js`、`api/telegram-webhook.js`、`.github/workflows/multi-agent-executor.yml`、`.github/workflows/multi-agent-pr-gate.yml`、`tests/dev-agent-p1-telegram-callback.test.mjs`、`docs/MULTI_AGENT_AI_COLLABORATIVE_DEV_BLUEPRINT.md`、`docs/TODO.md`、`docs/GOOGLE_DRIVE_RELEASE_RECORD.md`
